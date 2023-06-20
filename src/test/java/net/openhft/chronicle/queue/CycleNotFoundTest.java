@@ -82,7 +82,7 @@ public class CycleNotFoundTest extends QueueTestCommon {
                     Assert.assertFalse(dc.isPresent());
                 }
             } finally {
-               // System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
+                // System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
             }
         };
 
@@ -95,30 +95,29 @@ public class CycleNotFoundTest extends QueueTestCommon {
         ExecutorService executorService1 = Executors.newSingleThreadExecutor(
                 new NamedThreadFactory("appender"));
         Future<?> submit = executorService1.submit(() -> {
-            ChronicleQueue wqueue = SingleChronicleQueueBuilder
+            try (ChronicleQueue wqueue = SingleChronicleQueueBuilder
                     .binary(path)
                     .testBlockSize()
                     .rollCycle(TEST_SECONDLY)
                     .build();
+                 final ExcerptAppender appender = wqueue.createAppender()) {
 
-            final ExcerptAppender appender = wqueue.acquireAppender();
-
-            long next = System.nanoTime() + INTERVAL_US * 1000;
-            for (int i = 0; i < NUMBER_OF_MSG; i++) {
-                while (System.nanoTime() < next)
-                    /* busy wait*/ ;
-                try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write().int64(i);
+                long next = System.nanoTime() + INTERVAL_US * 1000;
+                for (int i = 0; i < NUMBER_OF_MSG; i++) {
+                    while (System.nanoTime() < next)
+                        /* busy wait*/ ;
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        dc.wire().write().int64(i);
+                    }
+                    next += INTERVAL_US * 1000;
+                    if (executorService1.isShutdown())
+                        return;
                 }
-                next += INTERVAL_US * 1000;
-                if (executorService1.isShutdown())
-                    return;
             }
-            wqueue.close();
         });
         submit.get();
 
-       // System.out.println("appender is done.");
+        // System.out.println("appender is done.");
 
         // wait for all the tailer to finish
         for (Future f : tailers) {

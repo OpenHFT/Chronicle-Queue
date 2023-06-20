@@ -52,7 +52,7 @@ public class IndexTest extends QueueTestCommon {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-               // {WireType.TEXT}, // TODO Add CAS to LongArrayReference.
+                // {WireType.TEXT}, // TODO Add CAS to LongArrayReference.
                 {WireType.BINARY}
         });
     }
@@ -64,9 +64,9 @@ public class IndexTest extends QueueTestCommon {
                 .binary(getTmpDir())
                 .testBlockSize()
                 .wireType(this.wireType)
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
-            final ExcerptAppender appender = queue.acquireAppender();
             for (int i = 0; i < 5; i++) {
                 final int n = i;
                 appender.writeDocument(
@@ -85,9 +85,8 @@ public class IndexTest extends QueueTestCommon {
                 .binary(getTmpDir())
                 .testBlockSize()
                 .wireType(this.wireType)
-                .build()) {
-
-            final ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             final int messageCount = INDEXING_LINEAR_SCAN_THRESHOLD + 5;
             final long[] indices = new long[messageCount];

@@ -54,8 +54,8 @@ public class QueueWriteJitterMain {
         System.out.println("Writing to " + path);
 
         Thread pretoucher = new Thread(() -> {
-            try (ChronicleQueue q = createQueue(path)) {
-                ExcerptAppender appender = q.acquireAppender();
+            try (ChronicleQueue q = createQueue(path);
+                 ExcerptAppender appender = q.createAppender()) {
                 while (true) {
                     Thread.sleep(50);
                     appender.pretouch();
@@ -69,8 +69,8 @@ public class QueueWriteJitterMain {
         pretoucher.start();
 
         Thread writer = new Thread(() -> {
-            try (ChronicleQueue q = createQueue(path)) {
-                ExcerptAppender appender = q.acquireAppender();
+            try (ChronicleQueue q = createQueue(path);
+                 ExcerptAppender appender = q.createAppender()) {
                 while (running) {
                     writeStarted = System.nanoTime();
                     Jvm.safepoint();

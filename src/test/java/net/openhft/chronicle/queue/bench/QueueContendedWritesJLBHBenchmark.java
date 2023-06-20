@@ -75,8 +75,8 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();
         writerThread1 = new Thread(() -> {
-            try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
-                final ExcerptAppender app = queue.acquireAppender();
+            try (final AffinityLock affinityLock = AffinityLock.acquireCore();
+                 final ExcerptAppender app = queue.createAppender()) {
 
                 while (!stopped) {
                     if (write.get() <= 0)
@@ -96,8 +96,8 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         writerThread1.start();
 
         writerThread2 = new Thread(() -> {
-            try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
-                final ExcerptAppender app = queue.acquireAppender();
+            try (final AffinityLock affinityLock = AffinityLock.acquireCore();
+                 final ExcerptAppender app = queue.createAppender()) {
 
                 while (!stopped) {
                     if (write.get() <= 0)

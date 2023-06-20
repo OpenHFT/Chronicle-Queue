@@ -21,7 +21,6 @@ package net.openhft.chronicle.queue.internal.reader;
 import net.openhft.chronicle.bytes.MethodId;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -61,8 +60,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
                 .sourceId(1)
                 .testBlockSize()
                 .build()) {
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<All> methodWriterBuilder = excerptAppender.methodWriterBuilder(All.class);
+            final VanillaMethodWriterBuilder<All> methodWriterBuilder = queue.methodWriterBuilder(All.class);
             final All events = methodWriterBuilder.build();
 
             for (int i = 0; i < 24; ) {
@@ -125,11 +123,10 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Test
     public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
-        basicReader().
-                // matches goodbye, but not hello or history
-                withInclusionRegex("goodbye").
-                asMethodReader("").
-                execute();
+        basicReader()
+                .withInclusionRegex("goodbye") // matches goodbye, but not hello or history
+                .asMethodReader("")
+                .execute();
         assertFalse(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("method2")));
     }

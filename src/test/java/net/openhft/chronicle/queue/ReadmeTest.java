@@ -33,14 +33,14 @@ public class ReadmeTest extends QueueTestCommon {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
-                .build()) {
-            // Obtain an ExcerptAppender
-            ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             // Obtain an ExcerptAppender
+             ExcerptAppender appender = queue.createAppender()) {
 
             // write - {msg: TestMessage}
             appender.writeDocument(w -> w.write("msg").text("TestMessage"));
 
-           // System.out.println(queue.dump());
+            // System.out.println(queue.dump());
             // write - TestMessage
             appender.writeText("TestMessage");
 

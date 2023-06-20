@@ -37,9 +37,7 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(file)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY).build()) {
-
-            SomeListener someListener = queue.acquireAppender()
-                    .methodWriter(SomeListener.class);
+            SomeListener someListener = queue.methodWriter(SomeListener.class);
 
             SomeManager someManager = new SomeManager();
             MethodReader reader = queue.createTailer()
@@ -57,7 +55,7 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
             assertTrue(someManager.methodWithOneParamInvoked);       // one param method was invoked
             assertTrue(someManager.methodWithoutParamsInvoked);      // no params method was NOT invoked
 
-           // Jvm.warn().on(getClass(), queue.dump());
+            // Jvm.warn().on(getClass(), queue.dump());
         }
     }
 

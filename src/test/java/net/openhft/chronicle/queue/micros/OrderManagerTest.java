@@ -21,7 +21,10 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.Test;
@@ -63,7 +66,7 @@ public class OrderManagerTest extends QueueTestCommon {
         File queuePath = new File(OS.getTarget(), "testWithQueue-" + Time.uniqueId());
         try {
             try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
-                OrderIdeaListener orderManager = queue.acquireAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
+                OrderIdeaListener orderManager = queue.methodWriter(OrderIdeaListener.class, MarketDataListener.class);
                 SidedMarketDataCombiner combiner = new SidedMarketDataCombiner((MarketDataListener) orderManager);
 
                 // events in
@@ -115,7 +118,7 @@ public class OrderManagerTest extends QueueTestCommon {
                     .testBlockSize()
                     .sourceId(1)
                     .build()) {
-                OrderIdeaListener orderManager = out.acquireAppender()
+                OrderIdeaListener orderManager = out
                         .methodWriterBuilder(OrderIdeaListener.class)
                         .addInterface(MarketDataListener.class)
                         .get();
@@ -141,7 +144,7 @@ public class OrderManagerTest extends QueueTestCommon {
                          .sourceId(2)
                          .build()) {
 
-                OrderListener listener = out.acquireAppender()
+                OrderListener listener = out
                         .methodWriterBuilder(OrderListener.class)
                         .get();
                 // build our scenario
@@ -189,7 +192,7 @@ public class OrderManagerTest extends QueueTestCommon {
                     .rollCycle(TEST_DAILY)
                     .sourceId(1)
                     .build()) {
-                SidedMarketDataListener combiner = out.acquireAppender()
+                SidedMarketDataListener combiner = out
                         .methodWriterBuilder(SidedMarketDataListener.class)
                         .get();
 
@@ -216,8 +219,7 @@ public class OrderManagerTest extends QueueTestCommon {
                              .rollCycle(TEST_DAILY)
                              .build()) {
 
-                    ExcerptAppender excerptAppender = out.acquireAppender();
-                    MarketDataListener mdListener = excerptAppender
+                    MarketDataListener mdListener = out
                             .methodWriterBuilder(MarketDataListener.class)
                             .get();
 

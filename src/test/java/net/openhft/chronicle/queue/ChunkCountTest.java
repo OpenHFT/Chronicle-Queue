@@ -32,7 +32,7 @@ public class ChunkCountTest extends QueueTestCommon {
     public void chunks() {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(IOTools.createTempFile("chunks")).blockSize(64 << 10).rollCycle(DAILY);
         try (SingleChronicleQueue queue = builder.build();
-             ExcerptAppender appender = queue.acquireAppender()) {
+             ExcerptAppender appender = queue.createAppender()) {
             assertEquals(0, queue.chunkCount());
             appender.writeText("Hello");
             assertEquals(1, queue.chunkCount());

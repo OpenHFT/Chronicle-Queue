@@ -51,10 +51,10 @@ public class StoreTailerTest extends QueueTestCommon {
 
     @Test
     public void testEntryCount() {
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build();
+             final ExcerptAppender appender = queue.createAppender()) {
             assertEquals(0, queue.entryCount());
 
-            final ExcerptAppender appender = queue.acquireAppender();
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("test").text("value");
             }
@@ -70,9 +70,9 @@ public class StoreTailerTest extends QueueTestCommon {
 
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
         try (ChronicleQueue queue = build(createQueue(dataDirectory, MINUTELY, 0, "cycleRoll", false).
-                timeProvider(timeProvider))) {
+                timeProvider(timeProvider));
+             final ExcerptAppender appender = queue.createAppender()) {
 
-            final ExcerptAppender appender = queue.acquireAppender();
             final OnEvents events = appender.methodWriterBuilder(OnEvents.class).build();
             timeProvider.setTime(System.currentTimeMillis());
             events.onEvent("firstEvent");
@@ -111,10 +111,10 @@ public class StoreTailerTest extends QueueTestCommon {
              ChronicleQueue outputQueue =
                      createQueue(dataDirectory, TEST_DAILY, 0, "outputQueue")) {
 
-            final OnEvents firstWriter = firstInputQueue.acquireAppender()
+            final OnEvents firstWriter = firstInputQueue
                     .methodWriterBuilder(OnEvents.class)
                     .get();
-            final HelloWorld secondWriter = secondInputQueue.acquireAppender()
+            final HelloWorld secondWriter = secondInputQueue
                     .methodWriterBuilder(HelloWorld.class)
                     .get();
 
@@ -125,8 +125,8 @@ public class StoreTailerTest extends QueueTestCommon {
             secondWriter.hello("thirteen");
             secondWriter.hello("thirtyOne");
 
-            final OnEvents eventSink = outputQueue.acquireAppender().
-                    methodWriterBuilder(OnEvents.class).get();
+            final OnEvents eventSink = outputQueue
+                    .methodWriterBuilder(OnEvents.class).get();
 
             final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
             final MethodReader firstMethodReader = firstInputQueue.createTailer().methodReader(outputWriter);
@@ -159,10 +159,10 @@ public class StoreTailerTest extends QueueTestCommon {
                      createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue")) {
 
             // Create two MethodWriters for writing data to the input queues
-            final OnEvents firstWriter = firstInputQueue.acquireAppender()
+            final OnEvents firstWriter = firstInputQueue
                     .methodWriterBuilder(OnEvents.class)
                     .get();
-            final HelloWorld secondWriter = secondInputQueue.acquireAppender()
+            final HelloWorld secondWriter = secondInputQueue
                     .methodWriterBuilder(HelloWorld.class)
                     .get();
 
@@ -173,11 +173,9 @@ public class StoreTailerTest extends QueueTestCommon {
             secondWriter.hello("thirteen");
             secondWriter.hello("thirtyOne");
 
-
-            // Create an ExcerptAppender for writing data to the output queue
-            ExcerptAppender excerptAppender = outputQueue.acquireAppender();
-            final OnEvents eventSink = excerptAppender.
-                    methodWriterBuilder(OnEvents.class).get();
+            // Create a MethodWriter for writing data to the output queue
+            final OnEvents eventSink = outputQueue
+                    .methodWriterBuilder(OnEvents.class).get();
 
             // Reset the MessageHistory
             MessageHistory.get().reset();
@@ -209,7 +207,7 @@ public class StoreTailerTest extends QueueTestCommon {
             outputWriter.onEvent("out1");
 
             // Get the index of the last message appended to the output queue
-            long index = excerptAppender.lastIndexAppended();
+            long index = outputQueue.acquireAppender().lastIndexAppended();
             // Get the current indices of the tailers for the input queues
             index1 = tailer1.index();
             index2 = tailer2.index();
@@ -250,7 +248,8 @@ public class StoreTailerTest extends QueueTestCommon {
         MutableTimeProvider timeProvider = new MutableTimeProvider();
         timeProvider.setTime(System.currentTimeMillis());
         try (ChronicleQueue chronicle = minutely(dir, timeProvider).build();
-             ChronicleQueue chronicle2 = minutely(dir, timeProvider).build()) {
+             ChronicleQueue chronicle2 = minutely(dir, timeProvider).build();
+             final ExcerptAppender append = chronicle2.createAppender()) {
 
             //ExcerptAppender append = chronicle2.acquireAppender();
             //append.writeDocument(w -> w.write("test").text("before text"));
@@ -260,7 +259,6 @@ public class StoreTailerTest extends QueueTestCommon {
 
             timeProvider.addTime(10, TimeUnit.MINUTES);
 
-            ExcerptAppender append = chronicle2.acquireAppender();
             append.writeDocument(w -> w.write("test").text("text"));
 
             if (!tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals))) {
@@ -396,10 +394,8 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     private void writeMethodCall(SingleChronicleQueue queue, String message) {
-        try (final ExcerptAppender appender = queue.acquireAppender()) {
-            final Foobar foobar = appender.methodWriter(Foobar.class);
-            foobar.say(message);
-        }
+        final Foobar foobar = queue.methodWriter(Foobar.class);
+        foobar.say(message);
     }
 
     private String readMethodCall(ExcerptTailer tailer) {
@@ -414,7 +410,7 @@ public class StoreTailerTest extends QueueTestCommon {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build();
              ExcerptTailer tailer = queue.createTailer();
-             ExcerptAppender appender = queue.acquireAppender()) {
+             ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("Hello World");
             try (DocumentContext dc = tailer.readingDocument(true)) {
                 assertTrue(dc.isPresent());

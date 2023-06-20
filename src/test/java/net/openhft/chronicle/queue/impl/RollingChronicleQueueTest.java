@@ -46,9 +46,9 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
                 .testBlockSize()
                 .timeProvider(time::get)
                 .rollCycle(TEST2_DAILY)
-                .build()) {
+                .build();
+             final ExcerptAppender appender = q.createAppender()) {
 
-            final ExcerptAppender appender = q.acquireAppender();
             time.set(0);
 
             appender.writeText("1. some  text");

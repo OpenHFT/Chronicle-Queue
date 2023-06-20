@@ -58,8 +58,8 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build();
+             ExcerptAppender appender = q.createAppender()) {
             // write at index 0
             appender.writeBytes(test);
             // append at index 1
@@ -81,8 +81,8 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     public void dontOverwriteExisting() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build();
+             ExcerptAppender appender = q.createAppender()) {
             appender.writeBytes(test);
 
             // try to overwrite - will not overwrite
@@ -171,8 +171,8 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                 "hello world2\n" +
                 "...\n" +
                 "# 130260 bytes remaining\n";
-        try (SingleChronicleQueue q = createQueue(tmpDir)) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (SingleChronicleQueue q = createQueue(tmpDir);
+             ExcerptAppender appender = q.createAppender()) {
             appender.writeBytes(test);
             appender.writeBytes(test2);
             index = appender.lastIndexAppended();
@@ -181,8 +181,8 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         assertEquals(1, index);
 
         // has to be the same tmpDir
-        try (SingleChronicleQueue q = createQueue(tmpDir)) {
-            InternalAppender appender = (InternalAppender) q.acquireAppender();
+        try (SingleChronicleQueue q = createQueue(tmpDir);
+             InternalAppender appender = (InternalAppender) q.createAppender()) {
             appender.writeBytes(0, Bytes.from("HELLO WORLD"));
 //            assertEquals(expected, q.dump());
 
@@ -204,8 +204,8 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     @Test(expected = java.lang.IllegalStateException.class)
     public void cantAppendPastTheEnd() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build();
+             ExcerptAppender appender = q.createAppender()) {
             appender.writeBytes(test);
 
             // this will throw because it is not in sequence
@@ -217,8 +217,8 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     public void test3() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build()) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build();
+             ExcerptAppender appender = q.createAppender()) {
             appender.writeBytes(test);
 
             ExcerptTailer tailer = q.createTailer();
@@ -251,7 +251,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                 .rollCycle(MINUTELY)
                 .timeProvider(() -> 0).build();
 
-             ExcerptAppender appender = q.acquireAppender()) {
+             ExcerptAppender appender = q.createAppender()) {
             appender.writeText("hello");
             appender.writeText("hello2");
             try (final DocumentContext dc = appender.writingDocument()) {
@@ -273,8 +273,8 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
         SetTimeProvider timeProvider = new SetTimeProvider();
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build()) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build();
+             ExcerptAppender appender = q.createAppender()) {
             appender.writeBytes(test);
             long nextIndexInFirstCycle = appender.lastIndexAppended() + 1;
             int firstCycle = q.rollCycle().toCycle(nextIndexInFirstCycle);

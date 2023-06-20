@@ -50,8 +50,9 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)
                 .timeProvider(timeProvider)
                 .rollCycle(rollingCycle)
-                .build()) {
-            queue.acquireAppender().writeText("42");
+                .build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
+            excerptAppender.writeText("42");
         }
 
         // Wait less than the rolling cycle
@@ -67,5 +68,5 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
             String read = tailer.readText();
             assertEquals("42", read);
         }
- }
+    }
 }

@@ -37,7 +37,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static net.openhft.chronicle.bytes.Bytes.from;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
@@ -78,8 +77,8 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .rollCycle(rollCycle)
                 .timeProvider(tp)
                 .testBlockSize()
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build();
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             writer1.accept(appender);
 
@@ -93,8 +92,8 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .rollCycle(rollCycle)
                 .timeProvider(tp)
                 .testBlockSize()
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build();
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
 //            assertFalse(hasEOFAtEndOfFile(file1));
 
@@ -125,8 +124,8 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DEFAULT)
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build();
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             Bytes<byte[]> hello_world = Bytes.from("Hello World 1");
             appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 0L), hello_world);
@@ -141,8 +140,8 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DEFAULT)
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build();
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             // add a message for the new day
             Bytes<byte[]> hello_world = Bytes.from("Hello World 3");
@@ -179,9 +178,8 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .singleBuilder(getTmpDir())
                 .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
-                .build()) {
-
-            final ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             int i = 0;
             String msg = "world ";
@@ -235,9 +233,9 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .singleBuilder(getTmpDir())
                 .rollCycle(TEST4_SECONDLY)
                 .testBlockSize()
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
-            final ExcerptAppender appender = queue.acquireAppender();
             final ExcerptTailer tailer = queue.createTailer();
 
             boolean metadata = true;
@@ -259,9 +257,8 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(stp)
                 .testBlockSize()
-                .build()) {
-
-            final ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             for (int i = 0; i < strings.length; ++i) {
                 try (DocumentContext dc = appender.writingDocument(meta[i])) {

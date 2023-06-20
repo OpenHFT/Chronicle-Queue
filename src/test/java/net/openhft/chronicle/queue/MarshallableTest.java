@@ -34,9 +34,9 @@ public class MarshallableTest extends QueueTestCommon {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
-                .build()) {
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
 
-            ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
             ExcerptTailer tailer2 = queue.createTailer();
 

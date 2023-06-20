@@ -41,19 +41,20 @@ public class ValueStringArrayTest extends QueueTestCommon {
         // this is the directory the queue is written to
         final File dataDir = getTmpDir();
 
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build()) {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-            try (DocumentContext dc = queue.acquireAppender().writingDocument()) {
+            try (DocumentContext dc = excerptAppender.writingDocument()) {
                 dc.wire().write("data").marshallable(value);
             }
 
             try (DocumentContext dc = queue.createTailer().readingDocument()) {
                 dc.wire().read("data").marshallable(using);
                 CharSequence actual = using.getCsArr().getCharSequenceWrapperAt(1).getCharSequence();
-               // System.out.println(actual);
+                // System.out.println(actual);
                 Assert.assertEquals(EXPECTED, actual.toString());
             }
-         }
+        }
     }
 }
 

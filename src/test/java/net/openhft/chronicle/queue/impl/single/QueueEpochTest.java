@@ -54,7 +54,7 @@ public final class QueueEpochTest extends QueueTestCommon {
 
     private static void logDebug(final String format, final Object... args) {
         if (DEBUG) {
-           // System.out.printf(format, args);
+            // System.out.printf(format, args);
         }
     }
 
@@ -67,13 +67,13 @@ public final class QueueEpochTest extends QueueTestCommon {
 
         try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
                 rollTime(LocalTime.of(21, 15), ZoneOffset.UTC). // epoch is deprecated in favour of rollTime
-                timeProvider(this::getCurrentTime). // override the clock used by the queue to detect roll-over
-                storeFileListener(fileListener). // capture file-roll events
-                rollCycle(DAILY_ROLL).
-                build()) {
+                        timeProvider(this::getCurrentTime). // override the clock used by the queue to detect roll-over
+                        storeFileListener(fileListener). // capture file-roll events
+                        rollCycle(DAILY_ROLL).
+                build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             logDebug("Queue epoch offset is %d%n", queue.epoch());
-            final ExcerptAppender appender = queue.acquireAppender();
             final TestEvent eventWriter = appender.methodWriter(TestEvent.class);
 
             setCurrentTime(TEN_MINUTES_BEFORE_ROLL_TIME);

@@ -36,8 +36,8 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestC
                      ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()
                              .rollCycle(TEST_DAILY)
-                             .build()) {
-            final ExcerptAppender excerptAppender = writeQueue.acquireAppender();
+                             .build();
+             final ExcerptAppender excerptAppender = writeQueue.createAppender()) {
             try (final DocumentContext ctx = excerptAppender.writingDocument()) {
                 ctx.wire().getValueOut().object("first");
             }

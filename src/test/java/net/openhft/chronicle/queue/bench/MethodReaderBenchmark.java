@@ -63,6 +63,12 @@ public class MethodReaderBenchmark implements JLBHTask {
     private MethodReader reader;
     private Thread consumerThread;
 
+    static {
+        System.setProperty("disable.thread.safety", "true");
+        System.setProperty("jvm.resource.tracing", "false");
+        System.setProperty("check.thread.safety", "false");
+    }
+
     private volatile boolean stopped = false;
 
     public static void main(String[] args) {
@@ -104,8 +110,8 @@ public class MethodReaderBenchmark implements JLBHTask {
             }
         }
 
-        appender = queue.acquireAppender();
-        writer = appender.methodWriter(AnInterface.class);
+        appender = queue.createAppender();
+        writer = queue.methodWriter(AnInterface.class);
 
         nextExecutionReport = new ExecutionReportDTO(ThreadLocalRandom.current());
         nextOrder = new OrderDTO(ThreadLocalRandom.current());

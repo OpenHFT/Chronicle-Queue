@@ -172,7 +172,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         final double expectedPerSecond = Jvm.isArm() ? 3e7 : Jvm.isAzulZing() ? 3e8 : 1e9;
         final int expectedNumberOfMessages = (int) (TEST_TIME * expectedPerSecond / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
         Jvm.perf().on(getClass(), String.format("Running test with %d writers and %d readers (%d cores), sleep %dns expecting %d messages%n",
-             numWriters, numReaders, CORES, SLEEP_PER_WRITE_NANOS, expectedNumberOfMessages));
+                numWriters, numReaders, CORES, SLEEP_PER_WRITE_NANOS, expectedNumberOfMessages));
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
@@ -218,8 +218,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
                 final int w = wrote.get();
                 Jvm.perf().on(getClass(), String.format("Writers have written %d of %d messages (%d%%) after %dms (%d%%) . Readers at %s. Waiting...",
-                        w + 1, expectedNumberOfMessages, (int)(100d * (w + 1) / expectedNumberOfMessages),
-                        now - startTime, (int)(100d * (now - startTime) / maxWritingTime), readersLastRead));
+                        w + 1, expectedNumberOfMessages, (int) (100d * (w + 1) / expectedNumberOfMessages),
+                        now - startTime, (int) (100d * (now - startTime) / maxWritingTime), readersLastRead));
                 readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
                     if (reader.exception != null) {
                         throw new AssertionError("Reader encountered exception, so stopped reading messages",
@@ -501,7 +501,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         @Override
         public Throwable call() {
             ChronicleQueue queue = writerQueue(path);
-            try (final ExcerptAppender appender = queue.acquireAppender()) {
+            try (final ExcerptAppender appender = queue.createAppender()) {
                 Jvm.pause(random.nextInt(DELAY_WRITER_RANDOM_MS));
                 final long startTime = System.nanoTime();
                 int loopIteration = 0;
@@ -570,10 +570,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             this.running = new AtomicBoolean(true);
         }
 
-        @SuppressWarnings("resource")
         @Override
         public Throwable call() {
-            try (final ExcerptAppender appender = queue.acquireAppender()) {
+            try (final ExcerptAppender appender = queue.createAppender()) {
                 while (running.get()) {
                     appender.pretouch();
                     // allow it to be interrupted

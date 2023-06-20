@@ -176,7 +176,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .testBlockSize()
                 .blockSize(QueueUtil.testBlockSize())
                 .build()) {
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("foo");
                 }

@@ -43,8 +43,8 @@ public final class MoveToIndexTest extends QueueTestCommon {
     public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
         File queuePath = tmpFolder.newFolder("cq");
 
-        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).build();
+             ExcerptAppender appender = queue.createAppender()) {
             for (int i = 1; i < 10; ++i) {
                 appender.writeText("id" + i);
             }
@@ -66,9 +66,9 @@ public final class MoveToIndexTest extends QueueTestCommon {
         final Map<Long, String> messageByIndex = new HashMap<>();
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.
-                binary(tmpFolder.newFolder()).build()) {
+                binary(tmpFolder.newFolder()).build();
+             final ExcerptAppender appender = queue.createAppender()) {
             // create a queue and add some excerpts
-            final ExcerptAppender appender = queue.acquireAppender();
             for (int i = 0; i < 10; i++) {
                 final String message = "msg" + i;
                 appender.writeDocument(w -> w.write("message").object(message));
@@ -99,8 +99,8 @@ public final class MoveToIndexTest extends QueueTestCommon {
      */
     @Test
     public void testNotReachedInCycle() throws Exception {
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpFolder.newFolder()).build()) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpFolder.newFolder()).build();
+             ExcerptAppender appender = q.createAppender()) {
             ExcerptTailer tailer = q.createTailer();
 
             final int versionByte = 7;

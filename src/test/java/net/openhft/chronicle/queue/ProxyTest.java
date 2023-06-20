@@ -41,7 +41,7 @@ public class ProxyTest extends QueueTestCommon {
         StringBuilder result = new StringBuilder();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tempDir).build()) {
 
-            TestMessageListener writer = queue.acquireAppender().methodWriterBuilder(TestMessageListener.class).build();
+            TestMessageListener writer = queue.methodWriterBuilder(TestMessageListener.class).build();
             Message message = new ProxyTest.Message();
 
             StringBuilder sb = new StringBuilder("test ");

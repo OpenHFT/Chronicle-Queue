@@ -97,52 +97,51 @@ public class TailerDirectionTest extends QueueTestCommon {
     public void testTailerForwardBackwardRead() {
         String basePath = OS.getTarget() + "/tailerForwardBackward-" + Time.uniqueId();
 
-        ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
                 .testBlockSize()
                 .rollCycle(HOURLY)
                 .build();
-        ExcerptAppender appender = queue.acquireAppender();
-        ExcerptTailer tailer = queue.createTailer();
+             ExcerptAppender appender = queue.createAppender()) {
+            ExcerptTailer tailer = queue.createTailer();
 
-        //
-        // Prepare test messages in queue
-        //
-        // Map of test messages with their queue index position
-        HashMap<String, Long> msgIndexes = new HashMap<>();
+            //
+            // Prepare test messages in queue
+            //
+            // Map of test messages with their queue index position
+            HashMap<String, Long> msgIndexes = new HashMap<>();
 
-        for (int i = 0; i < 4; i++) {
-            String msg = testMessage(i);
-            long idx = appendEntry(appender, msg);
-            msgIndexes.put(msg, idx);
+            for (int i = 0; i < 4; i++) {
+                String msg = testMessage(i);
+                long idx = appendEntry(appender, msg);
+                msgIndexes.put(msg, idx);
+            }
+
+            assertEquals("[Forward 1] Wrong message 0", testMessage(0), readNextEntry(tailer));
+            assertEquals("[Forward 1] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
+            assertEquals("[Forward 1] Wrong message 1", testMessage(1), readNextEntry(tailer));
+            assertEquals("[Forward 1] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
+
+            tailer.direction(TailerDirection.BACKWARD);
+
+            assertEquals("[Backward] Wrong message 2", testMessage(2), readNextEntry(tailer));
+            assertEquals("[Backward] Wrong Tailer index after reading msg 2", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
+            assertEquals("[Backward] Wrong message 1", testMessage(1), readNextEntry(tailer));
+            assertEquals("[Backward] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(0)).longValue(), tailer.index());
+            assertEquals("[Backward] Wrong message 0", testMessage(0), readNextEntry(tailer));
+
+            String res = readNextEntry(tailer);
+            assertNull("Backward: res is" + res, res);
+
+            tailer.direction(TailerDirection.FORWARD);
+
+            res = readNextEntry(tailer);
+            assertNull("Forward: res is" + res, res);
+
+            assertEquals("[Forward 2] Wrong message 0", testMessage(0), readNextEntry(tailer));
+            assertEquals("[Forward 2] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
+            assertEquals("[Forward 2] Wrong message 1", testMessage(1), readNextEntry(tailer));
+            assertEquals("[Forward 2] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
         }
-
-        assertEquals("[Forward 1] Wrong message 0", testMessage(0), readNextEntry(tailer));
-        assertEquals("[Forward 1] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
-        assertEquals("[Forward 1] Wrong message 1", testMessage(1), readNextEntry(tailer));
-        assertEquals("[Forward 1] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
-
-        tailer.direction(TailerDirection.BACKWARD);
-
-        assertEquals("[Backward] Wrong message 2", testMessage(2), readNextEntry(tailer));
-        assertEquals("[Backward] Wrong Tailer index after reading msg 2", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
-        assertEquals("[Backward] Wrong message 1", testMessage(1), readNextEntry(tailer));
-        assertEquals("[Backward] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(0)).longValue(), tailer.index());
-        assertEquals("[Backward] Wrong message 0", testMessage(0), readNextEntry(tailer));
-
-        String res = readNextEntry(tailer);
-        assertNull("Backward: res is" + res, res);
-
-        tailer.direction(TailerDirection.FORWARD);
-
-        res = readNextEntry(tailer);
-        assertNull("Forward: res is" + res, res);
-
-        assertEquals("[Forward 2] Wrong message 0", testMessage(0), readNextEntry(tailer));
-        assertEquals("[Forward 2] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
-        assertEquals("[Forward 2] Wrong message 1", testMessage(1), readNextEntry(tailer));
-        assertEquals("[Forward 2] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
-
-        queue.close();
     }
 
     @Test
@@ -150,12 +149,12 @@ public class TailerDirectionTest extends QueueTestCommon {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
-                .rollCycle(TEST_SECONDLY).build()) {
+                .rollCycle(TEST_SECONDLY).build();
+             final ExcerptTailer tailer = queue.createTailer();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-            final ExcerptTailer tailer = queue.createTailer();
             tailer.direction(TailerDirection.NONE);
 
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
             for (int i = 0; i < 10; i++) {
                 excerptAppender.writeDocument(i, (out, value) -> {
                     out.int32(value);
@@ -171,41 +170,42 @@ public class TailerDirectionTest extends QueueTestCommon {
     public void testTailerBackwardsReadBeyondCycle() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
-        ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .build();
-        ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = queue.createAppender()) {
 
-        //
-        // Prepare test messages in queue
-        //
-        // List of test messages with their queue index position
-        List<Long> indexes = new ArrayList<>();
-        List<String> messages = new ArrayList<>();
-        for (int d = -7; d <= 0; d++) {
-            if (d == -5 || d == -4)
-                continue; // nothing on those days.
-            timeProvider.currentTimeMillis(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(d));
-            for (int i = 0; i < 3; i++) {
-                String msg = testMessage(indexes.size());
-                long idx = appendEntry(appender, msg);
-                messages.add(msg);
-                indexes.add(idx);
+            //
+            // Prepare test messages in queue
+            //
+            // List of test messages with their queue index position
+            List<Long> indexes = new ArrayList<>();
+            List<String> messages = new ArrayList<>();
+            for (int d = -7; d <= 0; d++) {
+                if (d == -5 || d == -4)
+                    continue; // nothing on those days.
+                timeProvider.currentTimeMillis(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(d));
+                for (int i = 0; i < 3; i++) {
+                    String msg = testMessage(indexes.size());
+                    long idx = appendEntry(appender, msg);
+                    messages.add(msg);
+                    indexes.add(idx);
+                }
+            }
+            try (ExcerptTailer tailer = queue.createTailer()
+                    .direction(TailerDirection.BACKWARD)
+                    .toEnd()) {
+
+                for (int i = indexes.size() - 1; i >= 0; i--) {
+                    long index = indexes.get(i);
+                    String msg = messages.get(i);
+
+                    assertEquals("[Backward] Wrong index " + i, index, tailer.index());
+                    assertEquals("[Backward] Wrong message " + i, msg, readNextEntry(tailer));
+                }
             }
         }
-        ExcerptTailer tailer = queue.createTailer()
-                .direction(TailerDirection.BACKWARD)
-                .toEnd();
-
-        for (int i = indexes.size() - 1; i >= 0; i--) {
-            long index = indexes.get(i);
-            String msg = messages.get(i);
-
-            assertEquals("[Backward] Wrong index " + i, index, tailer.index());
-            assertEquals("[Backward] Wrong message " + i, msg, readNextEntry(tailer));
-        }
-        queue.close();
     }
 
     @Test(timeout = 10_000)
@@ -216,7 +216,7 @@ public class TailerDirectionTest extends QueueTestCommon {
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .build();
-             ExcerptAppender appender = queue.acquireAppender()) {
+             ExcerptAppender appender = queue.createAppender()) {
 
             //
             // Prepare test messages in queue
@@ -224,33 +224,35 @@ public class TailerDirectionTest extends QueueTestCommon {
             for (int i = 0; i < 3; i++) {
                 appendEntry(appender, testMessage(i));
             }
-            ExcerptTailer tailer = queue.createTailer()
+            try (ExcerptTailer tailer = queue.createTailer()
                     .direction(TailerDirection.BACKWARD)
-                    .toEnd();
+                    .toEnd()) {
 
-            while (true) {
+                while (true) {
+                    try (final DocumentContext documentContext = tailer.readingDocument()) {
+                        if (!documentContext.isPresent()) {
+                            Jvm.startup().on(TailerDirection.class, "Reached the start");
+                            break;
+                        }
+                    }
+                }
+
+
+                // Try one more time, should still not be present and should not advance the index
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
                     if (!documentContext.isPresent()) {
                         Jvm.startup().on(TailerDirection.class, "Reached the start");
-                        break;
                     }
                 }
-            }
+                assertEquals(-1, tailer.index());
+                assertEquals(0, tailer.lastReadIndex());
 
-            // Try one more time, should still not be present and should not advance the index
-            try (final DocumentContext documentContext = tailer.readingDocument()) {
-                if (!documentContext.isPresent()) {
-                    Jvm.startup().on(TailerDirection.class, "Reached the start");
+                // Check that we can change direction and read forward from there
+                tailer.direction(TailerDirection.FORWARD);
+                try (final DocumentContext documentContext = tailer.readingDocument()) {
+                    assertTrue(documentContext.isPresent());
+                    assertEquals(0, documentContext.index());
                 }
-            }
-            assertEquals(-1, tailer.index());
-            assertEquals(0, tailer.lastReadIndex());
-
-            // Check that we can change direction and read forward from there
-            tailer.direction(TailerDirection.FORWARD);
-            try (final DocumentContext documentContext = tailer.readingDocument()) {
-                assertTrue(documentContext.isPresent());
-                assertEquals(0, documentContext.index());
             }
         }
     }

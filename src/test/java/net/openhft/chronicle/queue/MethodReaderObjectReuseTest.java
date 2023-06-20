@@ -39,7 +39,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
             PingDTO.constructionExpected++;
             PingDTO pdtio = new PingDTO();
             PingDTO.constructionExpected++;
-            Pinger pinger = cq.acquireAppender().methodWriter(Pinger.class);
+            Pinger pinger = cq.methodWriter(Pinger.class);
             for (int i = 0; i < 5; i++) {
                 pinger.ping(pdtio);
                 assertEquals(PingDTO.constructionExpected, PingDTO.constructionCounter);

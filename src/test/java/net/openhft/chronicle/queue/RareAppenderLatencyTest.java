@@ -75,67 +75,68 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             // this is a performance test so should not be run with assertions turned on
             return;
 
-       // System.out.println("starting test");
+        // System.out.println("starting test");
         String pathname = OS.getTarget() + "/testRareAppenderLatency-" + Time.uniqueId();
         new File(pathname).deleteOnExit();
 
         // Shared queue between two threads appending. One appends very rarely, another heavily.
-        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(pathname)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(pathname)
                 .rollCycle(HOURLY)
                 .build();
+             final ExcerptAppender rareAppender = queue.createAppender()) {
 
-        String text = getText();
+            String text = getText();
 
-        // Write a some messages with an appender from Main thread.
-        ExcerptAppender rareAppender = queue.acquireAppender();
-        for (int i = 0; i < RARE_MSGS; i++) {
+            // Write a some messages with an appender from Main thread.
+            for (int i = 0; i < RARE_MSGS; i++) {
+                try (DocumentContext ctx = rareAppender.writingDocument()) {
+                    ctx.wire()
+                            .write("ts").int64(System.currentTimeMillis())
+                            .write("msg").text(text);
+                }
+            }
+
+            // Write a bunch of messages from another thread.
+            Future f = appenderES.submit(() -> {
+                try (ExcerptAppender appender = queue.createAppender()) {
+                    long start = System.currentTimeMillis();
+                    for (int i = 0; i < HEAVY_MSGS; i++) {
+                        try (DocumentContext ctx = appender.writingDocument()) {
+                            ctx.wire()
+                                    .write("ts").int64(System.currentTimeMillis())
+                                    .write("msg").text(text);
+                        }
+                        if (appenderES.isShutdown())
+                            return;
+                    }
+                }
+
+                // System.out.println("Wrote heavy " + HEAVY_MSGS + " msgs in " + (System.currentTimeMillis() - start) + " ms");
+            });
+
+            f.get();
+
+            // Write a message from the Main thread again (this will have unacceptable latency!)
+            long now = System.currentTimeMillis();
             try (DocumentContext ctx = rareAppender.writingDocument()) {
                 ctx.wire()
                         .write("ts").int64(System.currentTimeMillis())
                         .write("msg").text(text);
             }
-        }
+            long l = System.currentTimeMillis() - now;
 
-        // Write a bunch of messages from another thread.
-        Future f = appenderES.submit(() -> {
-            ExcerptAppender appender = queue.acquireAppender();
-            long start = System.currentTimeMillis();
-            for (int i = 0; i < HEAVY_MSGS; i++) {
-                try (DocumentContext ctx = appender.writingDocument()) {
-                    ctx.wire()
-                            .write("ts").int64(System.currentTimeMillis())
-                            .write("msg").text(text);
-                }
-                if (appenderES.isShutdown())
-                    return;
+            // Write another message from the Main thread (this will be fast since we are caught up)
+            now = System.currentTimeMillis();
+            try (DocumentContext ctx = rareAppender.writingDocument()) {
+                ctx.wire()
+                        .write("ts").int64(System.currentTimeMillis())
+                        .write("msg").text(text);
             }
+            // System.out.println("Wrote first rare one in " + l + " ms");
+            // System.out.println("Wrote another rare one in " + (System.currentTimeMillis() - now) + " ms");
 
-           // System.out.println("Wrote heavy " + HEAVY_MSGS + " msgs in " + (System.currentTimeMillis() - start) + " ms");
-        });
-
-        f.get();
-
-        // Write a message from the Main thread again (this will have unacceptable latency!)
-        rareAppender = queue.acquireAppender();
-        long now = System.currentTimeMillis();
-        try (DocumentContext ctx = rareAppender.writingDocument()) {
-            ctx.wire()
-                    .write("ts").int64(System.currentTimeMillis())
-                    .write("msg").text(text);
+            assertFalse("Appending from rare thread latency too high!", l > 150);
         }
-        long l = System.currentTimeMillis() - now;
-
-        // Write another message from the Main thread (this will be fast since we are caught up)
-        now = System.currentTimeMillis();
-        try (DocumentContext ctx = rareAppender.writingDocument()) {
-            ctx.wire()
-                    .write("ts").int64(System.currentTimeMillis())
-                    .write("msg").text(text);
-        }
-       // System.out.println("Wrote first rare one in " + l + " ms");
-       // System.out.println("Wrote another rare one in " + (System.currentTimeMillis() - now) + " ms");
-
-        assertFalse("Appending from rare thread latency too high!", l > 150);
     }
 
     @NotNull

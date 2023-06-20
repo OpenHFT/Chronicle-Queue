@@ -44,9 +44,10 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
                 .rollCycle(HOURLY);
 
         int messages = 10;
-        try (final ChronicleQueue myWrite = myBuilder.build()) {
-            write(myWrite, messages);
-           // System.out.println(myWrite.dump());
+        try (final ChronicleQueue myWrite = myBuilder.build();
+             final ExcerptAppender appender = myWrite.createAppender()) {
+            write(appender, messages);
+            // System.out.println(myWrite.dump());
         }
 
         try (final ChronicleQueue myRead = myBuilder.build()) {
@@ -62,7 +63,7 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
         long myIndex = HOURLY.toIndex(myCycle, 0);
         int count = 0;
         while (myCycle <= myLast) {
-           // System.out.println(Long.toHexString(myIndex));
+            // System.out.println(Long.toHexString(myIndex));
             if (myTailer.moveToIndex(myIndex)) {
                 while (myTailer.readDocument(read())) {
                     count++;
@@ -82,11 +83,10 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
         };
     }
 
-    private void write(@NotNull ChronicleQueue aChronicle, int messages) {
-        final ExcerptAppender myAppender = aChronicle.acquireAppender();
+    private void write(@NotNull ExcerptAppender myAppender, int messages) {
         for (int myCount = 0; myCount < messages; myCount++) {
             myAppender.writeDocument(aMarshallable -> aMarshallable.write().bytes(Long.toString(currentTimeMillis()).getBytes(StandardCharsets.UTF_8)));
-           // System.out.println(Long.toHexString(myAppender.lastIndexAppended()));
+            // System.out.println(Long.toHexString(myAppender.lastIndexAppended()));
         }
     }
 }

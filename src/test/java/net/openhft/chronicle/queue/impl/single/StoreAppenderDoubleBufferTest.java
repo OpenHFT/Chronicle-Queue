@@ -68,9 +68,10 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
     }
 
     @Test
-    public void disabled() {}
+    public void disabled() {
+    }
 
-//    @Test(timeout = 10000L)
+    //    @Test(timeout = 10000L)
     public void testDoubleBuffering() throws InterruptedException, ExecutionException, NoSuchMethodException,
             IllegalAccessException, InvocationTargetException, InstantiationException {
         try (SingleChronicleQueue q = binary(tempDir("q"))
@@ -138,7 +139,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
 
         public void runBlocker() {
             LOGGER.info("--- Starting {} iterations ({}) --", iterations, this.getClass().getSimpleName());
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 everyoneHasAppenders.await();
                 for (int i = 0; i < iterations; i++) {
                     LOGGER.info("--- Starting iteration {}/{} --", i + 1, iterations);
@@ -157,7 +158,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
         }
 
         public void runBlockee() {
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 everyoneHasAppenders.await();
                 for (int i = 0; i < iterations; i++) {
                     blockerHasDocumentContext.await();

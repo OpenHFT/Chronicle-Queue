@@ -52,8 +52,8 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
     public void shouldRollAndAppendToNewFile() throws IOException {
         assumeFalse(Jvm.isArm());
 
-        try (final SingleChronicleQueue queue = createQueue()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+        try (final SingleChronicleQueue queue = createQueue();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             appender.writeDocument(1, (w, i) -> {
                 w.int32(i);
@@ -96,8 +96,8 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
 
     @Test
     public void shouldAppendToExistingQueueFile() throws IOException {
-        try (final SingleChronicleQueue queue = createQueue()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+        try (final SingleChronicleQueue queue = createQueue();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             appender.writeDocument(1, (w, i) -> {
                 w.int32(i);

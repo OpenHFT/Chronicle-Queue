@@ -42,23 +42,22 @@ public class LongRunTestMain {
         final LogEntryOutput output = new LogEntryOutput(1024);
         output.setMarshallable(entry);
 
-        final ChronicleQueue queue = ChronicleQueue.singleBuilder(
-                OS.getTarget() + "/test-" + Time.uniqueId())
+        try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(
+                        OS.getTarget() + "/test-" + Time.uniqueId())
                 .rollCycle(HOURLY)
                 .build();
-        final ExcerptAppender appender = queue.acquireAppender();
-        Jvm.setExceptionHandlers(Slf4jExceptionHandler.ERROR, Slf4jExceptionHandler.WARN, Slf4jExceptionHandler.WARN);
-        for (int j = 0; j < 100; ++j) {
-            for (int i = 0; i < 100000; ++i) {
-                appender.writeBytes(output);
+             final ExcerptAppender appender = queue.createAppender()) {
+            Jvm.setExceptionHandlers(Slf4jExceptionHandler.ERROR, Slf4jExceptionHandler.WARN, Slf4jExceptionHandler.WARN);
+            for (int j = 0; j < 100; ++j) {
+                for (int i = 0; i < 100000; ++i) {
+                    appender.writeBytes(output);
+                }
+
+                // System.out.println((j + 1) * 100000);
+                // Jvm.pause(100L);
             }
-
-           // System.out.println((j + 1) * 100000);
-            // Jvm.pause(100L);
         }
-
-        queue.close();
-       // System.out.println("took " + (System.currentTimeMillis() - start) / 1e3);
+        // System.out.println("took " + (System.currentTimeMillis() - start) / 1e3);
     }
 
     static class TLogEntry {

@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -81,8 +82,9 @@ public class StuckQueueTest extends QueueTestCommon {
             }
 
             // Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
-            try (final SingleChronicleQueue q2 = ChronicleQueue.singleBuilder(tmpDir).rollCycle(MINUTELY).build()) {
-                try (DocumentContext dc = q2.acquireAppender().writingDocument()) {
+            try (final SingleChronicleQueue q2 = ChronicleQueue.singleBuilder(tmpDir).rollCycle(MINUTELY).build();
+                 final ExcerptAppender appender = q2.createAppender()) {
+                try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("hello").text("world");
                 }
             }

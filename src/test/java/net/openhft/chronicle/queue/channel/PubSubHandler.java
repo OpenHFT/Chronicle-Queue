@@ -81,7 +81,7 @@ public class PubSubHandler extends AbstractHandler<PubSubHandler> {
                             if (pub == null) {
                                 pub = new Publication();
                                 pub.queue = newQueue(context, qName);
-                                pub.appender = pub.queue.acquireAppender();
+                                pub.appender = pub.queue.createAppender();
                                 publicationMap.put(qName, pub);
                             }
                             try (DocumentContext dc2 = pub.appender.writingDocument()) {

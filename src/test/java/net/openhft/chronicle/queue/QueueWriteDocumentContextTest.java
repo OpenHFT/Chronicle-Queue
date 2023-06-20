@@ -59,8 +59,9 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
     @Test
     public void nestedPlainText() {
         String s = "/nestedPlainText";
-        try (ChronicleQueue cq = createQueue(s)) {
-            writeThreeKeys(cq.acquireAppender());
+        try (ChronicleQueue cq = createQueue(s);
+             final ExcerptAppender appender = cq.createAppender()) {
+            writeThreeKeys(appender);
             assertEquals("" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -140,8 +141,9 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
     @Test
     public void chainedPlainText() {
         String s = "/chainedPlainText";
-        try (ChronicleQueue cq = createQueue(s)) {
-            writeThreeChainedKeys(cq.acquireAppender());
+        try (ChronicleQueue cq = createQueue(s);
+             final ExcerptAppender appender = cq.createAppender()) {
+            writeThreeChainedKeys(appender);
             assertEquals("" +
                             "--- !!meta-data #binary\n" +
                             "header: !STStore {\n" +

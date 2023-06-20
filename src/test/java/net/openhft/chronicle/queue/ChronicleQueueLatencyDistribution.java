@@ -118,7 +118,7 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
         // use CQ dir in current directory, not tmp as that is often tmpfs
         final File tmpDir = new File(this.getClass().getSimpleName() + "_" + System.currentTimeMillis());
         tmpDir.deleteOnExit();
-       // System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
+        // System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder
                 .fieldlessBinary(tmpDir)
                 .blockSize(BLOCK_SIZE)
@@ -141,10 +141,11 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
         if (PRETOUCH) {
             // Pretoucher will only work with Queue Enterprise in the path
             Thread pretoucher = new Thread(() -> {
-                ExcerptAppender appender = queue.acquireAppender();
-                while (!Thread.currentThread().isInterrupted()) {
-                    appender.pretouch();
-                    Jvm.pause(500);
+                try (ExcerptAppender appender = queue.createAppender()) {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        appender.pretouch();
+                        Jvm.pause(500);
+                    }
                 }
             });
             pretoucher.setName("pret");
@@ -152,22 +153,19 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
             pretoucher.start();
         }
 
-        ExcerptAppender appender = queue.acquireAppender();
-        ExcerptTailer tailer = queue.createTailer();
-
         String name = getClass().getName();
         Thread tailerThread = new Thread(() -> {
             AffinityLock lock = null;
-            try {
+            try (ExcerptTailer tailer = queue.createTailer()) {
                 if (Jvm.getBoolean("enableTailerAffinity") || Jvm.getBoolean("enableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
                 int counter = 0;
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
-                       // if (SAMPLING)
-                           // sampler.thread(Thread.currentThread());
-                       // boolean found = tailer.readDocument(myReadMarshallable);
+                        // if (SAMPLING)
+                        // sampler.thread(Thread.currentThread());
+                        // boolean found = tailer.readDocument(myReadMarshallable);
                         boolean found;
                         try (DocumentContext dc = tailer.readingDocument()) {
                             found = dc.isPresent();
@@ -184,7 +182,7 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                                 long now = System.nanoTime();
                                 histogramCo.sample(now - startCo);
                                 histogramIn.sample(now - startIn);
-                               // if (count % 1_000_000 == 0) System.out.println("read  " + count);
+                                // if (count % 1_000_000 == 0) System.out.println("read  " + count);
                             }
                         }
 /*
@@ -216,7 +214,7 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
 
         Thread appenderThread = new Thread(() -> {
             AffinityLock lock = null;
-            try {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 if (Jvm.getBoolean("enableAppenderAffinity") || Jvm.getBoolean("enableAffinity")) {
                     lock = Affinity.acquireLock();
                 }
@@ -256,7 +254,7 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                         }
                     }
                     next += interval;
-                   // if (i % 1_000_000 == 0) System.out.println("wrote " + i);
+                    // if (i % 1_000_000 == 0) System.out.println("wrote " + i);
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)
@@ -283,8 +281,8 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
         tailerThread.interrupt();
         tailerThread.join();
 
-       // System.out.println("wr: " + histogramWr.toMicrosFormat());
-       // System.out.println("in: " + histogramIn.toMicrosFormat());
-       // System.out.println("co: " + histogramCo.toMicrosFormat());
+        // System.out.println("wr: " + histogramWr.toMicrosFormat());
+        // System.out.println("in: " + histogramIn.toMicrosFormat());
+        // System.out.println("co: " + histogramCo.toMicrosFormat());
     }
 }

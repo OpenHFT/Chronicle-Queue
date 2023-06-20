@@ -40,8 +40,8 @@ public class CreateAtIndexTest extends QueueTestCommon {
     testWriteBytesWithIndex() {
         final Bytes<?> HELLO_WORLD = Bytes.from("hello world");
         File tmp = getTmpDir();
-        try (ChronicleQueue queue = single(tmp).testBlockSize().rollCycle(TEST_DAILY).build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+        try (ChronicleQueue queue = single(tmp).testBlockSize().rollCycle(TEST_DAILY).build();
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             appender.writeBytes(0x421d00000000L, HELLO_WORLD);
             appender.writeBytes(0x421d00000001L, HELLO_WORLD);
@@ -49,8 +49,8 @@ public class CreateAtIndexTest extends QueueTestCommon {
 
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build();
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             String before = queue.dump();
             appender.writeBytes(0x421d00000000L, HELLO_WORLD);
@@ -82,8 +82,8 @@ public class CreateAtIndexTest extends QueueTestCommon {
         // try too far
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build();
+            InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             try {
                 appender.writeBytes(0x421d00000003L, HELLO_WORLD);
@@ -95,8 +95,8 @@ public class CreateAtIndexTest extends QueueTestCommon {
 
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
-                .build()) {
-            InternalAppender appender = (InternalAppender) queue.acquireAppender();
+                .build();
+            InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             appender.writeBytes(0x421d00000002L, HELLO_WORLD);
             appender.writeBytes(0x421d00000003L, HELLO_WORLD);
@@ -118,9 +118,8 @@ public class CreateAtIndexTest extends QueueTestCommon {
 
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
-                .build()) {
-
-            ExcerptAppender appender = queue.acquireAppender();
+                .build();
+            ExcerptAppender appender = queue.createAppender()) {
 
             try (DocumentContext dc = appender.writingDocument()) {
 

@@ -104,7 +104,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
             sourceQueue = single(ROOTDIR + "chunking-standardBlockSize").blockSize(NORMALBLOCK).build();
             sinkQueue = single(ROOTDIR + "chunking-standardBlockSize").blockSize(NORMALBLOCK).build();
         }
-        appender = sourceQueue.acquireAppender();
+        appender = sourceQueue.createAppender();
         appender.singleThreadedCheckDisabled(true);
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);

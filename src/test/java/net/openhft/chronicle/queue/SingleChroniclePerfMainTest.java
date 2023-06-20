@@ -62,8 +62,8 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);
         String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
-        try (ChronicleQueue chronicle = single(file).blockSize(64 << 20).build()) {
-            ExcerptAppender appender = chronicle.acquireAppender();
+        try (ChronicleQueue chronicle = single(file).blockSize(64 << 20).build();
+             ExcerptAppender appender = chronicle.createAppender()) {
             UncheckedBytes bytes = new UncheckedBytes(NoBytesStore.NO_BYTES);
             for (int i = 0; i < count; i++) {
                 long start = System.nanoTime();

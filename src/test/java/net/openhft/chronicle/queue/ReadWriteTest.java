@@ -46,8 +46,8 @@ public class ReadWriteTest extends QueueTestCommon {
         try (ChronicleQueue readWrite = ChronicleQueue.singleBuilder(chroniclePath)
                 .readOnly(false)
                 .testBlockSize()
-                .build()) {
-            final ExcerptAppender appender = readWrite.acquireAppender();
+                .build();
+             final ExcerptAppender appender = readWrite.createAppender()) {
             appender.writeText(STR1);
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().bytes().writeUtf8(STR2);
@@ -159,8 +159,9 @@ public class ReadWriteTest extends QueueTestCommon {
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(true)
-                .build()) {
-            out.acquireAppender();
+                .build();
+             final ExcerptAppender appender = out.createAppender()) {
+            // Do nothing
         }
     }
 

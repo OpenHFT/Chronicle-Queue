@@ -51,8 +51,9 @@ public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestC
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)
                 .timeProvider(timeProvider)
                 .rollCycle(rollingCycle)
-                .build()) {
-            queue.acquireAppender().writeText("0");
+                .build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
+            excerptAppender.writeText("0");
         }
 
         // Wait more than a cycle
@@ -61,8 +62,9 @@ public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestC
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)
                 .timeProvider(timeProvider)
                 .rollCycle(rollingCycle)
-                .build()) {
-            queue.acquireAppender().writeText("42");
+                .build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
+            excerptAppender.writeText("42");
         }
 
         // Read backwards from the end
@@ -76,5 +78,5 @@ public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestC
             assertEquals("42", tailer.readText());
             assertNull(tailer.readText());
         }
- }
+    }
 }

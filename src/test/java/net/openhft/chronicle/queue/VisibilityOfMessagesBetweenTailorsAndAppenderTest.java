@@ -37,7 +37,6 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
 
     /**
      * check if a message is written with an appender its visible to the tailor, without locks etc.
-     *
      */
     @Test
     public void test() throws InterruptedException, ExecutionException {
@@ -50,7 +49,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
             ExecutorService e1 = newSingleThreadExecutor(new NamedThreadFactory("e1"));
 
             e1.submit(() -> {
-                try (ExcerptAppender excerptAppender = x.acquireAppender()) {
+                try (ExcerptAppender excerptAppender = x.createAppender()) {
                     for (long i = 0; i < 1_000_000; i++) {
                         try (DocumentContext dc = excerptAppender.writingDocument()) {
                             dc.wire().getValueOut().int64(i);

@@ -51,8 +51,8 @@ public class TestTailAfterRoll extends QueueTestCommon {
     public void test() {
         File tmpDir = getTmpDir();
         File[] files;
-        try (ChronicleQueue writeQ = ChronicleQueue.singleBuilder(tmpDir).build()) {
-            ExcerptAppender appender = writeQ.acquireAppender();
+        try (ChronicleQueue writeQ = ChronicleQueue.singleBuilder(tmpDir).build();
+             ExcerptAppender appender = writeQ.createAppender()) {
             long wp;
             Wire wire;
 
@@ -74,10 +74,10 @@ public class TestTailAfterRoll extends QueueTestCommon {
         File file = files[0];
         file.delete();
 
-        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).build()) {
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).build();
+             final ExcerptAppender appender = q.createAppender()) {
             ExcerptTailer excerptTailer = q.createTailer().toEnd();
-            q.acquireAppender()
-                    .writeText(EXPECTED);
+            appender.writeText(EXPECTED);
             Assert.assertEquals(EXPECTED, excerptTailer.readText());
         }
     }

@@ -64,9 +64,9 @@ public class OnReleaseTest extends QueueTestCommon {
                          System.out.println("read released " + f);
                          readRoll.incrementAndGet();
                      })
-                     .build()) {
-            ExcerptAppender appender = writeQ.acquireAppender();
-            ExcerptTailer tailer = readQ.createTailer();
+                     .build();
+             ExcerptAppender appender = writeQ.createAppender();
+             ExcerptTailer tailer = readQ.createTailer()) {
             for (int i = 0; i < 500; i++) {
                 appender.writeText("hello-" + i);
                 assertNotNull(tailer.readText());

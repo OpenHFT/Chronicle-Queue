@@ -65,8 +65,8 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
     @Test
     public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws IOException {
         assumeFalse(OS.isWindows());
-        try (final ChronicleQueue queue = createQueue(path, clock::get)) {
-            final ExcerptAppender appender = queue.acquireAppender();
+        try (final ChronicleQueue queue = createQueue(path, clock::get);
+             final ExcerptAppender appender = queue.createAppender()) {
             // generate some cycle files
             range(0, 5).forEach(i -> {
                 try (final DocumentContext ctx = appender.writingDocument()) {

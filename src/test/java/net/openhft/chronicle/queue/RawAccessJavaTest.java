@@ -89,9 +89,9 @@ public class RawAccessJavaTest extends QueueTestCommon {
         String tmp = "/dev/shm/RawAccessJtoC";
         System.out.println(tmp); // so C++ knows this ran rather than skipped
 
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();
 
-            ExcerptAppender appender = cq.acquireAppender();
+             ExcerptAppender appender = cq.createAppender()) {
 
             for (int i = 0; i < COUNT; ++i) {
                 try (DocumentContext dc = appender.writingDocument()) {

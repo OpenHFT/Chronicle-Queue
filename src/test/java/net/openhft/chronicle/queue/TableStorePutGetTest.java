@@ -38,7 +38,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                 .timeProvider(stp)
                 .testBlockSize()
                 .build()) {
-            try (ExcerptAppender appender = cq.acquireAppender()) {
+            try (ExcerptAppender appender = cq.createAppender()) {
                 try (DocumentContext dc = appender.acquireWritingDocument(false)) {
                     dc.wire().write("hello").text("world");
                 }

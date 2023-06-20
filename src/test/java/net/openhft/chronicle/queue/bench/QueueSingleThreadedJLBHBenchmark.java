@@ -47,6 +47,12 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     private BytesStore datumBytes;
     private Bytes<?> datumWrite;
 
+    static {
+        System.setProperty("disable.thread.safety", "true");
+        System.setProperty("jvm.resource.tracing", "false");
+        System.setProperty("check.thread.safety", "false");
+    }
+
     public static void main(String[] args) {
         // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
@@ -74,7 +80,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
 
         sourceQueue = single(PATH).build();
         sinkQueue = single(PATH).build();
-        appender = sourceQueue.acquireAppender();
+        appender = sourceQueue.createAppender();
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         this.jlbh = jlbh;

@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
@@ -117,8 +118,10 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     private void startWriter(SingleChronicleQueue queue, CyclicBarrier startBarrier) {
         new Thread(() -> {
             waitOn(startBarrier);
-            for (int i = 0; i < TOTAL_EVENTS; ++i) {
-                queue.acquireAppender().writingDocument().close();
+            try (final ExcerptAppender excerptAppender = queue.createAppender()) {
+                for (int i = 0; i < TOTAL_EVENTS; ++i) {
+                    excerptAppender.writingDocument().close();
+                }
             }
         }).start();
     }

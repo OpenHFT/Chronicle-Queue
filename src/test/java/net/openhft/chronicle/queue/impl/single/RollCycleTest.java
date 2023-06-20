@@ -49,8 +49,8 @@ public class RollCycleTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .timeProvider(timeProvider)
-                .build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
 
             Thread thread = new Thread(observer);
             thread.start();
@@ -90,8 +90,8 @@ public class RollCycleTest extends QueueTestCommon {
                     .testBlockSize()
                     .rollCycle(TEST_DAILY)
                     .timeProvider(timeProvider)
-                    .build()) {
-                ExcerptAppender appender = queue.acquireAppender();
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText("0");
 
                 thread.start();

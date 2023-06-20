@@ -82,8 +82,8 @@ public class QueueReadJitterMain {
         Jvm.pause(100); // give it time to start
 
         long count = 0;
-        try (ChronicleQueue q = createQueue(path)) {
-            ExcerptAppender appender = q.acquireAppender();
+        try (ChronicleQueue q = createQueue(path);
+             ExcerptAppender appender = q.createAppender()) {
             long start0 = System.currentTimeMillis();
             do {
                 try (DocumentContext dc = appender.writingDocument()) {

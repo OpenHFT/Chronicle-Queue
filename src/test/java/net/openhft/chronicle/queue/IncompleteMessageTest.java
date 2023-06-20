@@ -36,23 +36,22 @@ public class IncompleteMessageTest extends QueueTestCommon {
     public TemporaryFolder tmpDir = new TemporaryFolder();
 
     @Test
-    public void incompleteMessageShouldBeSkipped() throws Exception {
+    public void incompleteMessageShouldBeSkipped() {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock after ");
         expectException("Forced unlock for the lock ");
         ignoreException("Unable to release the lock");
-        try (SingleChronicleQueue queue = createQueue()) {
-            try (ExcerptAppender appender = queue.acquireAppender()) {
-                appender.writeDocument("hello", ValueOut::text);
+        try (SingleChronicleQueue queue = createQueue();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeDocument("hello", ValueOut::text);
 
-                // open a document context, but do not close
-                final DocumentContext documentContext = appender.writingDocument();
-                documentContext.wire().bytes().write("incomplete longer write".getBytes(StandardCharsets.UTF_8));
-            }
+            // open a document context, but do not close
+            final DocumentContext documentContext = appender.writingDocument();
+            documentContext.wire().bytes().write("incomplete longer write".getBytes(StandardCharsets.UTF_8));
         }
 
         try (SingleChronicleQueue queue = createQueue()) {
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 appender.writeDocument("world", ValueOut::text);
             }
 

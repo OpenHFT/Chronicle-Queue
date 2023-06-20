@@ -71,7 +71,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
         try {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
-                DummyListener writer = out.acquireAppender()
+                DummyListener writer = out
                         .methodWriterBuilder(dummyClass)
                         .get();
                 // this will write the 1st timestamps
@@ -80,9 +80,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
             try (ChronicleQueue in = queue(queuePath1, 1);
                  ChronicleQueue out = queue(queuePath2, 2)) {
-                DummyListener writer = out.acquireAppender()
-                        .methodWriterBuilder(dummyClass)
-                        .get();
+                DummyListener writer = out.methodWriterBuilder(dummyClass).get();
                 final AtomicInteger numberRead = new AtomicInteger();
                 // if this listener is a DummyListener then messages with methodId won't be routed to it
                 DummyListenerId dummy = msg -> {
@@ -102,8 +100,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
             try (ChronicleQueue in = queue(queuePath2, 2);
                  ChronicleQueue out = queue(queuePath3, 3)) {
-                DummyListener writer = out.acquireAppender()
-                        .methodWriterBuilder(dummyClass)
+                DummyListener writer = out.methodWriterBuilder(dummyClass)
                         .get();
                 final AtomicInteger numberRead = new AtomicInteger();
                 DummyListenerId dummy = msg -> {
@@ -235,13 +232,13 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                          .withMeasurementWindow(mwMicros)
                          .withMessageSink(str -> sb.append(str).append('\n'))) {
 
-                DummyListener writer1 = q1.acquireAppender().methodWriterBuilder(DummyListener.class).get();
-                DummyListener writer2 = q2.acquireAppender().methodWriterBuilder(DummyListener.class).get();
-                DummyListener writer3 = q3.acquireAppender().methodWriterBuilder(DummyListener.class).get();
+                DummyListener writer1 = q1.methodWriterBuilder(DummyListener.class).get();
+                DummyListener writer2 = q2.methodWriterBuilder(DummyListener.class).get();
+                DummyListener writer3 = q3.methodWriterBuilder(DummyListener.class).get();
                 MethodReader reader1 = q1.createTailer().methodReader(writer2);
                 MethodReader reader2 = q2.createTailer().methodReader(writer3);
 
-                for (int i=0; i<100; i++) {
+                for (int i = 0; i < 100; i++) {
                     writer1.say("hello " + i);
                     assertTrue(reader1.readOne());
                     assertTrue(reader2.readOne());
