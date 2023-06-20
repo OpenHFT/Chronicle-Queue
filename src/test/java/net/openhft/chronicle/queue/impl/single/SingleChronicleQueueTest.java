@@ -151,6 +151,27 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 appenderListenerDump.toString());
     }
 
+    @Test
+    public void createAppenderWillReturnANewAppenderEachTime() {
+        try (final ChronicleQueue queue = builder(getTmpDir(), wireType).build();
+             final ExcerptAppender appender1 = queue.createAppender();
+             final ExcerptAppender appender2 = queue.createAppender()) {
+            assertNotSame(appender1, appender2);
+        }
+    }
+
+    @Test
+    public void createAppenderWillThrowWhenQueueIsReadOnly() {
+        final File queueDir = getTmpDir();
+        try (final ChronicleQueue queue = builder(queueDir, wireType).build();
+             final ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("hello world");
+            try (final ChronicleQueue readOnlyQueue = builder(queueDir, wireType).readOnly(true).build()) {
+                assertThrows(IllegalStateException.class, readOnlyQueue::createAppender);
+            }
+        }
+    }
+
     @NotNull
     protected String expectedForTestAppend() {
         return "" +
