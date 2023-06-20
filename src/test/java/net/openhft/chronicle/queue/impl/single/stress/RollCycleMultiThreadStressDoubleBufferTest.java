@@ -25,13 +25,11 @@ import net.openhft.chronicle.queue.internal.main.InternalDumpMain;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Ignore("double buffering is turned off currently")
 public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiThreadStressTest {
 
     private AtomicBoolean queueDumped = new AtomicBoolean(false);
