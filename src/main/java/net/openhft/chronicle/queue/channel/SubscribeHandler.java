@@ -10,14 +10,28 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.channel.impl.SubscribeQueueChannel;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.channel.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
 
 public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
+
+    private static class NoOp extends SelfDescribingMarshallable implements Consumer {
+        @Override
+        public void accept(Object o) {
+            return;
+        }
+    }
+
+    public final static Consumer NO_OP = new NoOp();
+
     private String subscribe;
     private transient boolean closeWhenRunEnds = true;
 
@@ -26,10 +40,20 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
     private Predicate<Wire> filter;
     private int sourceId;
 
-    static void queueTailer(Pauser pauser, ChronicleChannel channel, ChronicleQueue subscribeQueue, Predicate<Wire> filter) {
+    private Consumer<ExcerptTailer> subscriptionIndexController = NO_OP;
+
+
+    static void queueTailer(@NotNull Pauser pauser,
+                            @NotNull ChronicleChannel channel,
+                            @NotNull ChronicleQueue subscribeQueue,
+                            @Nullable Predicate<Wire> filter,
+                            @NotNull Consumer<ExcerptTailer> subscriptionIndexController) {
         try (ChronicleQueue subscribeQ = subscribeQueue; // leave here so it gets closed
              ExcerptTailer tailer = subscribeQ.createTailer()) {
+
             tailer.singleThreadedCheckDisabled(true);  // assume we are thread safe
+            subscriptionIndexController.accept(tailer);
+
             while (!channel.isClosing()) {
                 if (copyOneMessage(channel, tailer, filter))
                     pauser.reset();
@@ -116,7 +140,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
                 closeWhenRunEnds = false;
             } else {
                 try (AffinityLock lock = context.affinityLock()) {
-                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode, sourceId), filter);
+                    queueTailer(pauser, channel, newQueue(context, subscribe, syncMode, sourceId), filter, subscriptionIndexController);
                 }
                 closeWhenRunEnds = true;
             }
@@ -163,6 +187,16 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
      */
     public SubscribeHandler subscribeSourceId(int sourceId) {
         this.sourceId = sourceId;
+        return this;
+    }
+
+
+    /**
+     * @param subscriptionIndexController controls where the subscriptions will start to read from, by allowing the caller to
+     *                                    {@link net.openhft.chronicle.queue.ExcerptTailer#moveToIndex(long) to control the first read location
+     */
+    public SubscribeHandler subscriptionIndexController(Consumer<ExcerptTailer> subscriptionIndexController) {
+        this.subscriptionIndexController = subscriptionIndexController;
         return this;
     }
 }
