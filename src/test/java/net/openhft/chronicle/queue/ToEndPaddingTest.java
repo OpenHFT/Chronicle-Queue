@@ -29,8 +29,8 @@ import static org.junit.Assert.assertTrue;
 public class ToEndPaddingTest extends QueueTestCommon {
     @Test
     public void toEndWorksWithDifferentlyPaddedMessages() {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().rollCycle(TEST8_DAILY).build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().rollCycle(TEST8_DAILY).build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             final ExcerptTailer tailer = queue.createTailer();
 
@@ -52,7 +52,7 @@ public class ToEndPaddingTest extends QueueTestCommon {
 
             for (int i = 0; i < 2; i++) {
                 try (final DocumentContext documentContext = appender.acquireWritingDocument(true)) {
-                    documentContext.wire().write("metakey" + i).text(Bytes.wrapForRead(new byte[i+1]));
+                    documentContext.wire().write("metakey" + i).text(Bytes.wrapForRead(new byte[i + 1]));
                 }
             }
 

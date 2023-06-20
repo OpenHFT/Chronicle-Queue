@@ -60,8 +60,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(TEST_DAILY)
-                .blockSize(QueueUtil.testBlockSize()).build()) {
-            @NotNull ExcerptAppender appender = queue.acquireAppender();
+                .blockSize(QueueUtil.testBlockSize()).build();
+             @NotNull ExcerptAppender appender = queue.createAppender()) {
             try (DocumentContext dc = appender.writingDocument()) {
                 @NotNull MyData name = new MyData("name", 12345, 1.2, 111);
                 // System.out.println(name);
@@ -93,10 +93,11 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     .blockSize(QueueUtil.testBlockSize())
                     .indexCount(8)
                     .indexSpacing(1)
-                    .build()) {
+                    .build();
+                 final ExcerptAppender appender = queue.createAppender()) {
 
                 long start = RollCycles.DEFAULT.toIndex(queue.cycle(), 0);
-                appendMessage(queue, start, "Hello World");
+                appendMessage(appender, start, "Hello World");
                 @NotNull String expectedEager = "" +
                         "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
@@ -129,7 +130,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                         "...\n";
                 checkFileContents(getFirstQueueFile(dir), expectedEager);
 
-                appendMessage(queue, start + 1, "Another Hello World");
+                appendMessage(appender, start + 1, "Another Hello World");
                 @NotNull String expectedEager2 = "" +
                         "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
@@ -165,7 +166,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                         "...\n";
                 checkFileContents(getFirstQueueFile(dir), expectedEager2);
 
-                appendMessage(queue, start + 2, "Bye for now");
+                appendMessage(appender, start + 2, "Bye for now");
 
                 @NotNull String expectedEager3 = "" +
                         "--- !!meta-data #binary\n" +
@@ -230,13 +231,14 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 // only do this for testing
                 .indexCount(8)
                 .indexSpacing(spacing)
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             long start = RollCycles.DEFAULT.toIndex(queue.cycle(), 0);
             @NotNull ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.moveToIndex(start));
 
-            appendMessage(queue, start, "Hello World");
+            appendMessage(appender, start, "Hello World");
             @NotNull String expectedEager = "" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -275,11 +277,11 @@ public class SingleCQFormat2Test extends QueueTestCommon {
             assertTrue(tailer.moveToIndex(start));
             for (int i = 1; i < 19; i++) {
                 assertFalse(tailer.moveToIndex(start + i));
-                appendMessage(queue, start + i, "Another Hello World " + (i + 1));
+                appendMessage(appender, start + i, "Another Hello World " + (i + 1));
                 assertTrue(tailer.moveToIndex(start + i));
             }
             assertFalse(tailer.moveToIndex(start + 19));
-            appendMessage(queue, start + 19, "Bye for now");
+            appendMessage(appender, start + 19, "Bye for now");
             assertTrue(tailer.moveToIndex(start + 19));
             assertFalse(tailer.moveToIndex(start + 20));
 
@@ -554,8 +556,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         appendMode = 0;
     }
 
-    public void appendMessage(@NotNull ChronicleQueue queue, long expectedIndex, String msg) {
-        @NotNull ExcerptAppender appender = queue.acquireAppender();
+    public void appendMessage(@NotNull ExcerptAppender appender, long expectedIndex, String msg) {
         switch (appendMode) {
             case 1:
                 appender.writeDocument(w -> w.write("msg").text(msg));
@@ -593,8 +594,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 .blockSize(QueueUtil.testBlockSize())
                 .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
-                .build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
             appender.writeMap(map);
 
             map.put("abc", "aye-bee-see");
@@ -684,8 +685,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 .rollCycle(TEST_DAILY)
                 .blockSize(QueueUtil.testBlockSize())
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
-                .build()) {
-            @NotNull ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             @NotNull ExcerptAppender appender = queue.createAppender()) {
             appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
             appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
             String expectedEager = "" +
@@ -768,8 +769,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 .rollCycle(TEST_DAILY)
                 .blockSize(QueueUtil.testBlockSize())
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
-                .build()) {
-            @NotNull final ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             @NotNull final ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("msg-1");
             String expectedEager = "" +
                     "--- !!meta-data #binary\n" +

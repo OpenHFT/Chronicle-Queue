@@ -44,7 +44,7 @@ public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
                 .timeProvider(timeProvider)
                 .testBlockSize()
                 .build();
-             final ExcerptAppender excerptAppender = q.acquireAppender();
+             final ExcerptAppender excerptAppender = q.createAppender();
              final ExcerptTailer tailer = q.createTailer()) {
 
             Thread.currentThread().interrupt();

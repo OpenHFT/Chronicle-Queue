@@ -62,9 +62,8 @@ public class ToEndTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(timeProvider)
-                .build()) {
-
-            final ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             appender.writeDocument(wire -> wire.write("msg").int32(1));
 
@@ -136,9 +135,9 @@ public class ToEndTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(time)
-                .build()) {
+                .build();
+             final StoreAppender appender = (StoreAppender) queue.createAppender()) {
 
-            final StoreAppender appender = (StoreAppender) queue.acquireAppender();
             Field storeF1 = StoreAppender.class.getDeclaredField("store");
             Jvm.setAccessible(storeF1);
             SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
@@ -168,10 +167,10 @@ public class ToEndTest extends QueueTestCommon {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
-                .build()) {
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
 
             checkOneFile(baseDir);
-            ExcerptAppender appender = queue.acquireAppender();
             checkOneFile(baseDir);
 
             for (int i = 0; i < 10; i++) {
@@ -212,21 +211,21 @@ public class ToEndTest extends QueueTestCommon {
             checkOneFile(baseDir);
 
             // if this appender isn't created, the tailer toEnd doesn't cause a roll.
-            @SuppressWarnings("unused")
-            ExcerptAppender appender = queue.acquireAppender();
-            checkOneFile(baseDir);
+            try (ExcerptAppender appender = queue.createAppender()) {
+                checkOneFile(baseDir);
 
-            ExcerptTailer tailer = queue.createTailer();
-            checkOneFile(baseDir);
+                ExcerptTailer tailer = queue.createTailer();
+                checkOneFile(baseDir);
 
-            ExcerptTailer tailer2 = queue.createTailer();
-            checkOneFile(baseDir);
+                ExcerptTailer tailer2 = queue.createTailer();
+                checkOneFile(baseDir);
 
-            tailer.toEnd();
-            checkOneFile(baseDir);
+                tailer.toEnd();
+                checkOneFile(baseDir);
 
-            tailer2.toEnd();
-            checkOneFile(baseDir);
+                tailer2.toEnd();
+                checkOneFile(baseDir);
+            }
         }
         System.gc();
 
@@ -249,8 +248,8 @@ public class ToEndTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(stp)
-                .build()) {
-            ExcerptAppender appender = wqueue.acquireAppender();
+                .build();
+             ExcerptAppender appender = wqueue.createAppender()) {
 
             for (int i = 0; i < 10; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
@@ -399,10 +398,9 @@ public class ToEndTest extends QueueTestCommon {
     public void shouldReuseStoreWhenNoUpdates() {
         // use vm args -ea -Xmx60m -XX:+HeapDumpOnOutOfMemoryError
         final File dir = getTmpDir();
-        try (ChronicleQueue queue = ChronicleQueue.single(dir.toString())) {
-            try (ExcerptAppender appender = queue.acquireAppender()) {
-                appender.writeBytes(Bytes.from("i must not leak"));
-            }
+        try (ChronicleQueue queue = ChronicleQueue.single(dir.toString());
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("i must not leak"));
             try (ExcerptTailer tailer = queue.createTailer()) {
                 while (true) {
                     tailer.toEnd();
@@ -425,16 +423,15 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     private void writeExcerptToQueue(SingleChronicleQueue queue) {
-        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+        try (final ExcerptAppender excerptAppender = queue.createAppender()) {
             excerptAppender.writeText("hello!");
         }
     }
 
     private void writeMetadataToQueue(SingleChronicleQueue queue) {
-        try (final ExcerptAppender excerptAppender = queue.acquireAppender()) {
-            try (final DocumentContext documentContext = excerptAppender.writingDocument(true)) {
-                documentContext.wire().write().text("hello!");
-            }
+        try (final ExcerptAppender excerptAppender = queue.createAppender();
+             final DocumentContext documentContext = excerptAppender.writingDocument(true)) {
+            documentContext.wire().write().text("hello!");
         }
     }
 

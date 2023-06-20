@@ -30,7 +30,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -69,7 +68,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
                 .build()) {
 
             int iter = 4;
-            try (ExcerptAppender excerptAppender = queue.acquireAppender()) {
+            try (ExcerptAppender excerptAppender = queue.createAppender()) {
                 for (int i = 0; i < iter; i++) {
                     excerptAppender.writeDocument(w -> {
                         w.write("a").marshallable(m -> {
@@ -96,10 +95,11 @@ public class AcquireReleaseTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
-                .build()) {
-            queue.acquireAppender().writeText("Hello World");
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("Hello World");
             stp.currentTimeMillis(2000);
-            queue.acquireAppender().writeText("Hello World");
+            appender.writeText("Hello World");
             queue.createTailer().readText();
             try (ExcerptTailer tailer = queue.createTailer()) {
                 tailer.readText();
@@ -130,9 +130,9 @@ public class AcquireReleaseTest extends QueueTestCommon {
                 .storeFileListener(storeFileListener)
                 .timeProvider(stp)
                 .rollCycle(TEST_SECONDLY)
-                .build();) {
-            // new appender created
-            final ExcerptAppender appender = queue.acquireAppender();
+                .build();
+             // new appender created
+             final ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("Main thread: Hello world");
             BackgroundResourceReleaser.releasePendingResources();
             assertEquals(1, acount.get());
@@ -140,7 +140,10 @@ public class AcquireReleaseTest extends QueueTestCommon {
             stp.advanceMillis(1000L); // advance 1 cycle, so that cleanupStoreFilesWithNoData() acquires store
 
             // other appender is created
-            CompletableFuture.runAsync(queue::acquireAppender).get();  // Here store is Acquired twice (second time in cleanupStoreFilesWithNoData())
+            try (final ExcerptAppender secondAppender = queue.createAppender()) {
+                // Here store is Acquired twice (second time in cleanupStoreFilesWithNoData())
+                // Do nothing with it
+            }
         }
         BackgroundResourceReleaser.releasePendingResources();
 

@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.GcControls;
 import org.junit.Rule;
@@ -44,9 +45,10 @@ public final class MappedMemoryUnmappingTest extends QueueTestCommon {
 
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(tmp.newFolder()).testBlockSize().rollCycle(TEST_SECONDLY).
-                timeProvider(clock::get).build()) {
+                timeProvider(clock::get).build();
+             final ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < 100; i++) {
-                queue.acquireAppender().writeDocument(System.nanoTime(), (d, t) -> d.int64(t));
+                appender.writeDocument(System.nanoTime(), (d, t) -> d.int64(t));
                 clock.addAndGet(TimeUnit.SECONDS.toMillis(1L));
                 if (initialQueueMappedMemory == 0L) {
                     initialQueueMappedMemory = OS.memoryMapped();

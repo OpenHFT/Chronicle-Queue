@@ -53,7 +53,7 @@ public class MicroToucherTest extends QueueTestCommon {
         final SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
         configure.accept(builder);
         try (ChronicleQueue q = builder.build();
-             final StoreAppender appender = (StoreAppender) q.acquireAppender()) {
+             final StoreAppender appender = (StoreAppender) q.createAppender()) {
 
             Thread msync = new Thread(() -> {
                 try {

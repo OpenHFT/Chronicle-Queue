@@ -69,9 +69,8 @@ public class ThreadedQueueTest extends QueueTestCommon {
         Future af = appenderES.submit(() -> {
             try (final ChronicleQueue wqueue = ChronicleQueue.singleBuilder(path)
                     .testBlockSize()
-                    .build()) {
-
-                final ExcerptAppender appender = wqueue.acquireAppender();
+                    .build();
+                 final ExcerptAppender appender = wqueue.createAppender()) {
 
                 final Bytes<?> message = Bytes.elasticByteBuffer();
                 for (int i = 0; i < REQUIRED_COUNT; i++) {
@@ -109,12 +108,12 @@ public class ThreadedQueueTest extends QueueTestCommon {
             try (final ChronicleQueue wqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)
                     .testBlockSize()
                     .rollCycle(TEST_DAILY)
-                    .build()) {
+                    .build();
+                 final ExcerptAppender appender = wqueue.createAppender()) {
 
                 Bytes<?> bytes = Bytes.elasticByteBuffer();
                 assertFalse(tailer.readBytes(bytes));
 
-                final ExcerptAppender appender = wqueue.acquireAppender();
                 appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes(ISO_8859_1)));
 
                 bytes.clear();

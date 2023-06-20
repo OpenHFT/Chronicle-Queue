@@ -120,8 +120,8 @@ public class FileUtilTest extends QueueTestCommon {
         final SetTimeProvider tp = new SetTimeProvider(0);
         final File tmpDir = getTmpDir();
 
-        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(TEST_SECONDLY).timeProvider(tp).build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+        try (SingleChronicleQueue queue = builder(tmpDir, WireType.BINARY).rollCycle(TEST_SECONDLY).timeProvider(tp).build();
+             final ExcerptAppender appender = queue.createAppender()) {
             final ExcerptTailer tailer = queue.createTailer();
             for (int i = 0; i < rolls; i++) {
                 appender.writeText(Integer.toString(i)); // to file ...00000iT

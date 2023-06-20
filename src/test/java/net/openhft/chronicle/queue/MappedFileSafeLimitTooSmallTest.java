@@ -42,11 +42,12 @@ public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
         File tmpDir = getTmpDir();
 
         try (final ChronicleQueue queue =
-                     SingleChronicleQueueBuilder.builder(tmpDir, WireType.BINARY).blockSize(blockSize).build()) {
+                     SingleChronicleQueueBuilder.builder(tmpDir, WireType.BINARY).blockSize(blockSize).build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
 
             for (int i = 0; i < 5; i++) {
-                try (DocumentContext dc = queue.acquireAppender().writingDocument()) {
-                   // System.out.println(dc.wire().bytes().writeRemaining());
+                try (DocumentContext dc = excerptAppender.writingDocument()) {
+                    // System.out.println(dc.wire().bytes().writeRemaining());
                     dc.wire().write("data").bytes(data);
                 }
             }
@@ -60,6 +61,6 @@ public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
                     Assert.assertArrayEquals(data, dc.wire().read("data").bytes());
                 }
             }
- }
+        }
     }
 }

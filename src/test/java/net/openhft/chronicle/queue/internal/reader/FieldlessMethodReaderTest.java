@@ -37,7 +37,7 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
 
         try (SingleChronicleQueue chronicle = SingleChronicleQueueBuilder.builder().path(path)
                 .wireType(WireType.FIELDLESS_BINARY).rollCycle(TestRollCycles.TEST_DAILY).build()) {
-            EntityListener writer = chronicle.acquireAppender().methodWriter(EntityListener.class);
+            EntityListener writer = chronicle.methodWriter(EntityListener.class);
             MethodReader methodReader = chronicle.createTailer().toEnd().methodReader((EntityListener) value -> msgCounter.incrementAndGet());
 
             CustomEntity entity = new CustomEntity();

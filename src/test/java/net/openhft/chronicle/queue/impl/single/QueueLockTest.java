@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -67,10 +68,11 @@ public class QueueLockTest extends QueueTestCommon {
             final File queueDir = DirectoryUtils.tempDir("check");
             try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
                     timeoutMS(timeoutMs).
-                    build()) {
+                    build();
+                 final ExcerptAppender excerptAppender = queue.createAppender()) {
 
                 // lock the queue
-                try (DocumentContext dc = queue.acquireAppender().writingDocument()) {
+                try (DocumentContext dc = excerptAppender.writingDocument()) {
 
                     final CountDownLatch started = new CountDownLatch(1);
                     final CountDownLatch finished = new CountDownLatch(1);
@@ -82,14 +84,15 @@ public class QueueLockTest extends QueueTestCommon {
                                 timeoutMS(timeoutMs).
                                 build()) {
                             started.countDown();
-                            try (DocumentContext ignored = queue2.acquireAppender().writingDocument()) {
+                            try (final ExcerptAppender queue2Appender = queue2.createAppender();
+                                 final DocumentContext ignored = queue2Appender.writingDocument()) {
                                 recoveredAndAcquiredTheLock.set(true);
                                 System.out.println("Done");
                             } catch (UnrecoverableTimeoutException e) {
                                 e.printStackTrace();
                                 threwException.set(true);
-                            } catch (Throwable t) {
-                                t.printStackTrace();
+                            } catch (RuntimeException e) {
+                                e.printStackTrace();
                             } finally {
                                 System.out.println("finished");
                                 finished.countDown();

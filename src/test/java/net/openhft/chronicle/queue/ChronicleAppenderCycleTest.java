@@ -109,7 +109,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
             try {
                 SingleChronicleQueueBuilder builder = createBuilder(path);
                 try (SingleChronicleQueue queue = builder.build()) {
-                    try (ExcerptAppender appender = queue.acquireAppender()) {
+                    try (ExcerptAppender appender = queue.createAppender()) {
                         tester.accept(appender);
                     }
                 }

@@ -135,13 +135,13 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                     .singleBuilder(path)
                     .testBlockSize()
                     .storeFileListener(storeFileListener)
-                    .rollCycle(TEST_SECONDLY).build()) {
+                    .rollCycle(TEST_SECONDLY).build();
+                 ExcerptAppender appender = writeQueue.createAppender()) {
                 for (int i = 0; i < messages; i++) {
                     long millis = System.currentTimeMillis() % 100;
                     if (millis > 1 && millis < 99) {
                         Jvm.pause(99 - millis);
                     }
-                    ExcerptAppender appender = writeQueue.acquireAppender();
                     Map<String, Object> map = new HashMap<>();
                     map.put("key", Thread.currentThread().getName() + " - " + i);
                     appender.writeMap(map);

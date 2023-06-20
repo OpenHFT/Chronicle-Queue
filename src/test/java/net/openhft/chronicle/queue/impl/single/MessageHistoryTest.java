@@ -135,16 +135,14 @@ public final class MessageHistoryTest extends QueueTestCommon {
     }
 
     private void generateTestData(final ChronicleQueue inputQueue, final ChronicleQueue outputQueue) {
-        final First first = inputQueue.acquireAppender()
-                .methodWriterBuilder(First.class)
+        final First first = inputQueue.methodWriterBuilder(First.class)
                 .get();
         first.say("one");
         first.say("two");
         first.say("three");
 
         final LoggingFirst loggingFirst =
-                new LoggingFirst(outputQueue.acquireAppender().
-                        methodWriterBuilder(Second.class).build());
+                new LoggingFirst(outputQueue.methodWriterBuilder(Second.class).build());
 
         final MethodReader reader = inputQueue.createTailer(named ? "named" : null).
                 methodReaderBuilder().build(loggingFirst);

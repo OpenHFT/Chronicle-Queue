@@ -56,9 +56,9 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
-                     builder(getTmpDir(), 1_000L).build()) {
+                     builder(getTmpDir(), 1_000L).build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
             // write initial document
             excerptAppender.writeDocument("foo", ValueOut::text);
 
@@ -102,10 +102,10 @@ public final class DocumentOrderingTest extends QueueTestCommon {
              final ChronicleQueue queue3 =
                      builder(dir, 5_000L).build();
              final ChronicleQueue queue4 =
-                     builder(dir, 5_000L).build()
+                     builder(dir, 5_000L).build();
+             final ExcerptAppender excerptAppender = queue.createAppender();
         ) {
 
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
             final Future<RecordInfo> firstWriter;
             final Future<RecordInfo> secondWriter;
             final Future<RecordInfo> thirdWriter;
@@ -146,9 +146,9 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         expectException("Forced unlock for the lock");
         // as below, but don't actually close the initial context
         try (final ChronicleQueue queue =
-                     builder(getTmpDir(), 1_000L).build()) {
+                     builder(getTmpDir(), 1_000L).build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
             final Future<RecordInfo> otherDocumentWriter;
             // begin a record in the first cycle file
             final DocumentContext documentContext = excerptAppender.writingDocument();
@@ -172,9 +172,9 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
-                     builder(getTmpDir(), 3_000L).build()) {
+                     builder(getTmpDir(), 3_000L).build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
             final Future<RecordInfo> otherDocumentWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
 
@@ -201,9 +201,9 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
-                     builder(getTmpDir(), 3_000L).build()) {
+                     builder(getTmpDir(), 3_000L).build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
             excerptAppender.writeDocument("foo", ValueOut::text);
             final Future<RecordInfo> otherDocumentWriter;
             try (final DocumentContext documentContext = excerptAppender.writingDocument()) {
@@ -252,7 +252,8 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             thread = Thread.currentThread();
             final int counterValue;
             startedLatch.countDown();
-            try (final DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+            try (final ExcerptAppender excerptAppender = queue.createAppender();
+                 final DocumentContext documentContext = excerptAppender.writingDocument()) {
                 counterValue = counter.getAndIncrement();
                 documentContext.wire().getValueOut().int32(counterValue);
             }

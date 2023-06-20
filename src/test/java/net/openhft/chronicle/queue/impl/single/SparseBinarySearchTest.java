@@ -84,9 +84,9 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(rollCycle)
                 .timeProvider(stp)
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
-            final ExcerptAppender appender = queue.acquireAppender();
             Set<Integer> entriesWithValues = new HashSet<>();
             Random random = new Random();
             for (int i = 0; i < numberOfMessages; i++) {
@@ -104,7 +104,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
             }
 
             try (final ExcerptTailer tailer = queue.createTailer();
-                final ExcerptTailer binarySearchTailer = queue.createTailer()) {
+                 final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
                         Wire key = toWire(j);

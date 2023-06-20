@@ -42,9 +42,8 @@ public class DumpQueueMainTest extends QueueTestCommon {
         final File dataDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
-                build()) {
-
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
+                build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
             excerptAppender.writeText("first");
             excerptAppender.writeText("last");
 
@@ -52,7 +51,7 @@ public class DumpQueueMainTest extends QueueTestCommon {
                 final Path queueFile = list.
                         filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
                         findFirst().orElseThrow(() ->
-                        new AssertionError("Could not find queue file in directory " + dataDir));
+                                new AssertionError("Could not find queue file in directory " + dataDir));
                 assertTrue(queueFile.toFile().setWritable(false));
 
                 final CountingOutputStream countingOutputStream = new CountingOutputStream();
@@ -68,9 +67,8 @@ public class DumpQueueMainTest extends QueueTestCommon {
         final File dataDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).
-                build()) {
-
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
+                build();
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
             excerptAppender.writeText("first");
             excerptAppender.writeText("last");
 

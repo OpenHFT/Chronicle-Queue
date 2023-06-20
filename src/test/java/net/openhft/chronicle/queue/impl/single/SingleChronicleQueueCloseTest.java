@@ -27,7 +27,7 @@ public class SingleChronicleQueueCloseTest extends QueueTestCommon {
     @Test
     public void testTailAfterClose() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+            final ExcerptAppender appender = queue.createAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(1));
             queue.close();
             try {

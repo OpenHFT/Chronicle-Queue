@@ -49,8 +49,8 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
         private static void writeIncompleteMessage(String arg, boolean exit) throws InterruptedException {
             System.out.println("half writing a message to " + arg);
 
-            try( final ChronicleQueue single = ChronicleQueue.single(arg) ) {
-                final ExcerptAppender excerptAppender = single.acquireAppender();
+            try (final ChronicleQueue single = ChronicleQueue.single(arg);
+                 final ExcerptAppender excerptAppender = single.createAppender()) {
 
                 try (final DocumentContext dc = excerptAppender.writingDocument()) {
                     dc.wire().write("key1").text("hello world 1");

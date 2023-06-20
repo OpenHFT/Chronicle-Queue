@@ -44,9 +44,8 @@ public class AppenderListenerTest extends QueueTestCommon {
                             .append(", index: ").append(Long.toHexString(index)).append("\n");
                 })
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
-                .build();
-             ExcerptAppender appender = q.acquireAppender()) {
-            final HelloWorld writer = appender.methodWriter(HelloWorld.class);
+                .build()) {
+            final HelloWorld writer = q.methodWriter(HelloWorld.class);
             writer.hello("G'Day");
             writer.hello("Bye-now");
         }

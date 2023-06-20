@@ -72,9 +72,9 @@ public class RollingCycleTest extends QueueTestCommon {
                 .timeoutMS(5)
                 .rollCycle(TEST_DAILY)
                 .timeProvider(stp)
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
-            final ExcerptAppender appender = queue.acquireAppender();
             for (int h = 0; h < 3; h++) {
                 stp.currentTimeMillis(start + TimeUnit.DAYS.toMillis(h));
                 for (int i = 0; i < 3; i++) {

@@ -36,11 +36,11 @@ public class WriteBytesIndexTest extends QueueTestCommon {
     public void writeMultipleAppenders() {
         File path = IOTools.createTempFile("writeMultipleAppenders");
         try (ChronicleQueue q0 = createQueue(path);
-             ExcerptAppender a0 = q0.acquireAppender();
+             ExcerptAppender a0 = q0.createAppender();
              ExcerptTailer t0 = q0.createTailer();
 
              ChronicleQueue q1 = createQueue(path);
-             ExcerptAppender a1 = q1.acquireAppender();
+             ExcerptAppender a1 = q1.createAppender();
              ExcerptTailer t1 = q1.createTailer();
 
              ChronicleQueue q2 = createQueue(path)) {

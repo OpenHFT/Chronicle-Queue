@@ -21,7 +21,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -69,12 +68,12 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     public void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
-         /**
-        final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
-        final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
-        IOTools.deleteDirWithFiles(sourceDir.toFile());
-        IOTools.deleteDirWithFiles(destinationDir.toFile());
-*/
+        /**
+         final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
+         final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
+         IOTools.deleteDirWithFiles(sourceDir.toFile());
+         IOTools.deleteDirWithFiles(destinationDir.toFile());
+         */
 
         populateSourceQueue(sourceDir);
 
@@ -112,7 +111,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
              *
              * part of the contract with {@link net.openhft.chronicle.queue.impl.single.StoreAppender.writeBytes(long, net.openhft.chronicle.bytes.BytesStore)}
              */
-            try (final ExcerptAppender appender = destinationQueue.acquireAppender()) {
+            try (final ExcerptAppender appender = destinationQueue.createAppender()) {
                 appender.normaliseEOFs();
             }
 
@@ -154,7 +153,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                  final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
                      final ExcerptTailer destinationTailer = destinationQueue.createTailer();
-                     final ExcerptAppender destinationAppender = destinationQueue.acquireAppender()) {
+                     final ExcerptAppender destinationAppender = destinationQueue.createAppender()) {
                     Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
                     Bytes<?> prev = Bytes.allocateElasticOnHeap(1024);
                     long index;
@@ -181,7 +180,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                         prev.clear().append(buffer);
 //                        if (false && index %17 == 0) {
                         try (final ChronicleQueue dq = createQueue(destinationDir, null);
-                             final ExcerptAppender da = dq.acquireAppender()) {
+                             final ExcerptAppender da = dq.createAppender()) {
 
                         }
                         //                      }
@@ -193,20 +192,17 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     }
 
     private void populateSourceQueue(Path queueDir) {
-        SetTimeProvider tp = new SetTimeProvider();
         Jvm.debug().on(getClass(), "Populating source queue...");
-        try (final ChronicleQueue queue = createQueue(queueDir)) {
-            try (final ExcerptAppender appender = queue.acquireAppender()) {
-                Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
-                for (int i = 0; i < MESSAGES_TO_WRITE; i++) {
-                    if (i == MESSAGES_TO_WRITE / 3 || i == 2*MESSAGES_TO_WRITE/3) {
-                        Jvm.pause(1000);
-//                        tp.advanceMillis(TimeUnit.SECONDS.toMillis(1));
-                    }
-                    buffer.clear();
-                    buffer.write(messageForIndex(i));
-                    appender.writeBytes(buffer);
+        try (final ChronicleQueue queue = createQueue(queueDir);
+             final ExcerptAppender appender = queue.createAppender()) {
+            Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
+            for (int i = 0; i < MESSAGES_TO_WRITE; i++) {
+                if (i == MESSAGES_TO_WRITE / 3 || i == 2 * MESSAGES_TO_WRITE / 3) {
+                    Jvm.pause(1000);
                 }
+                buffer.clear();
+                buffer.write(messageForIndex(i));
+                appender.writeBytes(buffer);
             }
         }
         Jvm.debug().on(getClass(), "Populated source queue");

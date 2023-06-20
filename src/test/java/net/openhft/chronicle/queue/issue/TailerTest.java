@@ -53,7 +53,7 @@ public class TailerTest extends QueueTestCommon {
         long firstOutputIndex = Long.MAX_VALUE;
         long lastOutputIndex = Long.MIN_VALUE;
 
-        try (ChronicleQueue q = createQueue(); ExcerptAppender appender = q.acquireAppender(); ExcerptTailer tailer = q.createTailer()) {
+        try (ChronicleQueue q = createQueue(); ExcerptAppender appender = q.createAppender(); ExcerptTailer tailer = q.createTailer()) {
             for (int i = 0; i < 5; i++) {
                 final String text = "Hello World " + i;
                 try (DocumentContext dc = appender.writingDocument()) {

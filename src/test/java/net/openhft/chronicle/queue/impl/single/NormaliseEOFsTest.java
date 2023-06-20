@@ -59,7 +59,7 @@ public class NormaliseEOFsTest extends QueueTestCommon {
     public void normaliseShouldResumeFromPreviousNormalisation() {
         SetTimeProvider setTimeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(setTimeProvider);
-             final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+             final ExcerptAppender excerptAppender = queue.createAppender()) {
             for (int i = 0; i < 5; i++) {
                 createNewRollCycles(excerptAppender, setTimeProvider);
                 excerptAppender.normaliseEOFs();

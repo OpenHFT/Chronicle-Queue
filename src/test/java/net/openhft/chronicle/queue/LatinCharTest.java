@@ -48,7 +48,7 @@ public class LatinCharTest extends QueueTestCommon {
                 .binary(DirectoryUtils.tempDir("temp"))
                 .rollCycle(MINUTELY)
                 .build();
-             ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("test-tailer")) {
 
             // the é character in the line below is causing it to fail under java 11

@@ -27,7 +27,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
@@ -41,7 +40,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
     @Ignore("long running test")
     @Test(timeout = 60000)
-    public void testUnbuffered() throws IOException, InterruptedException {
+    public void testUnbuffered() throws InterruptedException {
         doTest(false);
     }
 
@@ -54,6 +53,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
             Bytes<?> bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
             try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
                     .fieldlessBinary(name)
+                    .rollCycle(SMALL_DAILY)
                     .testBlockSize()
                     .build()) {
 
@@ -69,7 +69,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                 if (rlock != null) {
                     rlock.release();
                 }
-               // System.out.printf("Read %,d messages", counter.intValue());
+                // System.out.printf("Read %,d messages", counter.intValue());
             }
         }, "tailer thread");
 
@@ -77,15 +77,13 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
         Thread appenderThread = new Thread(() -> {
             AffinityLock wlock = AffinityLock.acquireLock();
-            try {
-                ChronicleQueue wqueue = SingleChronicleQueueBuilder
-                        .fieldlessBinary(name)
-                        .rollCycle(SMALL_DAILY)
-                        .testBlockSize()
-                        .writeBufferMode(buffered ? BufferMode.Asynchronous : BufferMode.None)
-                        .build();
-
-                ExcerptAppender appender = wqueue.acquireAppender();
+            try (ChronicleQueue wqueue = SingleChronicleQueueBuilder
+                    .fieldlessBinary(name)
+                    .rollCycle(SMALL_DAILY)
+                    .testBlockSize()
+                    .writeBufferMode(buffered ? BufferMode.Asynchronous : BufferMode.None)
+                    .build();
+                 ExcerptAppender appender = wqueue.createAppender()) {
 
                 Bytes<?> bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
@@ -100,7 +98,6 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                     appender.writeBytes(bytes);
                     next += INTERVAL_US * 1000;
                 }
-                wqueue.close();
             } finally {
                 if (wlock != null) {
                     wlock.release();

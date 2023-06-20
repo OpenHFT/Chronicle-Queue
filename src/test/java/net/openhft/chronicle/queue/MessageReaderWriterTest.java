@@ -52,10 +52,10 @@ public class MessageReaderWriterTest extends QueueTestCommon {
                      .testBlockSize()
                      .build()) {
             MethodReader reader2 = queue1.createTailer().methodReader(printAll(MessageListener.class));
-            MessageListener writer2 = queue2.acquireAppender().methodWriter(MessageListener.class);
+            MessageListener writer2 = queue2.methodWriter(MessageListener.class);
             MessageListener processor = new MessageProcessor(writer2);
             MethodReader reader1 = queue1.createTailer().methodReader(processor);
-            MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
+            MessageListener writer1 = queue1.methodWriter(MessageListener.class);
 
             for (int i = 0; i < 3; i++) {
                 // write a message

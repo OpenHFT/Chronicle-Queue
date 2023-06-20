@@ -33,8 +33,8 @@ public class LastAcknowledgedTest extends QueueTestCommon {
     public void testLastAcknowledge() {
         String name = OS.getTarget() + "/testLastAcknowledge-" + Time.uniqueId();
         long lastIndexAppended;
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(name).testBlockSize().build()) {
-            ExcerptAppender excerptAppender = q.acquireAppender();
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(name).testBlockSize().build();
+             ExcerptAppender excerptAppender = q.createAppender()) {
             excerptAppender.writeText("Hello World");
             lastIndexAppended = excerptAppender.lastIndexAppended();
 

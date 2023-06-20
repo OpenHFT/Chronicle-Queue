@@ -76,9 +76,9 @@ public class ThroughputPerfMain {
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSizeMB << 20)
-                .build()) {
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
 
-            ExcerptAppender appender = q.acquireAppender();
             do {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().bytes().write(nbs);
@@ -114,9 +114,9 @@ public class ThroughputPerfMain {
                 " -Dpath=" + PATH +
                 " - DblockSizeMB=" + blockSizeMB);
         System.out.printf("Writing %,d messages took %.3f seconds, at a rate of %,d per second, with an average latency of %,d ns%n",
-                count, time1 / 1e9, (long) (1e9 * count / time1), time1/count);
+                count, time1 / 1e9, (long) (1e9 * count / time1), time1 / count);
         System.out.printf("Reading %,d messages took %.3f seconds, at a rate of %,d per second, with an average latency of %,d ns%n",
-                count, time2 / 1e9, (long) (1e9 * count / time2), time2/count);
+                count, time2 / 1e9, (long) (1e9 * count / time2), time2 / count);
         BackgroundResourceReleaser.releasePendingResources();
         System.gc(); // make sure its cleaned up for windows to delete.
         IOTools.deleteDirWithFiles(base, 2);

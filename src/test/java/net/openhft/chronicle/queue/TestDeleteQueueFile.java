@@ -273,27 +273,29 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
         SingleChronicleQueue queue = queueBuilder
                 .build();
+        List<RollCycleDetails> rollCycleDetails;
+        try (ExcerptAppender appender = queue.createAppender()) {
 
-        ExcerptAppender appender = queue.acquireAppender();
+            assertEquals(Long.MAX_VALUE, queue.firstIndex());
 
-        assertEquals(Long.MAX_VALUE, queue.firstIndex());
-
-        final List<RollCycleDetails> rollCycleDetails = IntStream.range(0, numberOfCycles)
-                .mapToObj(i -> {
-                    long firstIndexInCycle = writeTextAndReturnFirstIndex(appender, "test" + (i + 1));
-                    long lastIndexInCycle = appender.lastIndexAppended();
-                    timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
-                    BackgroundResourceReleaser.releasePendingResources();
-                    return new RollCycleDetails(firstIndexInCycle, lastIndexInCycle, listener.lastFileAcquired.getAbsolutePath());
-                }).collect(Collectors.toList());
+            rollCycleDetails = IntStream.range(0, numberOfCycles)
+                    .mapToObj(i -> {
+                        long firstIndexInCycle = writeTextAndReturnFirstIndex(appender, "test" + (i + 1));
+                        long lastIndexInCycle = appender.lastIndexAppended();
+                        timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
+                        BackgroundResourceReleaser.releasePendingResources();
+                        return new RollCycleDetails(firstIndexInCycle, lastIndexInCycle, listener.lastFileAcquired.getAbsolutePath());
+                    }).collect(Collectors.toList());
+        }
 
         // There should be 3 acquired files, for roll cycles 1, 2, 3
         Assert.assertEquals(numberOfCycles, rollCycleDetails.size());
 
         // now let's create one tailer which will read all content
-        ExcerptTailer excerptTailer = queue.createTailer();
-        for (int i = 0; i < numberOfCycles; i++) {
-            readText(excerptTailer, "test" + (i + 1));
+        try (ExcerptTailer excerptTailer = queue.createTailer()) {
+            for (int i = 0; i < numberOfCycles; i++) {
+                readText(excerptTailer, "test" + (i + 1));
+            }
         }
 
         return new QueueWithCycleDetails(queue, rollCycleDetails);

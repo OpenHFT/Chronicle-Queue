@@ -44,7 +44,7 @@ public class Queue28Test extends QueueTestCommon {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-               // {WireType.TEXT},
+                // {WireType.TEXT},
                 {WireType.BINARY}
         });
     }
@@ -60,12 +60,12 @@ public class Queue28Test extends QueueTestCommon {
         File dir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(dir, wireType)
                 .testBlockSize()
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             final ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.readDocument(r -> r.read(TestKey.test).int32()));
 
-            final ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(1));
             Jvm.pause(100);
             assertTrue(tailer.readDocument(r -> r.read(TestKey.test).int32()));

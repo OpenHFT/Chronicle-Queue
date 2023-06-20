@@ -42,9 +42,10 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
         dto.age = 45;
         dto.name.append("rob");
 
-        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmp).build()) {
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmp).build();
+             final ExcerptAppender appender = q.createAppender()) {
 
-            try (DocumentContext dc = q.acquireAppender().writingDocument()) {
+            try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("who").object(dto);
             }
 
@@ -57,7 +58,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
                         "}\n", who.toString());
             }
         }
- }
+    }
 
     @Test
     public void testDtoAbstractMarshallable() {
@@ -69,18 +70,19 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
         dto.age = 45;
         dto.name.append("rob");
 
-        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmp).build()) {
+        try (ChronicleQueue q = ChronicleQueue.singleBuilder(tmp).build();
+             final ExcerptAppender appender = q.createAppender()) {
 
-            try (DocumentContext dc = q.acquireAppender().writingDocument()) {
+            try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("who").object(dto);
             }
 
             try (DocumentContext dc = q.createTailer().readingDocument()) {
                 String yaml = dc.toString();
-               // System.out.println(yaml);
+                // System.out.println(yaml);
 
                 DtoAbstractMarshallable who = (DtoAbstractMarshallable) dc.wire().read("who").object();
-               // System.out.println(who);
+                // System.out.println(who);
 
                 Assert.assertTrue(yaml.contains(who.toString()));
             }

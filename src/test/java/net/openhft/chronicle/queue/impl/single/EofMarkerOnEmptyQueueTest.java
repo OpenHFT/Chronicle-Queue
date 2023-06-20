@@ -61,8 +61,8 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
                              rollCycle(TEST_SECONDLY).
                              timeProvider(clock::get).
                              timeoutMS(1_000).
-                             testBlockSize().build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+                             testBlockSize().build();
+             final ExcerptAppender appender = queue.createAppender()) {
             final DocumentContext context = appender.writingDocument();
             // start to write a message, but don't close the context - simulates crashed writer
             final long expectedEofMarkerPosition = context.wire().bytes().writePosition() - Wires.SPB_HEADER_SIZE;
@@ -79,7 +79,8 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
             ExecutorService appenderExecutor = Executors.newSingleThreadExecutor(
                     new NamedThreadFactory("Appender"));
             appenderExecutor.submit(() -> {
-                try (final DocumentContext nextCtx = queue.acquireAppender().writingDocument()) {
+                try (final ExcerptAppender excerptAppender = queue.createAppender();
+                     final DocumentContext nextCtx = excerptAppender.writingDocument()) {
                     nextCtx.wire().write("bar").int32(7);
                 }
             }).get(Jvm.isDebug() ? 3000 : 3, TimeUnit.SECONDS);

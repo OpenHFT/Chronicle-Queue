@@ -60,8 +60,8 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     .testBlockSize()
                     .rollCycle(ROLL_CYCLE)
                     .timeProvider(timeProvider)
-                    .build()) {
-                ExcerptAppender appender = queue.acquireAppender();
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
 
                 Assert.assertEquals(-2, (int) scheduledExecutorService.submit(observer::call).get());
                 // two days pass
@@ -104,9 +104,8 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     .testBlockSize()
                     .rollCycle(ROLL_CYCLE)
                     .timeProvider(timeProvider)
-                    .build()) {
-
-                ExcerptAppender appender = queue.acquireAppender();
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
 
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("say").text("Day 1 data");

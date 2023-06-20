@@ -27,7 +27,7 @@ public class BareSyncTest {
     @Test
     public void sync() {
         try (ChronicleQueue cq = ChronicleQueue.single("sync-test");
-            ExcerptAppender appender = cq.acquireAppender()) {
+             ExcerptAppender appender = cq.createAppender()) {
             appender.sync();
             appender.writeBytes(BytesStore.wrap(new byte[1024]));
             appender.sync();

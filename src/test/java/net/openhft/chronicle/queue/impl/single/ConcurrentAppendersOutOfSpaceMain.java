@@ -34,13 +34,13 @@ import java.util.concurrent.locks.LockSupport;
  * The 1st writer creates a queue, then loops writing to it
  * In the meantime, a background thread removes the write permissions from the cq4 queue file(s)
  * The attached writer is unaffected as the perm check has been done
- *
+ * <p>
  * The 2nd writer thread then starts and attempts to write to the same queue
  * But this now fails the permission check
  * 2ns writer loops every seconds trying to gain access
- *
+ * <p>
  * Eventually the background thread restores the write permission, and the 2nd thread attaches and continues normally
- *
+ * <p>
  * Check for clean behaviour, and in particular no dangling locks left by the 2nd thread as it fails to gain
  * access to the queue while the permissions are removed
  */
@@ -120,13 +120,13 @@ public class ConcurrentAppendersOutOfSpaceMain extends QueueTestCommon {
             for (int i = 0; i < MSG_SIZE; i++)
                 sample[i] = (byte) r.nextInt();
 
-            for (;;) {
+            for (; ; ) {
                 try {
                     final SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(QUEUE_PATH)
                             .blockSize(BLOCK_SIZE)
                             .build();
 
-                    try (final ExcerptAppender appender = q.acquireAppender()) {
+                    try (final ExcerptAppender appender = q.createAppender()) {
                         for (; ; ) {
                             boolean written = true;
 
@@ -134,8 +134,7 @@ public class ConcurrentAppendersOutOfSpaceMain extends QueueTestCommon {
                                 dc.wire().writeBytes(bytes -> {
                                     bytes.write(sample, 0, r.nextInt(8, MSG_SIZE));
                                 });
-                            }
-                            catch (Exception e) {
+                            } catch (Exception e) {
                                 System.out.println("Writer " + threadNo + ": failed to write message, sleeping for 1 sec");
                                 e.printStackTrace();
                                 Jvm.pause(1000);
@@ -151,8 +150,7 @@ public class ConcurrentAppendersOutOfSpaceMain extends QueueTestCommon {
                             LockSupport.parkNanos(NANO_DELAY);
                         }
                     }
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     System.out.println("Writer " + threadNo + ": failed to acquire appender, sleeping for 1 sec");
                     e.printStackTrace();
                     Jvm.pause(1000);

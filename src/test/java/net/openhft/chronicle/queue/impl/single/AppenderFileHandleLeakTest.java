@@ -88,8 +88,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         }
     }
 
-    private static void writeMessage(final int j, final ChronicleQueue queue) {
-        final ExcerptAppender appender = queue.acquireAppender();
+    private static void writeMessage(final int j, final ExcerptAppender appender) {
         appender.writeBytes(b -> b.writeInt(j));
     }
 
@@ -116,9 +115,11 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
             for (int i = 0; i < THREAD_COUNT; i++) {
                 futures.add(threadPool.submit(() -> {
-                    for (int j = 0; j < MESSAGES_PER_THREAD; j++) {
-                        writeMessage(j, queue);
-                        readMessage(queue, false, gcGuard::add);
+                    try (final ExcerptAppender appender = queue.createAppender()) {
+                        for (int j = 0; j < MESSAGES_PER_THREAD; j++) {
+                            writeMessage(j, appender);
+                            readMessage(queue, false, gcGuard::add);
+                        }
                     }
                     GcControls.requestGcCycle();
                     return Boolean.TRUE;
@@ -150,9 +151,11 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
             for (int i = 0; i < THREAD_COUNT; i++) {
                 futures.add(threadPool.submit(() -> {
-                    for (int j = 0; j < MESSAGES_PER_THREAD; j++) {
-                        writeMessage(j, queue);
-                        readMessage(queue, true, gcGuard::add);
+                    try (final ExcerptAppender appender = queue.createAppender()) {
+                        for (int j = 0; j < MESSAGES_PER_THREAD; j++) {
+                            writeMessage(j, appender);
+                            readMessage(queue, true, gcGuard::add);
+                        }
                     }
                     return Boolean.TRUE;
                 }));
@@ -175,10 +178,11 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         System.gc();
         Thread.sleep(100);
         final int messagesPerThread = 10;
-        try (ChronicleQueue queue = createQueue(currentTime::get)) {
+        try (ChronicleQueue queue = createQueue(currentTime::get);
+             final ExcerptAppender appender = queue.createAppender()) {
 
             for (int j = 0; j < messagesPerThread; j++) {
-                writeMessage(j, queue);
+                writeMessage(j, appender);
                 currentTime.addAndGet(500);
             }
 
@@ -226,10 +230,11 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     public void appenderShouldOnlyKeepCurrentRollCycleOpen() {
         AtomicLong timeProvider = new AtomicLong(1661323015000L);
-        try (ChronicleQueue queue = createQueue(timeProvider::get)) {
+        try (ChronicleQueue queue = createQueue(timeProvider::get);
+             final ExcerptAppender appender = queue.createAppender()) {
 
             for (int j = 0; j < 10; j++) {
-                writeMessage(j, queue);
+                writeMessage(j, appender);
                 assertOnlyCurrentRollCycleIsOpen(timeProvider.get());
                 timeProvider.addAndGet(1_000);
             }
@@ -250,9 +255,10 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         final int messageCount = 10;
 
         // populate the queue
-        try (ChronicleQueue queue = createQueue(timeProvider::get)) {
+        try (ChronicleQueue queue = createQueue(timeProvider::get);
+             final ExcerptAppender appender = queue.createAppender()) {
             for (int j = 0; j < messageCount; j++) {
-                writeMessage(j, queue);
+                writeMessage(j, appender);
                 timeProvider.addAndGet(1_000);
             }
         }

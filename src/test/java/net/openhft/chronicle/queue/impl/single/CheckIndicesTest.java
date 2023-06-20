@@ -54,7 +54,7 @@ public class CheckIndicesTest extends QueueTestCommon {
                     f2.get();
                 Thread.sleep(500);
             }
- }
+        }
     }
 
     private Callable<Void> checkIndices() {
@@ -76,7 +76,7 @@ public class CheckIndicesTest extends QueueTestCommon {
                 }
                 if (index != dc.index())
                     throw new AssertionError();
-                 // System.out.println("reading index=" + Long.toHexString(index));
+                // System.out.println("reading index=" + Long.toHexString(index));
                 if (queue0.rollCycle().toSequenceNumber(index) != dc.wire().read("value").readLong())
                     throw new AssertionError();
             }
@@ -89,13 +89,12 @@ public class CheckIndicesTest extends QueueTestCommon {
     }
 
     private void appendToQueue() {
-        ExcerptAppender appender = queue0.acquireAppender();
-        try {
+        try (ExcerptAppender appender = queue0.createAppender()) {
 
             for (int i = 0; i < BATCH_SIZE; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     long seq = appender.queue().rollCycle().toSequenceNumber(dc.index());
-                      // System.out.println("write=" + Long.toHexString(dc.index()));
+                    // System.out.println("write=" + Long.toHexString(dc.index()));
                     dc.wire().write("value").writeLong(seq);
                 }
             }

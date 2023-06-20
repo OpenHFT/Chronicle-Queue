@@ -38,6 +38,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.DEFAULT;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -64,14 +65,14 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
         basePath = getTmpDir().toPath();
 
         queue = createChronicle(basePath);
-        appender = queue.acquireAppender();
+        appender = queue.createAppender();
         outbound = Bytes.elasticByteBuffer();
     }
 
     @After
     public void after() {
         outbound.releaseLast();
-        queue.close();
+        closeQuietly(appender, queue);
     }
 
     private void waitFor(Semaphore semaphore, String message)

@@ -81,7 +81,7 @@ public class MethodReaderSkipBenchmark implements JLBHTask {
             }
         }
 
-        writer = queue.acquireAppender().methodWriter(AnInterface.class);
+        writer = queue.methodWriter(AnInterface.class);
         reader = queue.createTailer().methodReader((AnotherInterface) s -> {
             throw new IllegalStateException("should not be called");
         });

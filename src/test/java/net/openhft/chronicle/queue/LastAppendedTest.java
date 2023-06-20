@@ -49,7 +49,7 @@ public class LastAppendedTest extends QueueTestCommon {
              ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build()) {
 
             // write some initial data to the inqueue
-            final LATMsg msg = inQueue.acquireAppender()
+            final LATMsg msg = inQueue
                     .methodWriterBuilder(LATMsg.class)
                     .get();
 
@@ -62,7 +62,7 @@ public class LastAppendedTest extends QueueTestCommon {
 
             // read a message on the in queue and write it to the out queue
             {
-                LATMsg out = outQueue.acquireAppender()
+                LATMsg out = outQueue
                         .methodWriterBuilder(LATMsg.class)
                         .get();
                 MethodReader methodReader = inQueue.createTailer()
@@ -119,11 +119,12 @@ public class LastAppendedTest extends QueueTestCommon {
         final File inQueueDir = getTmpDir();
 
         try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(ROLL_CYCLE).sourceId(1).timeProvider(timeProvider).build();
-             ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build()) {
+             ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build();
+             final ExcerptAppender outQueueAppender = outQueue.createAppender()) {
 
 
             // write some initial data to the inqueue
-            final LATMsg msg = inQueue.acquireAppender()
+            final LATMsg msg = inQueue
                     .methodWriterBuilder(LATMsg.class)
                     .get();
 
@@ -132,7 +133,7 @@ public class LastAppendedTest extends QueueTestCommon {
 
             // read a message on the in queue and write it to the out queue
             {
-                LATMsg out = outQueue.acquireAppender()
+                LATMsg out = outQueue
                         .methodWriterBuilder(LATMsg.class)
                         .get();
                 MethodReader methodReader = inQueue.createTailer().methodReader((LATMsg) out::msg);
@@ -149,7 +150,7 @@ public class LastAppendedTest extends QueueTestCommon {
             msg.msg("somedata-3");
             msg.msg("somedata-4");
 
-            try (DocumentContext dc = outQueue.acquireAppender().writingDocument(true)) {
+            try (DocumentContext dc = outQueueAppender.writingDocument(true)) {
                 dc.wire().write("some metadata");
             }
 
@@ -197,10 +198,11 @@ public class LastAppendedTest extends QueueTestCommon {
         final File inQueueDir = getTmpDir();
 
         try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(ROLL_CYCLE).sourceId(1).timeProvider(timeProvider).build();
-             ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build()) {
+             ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build();
+             final ExcerptAppender outQueueAppender = outQueue.createAppender()) {
 
             // write some initial data to the inqueue
-            final LATMsg msg = inQueue.acquireAppender()
+            final LATMsg msg = inQueue
                     .methodWriterBuilder(LATMsg.class)
                     .get();
 
@@ -209,7 +211,7 @@ public class LastAppendedTest extends QueueTestCommon {
 
             // read a message on the in queue and write it to the out queue
             {
-                LATMsg out = outQueue.acquireAppender()
+                LATMsg out = outQueue
                         .methodWriterBuilder(LATMsg.class)
                         .get();
                 MethodReader methodReader = inQueue.createTailer().methodReader((LATMsg) out::msg);
@@ -226,7 +228,7 @@ public class LastAppendedTest extends QueueTestCommon {
             msg.msg("somedata-3");
             msg.msg("somedata-4");
 
-            try (DocumentContext dc = outQueue.acquireAppender().writingDocument(true)) {
+            try (DocumentContext dc = outQueueAppender.writingDocument(true)) {
                 dc.wire().write("some metadata");
             }
 

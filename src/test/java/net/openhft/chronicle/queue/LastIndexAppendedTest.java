@@ -42,8 +42,8 @@ public class LastIndexAppendedTest extends QueueTestCommon {
             try (ChronicleQueue queue = single(path)
                     .testBlockSize()
                     .rollCycle(TEST_DAILY)
-                    .build()) {
-                ExcerptAppender appender = queue.acquireAppender();
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
 
                 try (DocumentContext documentContext = appender.writingDocument()) {
                     int index = (int) documentContext.index();
@@ -70,8 +70,8 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 ChronicleQueue appender_queue = single(path)
                         .testBlockSize()
                         .rollCycle(TEST_DAILY)
-                        .build()) {
-            ExcerptAppender appender = appender_queue.acquireAppender();
+                        .build();
+                ExcerptAppender appender = appender_queue.createAppender()) {
             for (int i = 0; i < 5; i++) {
                 appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
                         m.write("msg").text("hello world ")));
@@ -87,13 +87,13 @@ public class LastIndexAppendedTest extends QueueTestCommon {
             long t_index;
             t_index = doRead(tailer, 5);
             assertEquals(a_index, t_index);
-           // System.out.println("Continue appending");
+            // System.out.println("Continue appending");
             try (ChronicleQueue appender_queue = single(path)
-                            .testBlockSize()
-                            .rollCycle(TEST_DAILY)
-                            //.buffered(false)
-                            .build()) {
-                ExcerptAppender appender = appender_queue.acquireAppender();
+                    .testBlockSize()
+                    .rollCycle(TEST_DAILY)
+                    //.buffered(false)
+                    .build();
+                 ExcerptAppender appender = appender_queue.createAppender()) {
                 for (int i = 0; i < 5; i++) {
                     appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
                             m.write("msg").text("hello world2 ")));
@@ -102,12 +102,12 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 assertTrue(a_index > t_index);
             }
             // if the tailer continues as well it should see the 5 new messages
-           // System.out.println("Reading messages added");
+            // System.out.println("Reading messages added");
             t_index = doRead(tailer, 5);
             assertEquals(a_index, t_index);
 
             // if the tailer is expecting to read all the message again
-           // System.out.println("Reading all the messages again");
+            // System.out.println("Reading all the messages again");
             tailer.toStart();
             t_index = doRead(tailer, 10);
             assertEquals(a_index, t_index);
@@ -129,7 +129,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
                     assertNotNull(msg);
-                   // System.out.println("msg:" + msg);
+                    // System.out.println("msg:" + msg);
                     i[0]++;
                 });
             }

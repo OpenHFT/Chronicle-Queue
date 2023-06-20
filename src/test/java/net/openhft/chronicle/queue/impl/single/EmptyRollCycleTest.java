@@ -68,7 +68,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .timeoutMS(100)
                 .build();
-             ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = queue.createAppender();
              DocumentContext dc = appender.writingDocument()) {
             dc.wire().write("test").text("appending");
             indexWritten = dc.index();
@@ -121,7 +121,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
                 .timeProvider(timeProvider)
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .build();
-             ExcerptAppender appender = queue.acquireAppender()) {
+             ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < 3; i++) {
                 try (final DocumentContext documentContext = appender.writingDocument()) {
                     documentContext.wire().write("test").int32(i);

@@ -20,29 +20,34 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
 
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 
 public class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvider {
 
     private long currentTime = 0;
-    private ExcerptAppender appender;
-    private ExcerptTailer tailer;
+    private SingleChronicleQueue queue;
+
+    @Before
+    public void setUp() {
+        queue = binary(getTmpDir()).rollCycle(TEST_SECONDLY).timeProvider(this).build();
+    }
+
+    @Override
+    @After
+    public void tearDown() {
+        closeQuietly(queue);
+    }
 
     @Ignore("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
     @Test
     public void test() {
-        SingleChronicleQueue build = binary(getTmpDir()).rollCycle(TEST_SECONDLY).timeProvider(this).build();
-        appender = build.acquireAppender();
-
-        tailer = build.createTailer();
         Executors.newSingleThreadExecutor().submit(this::append);
 
         Executors.newSingleThreadExecutor().submit(this::toEnd);
@@ -50,23 +55,28 @@ public class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvi
     }
 
     private void append() {
-        for (; ; ) {
-            toEnd0();
-            appender.writeText("hello world");
-            toEnd0();
+        try (final ExcerptAppender appender = queue.createAppender();
+             final ExcerptTailer tailer = queue.createTailer()) {
+            for (; ; ) {
+                toEnd0(tailer);
+                appender.writeText("hello world");
+                toEnd0(tailer);
+            }
         }
     }
 
     private void toEnd() {
-        for (; ; ) {
-            toEnd0();
+        try (final ExcerptTailer tailer = queue.createTailer()) {
+            for (; ; ) {
+                toEnd0(tailer);
+            }
         }
     }
 
-    private void toEnd0() {
+    private void toEnd0(ExcerptTailer tailer) {
         try {
             long index = tailer.toEnd().index();
-           // System.out.println("index = " + index);
+            // System.out.println("index = " + index);
         } catch (IllegalStateException e) {
             e.printStackTrace();
             Assert.fail();

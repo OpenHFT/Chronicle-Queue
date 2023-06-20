@@ -82,7 +82,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     @Test
     public void shouldPerformIndexingOnAppend() throws IOException {
         runTest(queue -> {
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());
                 assertExcerptsAreIndexed(queue, indices, i -> i % INDEX_SPACING == 0, ScanResult.FOUND);
             }

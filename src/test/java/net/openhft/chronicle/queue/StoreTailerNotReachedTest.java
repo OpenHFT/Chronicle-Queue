@@ -32,12 +32,13 @@ public class StoreTailerNotReachedTest extends QueueTestCommon {
         String path = OS.getTarget() + "/afterNotReached-" + Time.uniqueId();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
-                .build()) {
-            q.acquireAppender().writeText("Hello");
+                .build();
+             final ExcerptAppender appender = q.createAppender()) {
+            appender.writeText("Hello");
             ExcerptTailer tailer = q.createTailer();
             assertEquals("Hello", tailer.readText());
             assertNull(tailer.readText());
-            q.acquireAppender().writeText("World");
+            appender.writeText("World");
             assertEquals("World", tailer.readText());
             assertNull(tailer.readText());
         }

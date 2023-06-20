@@ -10,7 +10,6 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -30,12 +29,12 @@ public class StridingAQueueTest extends QueueTestCommon {
                 .timeProvider(timeProvider)
                 .rollCycle(TEST4_SECONDLY)
                 .build()) {
-            SAQMessage writer = queue.acquireAppender().methodWriter(SAQMessage.class);
+            SAQMessage writer = queue.methodWriter(SAQMessage.class);
             for (int j = 1; j <= 4; j++) {
                 for (int i = 0; i < 6 + j; i++)
                     writer.hi(j, i);
                 timeProvider.advanceMillis(j * 500);
-           // System.out.println(timeProvider.currentTimeMillis());
+                // System.out.println(timeProvider.currentTimeMillis());
             }
         }
 

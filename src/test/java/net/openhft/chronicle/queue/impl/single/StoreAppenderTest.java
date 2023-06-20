@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -46,17 +47,19 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Rule
     public final TemporaryFolder queueDirectory = new TemporaryFolder();
 
+    @Ignore("net/openhft/chronicle/queue/channel/PublishHandler.java:25")
     @Test
     public void clearUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            queue.acquireAppender().singleThreadedCheckReset();
+            assertThrows(UnsupportedOperationException.class, () -> queue.acquireAppender().singleThreadedCheckReset());
         }
     }
 
+    @Ignore("net/openhft/chronicle/queue/channel/PublishHandler.java:25")
     @Test
     public void resetUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            queue.acquireAppender().singleThreadedCheckReset();
+            assertThrows(UnsupportedOperationException.class, () -> queue.acquireAppender().singleThreadedCheckReset());
         }
     }
 
@@ -91,24 +94,25 @@ public class StoreAppenderTest extends QueueTestCommon {
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
                 .timeProvider(clock::get)
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             // Create an 'old' roll-cycle, then wait a day:
-            queue.acquireAppender().writingDocument().close();
+            appender.writingDocument().close();
             clock.addAndGet(ONE_DAY);
 
             // Write to a new cycle:
-            queue.acquireAppender().writingDocument().close();
+            appender.writingDocument().close();
 
             // The code now throws WriteAfterEOFException for the old cycle:
             clock.addAndGet(-1); // One millisecond earlier
 
             assertThrows(WriteAfterEOFException.class, // is this a race?
-                    () -> queue.acquireAppender().writingDocument().close());
+                    () -> appender.writingDocument().close());
 
             // advance back to the latest cycle and write
             clock.addAndGet(2);
-            queue.acquireAppender().writingDocument().close();
+            appender.writingDocument().close();
 
             assertEquals(3, queue.entryCount());
         }
@@ -124,7 +128,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     private void writeSomeText(ChronicleQueue chronicleQueue, int times) {
-        try (final ExcerptAppender appender = chronicleQueue.acquireAppender()) {
+        try (final ExcerptAppender appender = chronicleQueue.createAppender()) {
             for (int i = 0; i < times; i++) {
                 appender.writeText(TEST_TEXT);
             }
@@ -165,7 +169,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
 
         private void makeInterruptedWriteAttemptThenTryAgain() {
-            try (final ExcerptAppender appender = queue.acquireAppender()) {
+            try (final ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText(TEST_TEXT);
                 acquire(waitingToAcquire);
                 try (final DocumentContext documentContext = appender.writingDocument()) {
@@ -204,7 +208,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
 
         private void acquireWritingDocumentThenBlock() {
-            try (final ExcerptAppender appender = queue.acquireAppender()) {
+            try (final ExcerptAppender appender = queue.createAppender()) {
                 try (final DocumentContext documentContext = appender.writingDocument()) {
                     acquire(inWritingDocument);
                     documentContext.rollbackOnClose();

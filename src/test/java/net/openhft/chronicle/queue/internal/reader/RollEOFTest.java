@@ -223,9 +223,8 @@ public class RollEOFTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .timeProvider(timeProvider)
-                .build()) {
-
-            ExcerptAppender excerptAppender = queue.acquireAppender();
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
 
             try (DocumentContext dc = excerptAppender.writingDocument(false)) {
                 dc.wire().write("test").int64(0);

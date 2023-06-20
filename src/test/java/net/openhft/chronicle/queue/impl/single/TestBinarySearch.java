@@ -69,9 +69,9 @@ public class TestBinarySearch extends QueueTestCommon {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(TEST_SECONDLY)
                 .timeProvider(stp)
-                .build()) {
+                .build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
-            final ExcerptAppender appender = queue.acquireAppender();
             for (int i = 0; i < numberOfMessages; i++) {
                 try (final DocumentContext dc = appender.writingDocument()) {
                     final MyData myData = new MyData();
@@ -106,7 +106,7 @@ public class TestBinarySearch extends QueueTestCommon {
             };
 
             try (final ExcerptTailer tailer = queue.createTailer();
-                final ExcerptTailer binarySearchTailer = queue.createTailer()) {
+                 final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
                         Wire key = toWire(j);

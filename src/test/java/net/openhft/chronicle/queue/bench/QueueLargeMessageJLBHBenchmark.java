@@ -44,6 +44,12 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private ExcerptAppender appender;
     private JLBH jlbh;
 
+    static {
+        System.setProperty("disable.thread.safety", "true");
+        System.setProperty("jvm.resource.tracing", "false");
+        System.setProperty("check.thread.safety", "false");
+    }
+
     public static void main(String[] args) {
         int throughput = MSG_THROUGHPUT / MSG_LENGTH;
         int warmUp = Math.min(50 * throughput, 12_000);
@@ -66,7 +72,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
 
         sourceQueue = single("large").blockSize(1L << 30).build();
         sinkQueue = single("large").blockSize(1L << 30).build();
-        appender = sourceQueue.acquireAppender();
+        appender = sourceQueue.createAppender();
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         this.jlbh = jlbh;

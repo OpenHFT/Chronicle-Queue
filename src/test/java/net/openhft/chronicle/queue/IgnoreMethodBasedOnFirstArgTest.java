@@ -38,7 +38,7 @@ public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
     @Test
     public void testIgnoreMethodBasedOnFirstArg() {
         try (SingleChronicleQueue build = SingleChronicleQueueBuilder.binary(DirectoryUtils.tempDir("q")).build()) {
-            Printer printer = build.acquireAppender().methodWriter(Printer.class);
+            Printer printer = build.methodWriter(Printer.class);
             printer.print(EXPECTED_ENVELOPE, MSG);
             MethodReader mr = build.createTailer().methodReaderBuilder().build(
                     new Printer() {

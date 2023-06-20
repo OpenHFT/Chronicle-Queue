@@ -34,8 +34,8 @@ public enum RunLargeQueueMain {
         System.out.println("msg.size: " + MSG_SIZE + " # B");
         System.out.println("block.size: " + BLOCK_SIZE + " # MB");
         System.out.println("pretouch: " + PRETOUCH);
-        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(args[0]).blockSize((int) (BLOCK_SIZE * (1 << 20))).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(args[0]).blockSize((int) (BLOCK_SIZE * (1 << 20))).build();
+             ExcerptAppender appender = queue.createAppender()) {
             ExcerptTailer tailer = queue.createTailer();
             BytesStore bytes = BytesStore.nativeStore(MSG_SIZE);
             Bytes<?> bytes2 = Bytes.allocateDirect(MSG_SIZE);

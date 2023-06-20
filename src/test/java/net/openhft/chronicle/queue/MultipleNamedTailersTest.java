@@ -35,7 +35,7 @@ public class MultipleNamedTailersTest extends QueueTestCommon {
         File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
 
         try (ChronicleQueue q1 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().rollCycle(TEST_SECONDLY).build();
-             ExcerptAppender appender = q1.acquireAppender();
+             final ExcerptAppender appender = q1.createAppender();
              ExcerptTailer tailer1 = q1.createTailer();
              ExcerptTailer namedTailer1 = q1.createTailer("named1");
              ChronicleQueue q2 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().build();

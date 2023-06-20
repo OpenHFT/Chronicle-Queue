@@ -44,9 +44,9 @@ public class WriteBytesTest extends QueueTestCommon {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
-                .build()) {
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
 
-            ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
 
             outgoingMsgBytes[0] = 'A';
@@ -82,10 +82,10 @@ public class WriteBytesTest extends QueueTestCommon {
                 .rollCycle(TEST4_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
         try (ChronicleQueue queue = builder
-                .build()) {
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
             final boolean useSparseFiles = builder.useSparseFiles();
 
-            ExcerptAppender appender = queue.acquireAppender();
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
                 byte finalI = (byte) i;
                 appender.writeBytes(b ->
@@ -1170,7 +1170,7 @@ public class WriteBytesTest extends QueueTestCommon {
     }
 
     @Override
-    public void assertReferencesReleased(){
+    public void assertReferencesReleased() {
         outgoingBytes.releaseLast();
         super.assertReferencesReleased();
     }

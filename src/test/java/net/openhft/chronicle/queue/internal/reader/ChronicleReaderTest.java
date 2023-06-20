@@ -101,9 +101,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
                 .testBlockSize().build()) {
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
             final VanillaMethodWriterBuilder<Say> methodWriterBuilder =
-                    excerptAppender.methodWriterBuilder(Say.class);
+                    queue.methodWriterBuilder(Say.class);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
@@ -181,12 +180,11 @@ public class ChronicleReaderTest extends QueueTestCommon {
         List<Long> indices = new ArrayList<>();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
-                .testBlockSize().build()) {
-            try (final ExcerptAppender appender = queue.acquireAppender()) {
-                for (int i = 1; i < 5; i++) {
-                    appender.writeText(String.valueOf(i));
-                    indices.add(appender.lastIndexAppended());
-                }
+                .testBlockSize().build();
+             final ExcerptAppender appender = queue.createAppender()) {
+            for (int i = 1; i < 5; i++) {
+                appender.writeText(String.valueOf(i));
+                indices.add(appender.lastIndexAppended());
             }
         }
         return indices;
@@ -200,8 +198,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).
                 testBlockSize().sourceId(1).build()) {
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
+            final VanillaMethodWriterBuilder<Say> methodWriterBuilder = queue.methodWriterBuilder(Say.class);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
@@ -221,8 +218,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).
                 testBlockSize().sourceId(1).build()) {
-            final ExcerptAppender excerptAppender = queue.acquireAppender();
-            final VanillaMethodWriterBuilder<Say> methodWriterBuilder = excerptAppender.methodWriterBuilder(Say.class);
+            final VanillaMethodWriterBuilder<Say> methodWriterBuilder = queue.methodWriterBuilder(Say.class);
             final Say events = methodWriterBuilder.build();
 
             for (int i = 0; i < TOTAL_EXCERPTS_IN_QUEUE; i++) {
@@ -303,7 +299,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         dataDir.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
 
-            final Say events = queue.acquireAppender().methodWriterBuilder(Say.class).build();
+            final Say events = queue.methodWriterBuilder(Say.class).build();
             events.say("hello");
 
             final long readerCapacity = getCurrentQueueFileLength(dataDir);
@@ -449,10 +445,9 @@ public class ChronicleReaderTest extends QueueTestCommon {
     @Test(timeout = 10_000)
     public void shouldPrintTimestampsToLocalTime() throws IOException {
         final File queueDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build();
-             final ExcerptAppender excerptAppender = queue.acquireAppender()) {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
             final VanillaMethodWriterBuilder<SayWhen> methodWriterBuilder =
-                    excerptAppender.methodWriterBuilder(SayWhen.class);
+                    queue.methodWriterBuilder(SayWhen.class);
             final SayWhen events = methodWriterBuilder.build();
 
             long microTimestamp = System.currentTimeMillis() * 1000;
@@ -606,7 +601,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 writeTimestamp(appender, getTimestampAtIndex(1));
                 writeTimestamp(appender, getTimestampAtIndex(2));
                 writeTimestamp(appender, getTimestampAtIndex(2));
@@ -634,7 +629,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 writeTimestamp(appender, getTimestampAtIndex(1));
                 writeTimestamp(appender, getTimestampAtIndex(2));
                 writeTimestamp(appender, getTimestampAtIndex(2));
@@ -663,7 +658,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 writeTimestamp(appender, getTimestampAtIndex(1));
                 writeTimestamp(appender, getTimestampAtIndex(2));
                 writeTimestamp(appender, getTimestampAtIndex(2));
@@ -690,7 +685,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.acquireAppender()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
                 writeTimestamp(appender, getTimestampAtIndex(1));
                 writeTimestamp(appender, getTimestampAtIndex(2));
                 writeTimestamp(appender, getTimestampAtIndex(2));
@@ -904,7 +899,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry, int batch) {
-        try (ExcerptAppender appender = queue.acquireAppender()) {
+        try (ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < entries; i++) {
                 int effectiveIndex = i + (entries * batch);
                 // write multiple so we can confirm that binary search finds the 1st

@@ -80,9 +80,9 @@ public class WriteReadTextTest extends QueueTestCommon {
                 .single(myPath)
                 .blockSize(Maths.nextPower2(EXTREMELY_LARGE.length() * 4, 256 << 10))
                 // .testBlockSize() not suitable as large message sizes.
-                .build()) {
+                .build();
+             ExcerptAppender appender = theQueue.createAppender()) {
 
-            ExcerptAppender appender = theQueue.acquireAppender();
             ExcerptTailer tailer = theQueue.createTailer();
 
             StringBuilder tmpReadback = new StringBuilder();

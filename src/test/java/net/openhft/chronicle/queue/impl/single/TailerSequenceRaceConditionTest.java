@@ -70,12 +70,13 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     private void appendToQueue(final ChronicleQueue queue) {
-        for (int i = 0; i < 31; i++) {
-            final ExcerptAppender appender = queue.acquireAppender();
-            if (queue.isClosed())
-                return;
-            try (final DocumentContext dc = appender.writingDocument()) {
-                dc.wire().write("foo");
+        try (final ExcerptAppender appender = queue.createAppender()) {
+            for (int i = 0; i < 31; i++) {
+                if (queue.isClosed())
+                    return;
+                try (final DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("foo");
+                }
             }
         }
     }
