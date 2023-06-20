@@ -194,9 +194,29 @@ public interface ChronicleQueue extends Closeable {
      * this method every time an appender is needed.
      *
      * @return Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread
+     * @deprecated It is recommended to use {@link #createAppender()} instead
      */
+    @Deprecated(/* To be removed in x.TBD */)
     @NotNull
     ExcerptAppender acquireAppender();
+
+    /**
+     * Creates and returns a new ExcerptAppender for this ChronicleQueue
+     * <p>
+     * An Appender can be used to store new excerpts sequentially to the queue.
+     * <p>
+     * <b>
+     * An Appender is <em>NOT thread-safe</em>, concurrent use of an Appender by multiple threads is unsafe
+     * and will inevitably lead to errors and unspecified behaviour.
+     * </b>
+     * <p>
+     * This method creates a new Appender on each call, it is up to the caller to manage the lifecycle of the
+     * returned Appender
+     *
+     * @return Returns a new ExcerptAppender for this ChronicleQueue
+     */
+    @NotNull
+    ExcerptAppender createAppender();
 
     /**
      * Returns the lowest valid index available for this ChronicleQueue, or {@link Long#MAX_VALUE}

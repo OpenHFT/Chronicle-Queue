@@ -505,6 +505,17 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return res;
     }
 
+    @NotNull
+    @Override
+    public ExcerptAppender createAppender() {
+        throwExceptionIfClosed();
+
+        if (readOnly)
+            throw new IllegalStateException("Can't append to a read-only chronicle");
+
+        return createNewAppenderOnceConditionIsMet();
+    }
+
     /**
      * @return the {@link QueueLock} This lock is held while the queue replication cluster is back-filling.
      * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
