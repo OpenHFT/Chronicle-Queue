@@ -608,6 +608,7 @@ To unlock a locked chronicle queue (perhaps an appending process has been abrupt
 
 == Compatibility
 
+[#containerisation-recommendations]
 === Does Chronicle Queue work in Linux containers?
 
 Chronicle Queue supports Linux container technology. The below is in regards to our testing on docker.
