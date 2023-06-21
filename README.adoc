@@ -316,6 +316,8 @@ A Chronicle Queue is defined by `SingleChronicleQueue.class` that is designed to
 
 * concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise),
 
+* concurrent readers and writers between link:./docs/FAQ.adoc#containerisation-recommendations[Docker or other containerised workloads]
+
 * zero copy serialization and deserialization,
 
 * millions of writes/reads per second on commodity hardware.
