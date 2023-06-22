@@ -512,7 +512,10 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
      * While we are doing this we lock the queue so that new appenders can not be created.
      * <p>
      * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
+     *
+     * @deprecated this is being removed in x.25 with no replacement
      */
+    @Deprecated(/* To be removed in x.25 */)
     @NotNull
     public QueueLock queueLock() {
         return queueLock;
