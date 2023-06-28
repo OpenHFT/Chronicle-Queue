@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
 
+@Deprecated(/* To be removed in x.25 */)
 public interface QueueLock extends Closeable {
 
     void waitForLock();
@@ -44,4 +45,8 @@ public interface QueueLock extends Closeable {
      * @return true if the lock is locked
      */
     boolean isLocked();
+
+    default boolean forceUnlockIfProcessIsDead() {
+        return true;
+    }
 }
