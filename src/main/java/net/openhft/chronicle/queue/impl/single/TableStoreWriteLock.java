@@ -51,8 +51,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
-        super(LOCK_KEY, tableStore, pauser);
-        timeout = timeoutMs;
+        this(tableStore, pauser, timeoutMs, LOCK_KEY);
     }
 
     /**

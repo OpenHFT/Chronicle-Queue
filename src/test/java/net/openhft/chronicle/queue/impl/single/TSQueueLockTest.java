@@ -48,7 +48,6 @@ import static org.junit.Assert.*;
 
 public class TSQueueLockTest extends QueueTestCommon {
 
-    private static final String TEST_LOCK_NAME = "testLock";
     private static final long TIMEOUT_MS = 100;
     private TableStore<Metadata.NoMeta> tableStore;
 
