@@ -146,8 +146,6 @@ class StoreTailer extends AbstractCloseable
     @Override
     @NotNull
     public DocumentContext readingDocument() {
-//        throwExceptionIfClosed();
-
         // trying to create an initial document without a direction should not consume a message
         final long index = index();
         if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
