@@ -15,7 +15,6 @@ import net.openhft.chronicle.wire.YamlWire;
 import net.openhft.chronicle.wire.channel.ChannelHandler;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
-import net.openhft.chronicle.wire.channel.TesterControl;
 import net.openhft.chronicle.wire.utils.YamlTester;
 
 import java.io.FileNotFoundException;
@@ -23,7 +22,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -195,5 +193,9 @@ public class ChannelHandlerYamlTester implements YamlTester {
     @Override
     public String actual() {
         return actual;
+    }
+
+    public interface TesterControl {
+        void waitFor(int ms);
     }
 }
