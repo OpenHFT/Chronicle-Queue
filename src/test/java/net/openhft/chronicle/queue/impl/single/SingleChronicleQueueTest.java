@@ -160,8 +160,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
+    /**
+     * readOnly=true is not supported on Windows so this test does not run on Windows targets, please see
+     * {@link SingleChronicleQueueBuilder#readOnly(boolean)}.
+     */
     @Test
     public void createAppenderWillThrowWhenQueueIsReadOnly() {
+        assumeFalse(OS.isWindows());
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = builder(queueDir, wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
