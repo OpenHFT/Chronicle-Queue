@@ -270,15 +270,11 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
      */
     @Override
     public long lastAcknowledgedIndexReplicated() {
-        // throwExceptionIfClosed();
-
         return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue(-1);
     }
 
     @Override
     public void lastAcknowledgedIndexReplicated(long newValue) {
-        // throwExceptionIfClosed();
-
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
