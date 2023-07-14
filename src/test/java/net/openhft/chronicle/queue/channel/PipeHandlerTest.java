@@ -90,6 +90,7 @@ public class PipeHandlerTest extends QueueTestCommon {
         }
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1390")
     @Test
     public void redirectedServer() throws IOException {
         IOTools.deleteDirWithFiles("target/zero", "target/one", "target/client");
