@@ -112,25 +112,7 @@ public class ChronicleReader implements Reader {
                     try {
                         moveToSpecifiedPosition(queue, tailer, isFirstIteration);
                         lastObservedTailIndex = tailer.index();
-
-                        while (!Thread.currentThread().isInterrupted()) {
-                            if (shouldHaltReadingDueToContentBasedLimit(tailer)) {
-                                running = false;
-                                break;
-                            }
-
-                            if (!queueEntryReader.read()) {
-                                if (tailInputSource) {
-                                    pauser.pause();
-                                }
-                                break;
-                            } else {
-                                if (messageConsumer.matchLimitReached()) {
-                                    break;
-                                }
-                            }
-                            pauser.reset();
-                        }
+                        readWhileNotInterrupted(tailer, messageConsumer, queueEntryReader);
                     } finally {
                         highestReachedIndex = tailer.index();
                         isFirstIteration = false;
@@ -141,19 +123,46 @@ public class ChronicleReader implements Reader {
                         return;
                 } while (tailerDirection != BACKWARD && (tailInputSource || queueHasBeenModified));
             } catch (final RuntimeException e) {
-                if (e.getCause() != null && e.getCause() instanceof DateTimeParseException) {
-                    // ignore this error - due to a race condition between
-                    // the reader creating a Queue (with default roll-cycle due to no files on disk)
-                    // and the writer appending to the Queue with a non-default roll-cycle
-                    retryLastOperation = true;
-                } else {
-                    throw e;
-                }
+                retryLastOperation = handleRuntimeException(e);
             } finally {
                 MessageHistory.set(null);
             }
         } while (retryLastOperation);
 
+    }
+
+    /**
+     * Ignore {@link DateTimeParseException} error - due to a race condition between the reader creating a Queue
+     * (with default roll-cycle due to no files on disk) and the writer appending to the Queue with a non-default
+     * roll-cycle.
+     */
+    private static boolean handleRuntimeException(RuntimeException e) {
+        if (e.getCause() instanceof DateTimeParseException) {
+            return true;
+        } else {
+            throw e;
+        }
+    }
+
+    private void readWhileNotInterrupted(ExcerptTailer tailer, MessageCountingMessageConsumer messageConsumer, QueueEntryReader queueEntryReader) {
+        while (!Thread.currentThread().isInterrupted()) {
+            if (shouldHaltReadingDueToContentBasedLimit(tailer)) {
+                running = false;
+                break;
+            }
+
+            if (!queueEntryReader.read()) {
+                if (tailInputSource) {
+                    pauser.pause();
+                }
+                break;
+            } else {
+                if (messageConsumer.matchLimitReached()) {
+                    break;
+                }
+            }
+            pauser.reset();
+        }
     }
 
     private void validateArgs() {
@@ -384,36 +393,44 @@ public class ChronicleReader implements Reader {
             }
 
             if (isSet(startIndex)) {
-                if (startIndex < ic.firstIndex()) {
-                    throw new IllegalArgumentException(String.format("startIndex 0x%xd is less than first index 0x%xd",
-                            startIndex, ic.firstIndex()));
-                }
-
-                if (tailerDirection == BACKWARD && startIndex > ic.lastIndex()) {
-                    throw new IllegalArgumentException(String.format("startIndex 0x%xd is greater than last index 0x%xd",
-                            startIndex, ic.lastIndex()));
-                }
-
-                boolean firstTime = true;
-                while (!tailer.moveToIndex(startIndex)) {
-                    if (firstTime) {
-                        messageSink.accept("Waiting for startIndex " + Long.toHexString(startIndex));
-                        firstTime = false;
-                    }
-                    Jvm.pause(100);
-                }
+                tryMoveToIndex(ic, tailer);
             } else if (binarySearch != null) {
                 seekBinarySearch(tailer);
             }
 
             if (tailerDirection == FORWARD) {
-                if (isSet(maxHistoryRecords)) {
-                    tailer.toEnd();
-                    moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
-                } else if (tailInputSource) {
-                    tailer.toEnd();
-                }
+                moveTailerToEnd(tailer);
             }
+        }
+    }
+
+    private void moveTailerToEnd(ExcerptTailer tailer) {
+        if (isSet(maxHistoryRecords)) {
+            tailer.toEnd();
+            moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
+        } else if (tailInputSource) {
+            tailer.toEnd();
+        }
+    }
+
+    private void tryMoveToIndex(ChronicleQueue ic, ExcerptTailer tailer) {
+        if (startIndex < ic.firstIndex()) {
+            throw new IllegalArgumentException(String.format("startIndex 0x%xd is less than first index 0x%xd",
+                    startIndex, ic.firstIndex()));
+        }
+
+        if (tailerDirection == BACKWARD && startIndex > ic.lastIndex()) {
+            throw new IllegalArgumentException(String.format("startIndex 0x%xd is greater than last index 0x%xd",
+                    startIndex, ic.lastIndex()));
+        }
+
+        boolean firstTime = true;
+        while (!tailer.moveToIndex(startIndex)) {
+            if (firstTime) {
+                messageSink.accept("Waiting for startIndex " + Long.toHexString(startIndex));
+                firstTime = false;
+            }
+            Jvm.pause(100);
         }
     }
 
