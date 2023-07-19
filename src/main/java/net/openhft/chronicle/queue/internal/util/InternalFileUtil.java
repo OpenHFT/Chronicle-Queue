@@ -227,8 +227,8 @@ public final class InternalFileUtil {
                 try {
                     final String e = file.toRealPath().toAbsolutePath().toString();
                     openFiles.add(e);
-                } catch (NoSuchFileException e) {
-                    // Ignore, sometimes they disappear
+                } catch (NoSuchFileException | AccessDeniedException e) {
+                    // Ignore, sometimes they disappear & we can't access all the files
                 } catch (IOException e) {
                     Jvm.warn().on(ProcFdWalker.class, "Error resolving " + file, e);
                 }
