@@ -13,6 +13,10 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -22,25 +26,30 @@ public class MultiThreadedWritesTest {
 
     @Test
     public void multiThreadedWrites_2Threads() throws InterruptedException {
-        runMultiThreadedWriteTestAWithNThreads(2);
+        runMultiThreadedWriteTestAWithNThreads(2, this::createWriterThreadWithPretouchOnSameThread);
     }
 
     @Test
     public void multiThreadedWrites_5Threads() throws InterruptedException {
-        runMultiThreadedWriteTestAWithNThreads(5);
+        runMultiThreadedWriteTestAWithNThreads(5, this::createWriterThreadWithPretouchOnSameThread);
     }
 
     @Test
     public void multiThreadedWrites_10Threads() throws InterruptedException {
-        runMultiThreadedWriteTestAWithNThreads(10);
+        runMultiThreadedWriteTestAWithNThreads(10, this::createWriterThreadWithPretouchOnSameThread);
     }
 
-    private void runMultiThreadedWriteTestAWithNThreads(int threadCount) throws InterruptedException {
+    @Test
+    public void multiThreadedWrites_preTouchOnDifferentThread_5Threads() throws InterruptedException {
+        runMultiThreadedWriteTestAWithNThreads(5, this::createWriterThreadWithPretouchOnDifferentThread);
+    }
+
+    private void runMultiThreadedWriteTestAWithNThreads(int threadCount, BiFunction<TestContext, String, Thread> threadCreator) throws InterruptedException {
         String queuePath = OS.getTarget() + "/MultiThreadedWritesTest-multiThreadWrites-" + Time.uniqueId();
         try (ChronicleQueue queue = ChronicleQueue.single(queuePath)) {
 
             TestContext testContext = new TestContext(queue);
-            Collection<Thread> threads = createWriterThreads(testContext, threadCount);
+            Collection<Thread> threads = createWriterThreads(testContext, threadCount, threadCreator);
             threads.forEach(Thread::start);
 
             // Let the test run for 10s
@@ -67,11 +76,11 @@ public class MultiThreadedWritesTest {
         });
     }
 
-    private Collection<Thread> createWriterThreads(TestContext testContext, int count) {
-        return IntStream.range(0, count).mapToObj(i -> createWriterThread(testContext, "Writer-" + i)).collect(Collectors.toList());
+    private Collection<Thread> createWriterThreads(TestContext testContext, int count, BiFunction<TestContext, String, Thread> threadCreator) {
+        return IntStream.range(0, count).mapToObj(i -> threadCreator.apply(testContext, "Writer-" + i)).collect(Collectors.toList());
     }
 
-    private Thread createWriterThread(TestContext testContext, String threadName) {
+    public Thread createWriterThreadWithPretouchOnSameThread(TestContext testContext, String threadName) {
         Thread thread = new Thread(() -> {
             try (ExcerptAppender appender = testContext.chronicleQueue.acquireAppender()) {
 
@@ -87,6 +96,39 @@ public class MultiThreadedWritesTest {
                         lastPreTouch = System.currentTimeMillis();
                         appender.pretouch();
                     }
+
+                    // Write something
+                    try (DocumentContext context = appender.writingDocument()) {
+                        context.wire().writeText("<data>");
+                        LOGGER.info("Thread {} writing at index {}", Thread.currentThread().getName(), context.index());
+                    }
+
+                    pauser.pause();
+                }
+            }
+        });
+        thread.setName(threadName);
+        return thread;
+    }
+
+    private Thread createWriterThreadWithPretouchOnDifferentThread(TestContext testContext, String threadName) {
+        Thread thread = new Thread(() -> {
+            try (ExcerptAppender appender = testContext.chronicleQueue.acquireAppender()) {
+
+                // Register for pretouch
+                testContext.scheduledExecutorService.scheduleAtFixedRate(() -> {
+                    try {
+                        LOGGER.info("Pre-touching on thread " + Thread.currentThread().getName());
+                        appender.pretouch();
+                    } catch (Exception e) {
+                        LOGGER.error("Pre-touch failed - {}", e.getMessage(), e);
+                    }
+                }, 0, 1, TimeUnit.SECONDS);
+
+                MilliPauser pauser = Pauser.millis(10);
+
+                // Append to the queue repeatedly until stopped
+                while (testContext.isRunning()) {
 
                     // Write something
                     try (DocumentContext context = appender.writingDocument()) {
@@ -121,6 +163,9 @@ public class MultiThreadedWritesTest {
             return running;
         }
 
+        public ScheduledExecutorService getScheduledExecutorService() {
+            return scheduledExecutorService;
+        }
     }
 
 }
