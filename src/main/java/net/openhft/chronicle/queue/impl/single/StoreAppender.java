@@ -929,58 +929,19 @@ class StoreAppender extends AbstractCloseable
             close(true);
         }
 
+        /**
+         * Close this {@link StoreAppenderContext}.
+         * @param unlock true if the {@link this#writeLock} should be unlocked.
+         */
         public void close(boolean unlock) {
-            if (chainedElement)
-                return;
-            if (isClosed) {
-                Jvm.warn().on(getClass(), "Already Closed, close was called twice.", new StackTrace("Second close", closedHere));
-                alreadyClosedFound = true;
-                return;
-            }
-            count--;
-            if (count > 0)
-                return;
-
-            if (alreadyClosedFound) {
-                closedHere = new StackTrace("Closed here");
-            }
+            if (!closePreconditionsAreSatisfied()) return;
 
             try {
-                // historically there have been problems with an interrupted thread causing exceptions
-                // in calls below, and we saw half-written messages
-                final boolean interrupted = checkInterrupts && Thread.currentThread().isInterrupted();
-                if (interrupted)
-                    throw new InterruptedException();
-                if (rollbackOnClose) {
-                    doRollback();
-                    return;
-                }
+                handleInterrupts();
+                if (handleRollbackOnClose()) return;
 
                 if (wire == StoreAppender.this.wire) {
-//                    final BytesStore bs = wire.bytes().bytesStore();
-                    try {
-                        wire.updateHeader(positionOfHeader, metaData, 0);
-                    } catch (IllegalStateException e) {
-                        if (queue.isClosed())
-                            return;
-                        throw e;
-                    }
-//                    if (bs != wire.bytes().bytesStore())
-//                        throw new AssertionError("header had to rewind to be written");
-
-                    lastPosition = positionOfHeader;
-
-                    if (!metaData) {
-                        lastIndex(wire.headerNumber());
-                        store.writePosition(positionOfHeader);
-                        if (lastIndex != Long.MIN_VALUE) {
-                            writeIndexForPosition(lastIndex, positionOfHeader);
-                            if (queue.appenderListener != null) {
-                                callAppenderListener();
-                            }
-                        }
-                    }
-
+                    updateHeaderAndIndex();
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
@@ -997,14 +958,91 @@ class StoreAppender extends AbstractCloseable
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
-                wire.bytes().writePositionForHeader(true);
-                isClosed = true;
-                if (unlock)
-                    try {
-                        writeLock.unlock();
-                    } catch (Exception ex) {
-                        Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
+                closeCleanup(unlock);
+            }
+        }
+
+        private boolean handleRollbackOnClose() {
+            if (rollbackOnClose) {
+                doRollback();
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * @return true if close preconditions are satisfied, otherwise false.
+         */
+        private boolean closePreconditionsAreSatisfied() {
+            if (chainedElement)
+                return false;
+            if (isClosed) {
+                Jvm.warn().on(getClass(), "Already Closed, close was called twice.", new StackTrace("Second close", closedHere));
+                alreadyClosedFound = true;
+                return false;
+            }
+            count--;
+            if (count > 0)
+                return false;
+
+            if (alreadyClosedFound) {
+                closedHere = new StackTrace("Closed here");
+            }
+            return true;
+        }
+
+        /**
+         * Historically there have been problems with an interrupted thread causing exceptions in calls below, and we
+         * saw half-written messages. If interrupt checking is enabled then check if interrupted and handle
+         * appropriately.
+         */
+        private void handleInterrupts() throws InterruptedException {
+            final boolean interrupted = checkInterrupts && Thread.currentThread().isInterrupted();
+            if (interrupted)
+                throw new InterruptedException();
+        }
+
+        private void updateHeaderAndIndex() throws StreamCorruptedException {
+            if (wire == null) throw new NullPointerException("Wire must not be null");
+            if (store == null) throw new NullPointerException("Store must not be null");
+
+            try {
+                wire.updateHeader(positionOfHeader, metaData, 0);
+            } catch (IllegalStateException e) {
+                if (queue.isClosed())
+                    return;
+                throw e;
+            }
+
+            lastPosition = positionOfHeader;
+
+            if (!metaData) {
+                lastIndex(wire.headerNumber());
+                store.writePosition(positionOfHeader);
+                if (lastIndex != Long.MIN_VALUE) {
+                    writeIndexForPosition(lastIndex, positionOfHeader);
+                    if (queue.appenderListener != null) {
+                        callAppenderListener();
                     }
+                }
+            }
+        }
+
+        /**
+         * Clean-up after close.
+         * @param unlock true if the {@link this#writeLock} should be unlocked.
+         */
+        private void closeCleanup(boolean unlock) {
+            if (wire == null) throw new NullPointerException("Wire must not be null");
+            Bytes<?> bytes = wire.bytes();
+            bytes.writePositionForHeader(true);
+            isClosed = true;
+            if (unlock) {
+                try {
+                    writeLock.unlock();
+                } catch (Exception ex) {
+                    Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
+                }
             }
         }
 
