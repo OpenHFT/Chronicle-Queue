@@ -923,12 +923,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Priority for ring buffer's drainer handler
+     * Priority for async mode drainer handler
      *
-     * @return drainerPriority
+     * @return drainerPriority, default is null
      */
     public HandlerPriority drainerPriority() {
-        return drainerPriority == null ? HandlerPriority.MEDIUM : drainerPriority;
+        return drainerPriority;
     }
 
     public SingleChronicleQueueBuilder drainerPriority(HandlerPriority drainerPriority) {
