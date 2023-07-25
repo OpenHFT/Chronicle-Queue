@@ -680,7 +680,7 @@
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
         </developerConnection>
-        <tag>develop</tag>
+        <tag>chronicle-queue-5.24ea23</tag>
     </scm>
 
 </project>
