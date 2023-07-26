@@ -30,6 +30,7 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -49,6 +50,13 @@ import static org.junit.Assert.*;
  */
 @RequiredForClient
 public class NotCompleteTest extends QueueTestCommon {
+
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test
     public void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {

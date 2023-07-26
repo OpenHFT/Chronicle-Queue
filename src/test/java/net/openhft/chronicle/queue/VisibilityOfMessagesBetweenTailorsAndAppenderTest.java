@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.*;
@@ -34,6 +35,12 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
 
     volatile long lastWrittenIndex = Long.MIN_VALUE;
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     /**
      * check if a message is written with an appender its visible to the tailor, without locks etc.

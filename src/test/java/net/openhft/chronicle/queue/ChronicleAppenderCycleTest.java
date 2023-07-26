@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -41,6 +42,12 @@ import static org.junit.Assert.assertNull;
 public class ChronicleAppenderCycleTest extends QueueTestCommon {
 
     private static final long LATCH_TIMEOUT_MS = 5000;
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test
     public void testAppenderCycle() throws IOException {

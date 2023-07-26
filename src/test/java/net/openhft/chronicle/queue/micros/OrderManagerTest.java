@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -36,6 +37,13 @@ import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 public class OrderManagerTest extends QueueTestCommon {
+
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test
     public void testOnOrderIdea() {

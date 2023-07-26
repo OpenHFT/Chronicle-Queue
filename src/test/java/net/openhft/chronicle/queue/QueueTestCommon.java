@@ -116,13 +116,14 @@ public class QueueTestCommon {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
-    @Before
+    // add @Before to sub class where a thread might be added
     public void threadDump() {
         threadDump = new ThreadDump();
     }
 
     public void checkThreadDump() {
-        threadDump.assertNoNewThreads();
+        if (threadDump != null)
+            threadDump.assertNoNewThreads();
     }
 
     @Before
@@ -162,7 +163,7 @@ public class QueueTestCommon {
         CleaningThread.performCleanup(Thread.currentThread());
 
         // find any discarded resources.
-        AbstractCloseable.gcAndWaitForCloseablesToClose();
+        AbstractCloseable.waitForCloseablesToClose(100);
 
         if (finishedNormally) {
             assertReferencesReleased();

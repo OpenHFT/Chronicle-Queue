@@ -31,6 +31,7 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -56,6 +57,12 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
     static volatile ChronicleQueue chronicle;
     static volatile ExcerptTailer tailer;
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @AfterClass
     public static void cleanup() {

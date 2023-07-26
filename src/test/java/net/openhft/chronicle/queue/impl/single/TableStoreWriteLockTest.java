@@ -60,6 +60,12 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         tableStore = SingleTableBuilder.binary(storeDirectory, Metadata.NoMeta.INSTANCE).build();
     }
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @After
     public void tearDown() {
         Closeable.closeQuietly(tableStore);

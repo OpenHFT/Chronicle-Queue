@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,6 +47,13 @@ public class StoreAppenderTest extends QueueTestCommon {
 
     @Rule
     public final TemporaryFolder queueDirectory = new TemporaryFolder();
+
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Ignore("net/openhft/chronicle/queue/channel/PublishHandler.java:25")
     @Test

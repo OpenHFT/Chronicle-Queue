@@ -53,6 +53,12 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     Thread thread;
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =

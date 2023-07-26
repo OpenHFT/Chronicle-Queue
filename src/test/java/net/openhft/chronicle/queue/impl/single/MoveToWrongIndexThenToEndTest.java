@@ -27,6 +27,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.StreamCorruptedException;
@@ -67,6 +68,12 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
         queue = createChronicle(basePath);
         appender = queue.createAppender();
         outbound = Bytes.elasticByteBuffer();
+    }
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
     }
 
     @After

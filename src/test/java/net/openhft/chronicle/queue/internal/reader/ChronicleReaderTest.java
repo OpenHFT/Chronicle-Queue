@@ -116,6 +116,12 @@ public class ChronicleReaderTest extends QueueTestCommon {
         ignoreException("Overriding sourceId from existing metadata, was 0, overriding to 1");
     }
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test(timeout = 10_000L)
     public void shouldReadQueueInReverse() {
         addCountToEndOfQueue();

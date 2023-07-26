@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -121,6 +122,13 @@ java.lang.AssertionError: Closeables still open
  */
 @RequiredForClient
 public class ChronicleRollingIssueTest extends QueueTestCommon {
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void test() throws InterruptedException {
         int threads = Math.min(64, Runtime.getRuntime().availableProcessors() * 4) - 1;

@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ReferenceCounted;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,12 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     private AtomicInteger createdCount;
     private AtomicInteger releasedCount;
     private ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> cache;
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @BeforeEach
     void setUp() {

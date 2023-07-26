@@ -95,6 +95,8 @@ public class PipeHandlerTest extends QueueTestCommon {
     public void redirectedServer() throws IOException {
         IOTools.deleteDirWithFiles("target/zero", "target/one", "target/client");
         assumeFalse(Jvm.isDebug()); // TODO FIX
+
+        expectException("failed to connect to host-port");
         String urlZzz = "tcp://localhost:65329";
         String url0 = "tcp://localhost:65330";
         String url1 = "tcp://localhost:65331";

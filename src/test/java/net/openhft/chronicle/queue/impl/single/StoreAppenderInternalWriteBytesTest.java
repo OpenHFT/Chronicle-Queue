@@ -55,6 +55,12 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         assumeTrue(Jvm.is64bit());
     }
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
         testInternalWriteBytes(5, true);

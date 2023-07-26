@@ -131,6 +131,12 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         }
     }
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void stress() throws Exception {
         ignoreException(" us to grow file");

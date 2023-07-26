@@ -21,9 +21,10 @@ package net.openhft.chronicle.queue.jitter;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
-public class BareSyncTest {
+public class BareSyncTest extends QueueTestCommon {
     @Test
     public void sync() {
         try (ChronicleQueue cq = ChronicleQueue.single("sync-test");

@@ -22,6 +22,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -40,6 +41,12 @@ public class CycleNotFoundTest extends QueueTestCommon {
     private static final long INTERVAL_US = 50;
     private static final long NUMBER_OF_MSG = 100_000; // this is working this  1_000_000 but
     // reduced so that it runs quicker for the continuous integration (CI)
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test(timeout = 50_000L)
     public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {

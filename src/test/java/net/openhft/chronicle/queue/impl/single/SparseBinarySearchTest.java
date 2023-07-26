@@ -159,7 +159,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         final MyData myData = new MyData();
         myData.key = key;
         myData.value = Integer.toString(key);
-        Wire wire = WireType.BINARY.apply(Bytes.elasticByteBuffer());
+        Wire wire = WireType.BINARY.apply(Bytes.allocateElasticOnHeap());
         wire.usePadding(true);
 
         try (final DocumentContext dc = wire.writingDocument()) {

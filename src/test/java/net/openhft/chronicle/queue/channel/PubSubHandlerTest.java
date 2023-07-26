@@ -9,6 +9,7 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
 import net.openhft.chronicle.wire.channel.ChronicleGatewayMain;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,6 +46,12 @@ public class PubSubHandlerTest extends QueueTestCommon {
                 new Object[]{"client-only", "tcp://localhost:65451"},
                 new Object[]{"server", "tcp://:0"}
         );
+    }
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
     }
 
     @Test
