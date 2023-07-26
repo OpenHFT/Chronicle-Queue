@@ -195,6 +195,9 @@ public class ChannelHandlerYamlTester implements YamlTester {
         return actual;
     }
 
+    /**
+     * What to do when waiting
+     */
     public interface TesterControl {
         void waitFor(int ms);
     }
