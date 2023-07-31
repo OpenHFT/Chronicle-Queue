@@ -1177,10 +1177,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assertTrue("i: " + i,
                         tailer.moveToIndex(
                                 index));
-                final DocumentContext context = tailer.readingDocument();
-                assertEquals(index, context.index());
-                context.wire().read("key").text(sb);
-                assertEquals("value=" + i, sb.toString());
+                try (final DocumentContext context = tailer.readingDocument()){
+                    assertEquals(index, context.index());
+                    context.wire().read("key").text(sb);
+                    assertEquals("value=" + i, sb.toString());
+                }
             }
         }
     }
