@@ -69,38 +69,55 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         try {
             currentLockValue = lock.getVolatileValue();
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
-                if (Thread.currentThread().isInterrupted())
-                    throw new InterruptedRuntimeException("Interrupted for the lock file:" + path);
-                tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
-                currentLockValue = lock.getVolatileValue();
+                currentLockValue = lockGetCurrentLockValue(tlPauser);
             }
 
-            //noinspection ConstantConditions,AssertWithSideEffects
-            assert (lockedByThread = Thread.currentThread()) != null
-                    && (lockedHere = new StackTrace()) != null;
+            lockAssertPostConditions();
 
             // success
         } catch (TimeoutException e) {
-            final String lockedBy = getLockedBy(currentLockValue);
-            final String warningMsg = "Couldn't acquire write lock " +
-                    "after " + timeout + " ms " +
-                    "for the lock file:" + path + ". " +
-                    "Lock was held by " + lockedBy;
-            if (forceUnlockOnTimeoutWhen == UnlockMode.NEVER)
-                throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
-            else if (forceUnlockOnTimeoutWhen == UnlockMode.LOCKING_PROCESS_DEAD) {
-                if (forceUnlockIfProcessIsDead())
-                    lock();
-                else
-                    throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
-            } else {
-                warn().on(getClass(), warningMsg + UNLOCKING_FORCIBLY_MSG);
-                forceUnlock(currentLockValue);
-                lock();
-            }
+            lockHandleTimeoutException(currentLockValue);
         } finally {
             tlPauser.reset();
         }
+    }
+
+    private long lockGetCurrentLockValue(TimingPauser tlPauser) throws TimeoutException {
+        if (Thread.currentThread().isInterrupted())
+            throw new InterruptedRuntimeException("Interrupted for the lock file:" + path);
+        tlPauser.pause(timeout, TimeUnit.MILLISECONDS);
+        return lock.getVolatileValue();
+    }
+
+    private void lockAssertPostConditions() {
+        //noinspection ConstantConditions,AssertWithSideEffects
+        assert (lockedByThread = Thread.currentThread()) != null
+                && (lockedHere = new StackTrace()) != null;
+    }
+
+    private void lockHandleTimeoutException(long currentLockValue) {
+        final String lockedBy = getLockedBy(currentLockValue);
+        final String warningMsg = lockHandleTimeoutExceptionCreateWarningMessage(lockedBy);
+        if (forceUnlockOnTimeoutWhen == UnlockMode.NEVER)
+            throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
+        else if (forceUnlockOnTimeoutWhen == UnlockMode.LOCKING_PROCESS_DEAD) {
+            if (forceUnlockIfProcessIsDead())
+                lock();
+            else
+                throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
+        } else {
+            warn().on(getClass(), warningMsg + UNLOCKING_FORCIBLY_MSG);
+            forceUnlock(currentLockValue);
+            lock();
+        }
+    }
+
+    @NotNull
+    private String lockHandleTimeoutExceptionCreateWarningMessage(String lockedBy) {
+        return "Couldn't acquire write lock " +
+                "after " + timeout + " ms " +
+                "for the lock file:" + path + ". " +
+                "Lock was held by " + lockedBy;
     }
 
     @NotNull
