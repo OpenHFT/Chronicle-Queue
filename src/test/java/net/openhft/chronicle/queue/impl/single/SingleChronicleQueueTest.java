@@ -1177,10 +1177,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assertTrue("i: " + i,
                         tailer.moveToIndex(
                                 index));
-                final DocumentContext context = tailer.readingDocument();
-                assertEquals(index, context.index());
-                context.wire().read("key").text(sb);
-                assertEquals("value=" + i, sb.toString());
+                try (final DocumentContext context = tailer.readingDocument()){
+                    assertEquals(index, context.index());
+                    context.wire().read("key").text(sb);
+                    assertEquals("value=" + i, sb.toString());
+                }
             }
         }
     }
@@ -1797,7 +1798,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "some: data\n" +
                     "some2: other\n" +
-                    "...\n", queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+                    "...\n", tidyDump(queue));
         }
     }
 
@@ -2018,7 +2019,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     break;
                 }
             }
-            assertEquals(expectedMetaDataTest2(), chronicle.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertEquals(expectedMetaDataTest2(), tidyDump(chronicle));
         }
     }
 
@@ -2615,8 +2616,15 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
             }
             String expected = expectedMultipleAppenders();
-            assertEquals(expected, syncQ.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertEquals(expected, tidyDump(syncQ));
         }
+    }
+
+    @NotNull
+    private static String tidyDump(ChronicleQueue queue) {
+        return queue.dump()
+                .replaceAll("(?m)^#.+$\\n", "")
+                .replaceAll("(\\n0000\\d+ ).*", "$1Binary");
     }
 
     @NotNull
@@ -3476,7 +3484,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     closeQuietly(bytesWithIndies);
                 }
 
-                String dump = queue.dump().replaceAll("(?m)^#.+$\\n", "");
+                String dump = tidyDump(queue);
                 assertTrue(dump, dump.contains(
                         "--- !!data #binary\n" +
                                 "hello: world0\n" +
@@ -3508,7 +3516,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
             }
 
-            String before = sourceQueue.dump().replaceAll("(?m)^#.+$\\n", "");
+            String before = tidyDump(sourceQueue);
             try (ExcerptTailer tailer = sourceQueue.createTailer(named ? "named" : null);
                  ChronicleQueue queue =
                          builder(getTmpDir(), wireType).testBlockSize().build();
@@ -3523,7 +3531,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     }
                 }
 
-                String dump = queue.dump().replaceAll("(?m)^#.+$\\n", "");
+                String dump = tidyDump(queue);
                 assertEquals(before, dump);
                 assertTrue(dump, dump.contains(
                         "--- !!data #binary\n" +
