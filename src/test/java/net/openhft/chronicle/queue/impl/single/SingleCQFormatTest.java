@@ -275,7 +275,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 "24 01 00 40                                     # msg-length\n" +
                 "b9 06 68 65 61 64 65 72                         # header: (event)\n" +
                 "b6 08 53 43 51 53 74 6f 72 65                   # SCQStore\n" +
-                "82 0d 01 00 00                                  # SingleCQFormatTest$$Lambda\n" +
+                "82 0d 01 00 00                                  # Marshallable\n" +
                 "c8 77 69 72 65 54 79 70 65                      # wireType:\n" +
                 "b6 08 57 69 72 65 54 79 70 65                   # WireType\n" +
                 "e6 42 49 4e 41 52 59                            # BINARY\n" +
@@ -312,7 +312,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         assertEquals(bytes instanceof HexDumpBytes
                         ? expectedHexDump
                         : expected,
-                bytes.toHexString().replaceAll("Lambda.*", "Lambda"));
+                bytes.toHexString());
 
         assertEquals("" +
                 "--- !!meta-data #binary\n" +
