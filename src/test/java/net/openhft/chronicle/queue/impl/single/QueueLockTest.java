@@ -25,6 +25,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -35,6 +36,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.*;
 
 public class QueueLockTest extends QueueTestCommon {
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test
     public void testTimeout() throws InterruptedException {

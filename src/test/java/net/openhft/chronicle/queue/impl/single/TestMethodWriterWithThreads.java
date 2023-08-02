@@ -77,6 +77,12 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
         assumeTrue(Jvm.is64bit());
     }
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test(timeout = 30_000)
     public void test() throws FileNotFoundException {
 

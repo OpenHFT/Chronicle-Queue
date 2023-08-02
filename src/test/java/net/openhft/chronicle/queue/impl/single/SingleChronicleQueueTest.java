@@ -35,10 +35,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -96,6 +93,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 new Object[]{WireType.BINARY, false},
                 new Object[]{WireType.BINARY_LIGHT, false}
         );
+    }
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
     }
 
     private static List<String> getMappedQueueFiles() {

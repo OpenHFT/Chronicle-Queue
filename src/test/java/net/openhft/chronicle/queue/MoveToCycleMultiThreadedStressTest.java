@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Threads;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -24,6 +25,13 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
     private ChronicleQueue queue;
 
     private AtomicBoolean shutDown = new AtomicBoolean();
+
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test(timeout = 60000)
     public void test() throws ExecutionException, InterruptedException {

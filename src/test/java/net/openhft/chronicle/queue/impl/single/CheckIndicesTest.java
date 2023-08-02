@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -37,6 +38,12 @@ public class CheckIndicesTest extends QueueTestCommon {
 
     private static final int BATCH_SIZE = 10;
     private ChronicleQueue queue0;
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Ignore("stress test to run manually")
     @Test

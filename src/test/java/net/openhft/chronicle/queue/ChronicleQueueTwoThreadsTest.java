@@ -23,6 +23,7 @@ import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -37,6 +38,12 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
     private static final int BYTES_LENGTH = 256;
     private static final long INTERVAL_US = 10;
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Ignore("long running test")
     @Test(timeout = 60000)

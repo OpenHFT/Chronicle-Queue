@@ -52,6 +52,12 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
 
     private ExecutorService appenderES;
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Before
     public void before() {
         appenderES = Executors.newSingleThreadExecutor(

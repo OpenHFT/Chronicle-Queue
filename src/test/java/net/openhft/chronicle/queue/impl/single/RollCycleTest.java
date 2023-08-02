@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -38,6 +39,13 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
 public class RollCycleTest extends QueueTestCommon {
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void newRollCycleIgnored() throws InterruptedException {
         File path = getTmpDir();

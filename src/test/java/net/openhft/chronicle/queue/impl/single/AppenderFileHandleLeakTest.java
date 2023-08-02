@@ -99,7 +99,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     @Before
     public void setUp() {
         assumeTrue(OS.isLinux());
-
+        System.gc();
         queuePath = getTmpDir();
     }
 

@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -65,6 +66,12 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
                 new Object[]{5, RollbackBlockedWriterScenario.class},
                 new Object[]{1, CallIndexWhileBlockedWriterScenario.class}
         );
+    }
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
     }
 
     @Test

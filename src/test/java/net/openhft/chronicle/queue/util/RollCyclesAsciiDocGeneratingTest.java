@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.RollCyclesTest;
@@ -8,7 +9,7 @@ import org.junit.Test;
 
 import static java.lang.String.format;
 
-public class RollCyclesAsciiDocGeneratingTest {
+public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
     /**
      * This generates the asciidoc for the table in /docs/FAQ.adoc
      */

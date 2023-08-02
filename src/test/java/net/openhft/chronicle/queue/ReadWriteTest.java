@@ -55,6 +55,12 @@ public class ReadWriteTest extends QueueTestCommon {
         }
     }
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void testReadFromReadOnlyChronicle() {
         assumeFalse(OS.isWindows());

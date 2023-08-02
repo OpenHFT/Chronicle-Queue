@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -34,6 +35,12 @@ import static org.junit.Assert.*;
 public class ThreadedQueueTest extends QueueTestCommon {
 
     public static final int REQUIRED_COUNT = 10;
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test(timeout = 10000)
     public void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {

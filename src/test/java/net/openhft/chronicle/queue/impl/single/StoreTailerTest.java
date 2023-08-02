@@ -30,6 +30,7 @@ import net.openhft.chronicle.wire.VanillaMessageHistory;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -48,6 +49,12 @@ import static org.junit.Assume.assumeFalse;
 
 public class StoreTailerTest extends QueueTestCommon {
     private final Path dataDirectory = getTmpDir().toPath();
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test
     public void testEntryCount() {

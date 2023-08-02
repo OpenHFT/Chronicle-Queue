@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
@@ -39,6 +40,13 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     private final AtomicBoolean failedToMoveToEnd = new AtomicBoolean(false);
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8,
             new NamedThreadFactory("test"));
+
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test
     public void shouldAlwaysBeAbleToTail() throws InterruptedException {

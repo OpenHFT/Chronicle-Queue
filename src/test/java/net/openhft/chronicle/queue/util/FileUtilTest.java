@@ -129,7 +129,7 @@ public class FileUtilTest extends QueueTestCommon {
             }
 
             // Allow files to be seen
-            Jvm.pause(1000);
+            Jvm.pause(300);
 
             // Force the tailer to open the first file
             tailer.toStart();

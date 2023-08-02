@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.function.Consumer;
@@ -34,6 +35,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
 public class MicroToucherTest extends QueueTestCommon {
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
 
     @Test
     public void touchPageSparse() {

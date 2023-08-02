@@ -88,6 +88,13 @@ public class OvertakeTest extends QueueTestCommon {
         }
     }
 
+
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void appendAndTail() {
         try (ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
