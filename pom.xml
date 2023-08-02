@@ -32,6 +32,7 @@
     <name>OpenHFT/Chronicle-Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
     <properties>
+        <zero.cost.assertions>disabled</zero.cost.assertions>
         <additionalparam>-Xdoclint:none</additionalparam>
         <sonar.organization>openhft</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
@@ -57,6 +58,12 @@
     </dependencyManagement>
 
     <dependencies>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>assertions-${zero.cost.assertions}</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>net.openhft</groupId>
@@ -461,6 +468,13 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>assertions</id>
+            <properties>
+                <zero.cost.assertions>enabled</zero.cost.assertions>
+            </properties>
+        </profile>
+
         <profile>
             <id>bundled-nexus-staging</id>
             <repositories>

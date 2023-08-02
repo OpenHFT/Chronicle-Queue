@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.assertions.AssertUtil;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+import static net.openhft.chronicle.assertions.AssertUtil.SKIP_ASSERTIONS;
 import static net.openhft.chronicle.core.Jvm.warn;
 
 /**
@@ -91,8 +93,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     private void lockAssertPostConditions() {
         //noinspection ConstantConditions,AssertWithSideEffects
-        assert (lockedByThread = Thread.currentThread()) != null
-                && (lockedHere = new StackTrace()) != null;
+        assert SKIP_ASSERTIONS ||
+                ((lockedByThread = Thread.currentThread()) != null && (lockedHere = new StackTrace()) != null);
     }
 
     private void lockHandleTimeoutException(long currentLockValue) {
