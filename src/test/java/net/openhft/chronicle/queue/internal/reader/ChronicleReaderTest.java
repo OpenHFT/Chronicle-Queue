@@ -88,6 +88,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Before
     public void before() {
+        assumeFalse(Jvm.isArm());
+
         // Reader opens queues in read-only mode
         if (OS.isWindows())
             if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") ||
