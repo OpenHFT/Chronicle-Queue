@@ -202,34 +202,14 @@ public class WriteBytesTest extends QueueTestCommon {
                     "00000330                          83 82 82 82 82 82 82 82          ········\n" +
                     "# position: 832, header: 4\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x84\n" +
-                    "# # Unknown_0x83\n" +
-                    "# # Unknown_0x83\n" +
-                    "# # Unknown_0x83\n" +
-                    "# # Unknown_0x83\n" +
-                    "# # Unknown_0x83\n" +
-                    "# # Unknown_0x83\n" +
-                    "# # Unknown_0x83\n" +
+                    "00000340             84 83 83 83  83 83 83 83                 ···· ····    \n" +
                     "# position: 844, header: 5\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x85\n" +
-                    "# # Unknown_0x84\n" +
-                    "# # Unknown_0x84\n" +
-                    "# # Unknown_0x84\n" +
-                    "# # Unknown_0x84\n" +
-                    "# # Unknown_0x84\n" +
-                    "# # Unknown_0x84\n" +
-                    "# # Unknown_0x84\n" +
+                    "00000350 85 84 84 84 84 84 84 84                          ········         \n" +
                     "# position: 856, header: 6\n" +
                     "--- !!data #binary\n" +
-                    "# # BYTES_MARSHALLABLE\n" +
-                    "# # Unknown_0x85\n" +
-                    "# # Unknown_0x85\n" +
-                    "# # Unknown_0x85\n" +
-                    "# # Unknown_0x85\n" +
-                    "# # Unknown_0x85\n" +
-                    "# # Unknown_0x85\n" +
-                    "# # Unknown_0x85\n" +
+                    "00000350                                      86 85 85 85              ····\n" +
+                    "00000360 85 85 85 85                                      ····             \n" +
                     "# position: 868, header: 7\n" +
                     "--- !!data #binary\n" +
                     "00000360                          87 86 86 86 86 86 86 86          ········\n" +
@@ -241,21 +221,14 @@ public class WriteBytesTest extends QueueTestCommon {
                     "00000380 89 88 88 88 88 88 88 88                          ········         \n" +
                     "# position: 904, header: 10\n" +
                     "--- !!data #binary\n" +
-                    "\"\\x89\\x89\\x89\\x89\\x89\\x89\\x89\"\n" +
+                    "00000380                                      8a 89 89 89              ····\n" +
+                    "00000390 89 89 89 89                                      ····             \n" +
                     "# position: 916, header: 11\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x8B\n" +
-                    "\"\\x8A\\x8A\\x8A\\x8A\\x8A\\x8A\"\n" +
+                    "00000390                          8b 8a 8a 8a 8a 8a 8a 8a          ········\n" +
                     "# position: 928, header: 12\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x8C\n" +
-                    "# # Unknown_0x8B\n" +
-                    "# # Unknown_0x8B\n" +
-                    "# # Unknown_0x8B\n" +
-                    "# # Unknown_0x8B\n" +
-                    "# # Unknown_0x8B\n" +
-                    "# # Unknown_0x8B\n" +
-                    "# # Unknown_0x8B\n" +
+                    "000003a0             8c 8b 8b 8b  8b 8b 8b 8b                 ···· ····    \n" +
                     "# position: 940, header: 13\n" +
                     "--- !!data #binary\n" +
                     "000003b0 8d 8c 8c 8c 8c 8c 8c 8c                          ········         \n" +
@@ -271,90 +244,59 @@ public class WriteBytesTest extends QueueTestCommon {
                     "-1.4156185439721035E-29\n" +
                     "# position: 988, header: 17\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT32\n" +
-                    "-5.702071897398123E-29\n" +
-                    "# # EndOfFile\n" +
+                    "000003e0 91 90 90 90 90 90 90 90                          ········         \n" +
                     "# position: 1000, header: 18\n" +
                     "--- !!data #binary\n" +
-                    "# # EndOfFile\n" +
+                    "000003e0                                      92 91 91 91              ····\n" +
+                    "000003f0 91 91 91 91                                      ····             \n" +
                     "# position: 1012, header: 19\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT_STOP_2\n" +
-                    "# # EndOfFile\n" +
+                    "000003f0                          93 92 92 92 92 92 92 92          ········\n" +
                     "# position: 1024, header: 20\n" +
                     "--- !!data #binary\n" +
-                    "# # EndOfFile\n" +
+                    "00000400             94 93 93 93  93 93 93 93                 ···· ····    \n" +
                     "# position: 1036, header: 21\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT_STOP_4\n" +
-                    "# # EndOfFile\n" +
+                    "00000410 95 94 94 94 94 94 94 94                          ········         \n" +
                     "# position: 1048, header: 22\n" +
                     "--- !!data #binary\n" +
-                    "# # EndOfFile\n" +
+                    "00000410                                      96 95 95 95              ····\n" +
+                    "00000420 95 95 95 95                                      ····             \n" +
                     "# position: 1060, header: 23\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT_STOP_6\n" +
-                    "# # EndOfFile\n" +
+                    "00000420                          97 96 96 96 96 96 96 96          ········\n" +
                     "# position: 1072, header: 24\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x97\n" +
-                    "# # Unknown_0x97\n" +
-                    "# # Unknown_0x97\n" +
-                    "# # Unknown_0x97\n" +
+                    "00000430             98 97 97 97  97 97 97 97                 ···· ····    \n" +
                     "# position: 1084, header: 25\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x98\n" +
-                    "# # Unknown_0x98\n" +
-                    "# # Unknown_0x98\n" +
-                    "# # Unknown_0x98\n" +
+                    "00000440 99 98 98 98 98 98 98 98                          ········         \n" +
                     "# position: 1096, header: 26\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x99\n" +
-                    "# # Unknown_0x99\n" +
-                    "# # Unknown_0x99\n" +
-                    "# # Unknown_0x99\n" +
+                    "00000440                                      9a 99 99 99              ····\n" +
+                    "00000450 99 99 99 99                                      ····             \n" +
                     "# position: 1108, header: 27\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT_SET_LOW_0\n" +
-                    "# # FLOAT_SET_LOW_0\n" +
-                    "# # FLOAT_SET_LOW_0\n" +
-                    "# # FLOAT_SET_LOW_0\n" +
+                    "00000450                          9b 9a 9a 9a 9a 9a 9a 9a          ········\n" +
                     "# position: 1120, header: 28\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT_SET_LOW_2\n" +
-                    "# # FLOAT_SET_LOW_2\n" +
-                    "# # FLOAT_SET_LOW_2\n" +
-                    "# # FLOAT_SET_LOW_2\n" +
+                    "00000460             9c 9b 9b 9b  9b 9b 9b 9b                 ···· ····    \n" +
                     "# position: 1132, header: 29\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT_SET_LOW_4\n" +
-                    "# # FLOAT_SET_LOW_4\n" +
-                    "# # FLOAT_SET_LOW_4\n" +
-                    "# # FLOAT_SET_LOW_4\n" +
+                    "00000470 9d 9c 9c 9c 9c 9c 9c 9c                          ········         \n" +
                     "# position: 1144, header: 30\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x9D\n" +
-                    "# # Unknown_0x9D\n" +
-                    "# # Unknown_0x9D\n" +
-                    "# # Unknown_0x9D\n" +
+                    "00000470                                      9e 9d 9d 9d              ····\n" +
+                    "00000480 9d 9d 9d 9d                                      ····             \n" +
                     "# position: 1156, header: 31\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x9E\n" +
-                    "# # Unknown_0x9E\n" +
-                    "# # Unknown_0x9E\n" +
-                    "# # Unknown_0x9E\n" +
+                    "00000480                          9f 9e 9e 9e 9e 9e 9e 9e          ········\n" +
                     "# position: 1168, header: 32\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x9F\n" +
-                    "# # Unknown_0x9F\n" +
-                    "# # Unknown_0x9F\n" +
-                    "# # Unknown_0x9F\n" +
+                    "00000490             a0 9f 9f 9f  9f 9f 9f 9f                 ···· ····    \n" +
                     "# position: 1180, header: 33\n" +
                     "--- !!data #binary\n" +
-                    "160\n" +
-                    "# # UUID\n" +
-                    "# # UUID\n" +
-                    "# # UUID\n" +
+                    "000004a0 a1 a0 a0 a0 a0 a0 a0 a0                          ········         \n" +
                     "# position: 1192, header: 34\n" +
                     "--- !!data #binary\n" +
                     "41377\n" +
@@ -367,30 +309,20 @@ public class WriteBytesTest extends QueueTestCommon {
                     "41634\n" +
                     "# position: 1216, header: 36\n" +
                     "--- !!data #binary\n" +
-                    "!byte -93\n" +
-                    "2745410467\n" +
-                    "# # EndOfFile\n" +
+                    "000004c0             a4 a3 a3 a3  a3 a3 a3 a3                 ···· ····    \n" +
                     "# position: 1228, header: 37\n" +
                     "--- !!data #binary\n" +
-                    "!short -23388\n" +
-                    "!byte -92\n" +
-                    "!byte -92\n" +
-                    "# # EndOfFile\n" +
+                    "000004d0 a5 a4 a4 a4 a4 a4 a4 a4                          ········         \n" +
                     "# position: 1240, header: 38\n" +
                     "--- !!data #binary\n" +
                     "-1515870811\n" +
                     "!short -23131\n" +
                     "# position: 1252, header: 39\n" +
                     "--- !!data #binary\n" +
-                    "# # INT32\n" +
-                    "-1499027802\n" +
-                    "# # EndOfFile\n" +
+                    "000004e0                          a7 a6 a6 a6 a6 a6 a6 a6          ········\n" +
                     "# position: 1264, header: 40\n" +
                     "--- !!data #binary\n" +
-                    "167\n" +
-                    "# # INT64\n" +
-                    "# # INT64\n" +
-                    "# # INT64\n" +
+                    "000004f0             a8 a7 a7 a7  a7 a7 a7 a7                 ···· ····    \n" +
                     "# position: 1276, header: 41\n" +
                     "--- !!data #binary\n" +
                     "43176\n" +
@@ -399,46 +331,27 @@ public class WriteBytesTest extends QueueTestCommon {
                     "-1\n" +
                     "# position: 1288, header: 42\n" +
                     "--- !!data #binary\n" +
-                    "# # SET_LOW_INT16\n" +
-                    "43433\n" +
-                    "43433\n" +
+                    "00000500                                      aa a9 a9 a9              ····\n" +
+                    "00000510 a9 a9 a9 a9                                      ····             \n" +
                     "# position: 1300, header: 43\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0xAA\n" +
-                    "# # Unknown_0xAA\n" +
-                    "# # Unknown_0xAA\n" +
-                    "# # Unknown_0xAA\n" +
+                    "00000510                          ab aa aa aa aa aa aa aa          ········\n" +
                     "# position: 1312, header: 44\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0xAB\n" +
-                    "# # Unknown_0xAB\n" +
-                    "# # Unknown_0xAB\n" +
-                    "# # Unknown_0xAB\n" +
+                    "00000520             ac ab ab ab  ab ab ab ab                 ···· ····    \n" +
                     "# position: 1324, header: 45\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0xAC\n" +
-                    "# # Unknown_0xAC\n" +
-                    "# # Unknown_0xAC\n" +
-                    "# # Unknown_0xAC\n" +
+                    "00000530 ad ac ac ac ac ac ac ac                          ········         \n" +
                     "# position: 1336, header: 46\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0xAD\n" +
-                    "# # Unknown_0xAD\n" +
-                    "# # Unknown_0xAD\n" +
-                    "# # Unknown_0xAD\n" +
+                    "00000530                                      ae ad ad ad              ····\n" +
+                    "00000540 ad ad ad ad                                      ····             \n" +
                     "# position: 1348, header: 47\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0xAE\n" +
-                    "# # Unknown_0xAE\n" +
-                    "# # Unknown_0xAE\n" +
-                    "# # Unknown_0xAE\n" +
+                    "00000540                          af ae ae ae ae ae ae ae          ········\n" +
                     "# position: 1360, header: 48\n" +
                     "--- !!data #binary\n" +
-                    "false\n" +
-                    "# # INT64_0x\n" +
-                    "# # INT64_0x\n" +
-                    "# # INT64_0x\n" +
-                    "# # EndOfFile\n" +
+                    "00000550             b0 af af af  af af af af                 ···· ····    \n" +
                     "# position: 1372, header: 49\n" +
                     "--- !!data #binary\n" +
                     "true\n" +
@@ -497,13 +410,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     "00000600                          bf be be be be be be be          ········\n" +
                     "# position: 1552, header: 64\n" +
                     "--- !!data #binary\n" +
-                    "\"\": # # HINT\n" +
-                    "# # HINT\n" +
-                    "# # HINT\n" +
-                    "# # HINT\n" +
-                    "# # HINT\n" +
-                    "# # HINT\n" +
-                    "# # HINT\n" +
+                    "00000610             c0 bf bf bf  bf bf bf bf                 ···· ····    \n" +
                     "# position: 1564, header: 65\n" +
                     "--- !!data #binary\n" +
                     "\"\\xC0\": \"\": \"\": \"\": \"\": \"\": \"\":\n" +
