@@ -324,6 +324,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     @Override
     public void close() {
-        tailer.queue().close();
+        if (tailer != null)
+            tailer.queue().close();
     }
 }
