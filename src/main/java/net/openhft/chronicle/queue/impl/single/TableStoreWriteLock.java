@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.assertions.AssertUtil;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.impl.TableStore;
