@@ -452,14 +452,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         long lastAddress = writePosition.getVolatileValue();
         long lastIndex = this.sequence.getSequence(lastAddress);
 
-        if (lastAddress > 0 && toPosition == lastAddress
-                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
-            bytes.readPositionUnlimited(toPosition);
-            i = lastIndex - 1;
-        } else {
-            bytes.readPositionUnlimited(startAddress);
-            i = indexOfNext - 1;
-        }
+        i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
 
         while (bytes.readPosition() <= toPosition) {
             WireIn.HeaderType headerType = wire.readDataHeader(true);
@@ -479,12 +472,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                     }
 
                     int header = bytes.readVolatileInt(bytes.readPosition());
-                    throw new IllegalArgumentException(
-                            "You can't know the index for an entry which hasn't been written. " +
-                                    "start: " + startAddress +
-                                    ", at: " + bytes.readPosition() +
-                                    ", header: " + Integer.toHexString(header) +
-                                    ", toPos: " + toPosition);
+                    throwIndexNotWritten(toPosition, startAddress, bytes, header);
                 case META_DATA:
                     break;
                 case DATA:
@@ -501,6 +489,30 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             bytes.readSkip(len);
         }
 
+        return throwPositionNotAtStartOfMessage(toPosition, bytes);
+    }
+
+    private long calculateInitialValue(long toPosition, long indexOfNext, long startAddress, Bytes<?> bytes, long lastAddress, long lastIndex) {
+        if (lastAddress > 0 && toPosition == lastAddress
+                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
+            bytes.readPositionUnlimited(toPosition);
+            return lastIndex - 1;
+        } else {
+            bytes.readPositionUnlimited(startAddress);
+            return indexOfNext - 1;
+        }
+    }
+
+    private void throwIndexNotWritten(long toPosition, long startAddress, Bytes<?> bytes, int header) {
+        throw new IllegalArgumentException(
+                "You can't know the index for an entry which hasn't been written. " +
+                        "start: " + startAddress +
+                        ", at: " + bytes.readPosition() +
+                        ", header: " + Integer.toHexString(header) +
+                        ", toPos: " + toPosition);
+    }
+
+    private long throwPositionNotAtStartOfMessage(long toPosition, Bytes<?> bytes) {
         throw new IllegalArgumentException("position not the start of a message, bytes" +
                 ".readPosition()=" + bytes.readPosition() + ",toPosition=" + toPosition);
     }
@@ -656,11 +668,11 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             if (IGNORE_INDEXING_FAILURE) {
                 return;
             }
-            throw new IllegalStateException("Unable to index " + sequenceNumber + ", the number of entries exceeds max number for the current rollcycle");
+            throwNumEntriesExceededForRollCycle(sequenceNumber);
         }
         long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
         if (secondaryAddress > bytes.capacity())
-            throw new IllegalStateException("sa2: " + secondaryAddress);
+            throwSecondaryAddressError(secondaryAddress);
         bytes.readLimitToCapacity();
         LongArrayValues indexValues = arrayForAddress(wire, secondaryAddress);
         int index3 = (int) ((sequenceNumber >>> indexSpacingBits) & (indexCount - 1));
@@ -674,6 +686,14 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             assert posN == position;
         }
         nextEntryToBeIndexed.setMaxValue(sequenceNumber + indexSpacing);
+    }
+
+    private void throwSecondaryAddressError(long secondaryAddress) {
+        throw new IllegalStateException("sa2: " + secondaryAddress);
+    }
+
+    private void throwNumEntriesExceededForRollCycle(long sequenceNumber) {
+        throw new IllegalStateException("Unable to index " + sequenceNumber + ", the number of entries exceeds max number for the current rollcycle");
     }
 
     public boolean indexable(long index) {
