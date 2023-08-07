@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
@@ -290,7 +291,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
     private boolean hasEOF(SingleChronicleQueue q, int cycle) {
         try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
-            String dump = store.dump();
+            String dump = store.dump(WireType.BINARY_LIGHT);
             System.out.println(dump);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }

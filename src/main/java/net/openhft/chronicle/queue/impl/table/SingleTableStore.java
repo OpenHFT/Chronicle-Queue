@@ -168,15 +168,21 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @NotNull
     @Override
     public String dump() {
-        return dump(false);
+        return dump(wireType);
     }
 
-    private String dump(final boolean abbrev) {
+    @Override
+    public String dump(WireType wireType) {
+        return dump(wireType, false);
+    }
+
+    private String dump(@NotNull WireType wireType, final boolean abbrev) {
 
         final MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
         try {
             bytes.readLimit(bytes.realCapacity());
-            return Wires.fromSizePrefixedBlobs(bytes, true, abbrev);
+            Wire wire = wireType.apply(bytes);
+            return Wires.fromSizePrefixedBlobs(wire, abbrev);
         } finally {
             bytes.releaseLast();
         }
@@ -187,7 +193,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public String shortDump() {
         throwExceptionIfClosed();
 
-        return dump(true);
+        return dump(wireType, true);
     }
 
     @Override

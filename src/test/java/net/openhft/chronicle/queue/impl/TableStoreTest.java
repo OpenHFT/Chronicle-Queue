@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
 import java.io.File;
@@ -59,7 +60,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "b: 2\n" +
                     "...\n" +
-                    "# 130972 bytes remaining\n", table.dump());
+                    "# 130972 bytes remaining\n", table.dump(WireType.BINARY_LIGHT));
         }
 
         try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
@@ -83,7 +84,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "c: 3\n" +
                     "...\n" +
-                    "# 130956 bytes remaining\n", table.dump());
+                    "# 130956 bytes remaining\n", table.dump(WireType.BINARY_LIGHT));
         }
     }
 
