@@ -434,6 +434,10 @@ public interface ChronicleQueue extends Closeable {
      */
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
+    default void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated, int remoteHostId) {
+        lastAcknowledgedIndexReplicated(lastAcknowledgedIndexReplicated);
+    }
+
     /**
      * Sets the last index that was mysync-ed to disk
      *

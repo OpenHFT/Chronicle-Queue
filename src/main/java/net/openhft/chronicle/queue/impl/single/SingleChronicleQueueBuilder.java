@@ -138,6 +138,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
     private SyncMode syncMode;
+    private LastAcknowledgedIndexReplicatedStrategy lastAcknowledgedIndexReplicatedStrategy;
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -1083,6 +1084,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public SyncMode syncMode() {
         return syncMode == null ? MappedFile.DEFAULT_SYNC_MODE : syncMode;
+    }
+
+    public LastAcknowledgedIndexReplicatedStrategy lastAcknowledgedIndexReplicatedStrategy() {
+        return lastAcknowledgedIndexReplicatedStrategy;
+    }
+
+    public SingleChronicleQueueBuilder lastAcknowledgedIndexReplicatedStrategy(LastAcknowledgedIndexReplicatedStrategy lastAcknowledgedIndexReplicatedStrategy) {
+        this.lastAcknowledgedIndexReplicatedStrategy = lastAcknowledgedIndexReplicatedStrategy;
+        return this;
     }
 
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {
