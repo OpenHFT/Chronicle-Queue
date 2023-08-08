@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -171,7 +172,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
     @Override
     public String toString() {
-        return tableStore.dump();
+        return tableStore.dump(WireType.BINARY_LIGHT);
     }
 
     protected void performClose() {

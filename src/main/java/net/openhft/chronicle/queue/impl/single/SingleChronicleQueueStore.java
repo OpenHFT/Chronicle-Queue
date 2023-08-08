@@ -171,19 +171,24 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     @Override
     public String dump() {
-        return dump(false);
+        return dump(WireType.BINARY_LIGHT, false);
     }
 
     @NotNull
     @Override
     public String shortDump() {
-        return dump(true);
+        return dump(WireType.BINARY_LIGHT,true);
     }
 
-    private String dump(boolean abbrev) {
+    @Override
+    public String dump(WireType wireType) {
+        return dump(wireType, false);
+    }
+
+    private String dump(WireType wireType, boolean abbrev) {
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
             bytes.readLimit(bytes.realCapacity());
-            final Wire w = WireType.BINARY.apply(bytes);
+            final Wire w = wireType.apply(bytes);
             w.usePadding(dataVersion > 0);
             return Wires.fromSizePrefixedBlobs(w, abbrev);
         }

@@ -341,11 +341,11 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @Override
     public String dump() {
         StringBuilder sb = new StringBuilder(1024);
-        sb.append(metaStore.dump());
+        sb.append(metaStore.dump(wireType));
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
             try (SingleChronicleQueueStore commonStore = storeForCycle(i, epoch, false, null)) {
                 if (commonStore != null)
-                    sb.append(commonStore.dump());
+                    sb.append(commonStore.dump(wireType));
             }
         }
         return sb.toString();
