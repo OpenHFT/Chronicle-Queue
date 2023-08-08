@@ -139,6 +139,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private final long forceDirectoryListingRefreshIntervalMs;
     private final long[] chunkCount = {0};
     private final SyncMode syncMode;
+    private final LastAcknowledgedIndexReplicatedStrategy lastAcknowledgedIndexReplicatedStrategy;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -216,6 +217,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
             this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
             this.forceDirectoryListingRefreshIntervalMs = builder.forceDirectoryListingRefreshIntervalMs();
+            this.lastAcknowledgedIndexReplicatedStrategy = builder.lastAcknowledgedIndexReplicatedStrategy();
 
             sourceId = builder.sourceId();
 
@@ -277,6 +279,14 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public void lastAcknowledgedIndexReplicated(long newValue) {
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
+    }
+
+    @Override
+    public void lastAcknowledgedIndexReplicated(long acknowledgeIndex, int remoteHostId) {
+        if (lastAcknowledgedIndexReplicated != null) {
+            long newValue = lastAcknowledgedIndexReplicatedStrategy.onAckReceived(acknowledgeIndex, remoteHostId);
+            lastAcknowledgedIndexReplicated.setMaxValue(newValue);
+        }
     }
 
     @Override
