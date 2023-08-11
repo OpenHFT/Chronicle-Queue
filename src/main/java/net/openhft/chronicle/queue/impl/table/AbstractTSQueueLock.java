@@ -115,9 +115,8 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             // mask off thread (if used)
             int realPid = (int) pid;
             if (!Jvm.isProcessAlive(realPid)) {
-                if (Jvm.isDebugEnabled(this.getClass()))
-                    Jvm.debug().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
-                            lockKey, this.path, realPid), new StackTrace("Forced unlock"));
+                Jvm.warn().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
+                        lockKey, this.path, realPid), new StackTrace("Forced unlock"));
                 if (lock.compareAndSwapValue(pid, UNLOCKED))
                     return true;
             } else
