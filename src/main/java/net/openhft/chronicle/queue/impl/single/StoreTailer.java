@@ -468,14 +468,14 @@ class StoreTailer extends AbstractCloseable
         bytes.readLimitToCapacity();
 
         switch (wire.readDataHeader(includeMetaData)) {
-            case DATA:
-                context.metaData(false);
-                break;
             case NONE:
                 // no more polling - appender will always write (or recover) EOF
                 return false;
             case META_DATA:
                 context.metaData(true);
+                break;
+            case DATA:
+                context.metaData(false);
                 break;
             case EOF:
                 throw EOF_EXCEPTION;
