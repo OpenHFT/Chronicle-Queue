@@ -30,7 +30,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertFalse;
 
