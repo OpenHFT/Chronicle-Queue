@@ -204,6 +204,7 @@ public class TSQueueLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws IOException, TimeoutException, InterruptedException {
+        ignoreException("Forced unlock");
         Process lockingProcess = runLockingProcess(false);
         try (TSQueueLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
