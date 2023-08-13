@@ -52,11 +52,12 @@ public class DirectoryUtils {
         return Long.toString(l, 36);
     }
 
-
+    @Deprecated(/* Remove in x.25. Use IOTools.deleteDirWithFiles */)
     public static void deleteDir(@NotNull String dir) {
         IOTools.deleteDirWithFiles(new File(dir));
     }
 
+    @Deprecated(/* Remove in x.25. Use IOTools.deleteDirWithFiles */)
     public static void deleteDir(@NotNull File dir) {
         IOTools.deleteDirWithFiles(dir);
     }
@@ -67,7 +68,7 @@ public class DirectoryUtils {
 
         {
             // TODO: should not need to do this now
-            PriorityHook.add(100, () -> toDeleteList.forEach(DirectoryUtils::deleteDir));
+            PriorityHook.add(100, () -> toDeleteList.forEach(IOTools::deleteDirWithFiles));
         }
 
         synchronized void add(File path) {

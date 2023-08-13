@@ -245,7 +245,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * {@inheritDoc}
      */
     @Override
-    public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) { // TODO Change to ThreadLocal values if performance is a problem.
+    public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
 
         if (mappedBytes.isClosed())
             throw new ClosedIllegalStateException("Closed");

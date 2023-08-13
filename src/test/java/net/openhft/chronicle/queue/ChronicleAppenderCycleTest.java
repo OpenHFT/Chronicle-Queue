@@ -96,7 +96,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
             assertNull(thr1.get());
             assertNull(thr2.get());
         } finally {
-            DirectoryUtils.deleteDir(path.toFile());
+            IOTools.deleteDirWithFiles(path.toFile());
         }
     }
 

@@ -63,9 +63,6 @@ public class NotCompleteTest extends QueueTestCommon {
 
         final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
         try {
-            DirectoryUtils.deleteDir(tmpDir);
-            tmpDir.mkdirs();
-
             final List<String> names = Collections.synchronizedList(new ArrayList<>());
             final Person person1 = new Person(40, "Terry");
             final Person interrupter = new Person(50, Person.INTERRUPT);

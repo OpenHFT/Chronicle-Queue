@@ -214,7 +214,6 @@ public class OrderManagerTest extends QueueTestCommon {
             }
 //            DumpQueueMain.dump(queuePath.getAbsolutePath());
 
-            // TODO FIx for more.
             for (int i = 0; i < 10; i++) {
                 // read one message at a time
                 try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath)

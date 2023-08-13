@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -46,7 +47,7 @@ public class TestEmptyFile {
 
     @After
     public void cleanup() {
-        DirectoryUtils.deleteDir(tmpDir.toFile());
+        IOTools.deleteDirWithFiles(tmpDir.toFile());
     }
 
     @Test(timeout = 30000)
