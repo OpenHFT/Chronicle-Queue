@@ -108,8 +108,6 @@ public class CreateAtIndexTest extends QueueTestCommon {
         }
     }
 
-    // TODO: 2 or more threads soak test
-
     @Test
     public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() {
         File tmp = getTmpDir();

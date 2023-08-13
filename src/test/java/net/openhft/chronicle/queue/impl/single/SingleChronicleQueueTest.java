@@ -3237,11 +3237,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         waitFor(mappedFile2::isClosed, "mappedFile2 is not closed");
 
         if (OS.isWindows()) {
-            // TODO: retest
             System.err.println("#460 Cannot test delete after close on windows");
             return;
         }
-        // this used to fail on windows
         assertTrue(mappedFile1.file().delete());
         assertTrue(mappedFile2.file().delete());
     }

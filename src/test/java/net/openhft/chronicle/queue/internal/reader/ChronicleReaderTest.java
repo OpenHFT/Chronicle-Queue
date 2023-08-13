@@ -303,7 +303,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test(timeout = 5000)
     public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
-        DirectoryUtils.deleteDir(dataDir.toFile());
+        IOTools.deleteDirWithFiles(dataDir.toFile());
         dataDir.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
 

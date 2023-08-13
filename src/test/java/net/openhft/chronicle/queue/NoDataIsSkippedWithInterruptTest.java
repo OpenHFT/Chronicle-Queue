@@ -49,7 +49,6 @@ public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
 
             Thread.currentThread().interrupt();
             excerptAppender.writeText(EXPECTED);
-            // TODO: restore the below
             Assert.assertTrue(Thread.currentThread().isInterrupted());
 
             timeProvider.advanceMillis(60_000);
