@@ -21,7 +21,7 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.36</version>
+        <version>1.24.0-SNAPSHOT</version>
         <relativePath />
     </parent>
 
@@ -29,7 +29,7 @@
 
     <version>5.24ea26-SNAPSHOT</version>
     <packaging>bundle</packaging>
-    <name>OpenHFT/Chronicle-Queue</name>
+    <name>OpenHFT/Chronicle Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
@@ -43,7 +43,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
-                <version>3.22.4</version>
+                <version>3.24.0-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -177,7 +177,6 @@
         <dependency>
             <groupId>org.hsqldb</groupId>
             <artifactId>hsqldb</artifactId>
-            <version>2.7.1</version>
             <scope>test</scope>
         </dependency>
 
@@ -233,7 +232,7 @@
             <plugin>
                 <groupId>net.openhft</groupId>
                 <artifactId>binary-compatibility-enforcer-plugin</artifactId>
-                <version>1.0.13</version>
+
                 <executions>
                     <execution>
                         <phase>verify</phase>
@@ -262,7 +261,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M7</version>
                 <configuration>
                     <forkCount>1</forkCount>
                     <!--                    <reuseForks>false</reuseForks>-->
@@ -273,7 +271,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -324,7 +321,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
 
                 <executions>
                     <!-- run this first -->
@@ -556,7 +552,6 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.1.0</version>
 
                         <configuration>
                             <classpathScope>test</classpathScope>
