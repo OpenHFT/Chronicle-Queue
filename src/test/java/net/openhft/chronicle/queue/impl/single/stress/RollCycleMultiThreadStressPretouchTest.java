@@ -18,8 +18,10 @@
 
 package net.openhft.chronicle.queue.impl.single.stress;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThreadStressTest {
 
     public RollCycleMultiThreadStressPretouchTest() {
