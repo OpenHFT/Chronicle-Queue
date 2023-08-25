@@ -242,7 +242,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             assertTrue(lock.locked());
         }
         lockingProcess.destroy();
-        lockingProcess.waitFor(5_000, TimeUnit.SECONDS);
+        lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
     }
 
     @Test(timeout = 5_000)
@@ -252,7 +252,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         try (TableStoreWriteLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
             lockingProcess.destroy();
-            lockingProcess.waitFor(5_000, TimeUnit.SECONDS);
+            lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
             assertTrue(lock.forceUnlockIfProcessIsDead());
             assertFalse(lock.locked());
         }
@@ -269,7 +269,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     private void waitForLockToBecomeLocked(TableStoreWriteLock lock) throws TimeoutException {
         Pauser p = Pauser.balanced();
         while (!lock.locked()) {
-            p.pause(5_000, TimeUnit.SECONDS);
+            p.pause(3_000, TimeUnit.SECONDS);
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedRuntimeException("Interrupted waiting for lock to lock");
             }
