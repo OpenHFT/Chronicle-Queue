@@ -100,7 +100,7 @@ public class ChannelHandlerYamlTester implements YamlTester {
                 long now = 1;
                 AtomicLong activeTime = new AtomicLong(System.currentTimeMillis());
                 final Thread thread = new Thread(() -> {
-                    long timeout = Jvm.isDebug() ? 60_000 : 500;
+                    long timeout = Jvm.isDebug() ? 60_000 : Jvm.isArm() ? 2_000 : 500;
                     for (int i = 0; i < timeout; i++) {
                         Jvm.pause(1);
                         if (activeTime.get() + timeout < System.currentTimeMillis())
