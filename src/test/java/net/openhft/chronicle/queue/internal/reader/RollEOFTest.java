@@ -184,7 +184,7 @@ public class RollEOFTest extends QueueTestCommon {
     }
 
     private void removeEOF(Path path) throws IOException {
-        long blockSize = 64 << 10;
+        long blockSize = OS.SAFE_PAGE_SIZE;
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
         final MappedBytes mappedBytes = MappedBytes.mappedBytes(path.toFile(), chunkSize, overlapSize, false);

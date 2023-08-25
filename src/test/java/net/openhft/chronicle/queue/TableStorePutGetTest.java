@@ -121,7 +121,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
         final File tempDir = DirectoryUtils.tempDir("manyEntries");
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(tempDir)
                 .rollCycle(TEST_DAILY)
-                .blockSize(64 << 10)
+                .testBlockSize()
                 .build()) {
             final int count = 2280;
             for (int j = 0; j < count; j++) {
