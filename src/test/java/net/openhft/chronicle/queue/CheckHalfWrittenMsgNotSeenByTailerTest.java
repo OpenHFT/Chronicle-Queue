@@ -119,8 +119,8 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
 
     @Test
     public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
-        Assume.assumeTrue(!OS.isWindows());
-        Assume.assumeTrue(!OS.isMacOSX());
+        Assume.assumeTrue(OS.isLinux() && OS.is64Bit());
+
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
         runCommand(JavaProcessBuilder.create(HalfWriteAMessage.class).withProgramArguments(queueDirectory.getAbsolutePath()).start());

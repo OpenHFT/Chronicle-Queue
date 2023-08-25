@@ -33,6 +33,7 @@ import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 public class PipeHandlerTest extends QueueTestCommon {
@@ -49,6 +50,11 @@ public class PipeHandlerTest extends QueueTestCommon {
                 {false}
         };
         return Arrays.asList(comb);
+    }
+
+    @Before
+    public void checkDefaultSizesAreOk() {
+        assumeTrue(OS.is64Bit());
     }
 
     @Before
