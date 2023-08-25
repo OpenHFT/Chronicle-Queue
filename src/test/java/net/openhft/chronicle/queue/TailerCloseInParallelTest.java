@@ -41,6 +41,7 @@ import java.util.Random;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
 public class TailerCloseInParallelTest extends QueueTestCommon {
@@ -71,6 +72,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
     @Test
     public void runOnce() throws IOException {
+        assumeTrue(OS.is64Bit());
         ignoreException("Reference tracing disabled");
         AbstractCloseable.disableCloseableTracing();
         AbstractReferenceCounted.disableReferenceTracing();
