@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Threads;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,11 +22,11 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
     private final AtomicLong last = new AtomicLong();
     private long firstCycle;
 
-    private static final int READ_THREADS = 10;
+    private static final int READ_THREADS = Math.min(Runtime.getRuntime().availableProcessors(), 10);
     private ChronicleQueue queue;
 
     private AtomicBoolean shutDown = new AtomicBoolean();
-
+    private boolean resourceTracing;
 
     @Override
     @Before
@@ -33,10 +34,21 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
         super.threadDump();
     }
 
+    @Before
+    public void disableResourceTracing() {
+        // with this enabled, and a 32 GB heap this fails with flight recorder
+        // with this disabled, and a 32 *MB* heap this passes with flight recorder on
+        resourceTracing = Jvm.isResourceTracing();
+        Jvm.setResourceTracing(false);
+    }
+
+    @After
+    public void resetResourceTracing() {
+        Jvm.setResourceTracing(resourceTracing);
+    }
+
     @Test(timeout = 60000)
     public void test() throws ExecutionException, InterruptedException {
-
-
         final String path = OS.getTarget() + "/stressMoveToCycle-" + Time.uniqueId();
         final ExecutorService es = Executors.newCachedThreadPool();
 
@@ -59,7 +71,6 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
                 f.add(es.submit(this::randomMove));
             }
 
-
             appender.get();
             shutDown.set(true);
             Thread.sleep(100);
@@ -72,12 +83,9 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
                     Assert.fail();
                 }
             });
-
         }
 
-
         Threads.shutdown(es);
-
     }
 
     private Void append() {
@@ -90,7 +98,6 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
             Jvm.pause(100);
         }
         return null;
-
     }
 
     private void updateLast(ExcerptAppender excerptAppender) {
@@ -113,5 +120,4 @@ public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
         tailer.close();
         return null;
     }
-
 }
