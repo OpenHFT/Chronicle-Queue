@@ -24,9 +24,7 @@ import net.openhft.chronicle.core.util.ThrowingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -37,7 +35,6 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         extends AbstractCloseable {
 
     private final Map<K, T> cache = new LinkedHashMap<>();
-    private final List<T> retained = new ArrayList<>();
     private final Function<T, V> transformer;
     private final ThrowingFunction<K, T, E> creator;
     private final ReferenceChangeListener referenceChangeListener;
@@ -78,57 +75,26 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     protected void performClose() {
         synchronized (cache) {
             for (T value : cache.values()) {
-                try {
-                    value.release(this);
-                    if (value.refCount() > 0)
-                        retained.add(value);
-//                    System.err.println("Released (performClose) " + value + " by " + this);
-                } catch (Exception e) {
-                    Jvm.debug().on(getClass(), e);
-                }
+                releaseResource(value);
             }
             cache.clear();
         }
-        if (retained.isEmpty() || !Jvm.isResourceTracing())
-            return;
+    }
 
-        boolean interrupted = false;
+    private void releaseResource(T value) {
         try {
-            for (int i = 1; i <= 2_500; i++) {
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                }
-                if (retained.stream().noneMatch(v -> v.refCount() > 0)) {
-                    (i > 9 ? Jvm.perf() : Jvm.debug())
-                            .on(getClass(), "Took " + i + " ms to release " + retained);
-                    return;
-                }
-            }
-            retained.stream()
-                    .filter(o -> o instanceof ManagedCloseable)
-                    .map(o -> (ManagedCloseable) o)
-                    .forEach(ManagedCloseable::warnAndCloseIfNotClosed);
-        } finally {
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
+            if (value != null)
+                value.release(this);
+        } catch (Exception e) {
+            Jvm.debug().on(getClass(), e);
         }
     }
 
     public void remove(K key) {
-        throwExceptionIfClosed();
+        // harmless to call if cache is already closing/closed
 
         synchronized (cache) {
-            @Nullable T value = cache.remove(key);
-
-            if (value != null) {
-                value.release(this);
-
-                if (value.refCount() > 0)
-                    retained.add(value);
-            }
+            releaseResource(cache.remove(key));
         }
     }
 
