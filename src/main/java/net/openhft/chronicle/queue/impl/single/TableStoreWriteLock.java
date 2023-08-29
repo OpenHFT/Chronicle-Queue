@@ -77,7 +77,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
             // success
         } catch (TimeoutException e) {
-            lockHandleTimeoutException(currentLockValue);
+            lockHandleTimeout(currentLockValue);
         } finally {
             tlPauser.reset();
         }
@@ -96,7 +96,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
                 ((lockedByThread = Thread.currentThread()) != null && (lockedHere = new StackTrace()) != null);
     }
 
-    private void lockHandleTimeoutException(long currentLockValue) {
+    private void lockHandleTimeout(long currentLockValue) {
         final String lockedBy = getLockedBy(currentLockValue);
         final String warningMsg = lockHandleTimeoutExceptionCreateWarningMessage(lockedBy);
         if (forceUnlockOnTimeoutWhen == UnlockMode.NEVER)
