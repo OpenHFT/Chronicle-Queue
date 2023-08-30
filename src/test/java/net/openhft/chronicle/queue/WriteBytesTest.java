@@ -1055,7 +1055,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     "...\n" +
                     (useSparseFiles
                             ? "# 4294963160 bytes remaining\n"
-                            : "# 77776 bytes remaining\n"), queue.dump());
+                            : "# 126928 bytes remaining\n"), queue.dump());
 
         } finally {
             try {

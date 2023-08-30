@@ -181,7 +181,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "say: Day 1 data\n" +
                                 "...\n" +
-                                "# 81496 bytes remaining\n",
+                                "# 130648 bytes remaining\n",
                         queue.dump());
 
                 // two days pass
@@ -261,7 +261,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "# position: 420, header: 0 EOF\n" +
                                 "--- !!not-ready-meta-data #binary\n" +
                                 "...\n" +
-                                "# 81496 bytes remaining\n" +
+                                "# 130648 bytes remaining\n" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !SCQStore {\n" +
                                 "  writePosition: [\n" +
@@ -294,7 +294,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "say: Day 3 data\n" +
                                 "...\n" +
-                                "# 81496 bytes remaining\n",
+                                "# 130648 bytes remaining\n",
                         queue.dump());
                 Assert.assertEquals(2, (int) es.submit(observer).get());
 

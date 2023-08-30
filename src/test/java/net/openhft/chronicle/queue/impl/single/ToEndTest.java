@@ -366,7 +366,7 @@ public class ToEndTest extends QueueTestCommon {
                     "--- !!meta-data #binary\n" +
                     "\"\": hello!\n" +
                     "...\n" +
-                    "# 81120 bytes remaining\n", queue.dump());
+                    "# 130272 bytes remaining\n", queue.dump());
             assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
             // toEnd().index() should be where it expects the next excerpt in an existing cycle to be written.
             final String actual = tailerToEndIndex(queue);

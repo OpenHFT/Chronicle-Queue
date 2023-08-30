@@ -135,7 +135,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                     "...\n" +
                     (useSparseFiles
                             ? "# 4294966880 bytes remaining\n"
-                            : "# 81492 bytes remaining\n"), cq.dump());
+                            : "# 130644 bytes remaining\n"), cq.dump());
         }
     }
 
@@ -217,7 +217,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                             "...\n" +
                             (useSparseFiles
                                     ? "# 4294966880 bytes remaining\n"
-                                    : "# 81492 bytes remaining\n"),
+                                    : "# 130644 bytes remaining\n"),
                     cq.dump());
         }
     }

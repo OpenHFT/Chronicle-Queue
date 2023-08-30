@@ -182,7 +182,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "# position: 408, header: 0 EOF\n" +
                                 "--- !!not-ready-meta-data #binary\n" +
                                 "...\n" +
-                                "# 81508 bytes remaining\n" +
+                                "# 130660 bytes remaining\n" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !SCQStore {\n" +
                                 "  writePosition: [\n" +
@@ -217,7 +217,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "# position: 408, header: 0 EOF\n" +
                                 "--- !!not-ready-meta-data #binary\n" +
                                 "...\n" +
-                                "# 81508 bytes remaining\n" +
+                                "# 130660 bytes remaining\n" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !SCQStore {\n" +
                                 "  writePosition: [\n" +
@@ -252,7 +252,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "# position: 408, header: 0 EOF\n" +
                                 "--- !!not-ready-meta-data #binary\n" +
                                 "...\n" +
-                                "# 81508 bytes remaining\n" +
+                                "# 130660 bytes remaining\n" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !SCQStore {\n" +
                                 "  writePosition: [\n" +
@@ -285,7 +285,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "\"3\"\n" +
                                 "...\n" +
-                                "# 81508 bytes remaining\n",
+                                "# 130660 bytes remaining\n",
                         queue.dump());
 
                 // allow parallel tailer to finish iteration
