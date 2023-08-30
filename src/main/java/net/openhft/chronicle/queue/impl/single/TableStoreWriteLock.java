@@ -77,7 +77,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
             // success
         } catch (TimeoutException e) {
-            lockHandleTimeoutException(currentLockValue);
+            handleTimeoutEx(currentLockValue);
         } finally {
             tlPauser.reset();
         }
@@ -96,9 +96,9 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
                 ((lockedByThread = Thread.currentThread()) != null && (lockedHere = new StackTrace()) != null);
     }
 
-    private void lockHandleTimeoutException(long currentLockValue) {
+    private void handleTimeoutEx(long currentLockValue) {
         final String lockedBy = getLockedBy(currentLockValue);
-        final String warningMsg = lockHandleTimeoutExceptionCreateWarningMessage(lockedBy);
+        final String warningMsg = lockHandleTimeoutExCreateWarningMessage(lockedBy);
         if (forceUnlockOnTimeoutWhen == UnlockMode.NEVER)
             throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         else if (forceUnlockOnTimeoutWhen == UnlockMode.LOCKING_PROCESS_DEAD) {
@@ -114,7 +114,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     @NotNull
-    private String lockHandleTimeoutExceptionCreateWarningMessage(String lockedBy) {
+    private String lockHandleTimeoutExCreateWarningMessage(String lockedBy) {
         return "Couldn't acquire write lock " +
                 "after " + timeout + " ms " +
                 "for the lock file:" + path + ". " +
