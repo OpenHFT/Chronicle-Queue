@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -134,7 +135,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                     "...\n" +
                     (useSparseFiles
                             ? "# 4294966880 bytes remaining\n"
-                            : "# 130644 bytes remaining\n"), cq.dump());
+                            : "# 81492 bytes remaining\n"), cq.dump());
         }
     }
 
@@ -216,7 +217,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                             "...\n" +
                             (useSparseFiles
                                     ? "# 4294966880 bytes remaining\n"
-                                    : "# 130644 bytes remaining\n"),
+                                    : "# 81492 bytes remaining\n"),
                     cq.dump());
         }
     }
@@ -226,7 +227,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(tempDir(s))
                 .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
-                .testBlockSize();
+                .blockSize(OS.SAFE_PAGE_SIZE); // to get the same result on Windows and Linux
         final SingleChronicleQueue queue = builder.build();
         useSparseFiles = builder.useSparseFiles();
         return queue;

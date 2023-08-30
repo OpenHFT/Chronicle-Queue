@@ -60,6 +60,7 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable;
 import static net.openhft.chronicle.wire.Wires.*;
 
@@ -158,7 +159,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             wireType = builder.wireType();
             blockSize = builder.blockSize();
             // the maximum message size is 1L << 30 so greater overlapSize has no effect
-            overlapSize = Math.min(Math.max(OS.SAFE_PAGE_SIZE, builder.blockSize() / 4), 1L << 30);
+            overlapSize = Math.min(Math.max(SMALL_BLOCK_SIZE, builder.blockSize() / 4), 1L << 30);
             useSparseFile = builder.useSparseFiles();
             sparseCapacity = builder.sparseCapacity();
             eventLoop = builder.eventLoop();

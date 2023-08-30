@@ -366,7 +366,7 @@ public class ToEndTest extends QueueTestCommon {
                     "--- !!meta-data #binary\n" +
                     "\"\": hello!\n" +
                     "...\n" +
-                    "# 130272 bytes remaining\n", queue.dump());
+                    "# 81120 bytes remaining\n", queue.dump());
             assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
             // toEnd().index() should be where it expects the next excerpt in an existing cycle to be written.
             final String actual = tailerToEndIndex(queue);
@@ -439,7 +439,7 @@ public class ToEndTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
-                .testBlockSize()
+                .blockSize(OS.SAFE_PAGE_SIZE) // so the result is the same on Windows and Linux.
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build();
