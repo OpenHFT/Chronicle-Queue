@@ -86,7 +86,9 @@ public class RollingResourcesCache {
     @NotNull
     public Resource resourceFor(long cycle) {
         long millisSinceBeginningOfEpoch = (cycle * length);
-        int hash = Maths.hash32(millisSinceBeginningOfEpoch) & (CACHE_SIZE - 1);
+        long h = Maths.hash64(millisSinceBeginningOfEpoch);
+        h ^= h >> 32;
+        int hash = (int) h & (CACHE_SIZE - 1);
         Resource dv = values[hash];
         if (dv == null || dv.millis != millisSinceBeginningOfEpoch) {
             final Instant instant = Instant.ofEpochMilli(millisSinceBeginningOfEpoch + epoch);
