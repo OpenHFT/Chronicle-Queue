@@ -439,7 +439,7 @@ public class ToEndTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
-                .testBlockSize()
+                .blockSize(OS.SAFE_PAGE_SIZE) // so the result is the same on Windows and Linux.
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(timeProvider)
                 .build();
