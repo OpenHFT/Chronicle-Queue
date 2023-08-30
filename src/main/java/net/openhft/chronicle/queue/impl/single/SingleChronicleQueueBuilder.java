@@ -714,7 +714,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.
      * <p>
      * Using this will be slower when you have many messages, and break when you have large messages.
-     * </p>
+     * <p>
+     * NOTE: This size is differnt on Linux and Windows. If you want the same size for both use {@code blockSize(OS.SAFE_PAGE_SIZE)}
      *
      * @return this
      */
