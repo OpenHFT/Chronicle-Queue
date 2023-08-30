@@ -159,7 +159,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             wireType = builder.wireType();
             blockSize = builder.blockSize();
             // the maximum message size is 1L << 30 so greater overlapSize has no effect
-            overlapSize = Math.min(Math.max(64 << 10, builder.blockSize() / 4), 1L << 30);
+            overlapSize = calcOverlapSize(blockSize);
             useSparseFile = builder.useSparseFiles();
             sparseCapacity = builder.sparseCapacity();
             eventLoop = builder.eventLoop();
@@ -237,6 +237,19 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             close();
             throw Jvm.rethrow(t);
         }
+    }
+
+    private static long calcOverlapSize(long blockSize) {
+        final long overlapSize;
+        if (blockSize < OS.SAFE_PAGE_SIZE)
+            overlapSize = blockSize;
+        else if (blockSize < OS.SAFE_PAGE_SIZE * 4)
+            overlapSize = OS.SAFE_PAGE_SIZE;
+        else if (blockSize < 4L << 30)
+            overlapSize = blockSize / 4;
+        else
+            overlapSize = 1L << 30;
+        return overlapSize;
     }
 
     protected void createAppenderCondition(@NotNull Condition createAppenderCondition) {

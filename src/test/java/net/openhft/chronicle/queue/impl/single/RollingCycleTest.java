@@ -68,7 +68,7 @@ public class RollingCycleTest extends QueueTestCommon {
 
         String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
-                .testBlockSize()
+                .blockSize(OS.SAFE_PAGE_SIZE)
                 .timeoutMS(5)
                 .rollCycle(TEST_DAILY)
                 .timeProvider(stp)

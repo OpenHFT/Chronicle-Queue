@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
@@ -78,7 +79,7 @@ public class WriteBytesTest extends QueueTestCommon {
     public void testWriteBytesAndDump() {
         File dir = getTmpDir();
         final SingleChronicleQueueBuilder builder = binary(dir)
-                .testBlockSize()
+                .blockSize(OS.SAFE_PAGE_SIZE)
                 .rollCycle(TEST4_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
         try (ChronicleQueue queue = builder

@@ -24,13 +24,19 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import java.io.File;
+
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static org.junit.Assert.assertEquals;
 
 public class ChunkCountTest extends QueueTestCommon {
     @Test
     public void chunks() {
-        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(IOTools.createTempFile("chunks")).blockSize(64 << 10).rollCycle(DAILY);
+        File tempFile = IOTools.createTempFile("chunks");
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder
+                .binary(tempFile)
+                .testBlockSize()
+                .rollCycle(DAILY);
         try (SingleChronicleQueue queue = builder.build();
              ExcerptAppender appender = queue.createAppender()) {
             assertEquals(0, queue.chunkCount());

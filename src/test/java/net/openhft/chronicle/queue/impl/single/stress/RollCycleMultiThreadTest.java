@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.impl.single.stress;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -101,7 +102,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 
             try (ChronicleQueue queue = SingleChronicleQueueBuilder
                     .binary(path)
-                    .testBlockSize()
+                    .blockSize(OS.SAFE_PAGE_SIZE)
                     .rollCycle(ROLL_CYCLE)
                     .timeProvider(timeProvider)
                     .build();
@@ -190,7 +191,8 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 3 data");
                 }
 
-                assertEquals("--- !!meta-data #binary\n" +
+                assertEquals("" +
+                                "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +
                                 "  metadata: !SCQMeta {\n" +

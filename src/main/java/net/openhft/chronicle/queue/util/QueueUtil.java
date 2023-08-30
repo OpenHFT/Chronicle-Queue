@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.util;
 
+@Deprecated(/* to be removed in x.25 */)
 public final class QueueUtil {
 
     private QueueUtil() {}

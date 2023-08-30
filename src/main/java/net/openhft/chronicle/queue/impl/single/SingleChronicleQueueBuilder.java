@@ -37,7 +37,6 @@ import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
-import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.threads.MediumEventLoop;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
@@ -68,6 +67,8 @@ import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
+    public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
+
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -658,7 +659,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public SingleChronicleQueueBuilder blockSize(long blockSize) {
-        this.blockSize = Math.max(QueueUtil.testBlockSize(), blockSize);
+        this.blockSize = Math.max(SMALL_BLOCK_SIZE, blockSize);
         return this;
     }
 
@@ -671,10 +672,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public long blockSize() {
 
-        long bs = blockSize == null ? OS.is64Bit() ? 64L << 20 : QueueUtil.testBlockSize() : blockSize;
+        long bs = blockSize == null
+                ? OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE
+                : blockSize;
 
         // can add an index2index & an index in one go.
-        long minSize = Math.max(QueueUtil.testBlockSize(), 32L * indexCount());
+        long minSize = Math.max(SMALL_BLOCK_SIZE, 32L * indexCount());
         return Math.max(minSize, bs);
     }
 
@@ -697,7 +700,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
 
         // can add an index2index & an index in one go.
-        long minSize = Math.max(QueueUtil.testBlockSize(), 64L * indexCount());
+        long minSize = Math.max(SMALL_BLOCK_SIZE, 32L * indexCount());
         return Math.max(minSize, bs);
     }
 
@@ -711,13 +714,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.
      * <p>
      * Using this will be slower when you have many messages, and break when you have large messages.
-     * </p>
+     * <p>
+     * NOTE: This size is differnt on Linux and Windows. If you want the same size for both use {@code blockSize(OS.SAFE_PAGE_SIZE)}
      *
      * @return this
      */
     public SingleChronicleQueueBuilder testBlockSize() {
         // small size for testing purposes only.
-        return blockSize(OS.isWindows() ? 64 << 10 : OS.pageSize());
+        return blockSize(SMALL_BLOCK_SIZE);
     }
 
     @NotNull

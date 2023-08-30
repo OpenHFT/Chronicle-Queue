@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -95,7 +96,7 @@ public class RollCycleTest extends QueueTestCommon {
             int cyclesToWrite = 3;
             Thread thread = new Thread(observer);
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                    .testBlockSize()
+                    .blockSize(OS.SAFE_PAGE_SIZE) // for the same result on Windows and Linux
                     .rollCycle(TEST_DAILY)
                     .timeProvider(timeProvider)
                     .build();

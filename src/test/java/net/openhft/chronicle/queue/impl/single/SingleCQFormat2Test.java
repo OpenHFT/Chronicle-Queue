@@ -18,13 +18,13 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
-import net.openhft.chronicle.queue.util.QueueUtil;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
@@ -60,7 +60,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(TEST_DAILY)
-                .blockSize(QueueUtil.testBlockSize()).build();
+                .testBlockSize()
+                .build();
              @NotNull ExcerptAppender appender = queue.createAppender()) {
             try (DocumentContext dc = appender.writingDocument()) {
                 @NotNull MyData name = new MyData("name", 12345, 1.2, 111);
@@ -90,7 +91,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
             dir.mkdir();
 
             try (@NotNull RollingChronicleQueue queue = binary(dir)
-                    .blockSize(QueueUtil.testBlockSize())
+                    .testBlockSize()
                     .indexCount(8)
                     .indexSpacing(1)
                     .build();
@@ -216,7 +217,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
     public void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, QueueUtil.testBlockSize());
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE);
         bytes.readLimit(bytes.realCapacity());
         assertEquals(expected, Wires.fromAlignedSizePrefixedBlobs(bytes).replaceAll("(?m)^#.+$\\n", ""));
         bytes.releaseLast();
@@ -227,7 +228,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         dir.mkdir();
 
         try (@NotNull RollingChronicleQueue queue = binary(dir)
-                .blockSize(QueueUtil.testBlockSize())
+                .testBlockSize()
                 // only do this for testing
                 .indexCount(8)
                 .indexSpacing(spacing)
@@ -591,7 +592,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         map.put("double", 1.28);
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = binary(dir)
-                .blockSize(QueueUtil.testBlockSize())
+                .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build();
@@ -683,7 +684,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(TEST_DAILY)
-                .blockSize(QueueUtil.testBlockSize())
+                .testBlockSize()
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build();
              @NotNull ExcerptAppender appender = queue.createAppender()) {
@@ -767,7 +768,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         try (@NotNull ChronicleQueue queue = SingleChronicleQueueBuilder.single(dir)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
-                .blockSize(QueueUtil.testBlockSize())
+                .testBlockSize()
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .build();
              @NotNull final ExcerptAppender appender = queue.createAppender()) {
