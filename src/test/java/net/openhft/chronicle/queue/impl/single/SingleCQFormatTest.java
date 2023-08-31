@@ -200,6 +200,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     // "see https://github.com/OpenHFT/Chronicle-Queue/issues/719")
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
+        finishedNormally = false;
         ignoreException("reading control code as text");
         expectException("closable tracing disabled");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
@@ -231,6 +232,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        finishedNormally = true;
     }
 
     private void testWritingTo(Bytes<?> bytes) {
