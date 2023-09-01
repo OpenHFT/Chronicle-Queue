@@ -140,6 +140,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private SecretKeySpec key;
 
     private int maxTailers;
+    // TODO: x.26 make this AsyncBufferCreator
     private ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator;
     private Long pretouchIntervalMillis;
     private LocalTime rollTime;
@@ -584,23 +585,49 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return maxTailers;
     }
 
+    @Deprecated(/* To be removed in x.26 - use asyncBufferCreator */)
     public SingleChronicleQueueBuilder bufferBytesStoreCreator(ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator) {
         this.bufferBytesStoreCreator = bufferBytesStoreCreator;
         return this;
     }
 
     /**
-     * Creator for BytesStore for underlying ring buffer. Allows visibility of RB's data to be controlled.
-     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE, EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_MAPPED_FILE.
+     * Creator for BytesStore for async mode. Allows visibility of data to be controlled.
+     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE etc.
      * <p>
-     * If you are using more than one {@link ChronicleQueue} object to access the ring buffer'd queue then you
-     * will need to set this. If this is not set then each queue will create its own in-memory ring buffer
+     * If you are using more than one {@link ChronicleQueue} object to access the async'd queue then you
+     * will need to set this.
+     * <p>
+     * This is an enterprise feature.
      *
      * @return bufferBytesStoreCreator
      */
+    @Deprecated(/* To be removed in x.26 - use asyncBufferCreator */)
     @Nullable
     public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
         return bufferBytesStoreCreator;
+    }
+
+    public SingleChronicleQueueBuilder asyncBufferCreator(AsyncBufferCreator asyncBufferCreator) {
+        this.bufferBytesStoreCreator = asyncBufferCreator;
+        return this;
+    }
+
+    /**
+     * Creator for BytesStore for async mode. Allows visibility of data to be controlled.
+     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE etc.
+     * <p>
+     * If you are using more than one {@link ChronicleQueue} object to access the async'd queue then you
+     * will need to set this.
+     * <p>
+     * This is an enterprise feature.
+     *
+     * @return asyncBufferCreator
+     */
+    public AsyncBufferCreator asyncBufferCreator() {
+        if (bufferBytesStoreCreator instanceof AsyncBufferCreator)
+            return (AsyncBufferCreator) bufferBytesStoreCreator;
+        return null;
     }
 
     /**
