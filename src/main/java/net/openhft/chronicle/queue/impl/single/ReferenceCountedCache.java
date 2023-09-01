@@ -32,7 +32,7 @@ import java.util.function.Function;
  * Thread-safe, self-cleaning cache for ReferenceCounted (and Closeable) objects
  */
 public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V, E extends Throwable>
-        extends AbstractCloseable {
+        extends AbstractReferenceCounted {
 
     private final Map<K, T> cache = new LinkedHashMap<>();
     private final Function<T, V> transformer;
@@ -50,7 +50,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
 
     @NotNull
     V get(@NotNull final K key) throws E {
-        throwExceptionIfClosed();
+        throwExceptionIfReleased();
 
         final V rv;
         synchronized (cache) {
@@ -72,7 +72,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     }
 
     @Override
-    protected void performClose() {
+    protected void performRelease() throws IllegalStateException {
         synchronized (cache) {
             for (T value : cache.values()) {
                 releaseResource(value);

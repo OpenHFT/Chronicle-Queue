@@ -607,10 +607,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
-        if (OS.isWindows()) {
-            System.err.println("#460 Cannot test deleting after close on windows");
-            return;
-        }
+        assumeFalse("#460 Cannot test deleting after close on windows", OS.isWindows());
 
         final File dir = getTmpDir();
         try (final ChronicleQueue queue =
@@ -1865,10 +1862,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void testToEndOnDeletedQueueFiles() throws IOException {
-        if (OS.isWindows()) {
-            System.err.println("#460 Cannot test delete after close on windows");
-            return;
-        }
+        assumeFalse("#460 Cannot test delete after close on windows", OS.isWindows());
 
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType).build();
@@ -3189,7 +3183,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
         }
-        // this used to fail on windows
         assertTrue(mappedFile.file().delete());
 
     }
@@ -3305,10 +3298,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void shouldBeAbleToLoadQueueFromReadOnlyFiles() throws IOException {
-        if (OS.isWindows()) {
-            System.err.println("#460 Cannot test read only mode on windows");
-            return;
-        }
+        assumeFalse("#460 Cannot test read only mode on windows", OS.isWindows());
         assumeFalse(named);
 
         final File queueDir = getTmpDir();
@@ -3333,15 +3323,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void shouldCreateQueueInCurrentDirectory() {
-        if (OS.isWindows()) {
-            System.err.println("#460 Cannot test delete after close on windows");
-            return;
-        }
+        assumeFalse("#460 Cannot test delete after close on windows", OS.isWindows());
 
         try (final ChronicleQueue ignored =
                      builder(new File(""), wireType).
                              testBlockSize().build()) {
-
         }
 
         assertTrue(new File(QUEUE_METADATA_FILE).delete());

@@ -147,14 +147,12 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             epoch = builder.epoch();
             dateCache = new RollingResourcesCache(rollCycle, epoch, textToFile(builder), fileToText());
 
-            storeFileListener = builder.storeFileListener();
-            storeSupplier = new StoreSupplier();
-            pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
             isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
             path = builder.path();
-            if (!builder.readOnly())
+            if (!builder.readOnly()) {
                 //noinspection ResultOfMethodCallIgnored
                 path.mkdirs();
+            }
             fileAbsolutePath = path.getAbsolutePath();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
@@ -183,6 +181,9 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             }
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
+            storeFileListener = builder.storeFileListener();
+            storeSupplier = new StoreSupplier();
+            pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
 
             if (metaStore.readOnly()) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction());
@@ -994,11 +995,12 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
         private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache;
         private boolean queuePathExists;
+        private final RCCKey rccKey;
 
         private StoreSupplier() {
-            mappedFileCache = new ReferenceCountedCache<>(
-                    MappedBytes::mappedBytes,
-                    SingleChronicleQueue.this::mappedFile);
+            rccKey = new RCCKey();
+            mappedFileCache = RCCHolder.INSTANCE.instance(this);
+            mappedFileCache.reserve(this);
             singleThreadedCheckDisabled(true);
         }
 
@@ -1147,7 +1149,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
         @Override
         protected void performClose() {
-            mappedFileCache.close();
+            mappedFileCache.release(this);
         }
 
         private void createFile(final File path) {
@@ -1307,6 +1309,67 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             if (!file.exists())
                 throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
             return dateCache.toLong(file);
+        }
+
+        MappedFile mappedFile(File file) throws FileNotFoundException {
+            return SingleChronicleQueue.this.mappedFile(file);
+        }
+
+        RCCKey rccKey() {
+            return rccKey;
+        }
+
+        class RCCKey {
+
+            @Override
+            public boolean equals(Object o) {
+                if (this == o) return true;
+                if (o == null || getClass() != o.getClass()) return false;
+
+                RCCKey rccKey = (RCCKey) o;
+
+                if (blockSize != rccKey.blockSize()) return false;
+                if (sparseCapacity != rccKey.sparseCapacity()) return false;
+                if (overlapSize != rccKey.overlapSize()) return false;
+                if (useSparseFile != rccKey.useSparseFile()) return false;
+                if (readOnly != rccKey.readOnly()) return false;
+                return syncMode == rccKey.syncMode();
+            }
+
+            @Override
+            public int hashCode() {
+                int result = (int) (blockSize ^ (blockSize >>> 32));
+                result = 31 * result + (int) (sparseCapacity ^ (sparseCapacity >>> 32));
+                result = 31 * result + (int) (overlapSize ^ (overlapSize >>> 32));
+                result = 31 * result + (useSparseFile ? 1 : 0);
+                result = 31 * result + (readOnly ? 1 : 0);
+                result = 31 * result + syncMode.hashCode();
+                return result;
+            }
+
+            private long blockSize() {
+                return blockSize;
+            }
+
+            private SyncMode syncMode() {
+                return syncMode;
+            }
+
+            private boolean readOnly() {
+                return readOnly;
+            }
+
+            private boolean useSparseFile() {
+                return useSparseFile;
+            }
+
+            private long overlapSize() {
+                return overlapSize;
+            }
+
+            private long sparseCapacity() {
+                return sparseCapacity;
+            }
         }
     }
 }
