@@ -34,6 +34,10 @@ import java.util.function.Function;
 public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V, E extends Throwable>
         extends AbstractReferenceCounted {
 
+    static {
+        Jvm.startup().on(ReferenceCountedCache.class, "Patched RCC");
+    }
+
     private final Map<K, T> cache = new LinkedHashMap<>();
     private final Function<T, V> transformer;
     private final ThrowingFunction<K, T, E> creator;
