@@ -772,7 +772,25 @@ class StoreAppender extends AbstractCloseable
 
         if (!suppressEOF) {
             assert queue.writeLock().locked();
-            store.writeEOF(wire, timeoutMS());
+
+            if (store.writeEOF(wire, timeoutMS())) {
+                Wire w = this.wire;
+
+                for (int eofCyle = cycle - 1; eofCyle >= queue.firstCycle(); eofCyle--) {
+
+                    try (SingleChronicleQueueStore st = queue.storeForCycle(eofCyle, queue.epoch(), false, null)) {
+                        wire = queue.wireType().apply(st.bytes());
+                        wire.usePadding(st.dataVersion() > 0);
+                        if (!st.writeEOF(wire, timeoutMS())) {
+                            releaseBytesFor(wire);
+                            break;
+                        }
+                        releaseBytesFor(wire);
+                    }
+                }
+                this.wire = w;
+            }
+
         }
 
         int lastExistingCycle = queue.lastCycle();
@@ -931,6 +949,7 @@ class StoreAppender extends AbstractCloseable
 
         /**
          * Close this {@link StoreAppenderContext}.
+         *
          * @param unlock true if the {@link this#writeLock} should be unlocked.
          */
         public void close(boolean unlock) {
@@ -1030,6 +1049,7 @@ class StoreAppender extends AbstractCloseable
 
         /**
          * Clean-up after close.
+         *
          * @param unlock true if the {@link this#writeLock} should be unlocked.
          */
         private void closeCleanup(boolean unlock) {
