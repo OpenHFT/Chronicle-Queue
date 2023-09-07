@@ -38,9 +38,9 @@ public class EmptyRollCycleInMiddleTest extends QueueTestCommon {
     }
 
     /**
-     * An empty middle cycle file with valid EOF marker in the middle file. The critical part of this issue reproduction
-     * is to have <strong>multiple</strong> empty queue files in the stream, not just one. In this case it seems that
-     * EOF markers are not added to the intermediate cycle files.
+     * A empty middle cycle files with missing EOF markers. The critical part of this issue reproduction
+     * is to have <strong>multiple</strong> empty queue files in the stream, not just one, all missing EOFs. 
+     * In this case it seems that EOF markers are not added to the intermediate cycle files.
      */
     @Test
     public void emptyRollCycleInMiddleWithMissingEOFs() {
