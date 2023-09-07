@@ -779,6 +779,9 @@ class StoreAppender extends AbstractCloseable
                 for (int eofCyle = cycle - 1; eofCyle >= queue.firstCycle(); eofCyle--) {
 
                     try (SingleChronicleQueueStore st = queue.storeForCycle(eofCyle, queue.epoch(), false, null)) {
+
+                        if (st == null)
+                            continue;
                         wire = queue.wireType().apply(st.bytes());
                         wire.usePadding(st.dataVersion() > 0);
                         if (!st.writeEOF(wire, timeoutMS())) {
