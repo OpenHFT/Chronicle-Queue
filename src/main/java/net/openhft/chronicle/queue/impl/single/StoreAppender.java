@@ -430,6 +430,10 @@ class StoreAppender extends AbstractCloseable
 
             try {
                 int cycle = queue.cycle();
+
+                // Always call normaliseEOFs
+                normaliseEOFs0(cycle);
+
                 if (wire == null)
                     setWireIfNull(cycle);
 
@@ -515,7 +519,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void setWireIfNull(final int cycle) {
-        normaliseEOFs0(cycle);
+        //normaliseEOFs0(cycle);
 
         setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
     }
