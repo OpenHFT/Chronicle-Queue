@@ -116,23 +116,18 @@ loop to drain the ring buffer in to the underlying (disk-backed) Chronicle Queue
 
 ====== Example for asynchronous reads and writes using a memory-mapped file and two processes
 
-If you don't need access across processes (actually `ChronicleQueue` instances), then no need to set `bufferBytesStoreCreator`.
-The default bufferBytesStoreCreator will create an in-memory `ByteStore`. If you do not set this, and try and access
+If you don't need access across processes (actually `ChronicleQueue` instances), then no need to set `SingleChronicleQueueBuilder.asyncBufferCreator`.
+The default asyncBufferCreator will create an in-memory `ByteStore`. If you do not set this, and try and access
 the ring buffer'd queue with multiple `ChronicleQueue` instances then each queue instance will create its own in-memory ring buffer.
 
-NOTE: This example won't work on Windows as it refers to tmpfs - if you want to test your code on Windows then you may want to adapt accordingly. If you are conducting performance tests on Windows and using a memory mapped file then you will gain no benefit -
- the only benefit to be gained with a memory mapped file is if it mapped to a fast filesystem like tmpfs on unix.
+NOTE: This example won't work on Windows as it uses /dev/shm.
 
 [source,Java]
 ----
     // Common
-    final File path = new File("/dev/shm/example");
+    final File path = new File(".");
     final File ring = new File("/dev/shm/example.rb");
     final int TAILERS = 5;
-
-    // persist the ring buffer to (mapped) file for sharing across processes
-    final ThrowingBiFunction<Long, Integer, BytesStore, Exception> mappedBytesCreator 
-        = (size, readers) -> ChronicleRingBuffer.mappedBytes(ring, ChronicleRingBuffer.sizeFor(size, readers));
 
     // Appender process
     SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
@@ -140,7 +135,7 @@ NOTE: This example won't work on Windows as it refers to tmpfs - if you want to 
             .maxTailers(TAILERS)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
-            .bufferBytesStoreCreator(mappedBytesCreator)
+            .asyncBufferCreator(AsyncBufferCreators.MappedFileDevShm) // share a memory-mapped ring in /dev/shm
             .build()) {
         ExcerptAppender appender = queue.acquireAppender();
         ...
@@ -152,7 +147,7 @@ NOTE: This example won't work on Windows as it refers to tmpfs - if you want to 
             .maxTailers(TAILERS)
             .readBufferMode(BufferMode.Asynchronous)
             .writeBufferMode(BufferMode.Asynchronous)
-            .bufferBytesStoreCreator(mappedBytesCreator)
+            .asyncBufferCreator(AsyncBufferCreators.MappedFileDevShm) // share a memory-mapped ring in /dev/shm
             .build()) {
         ExcerptTailer tailer = queue.createTailer();
         ...

@@ -8,7 +8,6 @@ import java.io.File;
 
 /**
  * Creates a buffer for use in async mode. This is an enterprise feature.
- * See queue
  */
 public interface AsyncBufferCreator extends ThrowingBiFunction<Long, Integer, BytesStore, Exception> {
 
