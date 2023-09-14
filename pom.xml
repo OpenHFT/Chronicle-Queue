@@ -91,11 +91,7 @@
             <optional>true</optional>
         </dependency>
 
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>jlbh</artifactId>
-            <optional>true</optional>
-        </dependency>
+
 
         <dependency>
             <groupId>commons-cli</groupId>
@@ -113,6 +109,13 @@
         </dependency>
 
         <!-- for testing -->
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>jlbh</artifactId>
+            <scope>test</scope>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-values</artifactId>
