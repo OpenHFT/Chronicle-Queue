@@ -18,18 +18,27 @@
 package net.openhft.chronicle.queue.bench;
 
 import net.openhft.affinity.AffinityLock;
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.NanoSampler;
-import net.openhft.chronicle.jlbh.JLBH;
-import net.openhft.chronicle.jlbh.JLBHOptions;
-import net.openhft.chronicle.jlbh.JLBHTask;
-import net.openhft.chronicle.jlbh.TeamCityHelper;
+import net.openhft.chronicle.jlbh.*;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.SelfDescribingMarshallable;
+import net.openhft.chronicle.wire.*;
 
+import javax.xml.soap.Text;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
@@ -44,13 +53,13 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     private NanoSampler concurrent;
     private NanoSampler concurrent2;
     private volatile boolean stopped = false;
-    private AtomicInteger write = new AtomicInteger(0);
+    private final AtomicInteger write = new AtomicInteger(0);
     private final Datum datum = new Datum();
     private final Datum datum2 = new Datum();
     private Thread writerThread1;
     private Thread writerThread2;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException {
         // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50_000)
@@ -60,7 +69,49 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
                 .skipFirstRun(true)
                 .runs(3)
                 .jlbhTask(new QueueContendedWritesJLBHBenchmark());
-        new JLBH(lth).start();
+        new JLBH(lth, System.out, jlbhResult ->{
+            try {
+                runResultToCSV(jlbhResult);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } ).start();
+
+    }
+
+    private static void runResultToCSV(JLBHResult jlbhResult) throws IOException {
+        Bytes<?> bytes3 = Bytes.allocateElasticOnHeap();
+        TextWire wire3 = new TextWire(bytes3);
+
+        JLBHResult.ProbeResult probeResult = jlbhResult.endToEnd();
+        writeProbeResult(wire3, probeResult);
+        Optional<JLBHResult.ProbeResult> concurrent1 = jlbhResult.probe("Concurrent");
+        writeProbeResult(wire3, concurrent1.get());
+
+        Optional<JLBHResult.ProbeResult> concurrent2 = jlbhResult.probe("Concurrent2");
+        writeProbeResult(wire3, concurrent2.get());
+        bytes3.copyTo(Files.newOutputStream(Paths.get("result.csv")));
+    }
+
+    private static void writeProbeResult(TextWire wire3, JLBHResult.ProbeResult probeResult) {
+        List<JLBHResult.RunResult> runResults = probeResult.eachRunSummary();
+        for (JLBHResult.RunResult runResult : runResults) {
+            writeRow(wire3, runResult);
+        }
+    }
+
+    private static void writeRow(TextWire wire3, JLBHResult.RunResult runResult) {
+        writeValue(wire3, runResult.get50thPercentile());
+        writeValue(wire3, runResult.get90thPercentile());
+        writeValue(wire3, runResult.get99thPercentile());
+//        writeValue(wire3, runResult.get999thPercentile());
+//        writeValue(wire3, runResult.get9999thPercentile());
+        wire3.append("\n");
+    }
+
+    private static void writeValue(TextWire wire3, Duration runResult) {
+        wire3.append(Integer.toString(runResult.getNano()));
+        wire3.append(",");
     }
 
     @Override
