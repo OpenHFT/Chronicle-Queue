@@ -118,7 +118,6 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         writeValue(wire3, "99th p-le");
         writeValue(wire3, "999th p-le");
         writeValue(wire3, "9999th p-le");
-        writeValue(wire3, "9999th p-le");
         wire3.append("\n");
 
     }
