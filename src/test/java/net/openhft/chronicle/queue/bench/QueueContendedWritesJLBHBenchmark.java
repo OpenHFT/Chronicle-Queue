@@ -27,18 +27,13 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.*;
 
-import javax.xml.soap.Text;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
@@ -69,48 +64,74 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
                 .skipFirstRun(true)
                 .runs(3)
                 .jlbhTask(new QueueContendedWritesJLBHBenchmark());
-        new JLBH(lth, System.out, jlbhResult ->{
+        new JLBH(lth, System.out, jlbhResult -> {
             try {
                 runResultToCSV(jlbhResult);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        } ).start();
+        }).start();
 
     }
 
     private static void runResultToCSV(JLBHResult jlbhResult) throws IOException {
         Bytes<?> bytes3 = Bytes.allocateElasticOnHeap();
         TextWire wire3 = new TextWire(bytes3);
+        writeHeader(wire3);
 
         JLBHResult.ProbeResult probeResult = jlbhResult.endToEnd();
-        writeProbeResult(wire3, probeResult);
-        Optional<JLBHResult.ProbeResult> concurrent1 = jlbhResult.probe("Concurrent");
-        writeProbeResult(wire3, concurrent1.get());
 
-        Optional<JLBHResult.ProbeResult> concurrent2 = jlbhResult.probe("Concurrent2");
-        writeProbeResult(wire3, concurrent2.get());
+        writeProbeResultRows(probeResult, wire3, "endToEnd");
+        writeProbeResult(jlbhResult, wire3, "Concurrent");
+        writeProbeResult(jlbhResult, wire3, "Concurrent2");
+
         bytes3.copyTo(Files.newOutputStream(Paths.get("result.csv")));
     }
 
-    private static void writeProbeResult(TextWire wire3, JLBHResult.ProbeResult probeResult) {
+    private static void writeProbeResult(JLBHResult jlbhResult, TextWire wire3, String probeName) {
+        Optional<JLBHResult.ProbeResult> probeResult = jlbhResult.probe(probeName);
+        probeResult.ifPresent(probeResult1 -> writeProbeResultRows(probeResult1, wire3, probeName));
+    }
+
+    private static void writeProbeResultRows(JLBHResult.ProbeResult probeResult, TextWire wire3, String probeName) {
         List<JLBHResult.RunResult> runResults = probeResult.eachRunSummary();
-        for (JLBHResult.RunResult runResult : runResults) {
-            writeRow(wire3, runResult);
+        for (int i = 0; i < runResults.size(); i++) {
+            JLBHResult.RunResult runResult = runResults.get(i);
+            writeRow(probeName + "-" + i, wire3, runResult);
         }
     }
 
-    private static void writeRow(TextWire wire3, JLBHResult.RunResult runResult) {
+    private static void writeRow(String probeName, TextWire wire3, JLBHResult.RunResult runResult) {
+        writeValue(wire3, probeName);
         writeValue(wire3, runResult.get50thPercentile());
         writeValue(wire3, runResult.get90thPercentile());
         writeValue(wire3, runResult.get99thPercentile());
-//        writeValue(wire3, runResult.get999thPercentile());
-//        writeValue(wire3, runResult.get9999thPercentile());
+        writeValue(wire3, runResult.get999thPercentile());
+        writeValue(wire3, runResult.get9999thPercentile());
         wire3.append("\n");
     }
 
+    private static void writeHeader(TextWire wire3) {
+        writeValue(wire3, "");
+        writeValue(wire3, "50th p-le");
+        writeValue(wire3, "90th p-le");
+        writeValue(wire3, "99th p-le");
+        writeValue(wire3, "999th p-le");
+        writeValue(wire3, "9999th p-le");
+        writeValue(wire3, "9999th p-le");
+        wire3.append("\n");
+
+    }
+
     private static void writeValue(TextWire wire3, Duration runResult) {
-        wire3.append(Integer.toString(runResult.getNano()));
+        if (runResult != null) {
+            wire3.append(Integer.toString(runResult.getNano()));
+        }
+        wire3.append(",");
+    }
+
+    private static void writeValue(TextWire wire3, String runResult) {
+        wire3.append(runResult);
         wire3.append(",");
     }
 
@@ -145,6 +166,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
             }
         });
         writerThread1.start();
+
 
         writerThread2 = new Thread(() -> {
             try (final AffinityLock affinityLock = AffinityLock.acquireCore();
