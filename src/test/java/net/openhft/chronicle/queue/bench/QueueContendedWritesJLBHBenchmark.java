@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -94,11 +95,14 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     }
 
     private static void writeProbeResultRows(JLBHResult.ProbeResult probeResult, TextWire wire3, String probeName) {
-        List<JLBHResult.RunResult> runResults = probeResult.eachRunSummary();
-        for (int i = 0; i < runResults.size(); i++) {
-            JLBHResult.RunResult runResult = runResults.get(i);
-            writeRow(probeName + "-" + i, wire3, runResult);
-        }
+        JLBHResult.@NotNull RunResult runResult = probeResult.summaryOfLastRun();
+        writeRow(probeName, wire3, runResult);
+
+//        List<JLBHResult.RunResult> runResults = probeResult.eachRunSummary();
+//        for (int i = 0; i < runResults.size(); i++) {
+//            JLBHResult.RunResult runResult = runResults.get(i);
+//            writeRow(probeName + "-" + i, wire3, runResult);
+//        }
     }
 
     private static void writeRow(String probeName, TextWire wire3, JLBHResult.RunResult runResult) {
