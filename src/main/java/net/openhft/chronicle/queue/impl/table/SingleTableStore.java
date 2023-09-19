@@ -25,12 +25,14 @@ import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataField;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.File;
@@ -250,7 +252,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         if (mappedBytes.isClosed())
             throw new ClosedIllegalStateException("Closed");
 
-        final StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve(this);
         try {
             mappedBytes.readPosition(0);
@@ -263,8 +264,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     break;
                 final long readPosition = mappedBytes.readPosition();
                 final int length = Wires.lengthOf(header);
-                final ValueIn valueIn = mappedWire.readEventName(sb);
-                if (StringUtils.equalsCaseIgnore(key, sb)) {
+                final ValueIn valueIn = readEventIfNameEquals(mappedWire, key);
+                if (valueIn != null) {
                     return valueIn.int64ForBinding(null);
                 }
                 mappedBytes.readPosition(readPosition + length);
@@ -295,11 +296,23 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         }
     }
 
+    @Nullable
+    private static ValueIn readEventIfNameEquals(WireIn wireIn, CharSequence expected) {
+        try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
+            StringBuilder sb = stlSb.get();
+            final ValueIn valueIn = wireIn.readEventName(sb);
+            if (StringUtils.equalsCaseIgnore(expected, sb)) {
+                return valueIn;
+            }
+            return null;
+        }
+    }
+
     @Override
     public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
-        final StringBuilder sb = Wires.acquireStringBuilder();
         mappedBytes.reserve(this);
-        try {
+        try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
+            StringBuilder sb = stlSb.get();
             mappedBytes.readPosition(0);
             mappedBytes.readLimit(mappedBytes.realCapacity());
             while (mappedWire.readDataHeader()) {

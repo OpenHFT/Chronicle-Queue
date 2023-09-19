@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
@@ -377,27 +378,29 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                         return;
                     }
                 }
-                Bytes<?> bytes = acquireBytes();
-                TextWire text = new TextWire(bytes);
-                while (true) {
-                    try (DocumentContext dc = tailer.readingDocument()) {
-                        if (!dc.isPresent()) {
-                            writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
-                            return;
-                        }
-                        if (dc.index() > toIndex)
-                            return;
-                        writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
-                        Wire wire = dc.wire();
-                        long start = wire.bytes().readPosition();
-                        try {
-                            text.clear();
-                            wire.copyTo(text);
-                            writer.append(bytes.toString());
+                try (ScopedResource<Bytes<?>> stlBytes = acquireBytesScoped()) {
+                    Bytes<?> bytes = stlBytes.get();
+                    TextWire text = new TextWire(bytes);
+                    while (true) {
+                        try (DocumentContext dc = tailer.readingDocument()) {
+                            if (!dc.isPresent()) {
+                                writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+                                return;
+                            }
+                            if (dc.index() > toIndex)
+                                return;
+                            writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
+                            Wire wire = dc.wire();
+                            long start = wire.bytes().readPosition();
+                            try {
+                                text.clear();
+                                wire.copyTo(text);
+                                writer.append(bytes.toString());
 
-                        } catch (Exception e) {
-                            wire.bytes().readPosition(start);
-                            writer.append(wire.bytes()).append("\n");
+                            } catch (Exception e) {
+                                wire.bytes().readPosition(start);
+                                writer.append(wire.bytes()).append("\n");
+                            }
                         }
                     }
                 }
@@ -1080,18 +1083,12 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                             return null;
                         }
 
-                        StringBuilder name = acquireStringBuilder();
-                        ValueIn valueIn = wire.readEventName(name);
-                        if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                            try {
-                                wireStore = valueIn.typedMarshallable();
-                            } catch (Throwable t) {
-                                mappedBytes.close();
-                                throw t;
-                            }
-
-                        } else {
-                            throw new StreamCorruptedException("The first message should be the header, was " + name);
+                        final ValueIn valueIn = readWireStoreValue(wire);
+                        try {
+                            wireStore = valueIn.typedMarshallable();
+                        } catch (Throwable t) {
+                            mappedBytes.close();
+                            throw t;
                         }
                     }
                 } catch (InternalError e) {
@@ -1112,6 +1109,18 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            }
+        }
+
+        @NotNull
+        private ValueIn readWireStoreValue(@NotNull Wire wire) throws StreamCorruptedException {
+            try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
+                StringBuilder name = stlSb.get();
+                ValueIn valueIn = wire.readEventName(name);
+                if (!StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+                    throw new StreamCorruptedException("The first message should be the header, was " + name);
+                }
+                return valueIn;
             }
         }
 

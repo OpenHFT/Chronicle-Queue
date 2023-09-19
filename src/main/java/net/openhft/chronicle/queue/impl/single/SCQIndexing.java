@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.values.LongArrayValues;
@@ -194,16 +195,21 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     @NotNull
     private LongArrayValues array(@NotNull WireIn w, @NotNull LongArrayValues using, boolean index2index) {
-        final StringBuilder sb = Wires.acquireStringBuilder();
-        long readPos = w.bytes().readPosition();
-        @NotNull final ValueIn valueIn = w.readEventName(sb);
-        String name = index2index ? "index2index" : "index";
-        if (!name.contentEquals(sb))
-            throw new IllegalStateException("expecting index, was " + sb + ", bytes: " + w.bytes().readPosition(readPos).toHexString());
-
+        @NotNull final ValueIn valueIn = readIndexValue(w, index2index ? "index2index" : "index");
         valueIn.int64array(using, this, (o1, o2) -> {
         });
         return using;
+    }
+
+    private ValueIn readIndexValue(@NotNull WireIn w, @NotNull String expectedName) {
+        try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
+            final StringBuilder sb = stlSb.get();
+            long readPos = w.bytes().readPosition();
+            @NotNull final ValueIn valueIn = w.readEventName(sb);
+            if (!expectedName.contentEquals(sb))
+                throw new IllegalStateException("expecting " + expectedName + ", was " + sb + ", bytes: " + w.bytes().readPosition(readPos).toHexString());
+            return valueIn;
+        }
     }
 
     /**

@@ -24,7 +24,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
@@ -308,10 +307,11 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    private class ParallelQueueObserver implements Callable {
+    private static class ParallelQueueObserver implements Callable<Integer> {
 
         @NotNull
         private final ExcerptTailer tailer;
+        private final StringBuilder sb = new StringBuilder();
         volatile int documentsRead;
 
         ParallelQueueObserver(@NotNull ChronicleQueue queue) {
@@ -329,7 +329,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                 if (!dc.isPresent())
                     return -2;
 
-                StringBuilder sb = Wires.acquireStringBuilder();
+                sb.setLength(0);
                 dc.wire().read("say").text(sb);
 
                 if (sb.length() == 0) {
