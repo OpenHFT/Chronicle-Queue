@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.ValueIn;
@@ -66,12 +67,23 @@ public enum SCQTools {
 
     @Nullable
     private static MessageHistory readHistoryFromWire(@NotNull final Wire wire, final MessageHistory history) {
-        final StringBuilder sb = StoreTailer.SBP.acquireStringBuilder();
-        ValueIn valueIn = wire.read(sb);
-
-        if (!MethodReader.HISTORY.contentEquals(sb))
+        final ValueIn historyValue = readHistoryValue(wire);
+        if (historyValue == null) {
             return null;
-        valueIn.marshallable(history);
+        }
+        historyValue.marshallable(history);
         return history;
+    }
+
+    @Nullable
+    private static ValueIn readHistoryValue(@NotNull final Wire wire) {
+        try (final ScopedResource<StringBuilder> stlSb = StoreTailer.SBP.get()) {
+            StringBuilder sb = stlSb.get();
+            ValueIn valueIn = wire.read(sb);
+
+            if (!MethodReader.HISTORY.contentEquals(sb))
+                return null;
+            return valueIn;
+        }
     }
 }

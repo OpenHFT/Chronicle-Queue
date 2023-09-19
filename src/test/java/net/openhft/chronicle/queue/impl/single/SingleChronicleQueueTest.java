@@ -1516,7 +1516,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
 
-            final StringBuilder sb = Wires.acquireStringBuilder();
+            final StringBuilder sb = new StringBuilder();
 
             try (final DocumentContext dc = tailer.readingDocument()) {
                 assert dc.isPresent();
@@ -1584,7 +1584,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
             assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)));
 
-            final StringBuilder sb = Wires.acquireStringBuilder();
+            final StringBuilder sb = new StringBuilder();
 
             try (final DocumentContext dc = tailer.readingDocument()) {
                 assert dc.isPresent();
@@ -1664,7 +1664,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
             assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)));
 
-            final StringBuilder sb = Wires.acquireStringBuilder();
+            final StringBuilder sb = new StringBuilder();
 
             try (final DocumentContext dc = tailer.readingDocument()) {
                 assert dc.isPresent();
@@ -2161,11 +2161,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 .direction(TailerDirection.FORWARD)
                 .toStart()) {
 
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < entries; i++) {
                 try (DocumentContext documentContext = forwardTailer.readingDocument()) {
                     assertTrue(documentContext.isPresent());
                     assertEquals(i, DEFAULT.toSequenceNumber(documentContext.index()));
-                    StringBuilder sb = Wires.acquireStringBuilder();
+                    sb.setLength(0);
                     ValueIn valueIn = documentContext.wire().readEventName(sb);
                     assertTrue("hello".contentEquals(sb));
                     String actual = valueIn.text();
@@ -2183,6 +2184,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 .direction(TailerDirection.BACKWARD)
                 .toEnd();
 
+        StringBuilder sb = new StringBuilder();
         for (int i = entries - 1; i >= 0; i--) {
             try (DocumentContext documentContext = backwardTailer.readingDocument()) {
                 assertTrue(documentContext.isPresent());
@@ -2190,7 +2192,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assertEquals("index: " + index, i, (int) index);
                 assertEquals(i, DEFAULT.toSequenceNumber(index));
                 assertTrue(documentContext.isPresent());
-                StringBuilder sb = Wires.acquireStringBuilder();
+                sb.setLength(0);
                 ValueIn valueIn = documentContext.wire().readEventName(sb);
                 assertTrue("hello".contentEquals(sb));
                 String actual = valueIn.text();
@@ -3571,7 +3573,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                      builder(file, wireType).testBlockSize().build();
              ExcerptTailer tailer1 = queue.createTailer(named ? "named" : null)) {
 
-            StringBuilder sb = Wires.acquireStringBuilder();
+            StringBuilder sb = new StringBuilder();
             try (DocumentContext documentContext = tailer1.readingDocument()) {
                 documentContext.wire().readEventName(sb);
                 assertEquals("hello", sb.toString());

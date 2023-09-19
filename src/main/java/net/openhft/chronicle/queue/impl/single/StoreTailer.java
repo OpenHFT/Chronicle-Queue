@@ -28,6 +28,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
+import net.openhft.chronicle.core.scoped.ScopedResourcePool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
@@ -54,7 +55,7 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
-    static final StringBuilderPool SBP = new StringBuilderPool();
+    static final ScopedResourcePool<StringBuilder> SBP = StringBuilderPool.createThreadLocal(1);
     static final EOFException EOF_EXCEPTION = new EOFException();
     @NotNull
     private final SingleChronicleQueue queue;
