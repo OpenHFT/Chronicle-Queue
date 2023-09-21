@@ -23,10 +23,7 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.UncheckedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.AbstractCloseable;
-import net.openhft.chronicle.core.io.AbstractReferenceCounted;
-import net.openhft.chronicle.core.io.ClosedIllegalStateException;
-import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.io.*;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -34,20 +31,19 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
+import javax.print.Doc;
 import java.nio.file.Paths;
 import java.util.Random;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
 public class TailerCloseInParallelTest extends QueueTestCommon {
     static String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
 
-    static final int size = 4 << 10;
+    static final int size = 1 << 10;
     // blackholes to avoid code elimination.
     static int s32;
     static long s64;
@@ -55,9 +51,6 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
     static double f64;
     static String s;
     static Random random = new Random();
-
-    static volatile ChronicleQueue chronicle;
-    static volatile ExcerptTailer tailer;
 
     @Override
     @Before
@@ -71,76 +64,84 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
     }
 
     @Test
-    public void runOnce() throws IOException {
+    public void runTenTimes() throws InterruptedException {
+        finishedNormally = false;
         assumeTrue(OS.is64Bit());
-        ignoreException("Reference tracing disabled");
-        AbstractCloseable.disableCloseableTracing();
-        AbstractReferenceCounted.disableReferenceTracing();
-        Thread thread = new Thread(() -> {
-            Jvm.pause(Math.min(random.nextInt(100), random.nextInt(100)));
-            if (tailer != null && !tailer.isClosing()) {
-                tailer.close();
-            }
-        });
-        thread.start();
-        for (int t = 0; t < random.nextInt(100); t++) {
+
+        for (int t = 10; t >= 1; t--) {
             try {
                 doPerfTest(file,
                         bytes -> writeMany(bytes, size),
                         bytes -> readMany(bytes, size),
-                        1, t > 0);
+                        2000, t == 1);
             } catch (ClosedIllegalStateException ex) {
                 System.err.println("Caught expected: " + ex);
                 break;
             }
         }
 
-        if (chronicle != null && !chronicle.isClosing()) {
-            chronicle.close();
-        }
-
         Paths.get(file).toFile().delete();
+        finishedNormally = true;
     }
 
-    static void doPerfTest(String file, TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws IOException {
+    static void doPerfTest(String file, TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws InterruptedException {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);
-        chronicle = single(file).blockSize(64 << 20).rollCycle(RollCycles.FIVE_MINUTELY).build();
-        tailer = chronicle.createTailer();
-        System.err.println("Length is " + tailer.toEnd().index());
+        try (ChronicleQueue chronicle = single(file).testBlockSize().rollCycle(RollCycles.FIVE_MINUTELY).build();
+             ExcerptTailer tailer0 = chronicle.createTailer()) {
 
-        ExcerptAppender appender = chronicle.acquireAppender();
-        UncheckedBytes<BytesStore> bytes = new UncheckedBytes<>(BytesStore.empty().bytesForRead());
-        for (int i = 0; i < count; i++) {
-            long start = System.nanoTime();
-            try (DocumentContext dc = appender.writingDocument()) {
-                Bytes<?> bytes0 = dc.wire().bytes();
-                bytes0.ensureCapacity(size);
-                bytes.setBytes(bytes0);
-                bytes.readPosition(bytes.writePosition());
-                writer.writeTo(bytes);
-                bytes0.writePosition(bytes.writePosition());
-            }
-            long time = System.nanoTime() - start;
-            writeHdr.sample(time);
-        }
+            System.err.println("End is " + Long.toHexString(tailer0.toEnd().index()));
 
-        ExcerptTailer tailer = chronicle.createTailer();
-        for (int i = 0; i < count; i++) {
-            long start2 = System.nanoTime();
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
-                Bytes<?> bytes0 = dc.wire().bytes();
-                bytes.setBytes(bytes0);
-                reader.readFrom(bytes);
+            Thread thread = new Thread(() -> {
+                tailer0.singleThreadedCheckReset();
+                for (int i=0; i < random.nextInt(10); i++) {
+                    Jvm.pause(1);
+                    try(DocumentContext dc = tailer0.readingDocument()) {
+
+                    }
+                }
+                Closeable.closeQuietly(tailer0);
+            });
+            thread.start();
+
+            UncheckedBytes<BytesStore> bytes = new UncheckedBytes<>(BytesStore.empty().bytesForRead());
+            try (ExcerptAppender appender = chronicle.acquireAppender()) {
+                for (int i = 0; i < count; i++) {
+                    long start = System.nanoTime();
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        Bytes<?> bytes0 = dc.wire().bytes();
+                        bytes0.ensureCapacity(size);
+                        bytes.setBytes(bytes0);
+                        bytes.readPosition(bytes.writePosition());
+                        writer.writeTo(bytes);
+                        bytes0.writePosition(bytes.writePosition());
+                    }
+                    long time = System.nanoTime() - start;
+                    writeHdr.sample(time);
+                }
+                System.err.println("... Wrote " + Long.toHexString(appender.lastIndexAppended()));
             }
-            long time2 = System.nanoTime() - start2;
-            readHdr.sample(time2);
-        }
-        System.err.println("!Length is " + tailer.toEnd().index());
-        if (print) {
-            System.out.println("Write latencies " + writeHdr.toMicrosFormat());
-            System.out.println("Read latencies " + readHdr.toMicrosFormat());
+
+            try (ExcerptTailer tailer = chronicle.createTailer()) {
+                for (int i = 0; i < count; i++) {
+                    long start2 = System.nanoTime();
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        assertTrue(dc.isPresent());
+                        Bytes<?> bytes0 = dc.wire().bytes();
+                        bytes.setBytes(bytes0);
+                        reader.readFrom(bytes);
+                    }
+                    long time2 = System.nanoTime() - start2;
+                    readHdr.sample(time2);
+                }
+                System.err.println("... End is now " + Long.toHexString(tailer.toEnd().index()));
+                if (print) {
+                    System.out.println("Write latencies " + writeHdr.toMicrosFormat());
+                    System.out.println("Read latencies " + readHdr.toMicrosFormat());
+                }
+            }
+            bytes.releaseLast();
+            thread.join();
         }
     }
 
