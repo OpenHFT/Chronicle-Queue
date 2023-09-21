@@ -202,11 +202,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     public void testCompleteHeader() throws FileNotFoundException {
         finishedNormally = false;
         ignoreException("reading control code as text");
-        expectException("closable tracing disabled");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
-
-        // too many hacks are required to make the (artificial) code below release resources correctly
-        AbstractCloseable.disableCloseableTracing();
 
         final File dir = getTmpDir();
         dir.mkdirs();
