@@ -44,6 +44,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.lang.ref.WeakReference;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.ZoneId;
@@ -104,7 +105,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private final TimeProvider time;
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, SingleChronicleQueueStore> storeFactory;
-    private final Set<Closeable> closers = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<WeakReference<Closeable>> closers = Collections.newSetFromMap(new IdentityHashMap<>());
     private final boolean readOnly;
     @NotNull
     private final CycleCalculator cycleCalculator;
@@ -732,8 +733,11 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public <T> void addCloseListener(Closeable key) {
         synchronized (closers) {
             if (!closers.isEmpty())
-                closers.removeIf(Closeable::isClosed);
-            closers.add(key);
+                closers.removeIf(wrc -> {
+                    final Closeable closeable = wrc.get();
+                    return (closeable != null) ? closeable.isClosed() : true;
+                });
+            closers.add(new WeakReference<>(key));
         }
     }
 
@@ -741,7 +745,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @Override
     protected void performClose() {
         synchronized (closers) {
-            metaStoreMap.values().forEach(Closeable::closeQuietly);
+            Closeable.closeQuietly(metaStoreMap.values());
             metaStoreMap.clear();
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
@@ -763,7 +767,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
         // close it if we created it.
         if (eventLoop instanceof OnDemandEventLoop)
-            eventLoop.close();
+            Closeable.closeQuietly(eventLoop);
     }
 
     @Override
@@ -928,9 +932,14 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return name -> dateCache.parseCount(name.substring(0, name.length() - SUFFIX.length()));
     }
 
+    @Deprecated(/* to be removed in x.25 */)
     void removeCloseListener(final StoreTailer storeTailer) {
+        removeCloseListener((java.io.Closeable) storeTailer);
+    }
+
+    void removeCloseListener(final java.io.Closeable closeable) {
         synchronized (closers) {
-            closers.remove(storeTailer);
+            closers.removeIf(wrc -> wrc.get() == closeable);
         }
     }
 
