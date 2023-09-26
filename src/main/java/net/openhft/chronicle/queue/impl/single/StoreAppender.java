@@ -225,6 +225,7 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     protected void performClose() {
+//        queue.removeCloseListener(this);
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
