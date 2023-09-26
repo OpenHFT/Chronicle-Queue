@@ -73,7 +73,7 @@ public final class Pretoucher extends AbstractCloseable {
         this.chunkListener = chunkListener;
         this.cycleChangedListener = cycleChangedListener;
         this.earlyAcquireNextCycle = checkEA(earlyAcquireNextCycle);
-        this.canWrite = canWrite || this.earlyAcquireNextCycle;
+        this.canWrite = checkCanWrite(canWrite) || this.earlyAcquireNextCycle;
         pretoucherState = new PretoucherState(this::getStoreWritePosition);
         if (PRETOUCHER_PREROLL_TIME_MS != PRETOUCHER_PREROLL_TIME_DEFAULT_MS && !earlyAcquireNextCycle)
             Jvm.warn().on(getClass(), "SingleChronicleQueueExcerpts.pretoucherPrerollTimeMs has been set but not earlyAcquireNextCycle");
@@ -83,6 +83,12 @@ public final class Pretoucher extends AbstractCloseable {
             Jvm.warn().on(getClass(), "This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         // always put references to "this" last.
         queue.addCloseListener(this);
+    }
+
+    private boolean checkCanWrite(boolean cw) {
+        if (cw)
+            Jvm.warn().on(getClass(), "Creating cycle files from the Pretoucher is not supported in x.23");
+        return false;
     }
 
     private boolean checkEA(boolean ea) {
