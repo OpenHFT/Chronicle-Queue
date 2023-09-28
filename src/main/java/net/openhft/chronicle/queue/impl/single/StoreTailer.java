@@ -237,6 +237,10 @@ class StoreTailer extends AbstractCloseable
             Wire wire = context.wire();
             if (wire != null && context.present(next)) {
                 Bytes<?> bytes = wire.bytes();
+
+                // Read the header
+                long checksum = bytes.readLong();
+
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
                 this.lastReadIndex = this.index();
