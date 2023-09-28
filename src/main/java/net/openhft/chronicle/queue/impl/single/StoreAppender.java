@@ -78,6 +78,7 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     private Wire wireForIndex;
     private long positionOfHeader = 0;
+    private long positionOfChecksum = 0;
     private long lastIndex = Long.MIN_VALUE;
     @Nullable
     private Pretoucher pretoucher = null;
@@ -544,6 +545,11 @@ class StoreAppender extends AbstractCloseable
     private void openContext(final boolean metaData, final long safeLength) {
         assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
+
+        // Write checksum
+        wire.bytes().writeLong(0);
+        this.positionOfChecksum = positionOfHeader + Long.BYTES;
+
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
@@ -601,7 +607,7 @@ class StoreAppender extends AbstractCloseable
             beforeAppend(wire, wire.headerNumber() + 1);
             Bytes<?> wireBytes = wire.bytes();
             wireBytes.write(bytes);
-            wire.updateHeader(positionOfHeader, false, 0);
+            updateHeaders();
             lastIndex(wire.headerNumber());
             lastPosition = positionOfHeader;
             store.writePosition(positionOfHeader);
@@ -611,6 +617,15 @@ class StoreAppender extends AbstractCloseable
         } finally {
             writeLock.unlock();
         }
+    }
+
+    /**
+     * Update the header that contains length + complete bit + metadata bit. Also updates the checksum.
+     */
+    private void updateHeaders() throws StreamCorruptedException {
+        wire.updateHeader(positionOfHeader, false, 0);
+        // In reality this needs to be replaced with appropriate thread safe write
+        wire.bytes().writeLong(positionOfChecksum, 0);
     }
 
     /**
@@ -931,6 +946,7 @@ class StoreAppender extends AbstractCloseable
 
         /**
          * Close this {@link StoreAppenderContext}.
+         *
          * @param unlock true if the {@link this#writeLock} should be unlocked.
          */
         public void close(boolean unlock) {
@@ -1007,7 +1023,7 @@ class StoreAppender extends AbstractCloseable
             if (store == null) throw new NullPointerException("Store must not be null");
 
             try {
-                wire.updateHeader(positionOfHeader, metaData, 0);
+                updateHeaders();
             } catch (IllegalStateException e) {
                 if (queue.isClosed())
                     return;
@@ -1030,6 +1046,7 @@ class StoreAppender extends AbstractCloseable
 
         /**
          * Clean-up after close.
+         *
          * @param unlock true if the {@link this#writeLock} should be unlocked.
          */
         private void closeCleanup(boolean unlock) {
