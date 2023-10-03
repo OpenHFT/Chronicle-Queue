@@ -1,0 +1,23 @@
+site:
+  title: Chronicle Queue
+  start_page: chronicle-queue:introduction:introduction.adoc
+  url: /build-local
+content:
+  sources:
+    - url: ./../../
+      branches: [HEAD]
+      start_path: docs/antora
+      tags: []
+runtime:
+  fetch: true
+ui:
+  bundle:
+    url: ui-bundle.zip # The UI bundle (page styling) is in Chronicle-Antora library.
+  supplemental_files: ./supplemental_portal # Includes the Lunr search bar
+asciidoc:
+  attributes:
+    page-pagination: true
+    extensions:
+      - highlightjs
+output:
+  dir: build/site

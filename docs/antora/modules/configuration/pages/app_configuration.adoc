@@ -1,0 +1,45 @@
+= Chronicle Queue Configuration
+keywords: queue, configuraion, java
+author: Julia Gustafsson
+:reftext: Chronicle Queue Configuration
+:navtitle: Chronicle Queue Configuration
+:source-highlighter: highlight.js
+
+This chapter describes how Chronicle Queue is configured. Settings are preferably made when instantiating the queue using `ChronicleQueue.singleBuilder`. For example, this builder sets the roll cycle to `RollCycle.HOURLY`:
+
+[source, java]
+----
+String basePath = OS.getTarget() + "/getting-started"
+ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
+    .rollCycle(RollCycle.HOURLY)
+    .build();
+}
+----
+
+The table presented below shows the options which can be set using the Chronicle Queue builder. More detailed information about each property can be found by clicking on the field name in each row.
+
+NOTE: Some features are only available in Chronicle Queue Enterprise. Please availability for Chronicle Queue OSS in column _Available in Chronicle Queue OSS_.
+
+.Available fields when using the Chronicle Queue builder
+|===
+| Type | Field name | Description | Default | Available in Chronicle Queue OSS
+
+| `RollCycle` | xref:roll-cycle.adoc[`rollCycle`] | The rolling interval, meaning how often messages are appended to a new queue | `DAILY` | Yes
+| `Long` | xref:roll-cycle.adoc#epoch[`epoch`] | The offset from the roll cycle in microseconds | 0 | Yes
+| `WireType` | xref:wire-type.adoc[`wireType`] |  | `BINARY_LIGHT` | OSS excludes `DELTA_BINARY`
+| `Integer` | xref:index-count.adoc[`indexCount`] | The size of each index array  | The default index count associated with the selected roll cycle | Yes
+| `Integer`| xref:index-spacing.adoc[`indexSpacing`] | The space between excerpts that are explicitly indexed | The default index spacing associated with the selected roll cycle | Yes
+| `Long` | xref:block-size.adoc[`blockSize`] | The size of a memory mapping chunk. Do not change this unless necessary |  | Yes
+| `BufferMode` | xref:buffer-modes.adoc[`writeBufferMode`] | | `None` | Only the default value `None`
+| `BufferMode` | xref:buffer-modes.adoc[`readBufferMode`] | | `BufferMode` | Only the default value `None`
+| `boolean` | xref:double-buffer.adoc[`doubleBuffer`] | Enables double-buffered writes on contention | `false` | Yes
+| `TimeProvider` | [`timeProvicer`] | The time provider used to evaluate the rolling timings | `SystemTimeProvider.INSTANCE` | Yes
+| `int` | [`maxTailers`] | The number of tailers to preallocate when using Ring Buffer. Only set this when using `readBufferMode=Asynchronous` | 1 | Enterprise only
+| `long` | link:[`bufferCapacity`] | Sets the Ring Buffer capacity in bytes | `false` | Enterprise only
+| `boolean` | link:[`enableRingBufferMonitoring`] | Enables the Ring Buffer's monitoring capability | `false` | Enterprise only
+| `boolean` | link:[`ringBufferReaderCanDrain`] | Enables Ring Buffer's reader processes to invoke the queue drainer. By default, only only writer processes are allowed to invoke the drainer. | `false` | Enterprise only
+| `boolean` | link:[`ringBufferForceCreateReader`] | Controls whether to force creating a reader (to recover from crash). | `false` | Enterprise only
+| `boolean` | link:[`ringBufferReopenReader`] | Controls if Ring Buffer readers are reset on close. If true, re-opening a reader puts you back at the same place, and your reader can block writers if the reader is not open | `false` | Enterprise only
+| `HandlerPriority` | link:[`drainerPriority`] | Priority for ring buffer's drainer handler | `MEDIUM` | Enterprise only
+| `int` | link:[`drainerTimeoutMS`] |  | 10,000 | Enterprise only
+|===

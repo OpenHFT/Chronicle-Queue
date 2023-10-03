@@ -1,0 +1,6 @@
+= Queue Replication
+keywords: queue, java, replication
+author: Julia Gustafsson
+:reftext: Queue Replication
+:navtitle: Queue Replication
+:source-highlighter: highlight.js
