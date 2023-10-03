@@ -144,6 +144,7 @@ public class IndexForIDTest extends QueueTestCommon {
 
     @Test //(timeout = 10_000)
     public void staged() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         ignoreException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         staged = IOTools.createTempDirectory("staged").toString();
         this.count = Jvm.isArm() ? 10_000 : 1_000_000;

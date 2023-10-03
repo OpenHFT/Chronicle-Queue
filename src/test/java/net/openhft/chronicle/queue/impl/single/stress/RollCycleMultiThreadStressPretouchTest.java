@@ -28,6 +28,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
 
     @Test
     public void stress() throws Exception {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         super.stress();
     }
