@@ -47,18 +47,20 @@ public class CleanupUnusedQueueFilesTest extends ChronicleQueueTestBase {
 
     @Test
     public void testTailingWithEmptyCycles() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         testTailing(p -> {
             try {
                 p.execute();
             } catch (InvalidEventHandlerException e) {
                 e.printStackTrace();
             }
-            return 1;
+            return 0;
         });
     }
 
     @Test
     public void testTailingWithMissingCycles() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         testTailing(p -> 0);
     }
 
