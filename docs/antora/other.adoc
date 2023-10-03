@@ -1,0 +1,6 @@
+= This file only contains random snippets that are not yet included in the user guide
+
+=== Compacting logs
+Chronicle Queue manages storage by cycle. Adding a `StoreFileListener` will send notifications whenever a file is added, and when it is no longer retained. The message history for a whole day can be moved, compressed, or deleted at once.
+
+NOTE: Unfortunately Windows environments can close the underlying `FileChannel` if an IO operation is interrupted.
