@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -17,7 +16,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Basic acceptance tests that check whether the frame has been corrupted by adding the checksum.
  */
-public class ChecksumSuffixTest extends QueueTestCommon {
+public class DynamicDocumentHeaderAcceptanceTest extends QueueTestCommon {
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -46,20 +45,19 @@ public class ChecksumSuffixTest extends QueueTestCommon {
     }
 
     @Test
-    public void intCase() {
-        try (DocumentContext context = appender.writingDocument()) {
-            context.wire().bytes().writeInt(42);
-        }
-
-        tailer.readBytes(bytes -> {
-            assertEquals(42, bytes.readInt());
-        });
-    }
-
-    @Test
     public void textCase() {
         appender.writeText("Hello");
         assertEquals("Hello", tailer.readText());
+    }
+
+    @Test
+    public void textCase_multipleEntries() {
+        appender.writeText("1");
+        appender.writeText("2");
+        appender.writeText("3");
+        assertEquals("1", tailer.readText());
+        assertEquals("2", tailer.readText());
+        assertEquals("3", tailer.readText());
     }
 
 }

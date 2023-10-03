@@ -57,6 +57,7 @@ class StoreTailer extends AbstractCloseable
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
     static final ScopedResourcePool<StringBuilder> SBP = StringBuilderPool.createThreadLocal(1);
     static final EOFException EOF_EXCEPTION = new EOFException();
+    private final DocumentHeaderData documentHeaderData = new DocumentHeaderData();
     @NotNull
     private final SingleChronicleQueue queue;
     private final WireStorePool storePool;
@@ -239,9 +240,7 @@ class StoreTailer extends AbstractCloseable
             if (wire != null && context.present(next)) {
                 Bytes<?> bytes = wire.bytes();
 
-                // Read the header
-                long checksum = bytes.readLong();
-                System.out.println("CHECKSUM_DEBUG: " + Long.toHexString(checksum));
+                documentHeaderData.onTailerContextOpen(bytes);
 
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;

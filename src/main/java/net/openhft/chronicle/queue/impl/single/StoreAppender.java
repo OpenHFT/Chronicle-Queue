@@ -57,6 +57,7 @@ class StoreAppender extends AbstractCloseable
      * This is the key in the table-store where we store that information
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
+    private final DocumentHeaderData documentHeaderData = new DocumentHeaderData();
     @NotNull
     private final SingleChronicleQueue queue;
     @NotNull
@@ -78,7 +79,6 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     private Wire wireForIndex;
     private long positionOfHeader = 0;
-    private long positionOfChecksum = 0;
     private long lastIndex = Long.MIN_VALUE;
     @Nullable
     private Pretoucher pretoucher = null;
@@ -546,9 +546,7 @@ class StoreAppender extends AbstractCloseable
         assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
 
-        // Write checksum
-        this.positionOfChecksum = wire.bytes().writePosition();
-        wire.bytes().writeLong(0xABCDEF);
+        documentHeaderData.onAppenderContextOpen(wire.bytes());
 
         context.isClosed = false;
         context.rollbackOnClose = false;
@@ -620,11 +618,11 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Update the header that contains length + complete bit + metadata bit. Also updates the checksum.
+     * Update the header that contains length + complete bit + metadata bit. Also updates the dynamic header.
      */
     private void updateHeaders() throws StreamCorruptedException {
         wire.updateHeader(positionOfHeader, false, 0);
-        wire.bytes().writeLong(positionOfChecksum, 0xABCDEE);
+        documentHeaderData.onAppenderContextClose(wire.bytes());
     }
 
     /**
