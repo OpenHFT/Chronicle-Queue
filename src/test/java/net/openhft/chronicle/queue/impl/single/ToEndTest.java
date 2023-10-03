@@ -295,6 +295,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldReturnExpectedValuesForEmptyPretouchedQueue() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
@@ -395,6 +396,7 @@ public class ToEndTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldReturnExpectedValuesForNonEmptyQueueRolledByPretouch() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
