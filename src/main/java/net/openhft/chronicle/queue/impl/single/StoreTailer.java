@@ -240,6 +240,7 @@ class StoreTailer extends AbstractCloseable
 
                 // Read the header
                 long checksum = bytes.readLong();
+                System.out.println("CHECKSUM_DEBUG: " + Long.toHexString(checksum));
 
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;
