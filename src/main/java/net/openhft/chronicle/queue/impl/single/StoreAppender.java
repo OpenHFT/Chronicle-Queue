@@ -547,8 +547,8 @@ class StoreAppender extends AbstractCloseable
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
 
         // Write checksum
-        wire.bytes().writeLong(0);
-        this.positionOfChecksum = positionOfHeader + Long.BYTES;
+        this.positionOfChecksum = wire.bytes().writePosition();
+        wire.bytes().writeLong(0xABCDEF);
 
         context.isClosed = false;
         context.rollbackOnClose = false;
@@ -624,8 +624,7 @@ class StoreAppender extends AbstractCloseable
      */
     private void updateHeaders() throws StreamCorruptedException {
         wire.updateHeader(positionOfHeader, false, 0);
-        // In reality this needs to be replaced with appropriate thread safe write
-        wire.bytes().writeLong(positionOfChecksum, 0);
+        wire.bytes().writeLong(positionOfChecksum, 0xABCDEE);
     }
 
     /**

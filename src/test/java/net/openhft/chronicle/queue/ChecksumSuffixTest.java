@@ -14,6 +14,9 @@ import java.nio.file.Paths;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * Basic acceptance tests that check whether the frame has been corrupted by adding the checksum.
+ */
 public class ChecksumSuffixTest extends QueueTestCommon {
 
     @Rule
@@ -43,7 +46,7 @@ public class ChecksumSuffixTest extends QueueTestCommon {
     }
 
     @Test
-    public void baseCase() {
+    public void intCase() {
         try (DocumentContext context = appender.writingDocument()) {
             context.wire().bytes().writeInt(42);
         }
@@ -51,6 +54,12 @@ public class ChecksumSuffixTest extends QueueTestCommon {
         tailer.readBytes(bytes -> {
             assertEquals(42, bytes.readInt());
         });
+    }
+
+    @Test
+    public void textCase() {
+        appender.writeText("Hello");
+        assertEquals("Hello", tailer.readText());
     }
 
 }
