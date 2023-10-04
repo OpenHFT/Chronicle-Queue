@@ -54,6 +54,7 @@ public final class DuplicateMessageReadTest extends ChronicleQueueTestBase {
 
     @Test
     public void shouldNotReceiveDuplicateMessages() throws IOException {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         final File location = getTmpDir();
 

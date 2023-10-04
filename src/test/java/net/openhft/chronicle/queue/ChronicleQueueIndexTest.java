@@ -112,6 +112,7 @@ public class ChronicleQueueIndexTest extends ChronicleQueueTestBase {
     @Test
     public void checkTheEOFisWrittenToPreQueueFileAfterPreTouch() {
         Assume.assumeTrue(!OS.isWindows());
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         SetTimeProvider tp = new SetTimeProvider(1);
 

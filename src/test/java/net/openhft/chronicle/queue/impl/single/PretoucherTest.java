@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -87,6 +88,7 @@ public class PretoucherTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore("Creating cycle files from the Pretoucher is not supported in this release")
     @Test
     public void shouldHandleCycleRollByPretoucher() {
         expectException("SingleChronicleQueueExcerpts.earlyAcquireNextCycle is not supported");

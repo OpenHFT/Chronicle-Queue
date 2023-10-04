@@ -33,16 +33,19 @@ public class BackwardWithPretouchTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppenderBackwardWithPretoucher() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         test(1000);
     }
 
     @Test
     public void testAppenderBackwardWithPretoucherPause2Seconds() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         test(2000);
     }
 
     @Test
     public void testAppenderBackwardWithPretoucherPause3Seconds() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         test(3000);
     }
 

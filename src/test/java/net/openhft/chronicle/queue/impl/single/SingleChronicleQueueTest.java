@@ -156,6 +156,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void createAppenderWillThrowWhenQueueIsReadOnly() {
+        assumeFalse(OS.isWindows()); // Read only is not supported on windows
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = builder(queueDir, wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -3753,6 +3754,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void lastIndexShouldReturnNegativeOneForEmptyPretouchedQueue() {
+        expectException("Creating cycle files from the Pretoucher is not supported in this release");
         expectException("This functionality has been deprecated and in future will only be available in Chronicle Queue Enterprise");
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
