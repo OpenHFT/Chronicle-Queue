@@ -58,7 +58,7 @@ This documentation covers the open source functionality but is also extended by 
 
 * Timezone adapted rollover schedule.
 
-* Using Chronicle's Ring Buffer for improved performance at high throughput on slower filesystems.
+* Using Chronicle Queue Async Mode for improved performance at high throughput on slower filesystems.
 
 For more information on Chronicle Queue Enterprise, please contact link:mailto:sales@chronicle.software[sales@chronicle.software].
 

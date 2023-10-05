@@ -23,7 +23,7 @@ author: Julia Gustafsson
 
 [#r]
 == R
-* *Ring Buffer:* TBW
+* *Async Mode* TBW
 * *Roll cycle:* TBW
 * *Rolling:* Chronicle refers to writing to a new Chronicle Queue `.cq4` file as Queue Rolling.
 

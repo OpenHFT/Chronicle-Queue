@@ -11,7 +11,7 @@ nav:
   - modules/queue-operations/nav.adoc
   - modules/performance/nav.adoc
 #  - modules/replication/nav.adoc
-  - modules/ring-buffer/nav.adoc
+  - modules/async-mode/nav.adoc
   - modules/encryption/nav.adoc
   - modules/advanced/nav.adoc
   - modules/demos/nav.adoc
