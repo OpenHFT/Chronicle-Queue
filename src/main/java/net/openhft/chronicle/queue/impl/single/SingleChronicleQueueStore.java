@@ -40,6 +40,9 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
+
+    public static final int DATA_VERSION_IN_THIS_BUILD = 1;
+
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
     }
@@ -85,7 +88,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 version = wire.getValueIn().int32();
             else
                 Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
-            this.dataVersion = version > 1 ? 0 : version;
+            this.dataVersion = version; // FIXME Understand what role this check played...
 
             singleThreadedCheckDisabled(true);
             failed = false;
@@ -111,14 +114,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         this.mappedFile = mappedBytes.mappedFile();
         mappedFile.reserve(this);
         indexCount = Maths.nextPower2(indexCount, 8);
-        indexSpacing = Maths.nextPower2(indexSpacing, 1);
+        indexSpacing = Maths.nextPower2(indexSpacing, DATA_VERSION_IN_THIS_BUILD);
 
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newTwoLongReference().get();
         this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(writePosition,
                 rollCycle.defaultIndexCount(),
                 rollCycle.defaultIndexSpacing());
-        this.dataVersion = 1;
+        this.dataVersion = DATA_VERSION_IN_THIS_BUILD;
 
         singleThreadedCheckDisabled(true);
     }
