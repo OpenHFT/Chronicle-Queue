@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
 
-    public static final int DATA_VERSION_IN_THIS_BUILD = 1;
+    public static final int DATA_VERSION_IN_THIS_BUILD = 2;
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
