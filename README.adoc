@@ -298,7 +298,7 @@ For more information see <<docs/replication.adoc#, Replication>>, the queue repl
 - Timezone support for daily queue rollover scheduling.
 For more information see <<docs/timezone_rollover.adoc#, Timezone support>>.
 - Async mode support to give improved performance at high throughput on slower filesystems.
-For more information see <<docs/ring_buffer.adoc#,async mode>> and also <<docs/performance.adoc#,performance>>.
+For more information see <<docs/async_mode.adoc#,async mode>> and also <<docs/performance.adoc#,performance>>.
 - Pretoucher
 For improved outliers, see <<Pretoucher and its configuration>>
 
@@ -634,7 +634,7 @@ These parameters define BufferMode for reads or writes that have the following o
 
 * `Copy` - used in conjunction with encryption;
 
-* `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
+* `Asynchronous` - use an asynchronous buffer when reading and/or writing, provided by Chronicle Async Mode.
 
 * *bufferCapacity*
 

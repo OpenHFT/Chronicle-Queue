@@ -15,8 +15,8 @@ These parameters define BufferMode for reads or writes that have the following o
 
 *-* `Copy` - used in conjunction with encryption;
 
-*-* `Asynchronous` - use ring-buffer when reading and/or writing, provided by Chronicle Ring Enterprise product Buffer
+*-* `Asynchronous` - use a buffer when reading and/or writing.
 
 * *bufferCapacity*
 
-RingBuffer capacity in bytes when using `bufferMode: Asynchronous`
+Async mode buffer capacity in bytes when using `bufferMode: Asynchronous`
