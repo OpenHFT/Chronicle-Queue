@@ -8,4 +8,4 @@
 Chronicle Async Mode provides a high performance, multi-writer, multi-reader, buffered queue implementation
 which can be used in your application code.
 
-For more information on Chronicle Async Mode please visit the https://portal.chronicle.software/[Chronicle User Portal].
+For more information on Chronicle Async Mode please visit the https://portal.chronicle.software/docs/queue/[Chronicle User Portal Queue Docs].
