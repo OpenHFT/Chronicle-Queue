@@ -25,6 +25,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.*;
+import org.apache.commons.cli.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,7 +36,8 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
-    public static final int ITERATIONS = 100_000;
+    public static final int DEFAULT_ITERATIONS = 100_000;
+    private static int iterations;
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
@@ -49,21 +51,32 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     private Thread writerThread2;
 
     public static void main(String[] args) throws FileNotFoundException {
+        Options options = new Options();
+        CLIUtils.addOption(options, "h", "help", false, "Help", false);
+        CLIUtils.addOption(options, "f", "result", false, "Write results to result.csv", false);
+        CLIUtils.addOption(options, "j", "jitter", false, "Record OS jitter", false);
+        CLIUtils.addOption(options, "t", "throughput", true, "Throughput", false);
+        CLIUtils.addOption(options, "i", "iterations", true, "Iterations", false);
+        CLIUtils.addOption(options, "r", "runs", true, "Number of runs", false);
+        CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
 
         // disable as otherwise single GC event skews results heavily
+        iterations = CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS);
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50_000)
-                .iterations(ITERATIONS)
-                .throughput(10_000)
-                .recordOSJitter(false).accountForCoordinatedOmission(false)
+                .iterations(iterations)
+                .throughput(CLIUtils.getIntOption(commandLine, 't', 10_000))
+                .recordOSJitter(commandLine.hasOption('j')).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
-                .runs(3)
+                .runs(CLIUtils.getIntOption(commandLine, 'r', 3))
                 .jlbhTask(new QueueContendedWritesJLBHBenchmark());
         new JLBH(lth, System.out, jlbhResult -> {
-            try {
-                JLBHResultSerializer.runResultToCSV(jlbhResult, "result.csv");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            if (commandLine.hasOption('f')) {
+                try {
+                    JLBHResultSerializer.runResultToCSV(jlbhResult, "result.csv");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }).start();
 
@@ -151,7 +164,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         join(writerThread1);
         join(writerThread2);
         queue.close();
-        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
     }
 
     private static class Datum extends SelfDescribingMarshallable {
