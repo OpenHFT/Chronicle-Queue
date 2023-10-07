@@ -93,47 +93,11 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();
-        writerThread1 = new Thread(() -> {
-            try (final AffinityLock affinityLock = AffinityLock.acquireCore();
-                 final ExcerptAppender app = queue.createAppender()) {
-
-                while (!stopped) {
-                    if (write.get() <= 0)
-                        continue;
-                    write.decrementAndGet();
-                    final long start = System.nanoTime();
-                    datum2.ts = start;
-                    datum2.username = "" + start;
-                    try (DocumentContext dc = app.writingDocument()) {
-                        dc.wire().write("datum").marshallable(datum2);
-                    }
-                    this.concurrent2.sampleNanos(System.nanoTime() - start);
-                }
-                queue.close();
-            }
-        });
+        writerThread1 = new Thread(() -> run(datum2, this.concurrent2));
         writerThread1.start();
 
 
-        writerThread2 = new Thread(() -> {
-            try (final AffinityLock affinityLock = AffinityLock.acquireCore();
-                 final ExcerptAppender app = queue.createAppender()) {
-
-                while (!stopped) {
-                    if (write.get() <= 0)
-                        continue;
-                    write.decrementAndGet();
-                    final long start = System.nanoTime();
-                    datum.ts = start;
-                    datum.username = "" + start;
-                    try (DocumentContext dc = app.writingDocument()) {
-                        dc.wire().write("datum").marshallable(datum);
-                    }
-                    concurrent.sampleNanos(System.nanoTime() - start);
-                }
-                queue.close();
-            }
-        });
+        writerThread2 = new Thread(() -> run(datum, concurrent));
         writerThread2.start();
     }
 
@@ -165,6 +129,26 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         join(writerThread2);
         queue.close();
         TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
+    }
+
+    private void run(Datum datum21, NanoSampler sampler) {
+        try (final AffinityLock ignored = AffinityLock.acquireCore();
+             final ExcerptAppender app = queue.createAppender()) {
+
+            while (!stopped) {
+                if (write.get() <= 0)
+                    continue;
+                write.decrementAndGet();
+                final long start = System.nanoTime();
+                datum21.ts = start;
+                datum21.username = "" + start;
+                try (DocumentContext dc = app.writingDocument()) {
+                    dc.wire().write("datum").marshallable(datum21);
+                }
+                sampler.sampleNanos(System.nanoTime() - start);
+            }
+            queue.close();
+        }
     }
 
     private static class Datum extends SelfDescribingMarshallable {
