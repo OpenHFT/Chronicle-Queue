@@ -45,6 +45,7 @@ public class SkewedRollCycleTest extends QueueTestCommon {
                 .path(queuePath)
                 .rollCycle(TestRollCycles.TEST_SECONDLY)
                 .timeProvider(timeProvider)
+                .epoch(-100)
                 .build();
         appender = queue.createAppender();
     }
@@ -57,8 +58,9 @@ public class SkewedRollCycleTest extends QueueTestCommon {
     }
 
     @Test
-    public void testSkewOf100MillisEarly() {
+    public void skewEarly() {
         appender.writeText("test1");
+        assertEquals(1, listQueueFiles().size());
         timeProvider.advanceMillis(900);
         appender.writeText("test2");
         List<String> queueFiles = listQueueFiles();
