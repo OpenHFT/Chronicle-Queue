@@ -27,21 +27,22 @@ public class ProducerService {
     private static void run(Datum datum21) {
         try (final AffinityLock ignored = AffinityLock.acquireCore();
              final ExcerptAppender app = queue.createAppender()) {
-            int counter = 100000;
+            int counter = 1000000;
             while (counter > 0) {
                 counter--;
-                final long start = getTime();
+                final long start = ClockUtil.getNanoTime();
                 datum21.ts = start;
                 datum21.username = "" + start;
                 try (DocumentContext dc = app.writingDocument()) {
                     dc.wire().write("datum").marshallable(datum21);
                 }
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
             queue.close();
         }
-    }
-
-    private static long getTime() {
-        return System.nanoTime();
     }
 }

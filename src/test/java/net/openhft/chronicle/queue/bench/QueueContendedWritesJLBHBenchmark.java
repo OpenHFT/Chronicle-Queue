@@ -51,13 +51,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     private Thread writerThread2;
 
     public static void main(String[] args) throws FileNotFoundException {
-        Options options = new Options();
-        CLIUtils.addOption(options, "h", "help", false, "Help", false);
-        CLIUtils.addOption(options, "f", "result", false, "Write results to result.csv", false);
-        CLIUtils.addOption(options, "j", "jitter", false, "Record OS jitter", false);
-        CLIUtils.addOption(options, "t", "throughput", true, "Throughput", false);
-        CLIUtils.addOption(options, "i", "iterations", true, "Iterations", false);
-        CLIUtils.addOption(options, "r", "runs", true, "Number of runs", false);
+        Options options = CLIUtils.createOptions();
         CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
 
         // disable as otherwise single GC event skews results heavily
