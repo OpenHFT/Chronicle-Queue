@@ -6,11 +6,11 @@ import org.jetbrains.annotations.NotNull;
 import java.io.PrintWriter;
 
 public class CLIUtils {
-    static int getIntOption(CommandLine commandLine, char r, int defaultValue) {
+    public static int getIntOption(CommandLine commandLine, char r, int defaultValue) {
         return Integer.parseInt(commandLine.getOptionValue(r, Integer.toString(defaultValue)));
     }
 
-    protected static CommandLine parseCommandLine(@NotNull final String[] args, final Options options) {
+    public static CommandLine parseCommandLine(@NotNull final String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
         try {
@@ -26,11 +26,11 @@ public class CLIUtils {
         return commandLine;
     }
 
-    protected static void printHelpAndExit(final Options options) {
+    public static void printHelpAndExit(final Options options) {
         printHelpAndExit(options, 0, null);
     }
 
-    protected static void printHelpAndExit(final Options options, int status, String message) {
+    public static void printHelpAndExit(final Options options, int status, String message) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
