@@ -163,7 +163,9 @@ public class LastAppendedTest extends QueueTestCommon {
                 try (DocumentContext dc = excerptTailer.readingDocument()) {
                     assertTrue(dc.isPresent());
                     MessageHistory mh = dc.wire().read("history").object(MessageHistory.get(), MessageHistory.class);
-                    assertTrue(mh.toString(), mh.toString().startsWith("VanillaMessageHistory{sources: [2=0x100000002] timings: "));
+                    assertEquals(1, mh.sources());
+                    assertEquals(2, mh.sourceId(0));
+                    assertEquals(0x100000002L, mh.sourceIndex(0));
                     final String msg0 = dc.wire().readEvent(String.class);
                     assertEquals("msg", msg0);
                     Object o = dc.wire().getValueIn().object();
