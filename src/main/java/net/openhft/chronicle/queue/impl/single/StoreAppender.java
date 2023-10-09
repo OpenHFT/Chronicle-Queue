@@ -546,7 +546,7 @@ class StoreAppender extends AbstractCloseable
         assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
 
-        documentHeaderData.onAppenderContextOpen(wire.bytes());
+        documentHeaderData.onAppenderContextOpen(wire.bytes(), store);
 
         context.isClosed = false;
         context.rollbackOnClose = false;
@@ -622,7 +622,7 @@ class StoreAppender extends AbstractCloseable
      */
     private void updateHeaders() throws StreamCorruptedException {
         wire.updateHeader(positionOfHeader, false, 0);
-        documentHeaderData.onAppenderContextClose(wire.bytes());
+        documentHeaderData.onAppenderContextClose(wire.bytes(), store);
     }
 
     /**

@@ -240,7 +240,7 @@ class StoreTailer extends AbstractCloseable
             if (wire != null && context.present(next)) {
                 Bytes<?> bytes = wire.bytes();
 
-                documentHeaderData.onTailerContextOpen(bytes);
+                documentHeaderData.onTailerContextOpen(bytes, store);
 
                 context.setStart(bytes.readPosition() - 4);
                 readingDocumentFound = true;

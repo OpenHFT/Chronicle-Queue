@@ -6,27 +6,42 @@ import org.slf4j.LoggerFactory;
 
 public class DocumentHeaderData {
 
+    private static final int DATA_VERSION_DYNAMIC_HEADERS_INTRODUCED = 2;
     private final Logger logger = LoggerFactory.getLogger(DocumentHeaderData.class);
     private long dynamicHeaderLengthPosition;
     private long dynamicHeaderLength;
     private long checksumOffset;
 
-    public void onAppenderContextOpen(Bytes<?> bytes) {
-        dynamicHeaderLengthPosition = bytes.writePosition();
-        bytes.writeInt(0); // Reserve space for the dynamic header length
-        appenderReserveDynamicHeader(bytes);
-        dynamicHeaderLength = bytes.writePosition() - dynamicHeaderLengthPosition;
-        bytes.writeInt(dynamicHeaderLengthPosition, (int) dynamicHeaderLength);
+    public DocumentHeaderData() {
+
     }
 
-    public void onAppenderContextClose(Bytes<?> bytes) {
-        appenderCompleteHeader(bytes);
-        reset();
+    private boolean dynamicHeadersSupported(SingleChronicleQueueStore store) {
+        return store.dataVersion() >= DATA_VERSION_DYNAMIC_HEADERS_INTRODUCED;
     }
 
-    public void onTailerContextOpen(Bytes<?> bytes) {
-        int dynamicHeaderLength = bytes.readInt();
-        tailerReadDynamicHeader(dynamicHeaderLength, bytes);
+    public void onAppenderContextOpen(Bytes<?> bytes, SingleChronicleQueueStore store) {
+        if (dynamicHeadersSupported(store)) {
+            dynamicHeaderLengthPosition = bytes.writePosition();
+            bytes.writeInt(0); // Reserve space for the dynamic header length
+            appenderReserveDynamicHeader(bytes);
+            dynamicHeaderLength = bytes.writePosition() - dynamicHeaderLengthPosition;
+            bytes.writeInt(dynamicHeaderLengthPosition, (int) dynamicHeaderLength);
+        }
+    }
+
+    public void onAppenderContextClose(Bytes<?> bytes, SingleChronicleQueueStore store) {
+        if (dynamicHeadersSupported(store)) {
+            appenderCompleteHeader(bytes);
+            reset();
+        }
+    }
+
+    public void onTailerContextOpen(Bytes<?> bytes, SingleChronicleQueueStore store) {
+        if (dynamicHeadersSupported(store)) {
+            int dynamicHeaderLength = bytes.readInt();
+            tailerReadDynamicHeader(dynamicHeaderLength, bytes);
+        }
     }
 
     public void reset() {
