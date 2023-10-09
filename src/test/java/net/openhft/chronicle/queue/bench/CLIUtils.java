@@ -58,4 +58,16 @@ public class CLIUtils {
         option.setRequired(isRequired);
         options.addOption(option);
     }
+
+    @NotNull
+    public static Options createOptions() {
+        Options options = new Options();
+        addOption(options, "h", "help", false, "Help", false);
+        addOption(options, "f", "result", false, "Write results to result.csv", false);
+        addOption(options, "j", "jitter", false, "Record OS jitter", false);
+        addOption(options, "t", "throughput", true, "Throughput", false);
+        addOption(options, "i", "iterations", true, "Iterations", false);
+        addOption(options, "r", "runs", true, "Number of runs", false);
+        return options;
+    }
 }

@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
-import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.bench.CLIUtils;
 import net.openhft.chronicle.queue.bench.JLBHResultSerializer;
@@ -34,7 +33,6 @@ import org.apache.commons.cli.Options;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
@@ -54,13 +52,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
 
     public static void main(String[] args) throws FileNotFoundException {
-        Options options = new Options();
-        CLIUtils.addOption(options, "h", "help", false, "Help", false);
-        CLIUtils.addOption(options, "f", "result", false, "Write results to result.csv", false);
-        CLIUtils.addOption(options, "j", "jitter", false, "Record OS jitter", false);
-        CLIUtils.addOption(options, "t", "throughput", true, "Throughput", false);
-        CLIUtils.addOption(options, "i", "iterations", true, "Iterations", false);
-        CLIUtils.addOption(options, "r", "runs", true, "Number of runs", false);
+        Options options = CLIUtils.createOptions();
         CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
 
         // disable as otherwise single GC event skews results heavily
@@ -107,14 +99,20 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
                     continue;
                 if (dc.wire().read("datum").marshallable(datum)) {
                     long ts = datum.ts;
-                    theProbe.sampleNanos(System.nanoTime() - ts);
+                    long nanoTime = ClockUtil.getNanoTime();
+                    System.out.println("nanoTime " + nanoTime + " ts = " + ts);
+
+                    long durationNs = nanoTime - ts;
+                    if (written < 10)
+                        System.out.println("durationNs = " + durationNs);
+                    theProbe.sampleNanos(durationNs);
                     break;
                 }
 
             }
         }
 
-        jlbh.sampleNanos(System.nanoTime() - startTimeNS);
+        jlbh.sampleNanos(ClockUtil.getNanoTime() - startTimeNS);
         written++;
         if (written % 10_000 == 0)
             System.err.println("Written: " + written);
