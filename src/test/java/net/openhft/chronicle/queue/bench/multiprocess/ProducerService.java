@@ -30,7 +30,7 @@ public class ProducerService {
             int counter = 1000000;
             while (counter > 0) {
                 counter--;
-                final long start = ClockUtil.getNanoTime();
+                final long start = System.nanoTime();
                 datum21.ts = start;
                 datum21.username = "" + start;
                 try (DocumentContext dc = app.writingDocument()) {
