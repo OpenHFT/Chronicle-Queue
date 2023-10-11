@@ -9,16 +9,26 @@ import java.io.InputStreamReader;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PageSizeSupport {
+/**
+ * FIXME Clean up error handling + logging
+ * FIXME Clean up cross platform portability
+ * FIXME Consider port to core
+ */
+public final class PageSizeSupport {
 
     private static final Pattern PAGE_SIZE_PATTERN = Pattern.compile("pagesize=[0-9]+(M|G)");
     private static final String PAGE_SIZE_PREFIX = "pagesize=";
     private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]+");
 
     private static final String MOUNT_COMMAND = "mount -l";
+
+    private PageSizeSupport() {
+        // Intentional no-op
+    }
 
     public static int resolvePageSize(Path path) {
         if (OS.isLinux()) {
@@ -34,16 +44,20 @@ public class PageSizeSupport {
         try {
             Process pr = runtime.exec(MOUNT_COMMAND);
             try (InputStreamReader inputStreamReader = new InputStreamReader(pr.getInputStream()); BufferedReader bufferedReader = new BufferedReader(inputStreamReader)) {
-                String val = bufferedReader.lines().filter(line -> line.contains(mount.toString())).findFirst().get();
-                Matcher matcher = PAGE_SIZE_PATTERN.matcher(val);
+                Optional<String> result = bufferedReader.lines().filter(line -> line.contains(mount.toString())).findFirst();
+                if (!result.isPresent()) {
+                    return fallbackPageSize;
+                }
+                String mountInfo = result.get();
+                Matcher matcher = PAGE_SIZE_PATTERN.matcher(mountInfo);
                 if (matcher.find()) {
                     String group = matcher.group();
-                    String trimmed = group.replace(PAGE_SIZE_PREFIX, "");
-                    if (trimmed.endsWith("M")) {
-                        int i = parseInt(trimmed);
-                        Jvm.warn().on(PageSizeSupport.class, "Determined page size of " + trimmed + " for " + mount);
+                    String pageSizeString = group.replace(PAGE_SIZE_PREFIX, "");
+                    if (pageSizeString.endsWith("M")) {
+                        int i = parseInt(pageSizeString);
+                        Jvm.warn().on(PageSizeSupport.class, "Determined page size of " + pageSizeString + " for " + mount);
                         return i * 1024 * 1024;
-                    } else if (trimmed.endsWith("G")) {
+                    } else if (pageSizeString.endsWith("G")) {
                         throw new UnsupportedOperationException();
                     } else {
                         return fallbackPageSize;
@@ -59,14 +73,14 @@ public class PageSizeSupport {
     }
 
     private static int fallbackPageSize() {
-        return OS.pageSize();
+        return OS.SAFE_PAGE_SIZE;
     }
 
     private static int parseInt(String trimmed) {
-        Matcher m = INTEGER_PATTERN.matcher(trimmed);
-        if (m.find()) {
-            String g = m.group();
-            return Integer.parseInt(g);
+        Matcher matcher = INTEGER_PATTERN.matcher(trimmed);
+        if (matcher.find()) {
+            String group = matcher.group();
+            return Integer.parseInt(group);
         } else {
             Jvm.warn().on(PageSizeSupport.class, "Could not parse page size");
             return fallbackPageSize();

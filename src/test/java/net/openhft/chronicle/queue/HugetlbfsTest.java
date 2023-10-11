@@ -62,7 +62,6 @@ public class HugetlbfsTest {
         String path = "/mnt/huge/tom/test-queue";
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single()
                 .path(path)
-                .pageSize(2 * 1024 * 1024)
                 .build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {

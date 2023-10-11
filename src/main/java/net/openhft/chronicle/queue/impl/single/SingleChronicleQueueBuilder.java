@@ -151,7 +151,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
     private SyncMode syncMode;
-    private int pageSize = OS.pageSize();
 
     protected SingleChronicleQueueBuilder() {
     }
@@ -1220,24 +1219,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public SyncMode syncMode() {
         return syncMode == null ? MappedFile.DEFAULT_SYNC_MODE : syncMode;
-    }
-
-    /**
-     * @return Page size in bytes.
-     */
-    public SingleChronicleQueueBuilder pageSize(int pageSize) {
-        if (pageSize <= 0) {
-            throw new IllegalArgumentException("pageSize must be greater than zero");
-        }
-        this.pageSize = pageSize;
-        return this;
-    }
-
-    /**
-     * @return Page size in bytes.
-     */
-    public int pageSize() {
-        return pageSize;
     }
 
     enum DefaultPauserSupplier implements Supplier<TimingPauser> {
