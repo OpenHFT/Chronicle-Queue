@@ -5,7 +5,9 @@ import net.openhft.posix.PosixAPI;
 
 public class ClockUtil {
     public static long getNanoTime() {
-        return PosixAPI.posix().clock_gettime(ClockId.CLOCK_REALTIME);
+//        return PosixAPI.posix().clock_gettime(ClockId.CLOCK_REALTIME);
+        return System.nanoTime();
+
 
     }
 }
