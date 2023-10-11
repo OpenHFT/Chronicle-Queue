@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.util.Builder;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
+import net.openhft.chronicle.queue.impl.single.PageSizeSupport;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.ValueIn;
@@ -116,7 +117,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             if (!readOnly && file.createNewFile() && !file.canWrite()) {
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
             }
-            bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, 2 * 1024 * 1024, readOnly);
+            bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageSizeSupport.resolvePageSize(file.toPath()), readOnly);
             // these MappedBytes are shared, but the assumption is they shouldn't grow. Supports 2K entries.
             bytes.singleThreadedCheckDisabled(true);
 

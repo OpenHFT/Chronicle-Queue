@@ -16,6 +16,9 @@ import java.io.RandomAccessFile;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * FIXME Needs to be configured to only run in CI where a hugetlbfs mount exists.
+ */
 public class HugetlbfsTest {
 
     @Test
@@ -44,18 +47,23 @@ public class HugetlbfsTest {
 
     @Test
     public void queue_tmp() {
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single().path("/tmp/test-queue").build();
+        String path = "/tmp/test-queue";
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single().path(path).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
             appender.writeText("1");
             assertEquals("1", tailer.readText());
         }
+        IOTools.deleteDirWithFiles(path);
     }
 
     @Test
     public void queue_hugetlbfs() {
         String path = "/mnt/huge/tom/test-queue";
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single().path(path).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single()
+                .path(path)
+                .pageSize(2 * 1024 * 1024)
+                .build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
             appender.writeText("1");
