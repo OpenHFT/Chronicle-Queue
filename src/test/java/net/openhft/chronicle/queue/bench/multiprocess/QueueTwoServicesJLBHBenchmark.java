@@ -99,7 +99,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
                     continue;
                 if (dc.wire().read("datum").marshallable(datum)) {
                     long ts = datum.ts;
-                    long nanoTime = ClockUtil.getNanoTime();
+                    long nanoTime = System.nanoTime();
                     System.out.println("nanoTime " + nanoTime + " ts = " + ts);
 
                     long durationNs = nanoTime - ts;
@@ -112,7 +112,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
             }
         }
 
-        jlbh.sampleNanos(ClockUtil.getNanoTime() - startTimeNS);
+        jlbh.sampleNanos(System.nanoTime() - startTimeNS);
         written++;
         if (written % 10_000 == 0)
             System.err.println("Written: " + written);
