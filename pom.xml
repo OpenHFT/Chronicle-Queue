@@ -67,13 +67,16 @@
 
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>chronicle-core</artifactId>
+	        <artifactId>chronicle-core</artifactId>
+            <!-- Pull in feature/hugetlbfs -->
+            <version>100.0.1-SNAPSHOT</version>
         </dependency>
 
         <dependency>
             <groupId>net.openhft</groupId>
-	    <artifactId>chronicle-bytes</artifactId>
-	    <version>100.0.1-SNAPSHOT</version>
+	        <artifactId>chronicle-bytes</artifactId>
+            <!-- Pull in feature/hugetlbfs -->
+            <version>100.0.1-SNAPSHOT</version>
         </dependency>
 
         <dependency>
