@@ -100,11 +100,11 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
                 if (dc.wire().read("datum").marshallable(datum)) {
                     long ts = datum.ts;
                     long nanoTime = System.nanoTime();
-                    System.out.println("nanoTime " + nanoTime + " ts = " + ts);
 
                     long durationNs = nanoTime - ts;
-                    if (written < 10)
-                        System.out.println("durationNs = " + durationNs);
+                    if (written < 10 || written % 10000 == 0) {
+                        System.out.println("nanoTime " + nanoTime + " ts = " + ts + " durationNs = " + durationNs);
+                    }
                     theProbe.sampleNanos(durationNs);
                     break;
                 }

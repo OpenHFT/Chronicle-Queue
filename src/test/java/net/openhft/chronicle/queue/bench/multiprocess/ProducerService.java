@@ -27,7 +27,7 @@ public class ProducerService {
     private static void run(Datum datum21) {
         try (final AffinityLock ignored = AffinityLock.acquireCore();
              final ExcerptAppender app = queue.createAppender()) {
-            int counter = 1000000;
+            int counter = 400_000;
             while (counter > 0) {
                 counter--;
                 final long start = System.nanoTime();
@@ -36,11 +36,15 @@ public class ProducerService {
                 try (DocumentContext dc = app.writingDocument()) {
                     dc.wire().write("datum").marshallable(datum21);
                 }
+                if (counter % 10000 == 0) {
+                    System.out.println("counter = " + counter);
+                }
                 try {
                     Thread.sleep(1);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+
             }
             queue.close();
         }
