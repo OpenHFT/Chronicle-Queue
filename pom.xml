@@ -92,11 +92,12 @@
         </dependency>
 
 
-
+        <!--overriding version fixes an issue on certain versions of linux-->
         <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jnr-ffi</artifactId>
             <version>2.2.15</version>
+            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>org.ow2.asm</groupId>

@@ -38,6 +38,7 @@ import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY
 
 public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
     public static final int DEFAULT_ITERATIONS = 100_000;
+    public static final String THE_PROBE = "TheProbe";
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
@@ -68,7 +69,8 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
         new JLBH(lth, System.out, jlbhResult -> {
             if (commandLine.hasOption('f')) {
                 try {
-                    JLBHResultSerializer.runResultToCSV(jlbhResult, "result.csv");
+                    JLBHResultSerializer.runResultToCSV(jlbhResult, "result.csv",
+                            QueueTwoServicesJLBHBenchmark.THE_PROBE);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -83,7 +85,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
         this.jlbh = jlbh;
         queue = single("replica").rollCycle(LARGE_DAILY).doubleBuffer(false).build();
-        theProbe = jlbh.addProbe("TheProbe");
+        theProbe = jlbh.addProbe(THE_PROBE);
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();

@@ -12,7 +12,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 public class JLBHResultSerializer {
-    public static void runResultToCSV(JLBHResult jlbhResult, String fileName) throws IOException {
+    public static void runResultToCSV(JLBHResult jlbhResult, String fileName, String... probes) throws IOException {
         Bytes<?> bytes3 = Bytes.allocateElasticOnHeap();
         TextWire wire3 = new TextWire(bytes3);
         writeHeader(wire3);
@@ -20,9 +20,9 @@ public class JLBHResultSerializer {
         JLBHResult.ProbeResult probeResult = jlbhResult.endToEnd();
 
         writeProbeResultRows(probeResult, wire3, "endToEnd");
-        writeProbeResult(jlbhResult, wire3, "Concurrent");
-        writeProbeResult(jlbhResult, wire3, "Concurrent2");
-
+        for (String probe : probes) {
+            writeProbeResult(jlbhResult, wire3, probe);
+        }
         bytes3.copyTo(Files.newOutputStream(Paths.get(fileName)));
     }
 
