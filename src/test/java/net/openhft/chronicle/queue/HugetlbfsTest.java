@@ -18,6 +18,7 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * FIXME Needs to be configured to only run in CI where a hugetlbfs mount exists.
+ * FIXME All file paths need to be resolved automatically to either traditional filesystem or hugetlbfs
  */
 public class HugetlbfsTest {
 
@@ -31,6 +32,7 @@ public class HugetlbfsTest {
         MappedBytes bytes = MappedBytes.mappedBytes(file, OS.pageSize(), OS.pageSize(), hugePageSize, false);
         bytes.writeVolatileInt(0, 1);
         int value = bytes.readVolatileInt(0);
+        assertEquals(1, value);
     }
 
     @Test
@@ -47,7 +49,7 @@ public class HugetlbfsTest {
 
     @Test
     public void queue_tmp() {
-        String path = "/tmp/test-queue";
+        String path = "/tmp/test-queue-1";
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single().path(path).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
