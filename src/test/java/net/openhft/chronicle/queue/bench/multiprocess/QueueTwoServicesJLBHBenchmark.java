@@ -33,6 +33,7 @@ import org.apache.commons.cli.Options;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import static net.openhft.chronicle.queue.bench.CLIUtils.addOption;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
@@ -42,7 +43,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
-    private final Datum datum = new Datum();
+    private static Datum datum ;
     private static NanoSampler theProbe;
 
     static {
@@ -54,7 +55,11 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
     public static void main(String[] args) throws FileNotFoundException {
         Options options = CLIUtils.createOptions();
+        addOption(options, "p", "payload", true, "Payload Size (approximate)", false);
+
         CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
+
+        datum = new Datum(CLIUtils.getIntOption(commandLine, 'p', 128));
 
         // disable as otherwise single GC event skews results heavily
         int iterations = CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS);
