@@ -2,16 +2,20 @@ package net.openhft.chronicle.queue.bench.multiprocess;
 
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.bench.CLIUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 
+import static net.openhft.chronicle.queue.bench.CLIUtils.addOption;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
 public class ProducerService {
 
     private static SingleChronicleQueue queue;
-    private static final Datum datum = new Datum();
+    private static Datum datum;
 
     static {
         System.setProperty("disable.thread.safety", "true");
@@ -20,6 +24,13 @@ public class ProducerService {
     }
 
     public static void main(String[] args) {
+        Options options = new Options();
+        addOption(options, "h", "help", false, "Help", false);
+        addOption(options, "p", "payload", true, "Payload Size (approximate)", false);
+        CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
+
+        datum = new Datum(CLIUtils.getIntOption(commandLine, 'p', 128));
+
         queue = single("replica").rollCycle(LARGE_DAILY).doubleBuffer(false).build();
         run(datum);
     }
@@ -32,7 +43,6 @@ public class ProducerService {
                 counter--;
                 final long start = System.nanoTime();
                 datum21.ts = start;
-                datum21.username = "" + start;
                 try (DocumentContext dc = app.writingDocument()) {
                     dc.wire().write("datum").marshallable(datum21);
                 }
