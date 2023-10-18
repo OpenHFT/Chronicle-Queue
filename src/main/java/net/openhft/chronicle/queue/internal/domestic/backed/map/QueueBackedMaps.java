@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Used by services to handle multiple QueueBackedMaps
  */
+@Deprecated(/* to be removed in x.25 */)
 public class QueueBackedMaps implements QueueEvents {
     final Map<String, QueueEvents> maps = new ConcurrentHashMap<>();
 
