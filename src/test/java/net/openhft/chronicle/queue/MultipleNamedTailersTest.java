@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
@@ -50,6 +51,8 @@ public class MultipleNamedTailersTest extends QueueTestCommon {
                 check(tailer2, id0, index0);
                 check(namedTailer2, id0, index0);
             }
+        } finally {
+            IOTools.deleteDirWithFiles(tmpDir);
         }
     }
 

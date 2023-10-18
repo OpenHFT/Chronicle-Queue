@@ -48,8 +48,9 @@ public class AppenderListenerTest extends QueueTestCommon {
             final HelloWorld writer = q.methodWriter(HelloWorld.class);
             writer.hello("G'Day");
             writer.hello("Bye-now");
+        } finally {
+            IOTools.deleteDirWithFiles(path);
         }
-        IOTools.deleteDirWithFiles(path);
         assertEquals("" +
                 "hello G'Day, addr:4a100000010114, index: 4a1000000000\n" +
                 "hello Bye-now, addr:4a100000010128, index: 4a1000000001\n", results.toString());

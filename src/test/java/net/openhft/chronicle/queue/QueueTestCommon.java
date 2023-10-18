@@ -41,10 +41,14 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class QueueTestCommon {
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
@@ -86,6 +90,7 @@ public class QueueTestCommon {
     //
     // *************************************************************************
     static AtomicLong counter = new AtomicLong();
+    private Set<String> targetAllowList;
 
     @NotNull
     protected File getTmpDir() {
@@ -94,6 +99,14 @@ public class QueueTestCommon {
         final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
         tmpDirs.add(tmpDir);
         return tmpDir;
+    }
+
+    @Before
+    public void recordTargetDirContents() {
+        String target = OS.getTarget();
+        targetAllowList = Stream.of(new File(target).listFiles())
+                .map(File::getName)
+                .collect(Collectors.toSet());
     }
 
     @Before
@@ -153,6 +166,24 @@ public class QueueTestCommon {
 
     public void checkExceptions() {
         exceptionTracker.checkExceptions();
+    }
+
+    @After
+    public void deleteTargetDirTestArtifacts() {
+        String target = OS.getTarget();
+        Set<String> currentFilesInTarget = Stream.of(new File(target).listFiles())
+                .map(File::getName)
+                .collect(Collectors.toSet());
+
+        currentFilesInTarget.stream()
+                .filter(fileName -> !targetAllowList.contains(fileName))
+                .forEach(fileName -> {
+                    try {
+                        IOTools.deleteDirWithFiles(Paths.get(target, fileName).toFile());
+                    } catch (Exception e) {
+                        Jvm.error().on(this.getClass(), "Could not delete file", e);
+                    }
+                });
     }
 
     @After

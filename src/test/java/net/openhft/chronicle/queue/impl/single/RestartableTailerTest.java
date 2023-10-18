@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -79,6 +80,8 @@ public class RestartableTailerTest extends QueueTestCommon {
             try (ExcerptTailer btailer = cq.createTailer("b")) {
                 assertEquals("test 3", btailer.readText());
             }
+        } finally {
+            IOTools.deleteDirWithFiles(tmp);
         }
     }
 }

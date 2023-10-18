@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -123,10 +124,18 @@ java.lang.AssertionError: Closeables still open
 @RequiredForClient
 public class ChronicleRollingIssueTest extends QueueTestCommon {
 
+    private String path;
+
     @Override
     @Before
     public void threadDump() {
         super.threadDump();
+        path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
+    }
+
+    @After
+    public void tearDown() {
+        IOTools.deleteDirWithFiles(path);
     }
 
     @Test
@@ -134,7 +143,6 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
         int threads = Math.min(64, Runtime.getRuntime().availableProcessors() * 4) - 1;
         int messages = 100;
 
-        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         AtomicInteger count = new AtomicInteger();
         StoreFileListener storeFileListener = (cycle, file) -> {
         };

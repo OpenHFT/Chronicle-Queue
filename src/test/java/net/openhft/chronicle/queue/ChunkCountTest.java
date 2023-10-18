@@ -53,6 +53,8 @@ public class ChunkCountTest extends QueueTestCommon {
 
                 assertEquals("i: " + i, expected, queue.chunkCount());
             }
+        } finally {
+            IOTools.deleteDirWithFiles(tempFile);
         }
     }
 }
