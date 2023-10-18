@@ -1,67 +1,26 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.bytes.internal.ChunkedMappedBytes;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-
+import static net.openhft.chronicle.queue.util.HugetlbfsTestUtil.getHugetlbfsQueueDirectory;
+import static net.openhft.chronicle.queue.util.HugetlbfsTestUtil.isHugetlbfsAvailable;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
-/**
- * FIXME Needs to be configured to only run in CI where a hugetlbfs mount exists.
- * FIXME All file paths need to be resolved automatically to either traditional filesystem or hugetlbfs
- */
 public class HugetlbfsTest {
 
-    @Test
-    public void mappedBytes_tmp() throws IOException {
-        File file = new File("/tmp/testfile");
-        file.createNewFile();
-        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-        int hugePageSize = 2048 * 1024;
-        randomAccessFile.setLength(hugePageSize);
-        MappedBytes bytes = MappedBytes.mappedBytes(file, OS.pageSize(), OS.pageSize(), hugePageSize, false);
-        bytes.writeVolatileInt(0, 1);
-        int value = bytes.readVolatileInt(0);
-        assertEquals(1, value);
-    }
+    @Rule
+    public TestName testName = new TestName();
 
     @Test
-    public void mappedBytes_hugetlbfs() throws IOException {
-        File file = new File("/mnt/huge/tom/testfile");
-        file.createNewFile();
-        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-        int hugePageSize = 2048 * 1024;
-        randomAccessFile.setLength(hugePageSize);
-        MappedBytes bytes = MappedBytes.mappedBytes(file, OS.pageSize(), OS.pageSize(), false);
-        bytes.writeVolatileInt(0, 33);
-        assertEquals(33, bytes.readVolatileInt(0));
-    }
-
-    @Test
-    public void queue_tmp() {
-        String path = "/tmp/test-queue-1";
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single().path(path).build();
-             ExcerptAppender appender = queue.createAppender();
-             ExcerptTailer tailer = queue.createTailer()) {
-            appender.writeText("1");
-            assertEquals("1", tailer.readText());
-        }
-        IOTools.deleteDirWithFiles(path);
-    }
-
-    @Test
-    public void queue_hugetlbfs() {
-        String path = "/mnt/huge/tom/test-queue";
+    public void queueHugetlbfsEndToEndSimpleAcceptanceTest() {
+        assumeTrue(isHugetlbfsAvailable());
+        String path = getHugetlbfsQueueDirectory(testName);
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single()
                 .path(path)
                 .build();
@@ -69,8 +28,9 @@ public class HugetlbfsTest {
              ExcerptTailer tailer = queue.createTailer()) {
             appender.writeText("1");
             assertEquals("1", tailer.readText());
+        } finally {
+            IOTools.deleteDirWithFiles(path);
         }
-        IOTools.deleteDirWithFiles(path);
     }
 
 }
