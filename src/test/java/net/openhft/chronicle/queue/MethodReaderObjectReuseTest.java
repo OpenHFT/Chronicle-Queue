@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
