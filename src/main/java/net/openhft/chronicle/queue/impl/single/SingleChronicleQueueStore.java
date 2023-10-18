@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -304,13 +303,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public MappedBytes bytes() {
         throwExceptionIfClosed();
 
-        final MappedBytes mbytes;
-        try {
-            // FIXME Fix this call-site
-            mbytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize(), mappedFile.overlapSize(), PageUtil.getPageSize(mappedFile.file().getAbsolutePath()), false);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        final MappedBytes mbytes = MappedBytes.mappedBytes(mappedFile);
         mbytes.singleThreadedCheckDisabled(true);
         return mbytes;
     }
@@ -417,7 +410,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             }
         }
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize(), mappedFile.overlapSize(), PageUtil.getPageSize(fileName), false)) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
             Wire wire0 = WireType.valueOf(wire).apply(bytes);
             return writeEOFAndShrink(wire0, timeoutMS);
 
