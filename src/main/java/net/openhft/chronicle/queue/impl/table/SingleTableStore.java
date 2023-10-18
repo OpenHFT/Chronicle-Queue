@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -32,10 +33,7 @@ import net.openhft.chronicle.queue.impl.single.MetaDataField;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.IOException;
-import java.io.StreamCorruptedException;
+import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
@@ -209,7 +207,12 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public MappedBytes bytes() {
         throwExceptionIfClosed();
 
-        return MappedBytes.mappedBytes(mappedFile);
+        try {
+            // FIXME Replace with correct invocation
+            return MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize(), mappedFile.overlapSize(), PageUtil.getPageSize(mappedFile.file().getAbsolutePath()), false);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @NotNull
