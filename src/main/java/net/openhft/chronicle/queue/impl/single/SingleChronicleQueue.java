@@ -897,10 +897,12 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     @PackageLocal
     MappedFile mappedFile(File file) throws FileNotFoundException {
+        // FIXME Needs to change
         long chunkSize = OS.pageAlign(blockSize);
+        int pageSize = PageUtil.getPageSize(file.getAbsolutePath());
         final MappedFile mappedFile = useSparseFile
-                ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
-                : MappedFile.of(file, chunkSize, overlapSize, readOnly);
+                ? MappedFile.ofSingle(file, sparseCapacity, readOnly) // FIXME Sparse file needs fixing
+                : MappedFile.of(file, chunkSize, overlapSize, pageSize, readOnly);
         mappedFile.syncMode(syncMode);
         return mappedFile;
     }
