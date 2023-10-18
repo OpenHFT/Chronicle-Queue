@@ -43,11 +43,12 @@ public class DirectoryUtils {
 
     public static String uniqueId() {
         long l;
-        try {
-            l = MappedUniqueTimeProvider.INSTANCE.currentTimeMicros();
-        } catch (IllegalStateException var3) {
+        // FIXME: MappedUniqueTimeProvider is not portable to hugetlbfs. Disable temporarily.
+        //try {
+        //    l = MappedUniqueTimeProvider.INSTANCE.currentTimeMicros();
+        //} catch (IllegalStateException var3) {
             l = SystemTimeProvider.INSTANCE.currentTimeMicros();
-        }
+        //}
 
         return Long.toString(l, 36);
     }
