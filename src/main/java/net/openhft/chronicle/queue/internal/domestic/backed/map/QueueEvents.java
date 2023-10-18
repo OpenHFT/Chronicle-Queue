@@ -5,6 +5,7 @@
 package net.openhft.chronicle.queue.internal.domestic.backed.map;
 
 // TODO add queue names and only read the ones for it.
+@Deprecated(/* to be removed in x.25 */)
 public interface QueueEvents<K, V> {
     /**
      * @param key       to put
