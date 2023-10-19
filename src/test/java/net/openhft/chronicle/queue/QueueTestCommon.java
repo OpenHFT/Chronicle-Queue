@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.internal.CloseableUtils;
 import net.openhft.chronicle.core.internal.JvmExceptionTracker;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
@@ -174,6 +175,9 @@ public class QueueTestCommon {
 
         // Ensure all pending resources are released first
         BackgroundResourceReleaser.releasePendingResources();
+
+        // Wait for all closeables to close
+        CloseableUtils.waitForCloseablesToClose(2_000);
 
         String target = OS.getTarget();
         Set<String> currentFilesInTarget = Stream.of(new File(target).listFiles())
