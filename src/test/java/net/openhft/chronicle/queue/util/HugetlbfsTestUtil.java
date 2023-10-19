@@ -11,7 +11,7 @@ public final class HugetlbfsTestUtil {
 
     public static final String HUGETLBFS_PATH_PROPERTY = "chronicle.queue.tests.hugetlbfsPath";
 
-    public static final String HUGETLBFS_PATH = Jvm.getProperty(HUGETLBFS_PATH_PROPERTY, "/huge");
+    public static final String HUGETLBFS_PATH = Jvm.getProperty(HUGETLBFS_PATH_PROPERTY, "/mnt/huge");
 
     private HugetlbfsTestUtil() {
     }
