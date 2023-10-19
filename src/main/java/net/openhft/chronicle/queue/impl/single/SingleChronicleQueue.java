@@ -62,7 +62,8 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable;
-import static net.openhft.chronicle.wire.Wires.*;
+import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
+import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
 public class
 SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
@@ -952,23 +953,24 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
-
-        BytesStore keyBytes = asBytes(key);
-        LongValue longValue = metaStoreMap.get(keyBytes);
-        if (longValue == null) {
-            synchronized (closers) {
-                longValue = metaStoreMap.get(keyBytes);
-                if (longValue == null) {
-                    longValue = metaStore.acquireValueFor(key, defaultValue);
-                    int length = key.length();
-                    HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
-                    key2.write(0, keyBytes, 0, length);
-                    metaStoreMap.put(key2, longValue);
-                    return longValue;
+        try (final ScopedResource<Bytes<?>> bytesTl = acquireBytesScoped()) {
+            BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
+            LongValue longValue = metaStoreMap.get(keyBytes);
+            if (longValue == null) {
+                synchronized (closers) {
+                    longValue = metaStoreMap.get(keyBytes);
+                    if (longValue == null) {
+                        longValue = metaStore.acquireValueFor(key, defaultValue);
+                        int length = key.length();
+                        HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
+                        key2.write(0, keyBytes, 0, length);
+                        metaStoreMap.put(key2, longValue);
+                        return longValue;
+                    }
                 }
             }
+            return longValue;
         }
-        return longValue;
     }
 
     public long tableStoreGet(CharSequence key) {
@@ -977,10 +979,10 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return longValue.getVolatileValue();
     }
 
-    private BytesStore asBytes(CharSequence key) {
+    private BytesStore asBytes(CharSequence key, Bytes<?> bytes) {
         return key instanceof BytesStore
                 ? ((BytesStore) key)
-                : acquireAnotherBytes().append(key);
+                : bytes.append(key);
     }
 
     private static final class CachedCycleTree {
