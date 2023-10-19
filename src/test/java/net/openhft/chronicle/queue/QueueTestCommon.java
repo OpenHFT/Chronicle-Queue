@@ -30,6 +30,7 @@ import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
+import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
 import net.openhft.chronicle.testframework.internal.ExceptionTracker;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
@@ -172,27 +173,22 @@ public class QueueTestCommon {
 
     @After
     public void deleteTargetDirTestArtifacts() {
+        if (HugetlbfsTestUtil.isHugetlbfsAvailable()) {
+            String target = OS.getTarget();
+            Set<String> currentFilesInTarget = Stream.of(new File(target).listFiles())
+                    .map(File::getName)
+                    .collect(Collectors.toSet());
 
-        // Ensure all pending resources are released first
-        BackgroundResourceReleaser.releasePendingResources();
-
-        // Wait for all closeables to close
-        CloseableUtils.waitForCloseablesToClose(2_000);
-
-        String target = OS.getTarget();
-        Set<String> currentFilesInTarget = Stream.of(new File(target).listFiles())
-                .map(File::getName)
-                .collect(Collectors.toSet());
-
-        currentFilesInTarget.stream()
-                .filter(fileName -> !targetAllowList.contains(fileName))
-                .forEach(fileName -> {
-                    try {
-                        IOTools.deleteDirWithFiles(Paths.get(target, fileName).toFile());
-                    } catch (Exception e) {
-                        Jvm.error().on(this.getClass(), "Could not delete file", e);
-                    }
-                });
+            currentFilesInTarget.stream()
+                    .filter(fileName -> !targetAllowList.contains(fileName))
+                    .forEach(fileName -> {
+                        try {
+                            IOTools.deleteDirWithFiles(Paths.get(target, fileName).toFile());
+                        } catch (Exception e) {
+                            Jvm.error().on(this.getClass(), "Could not delete file", e);
+                        }
+                    });
+        }
     }
 
     @After
