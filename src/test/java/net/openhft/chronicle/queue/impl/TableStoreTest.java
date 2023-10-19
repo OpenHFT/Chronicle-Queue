@@ -18,12 +18,14 @@
 
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -38,6 +40,7 @@ public class TableStoreTest extends QueueTestCommon {
     public void acquireValueFor() throws IOException {
 
         final File file = tempDir("table");
+        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(file.getAbsolutePath()));
         file.mkdir();
 
         final File tempFile = Files.createTempFile(file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
