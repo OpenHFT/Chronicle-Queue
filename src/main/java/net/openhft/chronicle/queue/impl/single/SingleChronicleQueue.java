@@ -19,8 +19,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.internal.HeapBytesStore;
-import net.openhft.chronicle.bytes.internal.SingleMappedFile;
-import net.openhft.chronicle.core.CleaningRandomAccessFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
