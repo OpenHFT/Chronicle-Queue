@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.util;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -32,10 +33,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -50,6 +48,7 @@ import static net.openhft.chronicle.queue.internal.util.InternalFileUtil.getAllO
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 public class FileUtilTest extends QueueTestCommon {
@@ -67,7 +66,9 @@ public class FileUtilTest extends QueueTestCommon {
         dir.toFile().mkdir();
         try {
             final File testFile = dir.resolve("tmpFile").toFile();
-            Files.write(testFile.toPath(), "A".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            RandomAccessFile raf = new RandomAccessFile(testFile, "rw");
+            raf.setLength(PageUtil.getPageSize(dir.toString()));
+            raf.close();
 
             // Allow things to stabilize
             Jvm.pause(100);
