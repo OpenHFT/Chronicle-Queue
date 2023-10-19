@@ -899,7 +899,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     @PackageLocal
     MappedFile mappedFile(File file) throws FileNotFoundException {
-        // FIXME Needs to change
         long chunkSize = OS.pageAlign(blockSize);
         int pageSize = PageUtil.getPageSize(file.getAbsolutePath());
         final MappedFile mappedFile = useSparseFile

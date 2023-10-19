@@ -46,6 +46,7 @@ import org.junit.runner.Description;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -104,12 +105,20 @@ public class QueueTestCommon {
         return tmpDir;
     }
 
+    /**
+     * @see #deleteTargetDirTestArtifacts()
+     */
     @Before
     public void recordTargetDirContents() {
         String target = OS.getTarget();
-        targetAllowList = Stream.of(new File(target).listFiles())
-                .map(File::getName)
-                .collect(Collectors.toSet());
+        File[] files = new File(target).listFiles();
+        if (files == null) {
+            targetAllowList = Collections.emptySet();
+        } else {
+            targetAllowList = Stream.of(files)
+                    .map(File::getName)
+                    .collect(Collectors.toSet());
+        }
     }
 
     @Before
@@ -171,11 +180,24 @@ public class QueueTestCommon {
         exceptionTracker.checkExceptions();
     }
 
+    /**
+     * When running tests on hugetlbfs queue files all take up pages in the CI environment. Historically not all tests
+     * neatly clean up their test data after they exit and this meant that hugetlbfs CI tests would run out of huge
+     * pages to allocate. To work around this when running in the context of hugetlbfs the below method will ensure
+     * that any files created in the OS.getTarget() directory are cleaned up in between tests to prevent the host from
+     * running out of huge pages during the build.
+     *
+     * @see #recordTargetDirContents() which tracks the original contents of target and avoids deleting unrelated files
+     */
     @After
     public void deleteTargetDirTestArtifacts() {
         if (HugetlbfsTestUtil.isHugetlbfsAvailable()) {
             String target = OS.getTarget();
-            Set<String> currentFilesInTarget = Stream.of(new File(target).listFiles())
+            File[] files = new File(target).listFiles();
+            if (files == null) {
+                return;
+            }
+            Set<String> currentFilesInTarget = Stream.of(files)
                     .map(File::getName)
                     .collect(Collectors.toSet());
 
@@ -185,7 +207,7 @@ public class QueueTestCommon {
                         try {
                             IOTools.deleteDirWithFiles(Paths.get(target, fileName).toFile());
                         } catch (Exception e) {
-                            Jvm.error().on(this.getClass(), "Could not delete file", e);
+                            Jvm.error().on(this.getClass(), "Could not delete file - " + fileName, e);
                         }
                     });
         }
