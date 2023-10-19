@@ -19,6 +19,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.bytes.internal.HeapBytesStore;
+import net.openhft.chronicle.bytes.internal.SingleMappedFile;
+import net.openhft.chronicle.core.CleaningRandomAccessFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
@@ -901,7 +903,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         long chunkSize = OS.pageAlign(blockSize);
         int pageSize = PageUtil.getPageSize(file.getAbsolutePath());
         final MappedFile mappedFile = useSparseFile
-                ? MappedFile.ofSingle(file, sparseCapacity, readOnly) // FIXME Sparse file needs fixing
+                ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
                 : MappedFile.of(file, chunkSize, overlapSize, pageSize, readOnly);
         mappedFile.syncMode(syncMode);
         return mappedFile;

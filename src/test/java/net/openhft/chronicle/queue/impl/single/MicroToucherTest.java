@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
@@ -59,6 +60,11 @@ public class MicroToucherTest extends QueueTestCommon {
         int pages = 0;
         final SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
         configure.accept(builder);
+        String queuePath = builder.path().getAbsolutePath();
+        if (PageUtil.isHugePage(queuePath)) {
+            // Set the sparse capacity to a sufficiently large multiple of the page size
+            builder.sparseCapacity(PageUtil.getPageSize(queuePath) * 200);
+        }
         try (ChronicleQueue q = builder.build();
              final StoreAppender appender = (StoreAppender) q.createAppender()) {
 
