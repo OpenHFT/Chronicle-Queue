@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -47,6 +48,7 @@ public class StuckQueueTest extends QueueTestCommon {
         assumeFalse(OS.isWindows());
 
         Path tmpDir = getTmpDir().toPath();
+        assumeFalse("This test uses a checked in queue file that has a size incompatible with hugetlbfs", PageUtil.isHugePage(tmpDir.toString()));
 
         expectException("Failback to readonly tablestore");
         ignoreException("reading control code as text");

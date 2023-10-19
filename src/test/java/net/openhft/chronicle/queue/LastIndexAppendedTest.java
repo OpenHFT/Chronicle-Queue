@@ -38,26 +38,26 @@ public class LastIndexAppendedTest extends QueueTestCommon {
     public void testLastIndexAppendedAcrossRestarts() {
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
 
-        for (int i = 0; i < 5; i++) {
-            try (ChronicleQueue queue = single(path)
-                    .testBlockSize()
-                    .rollCycle(TEST_DAILY)
-                    .build();
-                 ExcerptAppender appender = queue.createAppender()) {
-
-                try (DocumentContext documentContext = appender.writingDocument()) {
-                    int index = (int) documentContext.index();
-                    assertEquals(i, index);
-
-                    documentContext.wire().write().text("hello world");
-                }
-
-                assertEquals(i, (int) appender.lastIndexAppended());
-            }
-        }
         try {
+            for (int i = 0; i < 5; i++) {
+                try (ChronicleQueue queue = single(path)
+                        .testBlockSize()
+                        .rollCycle(TEST_DAILY)
+                        .build();
+                     ExcerptAppender appender = queue.createAppender()) {
+
+                    try (DocumentContext documentContext = appender.writingDocument()) {
+                        int index = (int) documentContext.index();
+                        assertEquals(i, index);
+
+                        documentContext.wire().write().text("hello world");
+                    }
+
+                    assertEquals(i, (int) appender.lastIndexAppended());
+                }
+            }
+        } finally {
             IOTools.deleteDirWithFiles(path, 2);
-        } catch (Exception index) {
         }
     }
 
@@ -111,10 +111,8 @@ public class LastIndexAppendedTest extends QueueTestCommon {
             tailer.toStart();
             t_index = doRead(tailer, 10);
             assertEquals(a_index, t_index);
-        }
-        try {
+        } finally {
             IOTools.deleteDirWithFiles(path, 2);
-        } catch (Exception index) {
         }
     }
 

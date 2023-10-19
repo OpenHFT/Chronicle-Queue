@@ -20,17 +20,18 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.HexDumpBytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -46,6 +47,7 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 public class SingleCQFormatTest extends QueueTestCommon {
     static {
@@ -73,7 +75,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         dir.mkdir();
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), OS.SAFE_PAGE_SIZE)) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(dir.getAbsolutePath()), false)) {
             bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
             try (RollingChronicleQueue queue = binary(dir)
@@ -104,6 +106,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     public void testNoHeader() throws IOException {
         ignoreException("Channel closed while unlocking");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
+        assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()));
         dir.mkdir();
 
         final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
@@ -137,7 +140,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         dir.mkdirs();
         final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
         file.createNewFile();
-        final MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE);
+        final MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(dir.getAbsolutePath()), false);
         try {
             bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
         } finally {
@@ -163,7 +166,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         dir.mkdirs();
         final File file = new File(dir, LocalDate.now(Clock.systemUTC()).format(DateTimeFormatter.ofPattern("yyyyMMdd")) + SingleChronicleQueue.SUFFIX);
         file.createNewFile();
-        final MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE);
+        final MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(dir.getAbsolutePath()), false);
         try {
             bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
         } finally {
@@ -212,7 +215,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
 
         testWritingTo(new HexDumpBytes());
 
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE)) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(dir.getAbsolutePath()), false)) {
             testWritingTo(bytes);
         }
 
@@ -335,7 +338,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         dir.mkdir();
 
         File file = new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX);
-        final MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE);
+        final MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(dir.getAbsolutePath()), false);
 
         final Wire wire = new BinaryWire(bytes);
         wire.usePadding(true);
@@ -380,7 +383,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         dir.mkdir();
 
         File file = new File(dir, "19700101T4" + SingleChronicleQueue.SUFFIX);
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE)) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(dir.getAbsolutePath()), false)) {
             final Wire wire = new BinaryWire(bytes);
             wire.usePadding(true);
             try (DocumentContext dc = wire.writingDocument(true)) {

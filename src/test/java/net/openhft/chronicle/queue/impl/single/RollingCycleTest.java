@@ -17,10 +17,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.BytesIn;
-import net.openhft.chronicle.bytes.BytesOut;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
@@ -32,6 +29,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -67,6 +65,7 @@ public class RollingCycleTest extends QueueTestCommon {
         stp.currentTimeMillis(start);
 
         String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
+        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .timeoutMS(5)

@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
@@ -26,6 +27,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -51,74 +53,78 @@ public class ToEndTest extends QueueTestCommon {
     @Test
     public void missingCyclesToEndTest() {
         String path = OS.getTarget() + "/missingCyclesToEndTest-" + Time.uniqueId();
-        IOTools.shallowDeleteDirWithFiles(path);
+        try {
+            IOTools.shallowDeleteDirWithFiles(path);
 
-        final SetTimeProvider timeProvider = new SetTimeProvider();
-        long now = 1470757797000L;
-        long timeIncMs = 1001;
-        timeProvider.currentTimeMillis(now);
+            final SetTimeProvider timeProvider = new SetTimeProvider();
+            long now = 1470757797000L;
+            long timeIncMs = 1001;
+            timeProvider.currentTimeMillis(now);
 
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                .testBlockSize()
-                .rollCycle(TEST4_SECONDLY)
-                .timeProvider(timeProvider)
-                .build();
-             final ExcerptAppender appender = queue.createAppender()) {
+            try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                    .testBlockSize()
+                    .rollCycle(TEST4_SECONDLY)
+                    .timeProvider(timeProvider)
+                    .build();
+                 final ExcerptAppender appender = queue.createAppender()) {
 
-            appender.writeDocument(wire -> wire.write("msg").int32(1));
+                appender.writeDocument(wire -> wire.write("msg").int32(1));
 
-            // roll
-            timeProvider.currentTimeMillis(now += timeIncMs);
+                // roll
+                timeProvider.currentTimeMillis(now += timeIncMs);
 
-            appender.writeDocument(wire -> wire.write("msg").int32(2));
-            appender.writeDocument(wire -> wire.write("msg").int32(3));
+                appender.writeDocument(wire -> wire.write("msg").int32(2));
+                appender.writeDocument(wire -> wire.write("msg").int32(3));
 
-            final ExcerptTailer tailer = queue.createTailer().toEnd();
-            try (DocumentContext dc = tailer.readingDocument()) {
-                if (dc.isPresent()) {
-                    fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read("msg").int32());
+                final ExcerptTailer tailer = queue.createTailer().toEnd();
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    if (dc.isPresent()) {
+                        fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read("msg").int32());
+                    }
                 }
-            }
 
-            // append same cycle.
-            appender.writeDocument(wire -> wire.write("msg").int32(4));
+                // append same cycle.
+                appender.writeDocument(wire -> wire.write("msg").int32(4));
 
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
-                int i = dc.wire().read("msg").int32();
-                assertEquals("Should've read 4, instead we read: " + i, 4, i);
-            }
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
+                    int i = dc.wire().read("msg").int32();
+                    assertEquals("Should've read 4, instead we read: " + i, 4, i);
+                }
 
-            // read from the beginning
-            tailer.toStart();
+                // read from the beginning
+                tailer.toStart();
 
-            for (int j = 1; j <= 4; j++) {
+                for (int j = 1; j <= 4; j++) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        assertTrue(dc.isPresent());
+                        int i = dc.wire().read("msg").int32();
+                        assertEquals(j, i);
+                    }
+                }
+
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    if (dc.isPresent()) {
+                        fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read("msg").int32()));
+                    }
+                }
+
+                // write another
+                appender.writeDocument(wire -> wire.write("msg").int32(5));
+
+                // roll 5 cycles
+                timeProvider.currentTimeMillis(now += timeIncMs * 5);
+
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
-                    int i = dc.wire().read("msg").int32();
-                    assertEquals(j, i);
+                    assertEquals(5, dc.wire().read("msg").int32());
+                }
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertFalse(dc.isPresent());
                 }
             }
-
-            try (DocumentContext dc = tailer.readingDocument()) {
-                if (dc.isPresent()) {
-                    fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read("msg").int32()));
-                }
-            }
-
-            // write another
-            appender.writeDocument(wire -> wire.write("msg").int32(5));
-
-            // roll 5 cycles
-            timeProvider.currentTimeMillis(now += timeIncMs * 5);
-
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
-                assertEquals(5, dc.wire().read("msg").int32());
-            }
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(dc.isPresent());
-            }
+        } finally {
+            IOTools.deleteDirWithFiles(path);
         }
     }
 
@@ -156,6 +162,8 @@ public class ToEndTest extends QueueTestCommon {
 
             // the reference count here is 1, the queue itself
             assertFalse(store2.isClosed());
+        } finally {
+            IOTools.deleteDirWithFiles(path);
         }
     }
 
@@ -163,40 +171,44 @@ public class ToEndTest extends QueueTestCommon {
     public void toEndTest() {
         File baseDir = getTmpDir();
 
-        List<Integer> results = new ArrayList<>();
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
-                .testBlockSize()
-                .rollCycle(TEST_DAILY)
-                .build();
-             ExcerptAppender appender = queue.createAppender()) {
+        try {
+            List<Integer> results = new ArrayList<>();
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
+                    .testBlockSize()
+                    .rollCycle(TEST_DAILY)
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
 
-            checkOneFile(baseDir);
-            checkOneFile(baseDir);
+                checkOneFile(baseDir);
+                checkOneFile(baseDir);
 
-            for (int i = 0; i < 10; i++) {
-                final int j = i;
-                appender.writeDocument(wire -> wire.write("msg").int32(j));
+                for (int i = 0; i < 10; i++) {
+                    final int j = i;
+                    appender.writeDocument(wire -> wire.write("msg").int32(j));
+                }
+
+                checkOneFile(baseDir);
+
+                ExcerptTailer tailer = queue.createTailer();
+                checkOneFile(baseDir);
+
+                ExcerptTailer atEnd = tailer.toEnd();
+                assertEquals(10, queue.rollCycle().toSequenceNumber(atEnd.index()));
+                checkOneFile(baseDir);
+                fillResults(atEnd, results);
+                checkOneFile(baseDir);
+                assertEquals(0, results.size());
+
+                tailer.toStart();
+                checkOneFile(baseDir);
+                fillResults(tailer, results);
+                assertEquals(10, results.size());
+                checkOneFile(baseDir);
             }
-
-            checkOneFile(baseDir);
-
-            ExcerptTailer tailer = queue.createTailer();
-            checkOneFile(baseDir);
-
-            ExcerptTailer atEnd = tailer.toEnd();
-            assertEquals(10, queue.rollCycle().toSequenceNumber(atEnd.index()));
-            checkOneFile(baseDir);
-            fillResults(atEnd, results);
-            checkOneFile(baseDir);
-            assertEquals(0, results.size());
-
-            tailer.toStart();
-            checkOneFile(baseDir);
-            fillResults(tailer, results);
-            assertEquals(10, results.size());
-            checkOneFile(baseDir);
+            System.gc();
+        } finally {
+            IOTools.deleteDirWithFiles(baseDir);
         }
-        System.gc();
     }
 
     @Test
@@ -204,42 +216,41 @@ public class ToEndTest extends QueueTestCommon {
         File baseDir = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
-                .testBlockSize()
-                .rollCycle(TEST_DAILY)
-                .build()) {
-            checkOneFile(baseDir);
-
-            // if this appender isn't created, the tailer toEnd doesn't cause a roll.
-            try (ExcerptAppender appender = queue.createAppender()) {
+        try {
+            try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
+                    .testBlockSize()
+                    .rollCycle(TEST_DAILY)
+                    .build()) {
                 checkOneFile(baseDir);
 
-                ExcerptTailer tailer = queue.createTailer();
-                checkOneFile(baseDir);
+                // if this appender isn't created, the tailer toEnd doesn't cause a roll.
+                try (ExcerptAppender appender = queue.createAppender()) {
+                    checkOneFile(baseDir);
 
-                ExcerptTailer tailer2 = queue.createTailer();
-                checkOneFile(baseDir);
+                    ExcerptTailer tailer = queue.createTailer();
+                    checkOneFile(baseDir);
 
-                tailer.toEnd();
-                checkOneFile(baseDir);
+                    ExcerptTailer tailer2 = queue.createTailer();
+                    checkOneFile(baseDir);
 
-                tailer2.toEnd();
-                checkOneFile(baseDir);
+                    tailer.toEnd();
+                    checkOneFile(baseDir);
+
+                    tailer2.toEnd();
+                    checkOneFile(baseDir);
+                }
             }
-        }
-        System.gc();
+            System.gc();
 
-        /*for (int i = 0; i < 10; i++) {
-            final int j = i;
-            appender.writeDocument(wire -> wire.write("msg").int32(j));
-        }*/
+        } finally {
+            IOTools.deleteDirWithFiles(baseDir);
+        }
     }
 
     @Test
     public void toEndAfterWriteTest() {
         File file = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(file);
-
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(1470757797000L);
 
@@ -298,6 +309,7 @@ public class ToEndTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(queue.file().getAbsolutePath()));
             writeMetadataToQueue(queue);
             assertEquals("" +
                     "--- !!meta-data #binary\n" +

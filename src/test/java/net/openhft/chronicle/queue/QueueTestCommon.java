@@ -20,14 +20,17 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.internal.CloseableUtils;
 import net.openhft.chronicle.core.internal.JvmExceptionTracker;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
+import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
 import net.openhft.chronicle.testframework.internal.ExceptionTracker;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
@@ -41,10 +44,15 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class QueueTestCommon {
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
@@ -86,6 +94,7 @@ public class QueueTestCommon {
     //
     // *************************************************************************
     static AtomicLong counter = new AtomicLong();
+    private Set<String> targetAllowList;
 
     @NotNull
     protected File getTmpDir() {
@@ -94,6 +103,22 @@ public class QueueTestCommon {
         final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
         tmpDirs.add(tmpDir);
         return tmpDir;
+    }
+
+    /**
+     * @see #deleteTargetDirTestArtifacts()
+     */
+    @Before
+    public void recordTargetDirContents() {
+        String target = OS.getTarget();
+        File[] files = new File(target).listFiles();
+        if (files == null) {
+            targetAllowList = Collections.emptySet();
+        } else {
+            targetAllowList = Stream.of(files)
+                    .map(File::getName)
+                    .collect(Collectors.toSet());
+        }
     }
 
     @Before
@@ -153,6 +178,39 @@ public class QueueTestCommon {
 
     public void checkExceptions() {
         exceptionTracker.checkExceptions();
+    }
+
+    /**
+     * When running tests on hugetlbfs queue files all take up pages in the CI environment. Historically not all tests
+     * neatly clean up their test data after they exit and this meant that hugetlbfs CI tests would run out of huge
+     * pages to allocate. To work around this when running in the context of hugetlbfs the below method will ensure
+     * that any files created in the OS.getTarget() directory are cleaned up in between tests to prevent the host from
+     * running out of huge pages during the build.
+     *
+     * @see #recordTargetDirContents() which tracks the original contents of target and avoids deleting unrelated files
+     */
+    @After
+    public void deleteTargetDirTestArtifacts() {
+        if (HugetlbfsTestUtil.isHugetlbfsAvailable()) {
+            String target = OS.getTarget();
+            File[] files = new File(target).listFiles();
+            if (files == null) {
+                return;
+            }
+            Set<String> currentFilesInTarget = Stream.of(files)
+                    .map(File::getName)
+                    .collect(Collectors.toSet());
+
+            currentFilesInTarget.stream()
+                    .filter(fileName -> !targetAllowList.contains(fileName))
+                    .forEach(fileName -> {
+                        try {
+                            IOTools.deleteDirWithFiles(Paths.get(target, fileName).toFile());
+                        } catch (Exception e) {
+                            Jvm.error().on(this.getClass(), "Could not delete file - " + fileName, e);
+                        }
+                    });
+        }
     }
 
     @After

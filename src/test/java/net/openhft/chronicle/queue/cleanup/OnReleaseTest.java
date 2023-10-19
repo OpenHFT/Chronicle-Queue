@@ -18,8 +18,10 @@
 
 package net.openhft.chronicle.queue.cleanup;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -67,7 +69,10 @@ public class OnReleaseTest extends QueueTestCommon {
                      .build();
              ExcerptAppender appender = writeQ.createAppender();
              ExcerptTailer tailer = readQ.createTailer()) {
-            for (int i = 0; i < 500; i++) {
+
+            // On hugetlbfs creating a large number of cycle files without unmapping them will cause page exhaustion in CI
+            int messageCount = PageUtil.isHugePage(path) ? 10 : 500;
+            for (int i = 0; i < messageCount; i++) {
                 appender.writeText("hello-" + i);
                 assertNotNull(tailer.readText());
                 BackgroundResourceReleaser.releasePendingResources();
@@ -75,7 +80,8 @@ public class OnReleaseTest extends QueueTestCommon {
                 assertEquals(i, readRoll.get());
                 stp.advanceMillis(66_000);
             }
+        } finally {
+            IOTools.deleteDirWithFiles(path);
         }
-
     }
 }

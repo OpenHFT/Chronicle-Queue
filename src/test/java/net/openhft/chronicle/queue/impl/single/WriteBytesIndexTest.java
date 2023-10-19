@@ -73,8 +73,9 @@ public class WriteBytesIndexTest extends QueueTestCommon {
                     assertFalse(t0.readBytes(bytes2.clear()));
                 }
             }
+        } finally {
+            IOTools.deleteDirWithFiles(path);
         }
-        IOTools.deleteDirWithFiles(path);
     }
 
     static ChronicleQueue createQueue(File path) {

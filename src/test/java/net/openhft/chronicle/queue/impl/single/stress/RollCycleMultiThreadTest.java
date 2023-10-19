@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.impl.single.stress;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -26,6 +27,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -86,6 +88,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
     public void testRead2() throws ExecutionException, InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
+        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         final ExecutorService es = Executors.newSingleThreadExecutor(

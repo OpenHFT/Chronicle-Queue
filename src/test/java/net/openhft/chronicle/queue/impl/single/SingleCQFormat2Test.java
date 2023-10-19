@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -217,7 +218,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
     public void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(file.getAbsolutePath()), true);
         bytes.readLimit(bytes.realCapacity());
         assertEquals(expected, Wires.fromAlignedSizePrefixedBlobs(bytes).replaceAll("(?m)^#.+$\\n", ""));
         bytes.releaseLast();

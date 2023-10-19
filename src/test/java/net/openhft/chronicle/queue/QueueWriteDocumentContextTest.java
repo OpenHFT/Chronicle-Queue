@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -26,6 +27,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.WriteDocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Assume;
 import org.junit.Test;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
@@ -62,6 +64,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         String s = "/nestedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
+            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
             writeThreeKeys(appender);
             assertEquals("" +
                     "--- !!meta-data #binary\n" +
@@ -144,6 +147,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         String s = "/chainedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
+            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
             writeThreeChainedKeys(appender);
             assertEquals("" +
                             "--- !!meta-data #binary\n" +
