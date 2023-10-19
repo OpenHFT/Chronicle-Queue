@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.internal.JvmExceptionTracker;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.CleaningThread;
@@ -170,6 +171,10 @@ public class QueueTestCommon {
 
     @After
     public void deleteTargetDirTestArtifacts() {
+
+        // Ensure all pending resources are released first
+        BackgroundResourceReleaser.releasePendingResources();
+
         String target = OS.getTarget();
         Set<String> currentFilesInTarget = Stream.of(new File(target).listFiles())
                 .map(File::getName)
