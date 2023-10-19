@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
@@ -187,7 +188,7 @@ public class RollEOFTest extends QueueTestCommon {
         long blockSize = OS.SAFE_PAGE_SIZE;
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
-        final MappedBytes mappedBytes = MappedBytes.mappedBytes(path.toFile(), chunkSize, overlapSize, false);
+        final MappedBytes mappedBytes = MappedBytes.mappedBytes(path.toFile(), chunkSize, overlapSize, PageUtil.getPageSize(path.toString()), false);
         mappedBytes.reserve(test);
         try {
             final Wire wire = WireType.BINARY_LIGHT.apply(mappedBytes);
