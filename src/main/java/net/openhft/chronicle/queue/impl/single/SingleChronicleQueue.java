@@ -547,21 +547,41 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
-        throwExceptionIfClosed();
+        verifyTailerPreconditions(id);
 
         LongValue index = id == null
                 ? null
                 : indexForId(id);
-        final StoreTailer storeTailer = new StoreTailer(this, pool, index);
+        LongValue indexVersion = id == null
+                ? null
+                : indexVersionForId(id);
+
+        final StoreTailer storeTailer = new StoreTailer(this, pool, index, indexVersion);
         directoryListing.refresh(true);
         storeTailer.singleThreadedCheckReset();
         return storeTailer;
+    }
+
+    private void verifyTailerPreconditions(String id) {
+        // Preconditions for all tailer types
+        throwExceptionIfClosed();
+
+        // Named tailer preconditions
+        if (id == null) return;
+        if (appendLock.locked()) {
+            throw new NamedTailerNotAvailableException(id, NamedTailerNotAvailableException.Reason.NOT_AVAILABLE_ON_SINK);
+        }
     }
 
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
+    }
+
+    @NotNull
+    public LongValue indexVersionForId(@NotNull String id) {
+        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id + ".version", -1L));
     }
 
     @NotNull

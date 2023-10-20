@@ -60,6 +60,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     private final SingleChronicleQueue queue;
     private final WireStorePool storePool;
+    private final LongValue indexVersionValue;
     private final LongValue indexValue;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
@@ -79,15 +80,16 @@ class StoreTailer extends AbstractCloseable
     private boolean striding = false;
 
     public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool) {
-        this(queue, storePool, null);
+        this(queue, storePool, null, null);
     }
 
-    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, final LongValue indexValue) {
+    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, final LongValue indexValue, final LongValue indexVersionValue) {
         boolean error = true;
         try {
             this.queue = queue;
             this.storePool = storePool;
             this.indexValue = indexValue;
+            this.indexVersionValue = indexVersionValue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
 
@@ -158,6 +160,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     protected void performClose() {
         Closeable.closeQuietly(indexValue);
+        Closeable.closeQuietly(indexVersionValue);
         // the wire ref count will be released here by setting it to null
         context.wire(null);
         final Wire w0 = wireForIndex;
@@ -1128,10 +1131,12 @@ class StoreTailer extends AbstractCloseable
     }
 
     void index0(final long index) {
-        if (indexValue == null)
+        if (indexValue == null) {
             this.index = index;
-        else
+        } else {
             indexValue.setValue(index);
+            indexVersionValue.addAtomicValue(1);
+        }
     }
 
     // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue

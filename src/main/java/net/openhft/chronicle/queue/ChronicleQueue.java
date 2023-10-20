@@ -170,6 +170,8 @@ public interface ChronicleQueue extends Closeable {
      * @param id unique id for a tailer which uses to track where it was up to
      * @return a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}
      * @see #createTailer()
+     * @throws net.openhft.chronicle.core.io.ClosedIllegalStateException if required resources are closed
+     * @throws net.openhft.chronicle.queue.impl.single.NamedTailerNotAvailableException if named tailer is not available
      */
     @NotNull
     default ExcerptTailer createTailer(String id) {
