@@ -530,7 +530,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public Function<SingleChronicleQueue, Condition> createAppenderConditionCreator() {
         if (createAppenderConditionCreator == null) {
-            return QueueLockUnlockedCondition::new;
+            return q -> NoOpCondition.INSTANCE;
         }
         return createAppenderConditionCreator;
     }
