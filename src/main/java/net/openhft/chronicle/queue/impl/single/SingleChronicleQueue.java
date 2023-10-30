@@ -61,7 +61,6 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable;
 import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
 import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
@@ -117,8 +116,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private final LongValue lastIndexMSynced;
     @NotNull
     private final DirectoryListing directoryListing;
-    @NotNull
-    private final QueueLock queueLock;
     @NotNull
     private final WriteLock writeLock;
     private final boolean checkInterrupts;
@@ -194,9 +191,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             }
 
             this.directoryListing.refresh(true);
-            this.queueLock = areEnterpriseFeaturesAvailable() && !builder.readOnly()
-                    ? new TSQueueLock(metaStore, builder.pauserSupplier(), builder.timeoutMS() * 3 / 2)
-                    : new NoopQueueLock();
             this.writeLock = builder.writeLock();
 
             // release the write lock if the process is dead
@@ -530,21 +524,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     }
 
     /**
-     * @return the {@link QueueLock} This lock is held while the queue replication cluster is back-filling.
-     * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
-     * hence we need to back copy data from the sinks to the source upon startup.
-     * While we are doing this we lock the queue so that new appenders can not be created.
-     * <p>
-     * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
-     * @deprecated this is being removed in x.25 with no replacement
-     */
-    @Deprecated(/* To be removed in x.25 */)
-    @NotNull
-    public QueueLock queueLock() {
-        return queueLock;
-    }
-
-    /**
      * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to
      * coordinate writes from multiple threads and processes.
      * <p>This lock should only be held for a short time, as it will block progress of any writers to
@@ -753,7 +732,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             closeQuietly(
                     createAppenderCondition,
                     directoryListing,
-                    queueLock,
                     lastAcknowledgedIndexReplicated,
                     lastIndexReplicated,
                     lastIndexMSynced,
