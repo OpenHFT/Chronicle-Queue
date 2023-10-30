@@ -19,8 +19,8 @@
 package net.openhft.chronicle.queue.internal.writer;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.Mocker;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.Mocker;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;

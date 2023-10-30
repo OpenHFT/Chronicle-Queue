@@ -46,9 +46,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static net.openhft.chronicle.core.util.Time.sleep;
-
 public class SingleTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     public static final String SUFFIX = ".cq4t";
     private static final int EXCLUSIVE_LOCK_SIZE = 1;
@@ -153,7 +150,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     }
                 }
                 int delay = Math.min(250, count * count);
-                sleep(delay, MILLISECONDS);
+                Jvm.pause(delay);
             }
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
