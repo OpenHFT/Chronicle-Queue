@@ -218,13 +218,11 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     @Test
     public void tailingThroughDeletedCyclesWillRefreshThenRetry_Writable() throws IOException {
-        expectException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> qwcd.queue);
     }
 
     @Test
     public void tailingThroughDeletedCyclesWillRefreshThenRetry_ReadOnly() throws IOException {
-        expectException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())
                 .rollCycle(RollCycles.FAST_DAILY)
                 .readOnly(true)
@@ -267,6 +265,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     public void deleteFileFromUnderTailerTest(int numberOfCycles, int currentCycleIndex) throws IOException {
+        assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(numberOfCycles, null)) {
             try (final ExcerptTailer tailer = queueWithCycleDetails.queue.createTailer()) {
@@ -344,6 +343,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     @Test
     public void deletingRandomRollCyclesChaosTest() throws InterruptedException {
+        assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         final int numberOfCycles = 300;
         final AtomicBoolean running = new AtomicBoolean(true);
@@ -473,6 +473,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     public void tailingThroughDeletedCyclesWillRefreshThenRetry(Function<QueueWithCycleDetails, SingleChronicleQueue> queueCreator) throws IOException {
         assumeFalse(OS.isWindows());
+        expectException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null);
              SingleChronicleQueue queue = queueCreator.apply(queueWithCycleDetails)
