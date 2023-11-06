@@ -6,7 +6,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MappedUniqueTimeProvider;
-import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
@@ -20,18 +19,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class DirectoryUtils {
-
-    /**
-     * The {@link MappedUniqueTimeProvider} class will attempt to instantiate a memory mapped file under the
-     * directory returned by OS.getTarget(). In the scope of hugetlbfs tests this is mapped to hugetlbfs. That class
-     * is not compatible with hugetlbfs out of the box so the static block below ensures that it creates its memory
-     * mapped file on another filesystem.
-     */
-    static {
-        if (PageUtil.isHugePage(OS.getTarget())) {
-            System.setProperty("timestamp.dir", System.getProperty("java.io.tmpdir"));
-        }
-    }
 
     /**
      * Beware, this can give different results depending on whether you are

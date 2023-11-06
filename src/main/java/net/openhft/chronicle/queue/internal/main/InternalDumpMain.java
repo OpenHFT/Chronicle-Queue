@@ -18,7 +18,6 @@ package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -79,7 +78,7 @@ public class InternalDumpMain {
 
     private static void dumpFile(@NotNull File file, @NotNull PrintStream out, long upperLimit) {
         Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), PageUtil.getPageSize(file.getAbsolutePath()), !OS.isWindows())) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows())) {
             bytes.readLimit(bytes.realCapacity());
             StringBuilder sb = new StringBuilder();
             WireDumper dumper = WireDumper.of(bytes, !UNALIGNED);
