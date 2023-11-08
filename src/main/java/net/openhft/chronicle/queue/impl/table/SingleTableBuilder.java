@@ -18,7 +18,6 @@
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
@@ -118,7 +117,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             if (!readOnly && file.createNewFile() && !file.canWrite()) {
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
             }
-            bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(file.getAbsolutePath()), readOnly);
+            bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);
             // these MappedBytes are shared, but the assumption is they shouldn't grow. Supports 2K entries.
             bytes.singleThreadedCheckDisabled(true);
 
