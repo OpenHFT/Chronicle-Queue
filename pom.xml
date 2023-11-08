@@ -73,8 +73,6 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-bytes</artifactId>
-            <!-- FIXME Upgrade bom -->
-            <version>2.25ea1-SNAPSHOT</version>
         </dependency>
 
         <dependency>
