@@ -51,7 +51,7 @@ public enum BinarySearch {
      */
     public static long search(@NotNull ExcerptTailer tailer,
                               @NotNull Wire key,
-                              @NotNull Comparator<Wire> c) throws ParseException {
+                              @NotNull Comparator<Wire> c) {
         final long readPosition = key.bytes().readPosition();
         try {
             final long start = tailer.toStart().index();
