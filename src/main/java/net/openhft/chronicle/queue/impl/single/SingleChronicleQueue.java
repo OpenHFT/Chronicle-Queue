@@ -705,7 +705,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return result;
     }
 
-    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) {
         throwExceptionIfClosed();
 
         return pool.listCyclesBetween(lowerCycle, upperCycle);

@@ -52,7 +52,7 @@ public interface WireStoreSupplier {
      * @param upperCycle the upper cycle inclusive
      * @return the cycles between a range, inclusive
      */
-    NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException;
+    NavigableSet<Long> cycles(int lowerCycle, int upperCycle);
 
     boolean canBeReused(@NotNull SingleChronicleQueueStore store);
 }
