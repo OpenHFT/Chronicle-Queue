@@ -215,6 +215,8 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
             sourceId = builder.sourceId();
 
+            DiskSpaceMonitor.INSTANCE.pollDiskSpace(path);
+
             Announcer.announce("net.openhft", "chronicle-queue",
                     AnalyticsFacade.isEnabled()
                             ? singletonMap("Analytics", "Chronicle Queue reports usage statistics. Learn more or turn off: https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc")
@@ -1004,8 +1006,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                     return null;
                 }
 
-                if (createStrategy != CreateStrategy.READ_ONLY)
-                    checkDiskSpace(that.path);
 
                 throwExceptionIfClosed();
                 if (createStrategy == CreateStrategy.CREATE && !path.exists() && !dateValue.pathExists)
@@ -1150,11 +1150,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             } catch (IOException ex) {
                 Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
-        }
-
-        private void checkDiskSpace(@NotNull final File filePath) {
-            // This operation can stall for 500 ms or more under load.
-            DiskSpaceMonitor.INSTANCE.pollDiskSpace(filePath);
         }
 
         /**
