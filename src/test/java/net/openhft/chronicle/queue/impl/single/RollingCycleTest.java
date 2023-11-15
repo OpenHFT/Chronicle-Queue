@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
-@Ignore("Temporarily ignored as binary contents of metadata store has changed, this test needs to be refactored")
 @RunWith(Parameterized.class)
 public class RollingCycleTest extends QueueTestCommon {
     protected final boolean named;
@@ -82,6 +81,24 @@ public class RollingCycleTest extends QueueTestCommon {
                     appender.writeBytes(new TestBytesMarshallable(i));
                 }
             }
+
+            String namedTailerVersioningSubstring = named ? "# position: 520, header: 8\n" +
+                    "--- !!data #binary\n" +
+                    "index.named: 81866371629059\n" +
+                    "# position: 552, header: 9\n" +
+                    "--- !!data #binary\n" +
+                    "index.named.version: 11\n" +
+                    "# position: 592, header: 10\n" +
+                    "--- !!data #binary\n" +
+                    "index.named2: 81866371629059\n" +
+                    "# position: 624, header: 11\n" +
+                    "--- !!data #binary\n" +
+                    "index.named2.version: 0\n" +
+                    "...\n" +
+                    "# 130404 bytes remaining\n" :
+                    "...\n" +
+                    "# 130548 bytes remaining\n";
+
             String expected = "" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -116,20 +133,7 @@ public class RollingCycleTest extends QueueTestCommon {
                     "# position: 472, header: 7\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexMSynced: -1\n" +
-                    "# position: 520, header: 8\n" +
-                    "--- !!data #binary\n" +
-                    "index.named: 81866371629059\n" +
-                    "# position: 552, header: 9\n" +
-                    "--- !!data #binary\n" +
-                    "index.named.version: 12\n" +
-                    "# position: 592, header: 10\n" +
-                    "--- !!data #binary\n" +
-                    "index.named2: 81866371629059\n" +
-                    "# position: 624, header: 11\n" +
-                    "--- !!data #binary\n" +
-                    "index.named2.version: 1\n" +
-                    "...\n" +
-                    "# 130404 bytes remaining\n" +
+                    namedTailerVersioningSubstring +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
