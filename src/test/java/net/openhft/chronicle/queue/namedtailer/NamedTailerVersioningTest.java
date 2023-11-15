@@ -36,9 +36,9 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
              ExcerptTailer tailerTwo = queue.createTailer("tailerTwo");
              ExcerptTailer tailerThree = queue.createTailer("tailerThree")) {
 
-            assertEquals(84486301679617L, tailerOne.index());
-            assertEquals(84486301679617L, tailerTwo.index());
-            assertEquals(84486301679617L, tailerThree.index());
+            assertEquals(84507776516098L, tailerOne.index());
+            assertEquals(84507776516098L, tailerTwo.index());
+            assertEquals(84507776516098L, tailerThree.index());
 
             try (LongValue tailerOneVersion = queue.indexVersionForId("tailerOne");
                  LongValue tailerTwoVersion = queue.indexVersionForId("tailerTwo");
