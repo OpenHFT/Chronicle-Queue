@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.namedtailer;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.values.LongValue;
@@ -8,6 +9,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -26,6 +28,8 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
     public void verifyBackwardsCompatibility_tailerPositionsAreRetained() throws IOException, URISyntaxException {
+        Assume.assumeFalse("This test must be ignored on hugetlbfs because the test file was generated on a standard linux file system", PageUtil.isHugePage(OS.getTarget()));
+
         // Copy the data from src/test/resources
         Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").toURI());
         Path targetPath = Paths.get(OS.getTarget()).resolve(templatePath.getFileName());
