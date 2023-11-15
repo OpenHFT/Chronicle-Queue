@@ -31,6 +31,9 @@ public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
     @Test
     public void shouldNotGenerateExcessGarbage() {
+        // Perform a GC prior to the test to ensure an unrelated GC does not occur which would devalue this test
+        GcControls.waitForGcCycle();
+
         try (final SingleChronicleQueue queue = createQueue()) {
             queue.path.mkdirs();
             assertEquals(0, queue.path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
