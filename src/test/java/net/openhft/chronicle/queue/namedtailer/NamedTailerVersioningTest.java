@@ -12,6 +12,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,9 +25,9 @@ import static org.junit.Assert.assertNotEquals;
 public class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
-    public void verifyBackwardsCompatibility_tailerPositionsAreRetained() throws IOException {
+    public void verifyBackwardsCompatibility_tailerPositionsAreRetained() throws IOException, URISyntaxException {
         // Copy the data from src/test/resources
-        Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").getFile());
+        Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").toURI());
         Path targetPath = Paths.get(OS.getTarget()).resolve(templatePath.getFileName());
         copyFolder(templatePath, targetPath);
 

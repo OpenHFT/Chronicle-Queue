@@ -22,7 +22,7 @@ public class NamedTailerNotAvailableException extends IllegalStateException {
 
     public enum Reason {
 
-        NOT_AVAILABLE_ON_SINK("Named tailers cannot be instantiated on a replication sink");
+        NOT_AVAILABLE_ON_SINK("Replicated named tailers cannot be instantiated on a replication sink");
 
         private final String description;
 

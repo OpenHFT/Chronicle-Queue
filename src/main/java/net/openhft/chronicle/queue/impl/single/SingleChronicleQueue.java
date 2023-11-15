@@ -71,6 +71,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public static final String DISCARD_FILE_SUFFIX = ".discard";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
+    public static final String REPLICATED_NAMED_TAILER_PREFIX = "replicated:";
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
@@ -568,7 +569,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
         // Named tailer preconditions
         if (id == null) return;
-        if (appendLock.locked()) {
+        if (appendLock.locked() && id.startsWith(REPLICATED_NAMED_TAILER_PREFIX)) {
             throw new NamedTailerNotAvailableException(id, NamedTailerNotAvailableException.Reason.NOT_AVAILABLE_ON_SINK);
         }
     }
