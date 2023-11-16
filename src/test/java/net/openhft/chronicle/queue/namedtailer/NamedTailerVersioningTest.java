@@ -36,17 +36,17 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         copyFolder(templatePath, targetPath);
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(targetPath).build();
-             ExcerptTailer tailerOne = queue.createTailer("tailerOne");
-             ExcerptTailer tailerTwo = queue.createTailer("tailerTwo");
-             ExcerptTailer tailerThree = queue.createTailer("tailerThree")) {
+             ExcerptTailer tailerOne = queue.createTailer("replicated:tailerOne");
+             ExcerptTailer tailerTwo = queue.createTailer("replicated:tailerTwo");
+             ExcerptTailer tailerThree = queue.createTailer("replicated:tailerThree")) {
 
             assertEquals(84507776516098L, tailerOne.index());
             assertEquals(84507776516098L, tailerTwo.index());
             assertEquals(84507776516098L, tailerThree.index());
 
-            try (LongValue tailerOneVersion = queue.indexVersionForId("tailerOne");
-                 LongValue tailerTwoVersion = queue.indexVersionForId("tailerTwo");
-                 LongValue tailerThreeVersion = queue.indexVersionForId("tailerThree")) {
+            try (LongValue tailerOneVersion = queue.indexVersionForId("replicated:tailerOne");
+                 LongValue tailerTwoVersion = queue.indexVersionForId("replicated:tailerTwo");
+                 LongValue tailerThreeVersion = queue.indexVersionForId("replicated:tailerThree")) {
                 assertEquals(0, tailerOneVersion.getValue());
                 assertEquals(0, tailerTwoVersion.getValue());
                 assertEquals(0, tailerThreeVersion.getValue());
@@ -103,7 +103,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
-             ExcerptTailer tailer = queue.createTailer("named_1")) {
+             ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
 
             int versions = 100;
             for (int i = 0; i < versions; i++) {
@@ -111,7 +111,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
                 tailer.readText();
             }
 
-            LongValue indexVersion = queue.indexVersionForId("named_1");
+            LongValue indexVersion = queue.indexVersionForId("replicated:named_1");
             assertEquals(100, indexVersion.getValue());
             indexVersion.close();
 

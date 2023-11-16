@@ -36,6 +36,8 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
@@ -549,15 +551,8 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @Override
     public ExcerptTailer createTailer(String id) {
         verifyTailerPreconditions(id);
-
-        LongValue index = id == null
-                ? null
-                : indexForId(id);
-        LongValue indexVersion = id == null
-                ? null
-                : indexVersionForId(id);
-
-        final StoreTailer storeTailer = new StoreTailer(this, pool, index, indexVersion);
+        IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this);
+        final StoreTailer storeTailer = new StoreTailer(this, pool, indexUpdater);
         directoryListing.refresh(true);
         storeTailer.singleThreadedCheckReset();
         return storeTailer;
