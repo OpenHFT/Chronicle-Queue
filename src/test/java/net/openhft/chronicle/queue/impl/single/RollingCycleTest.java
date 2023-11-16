@@ -30,7 +30,6 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -81,24 +80,6 @@ public class RollingCycleTest extends QueueTestCommon {
                     appender.writeBytes(new TestBytesMarshallable(i));
                 }
             }
-
-            String namedTailerVersioningSubstring = named ? "# position: 520, header: 8\n" +
-                    "--- !!data #binary\n" +
-                    "index.named: 81866371629059\n" +
-                    "# position: 552, header: 9\n" +
-                    "--- !!data #binary\n" +
-                    "index.named.version: 11\n" +
-                    "# position: 592, header: 10\n" +
-                    "--- !!data #binary\n" +
-                    "index.named2: 81866371629059\n" +
-                    "# position: 624, header: 11\n" +
-                    "--- !!data #binary\n" +
-                    "index.named2.version: 0\n" +
-                    "...\n" +
-                    "# 130404 bytes remaining\n" :
-                    "...\n" +
-                    "# 130548 bytes remaining\n";
-
             String expected = "" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -133,7 +114,17 @@ public class RollingCycleTest extends QueueTestCommon {
                     "# position: 472, header: 7\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexMSynced: -1\n" +
-                    namedTailerVersioningSubstring +
+                    (named
+                            ? "# position: 520, header: 8\n" +
+                            "--- !!data #binary\n" +
+                            "index.named: 81866371629059\n" +
+                            "# position: 552, header: 9\n" +
+                            "--- !!data #binary\n" +
+                            "index.named2: 81866371629059\n" +
+                            "...\n" +
+                            "# 130484 bytes remaining\n"
+                            : "...\n" +
+                            "# 130548 bytes remaining\n") +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
@@ -304,7 +295,6 @@ public class RollingCycleTest extends QueueTestCommon {
             // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
-            System.out.println(dump);
             // was it truncated
             if (dump.contains("\n4 bytes remaining"))
                 expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");

@@ -7,9 +7,9 @@ public class QueueFileCreator {
     public static void main(String[] args) {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path("target/backwards").build();
              ExcerptAppender appender = queue.createAppender();
-             ExcerptTailer tailerOne = queue.createTailer("tailerOne");
-             ExcerptTailer tailerTwo = queue.createTailer("tailerTwo");
-             ExcerptTailer tailerThree = queue.createTailer("tailerThree")) {
+             ExcerptTailer tailerOne = queue.createTailer("replicated:tailerOne");
+             ExcerptTailer tailerTwo = queue.createTailer("replicated:tailerTwo");
+             ExcerptTailer tailerThree = queue.createTailer("replicated:tailerThree")) {
 
             appender.writeText("1");
             appender.writeText("2");
