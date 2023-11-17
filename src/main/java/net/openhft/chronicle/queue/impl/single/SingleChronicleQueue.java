@@ -36,6 +36,8 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
@@ -71,6 +73,8 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public static final String DISCARD_FILE_SUFFIX = ".discard";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
+    public static final String REPLICATED_NAMED_TAILER_PREFIX = "replicated:";
+    public static final String INDEX_VERSION_FORMAT = "index.%s.version";
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
@@ -549,21 +553,34 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
-        throwExceptionIfClosed();
-
-        LongValue index = id == null
-                ? null
-                : indexForId(id);
-        final StoreTailer storeTailer = new StoreTailer(this, pool, index);
+        verifyTailerPreconditions(id);
+        IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this);
+        final StoreTailer storeTailer = new StoreTailer(this, pool, indexUpdater);
         directoryListing.refresh(true);
         storeTailer.singleThreadedCheckReset();
         return storeTailer;
+    }
+
+    private void verifyTailerPreconditions(String id) {
+        // Preconditions for all tailer types
+        throwExceptionIfClosed();
+
+        // Named tailer preconditions
+        if (id == null) return;
+        if (appendLock.locked() && id.startsWith(REPLICATED_NAMED_TAILER_PREFIX)) {
+            throw new NamedTailerNotAvailableException(id, NamedTailerNotAvailableException.Reason.NOT_AVAILABLE_ON_SINK);
+        }
     }
 
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
+    }
+
+    @NotNull
+    public LongValue indexVersionForId(@NotNull String id) {
+        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(String.format(INDEX_VERSION_FORMAT, id), -1L));
     }
 
     @NotNull

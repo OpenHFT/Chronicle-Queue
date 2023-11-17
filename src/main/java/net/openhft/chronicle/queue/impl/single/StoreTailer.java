@@ -34,6 +34,7 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -60,7 +61,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     private final SingleChronicleQueue queue;
     private final WireStorePool storePool;
-    private final LongValue indexValue;
+    private final IndexUpdater indexUpdater;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
     private final Finalizer finalizer;
@@ -82,19 +83,19 @@ class StoreTailer extends AbstractCloseable
         this(queue, storePool, null);
     }
 
-    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, final LongValue indexValue) {
+    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, IndexUpdater indexUpdater) {
         boolean error = true;
         try {
             this.queue = queue;
             this.storePool = storePool;
-            this.indexValue = indexValue;
+            this.indexUpdater = indexUpdater;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
 
-            if (indexValue == null) {
+            if (indexUpdater == null) {
                 toStart();
             } else {
-                moveToIndex(indexValue.getVolatileValue());
+                moveToIndex(indexUpdater.index().getVolatileValue());
             }
             finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
             error = false;
@@ -157,7 +158,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     protected void performClose() {
-        Closeable.closeQuietly(indexValue);
+        Closeable.closeQuietly(indexUpdater);
         // the wire ref count will be released here by setting it to null
         context.wire(null);
         final Wire w0 = wireForIndex;
@@ -598,7 +599,7 @@ class StoreTailer extends AbstractCloseable
      */
     @Override
     public long index() {
-        return indexValue == null ? this.index : indexValue.getValue();
+        return indexUpdater == null ? this.index : indexUpdater.index().getValue();
     }
 
     @Override
@@ -1128,10 +1129,11 @@ class StoreTailer extends AbstractCloseable
     }
 
     void index0(final long index) {
-        if (indexValue == null)
+        if (indexUpdater == null) {
             this.index = index;
-        else
-            indexValue.setValue(index);
+        } else {
+            indexUpdater.update(index);
+        }
     }
 
     // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
