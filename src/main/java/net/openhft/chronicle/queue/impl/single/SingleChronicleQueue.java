@@ -74,6 +74,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
     public static final String REPLICATED_NAMED_TAILER_PREFIX = "replicated:";
+    public static final String INDEX_LOCK_FORMAT = "index.%s.lock";
     public static final String INDEX_VERSION_FORMAT = "index.%s.version";
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
@@ -581,6 +582,16 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     public LongValue indexVersionForId(@NotNull String id) {
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(String.format(INDEX_VERSION_FORMAT, id), -1L));
+    }
+
+    @NotNull
+    public TableStoreWriteLock versionIndexLockForId(@NotNull String id) {
+        return new TableStoreWriteLock(
+                metaStore,
+                pauserSupplier,
+                timeoutMS * 3 / 2,
+                String.format(SingleChronicleQueue.INDEX_LOCK_FORMAT, id)
+        );
     }
 
     @NotNull
