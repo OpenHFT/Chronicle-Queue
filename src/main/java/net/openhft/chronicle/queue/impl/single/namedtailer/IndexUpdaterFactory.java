@@ -84,6 +84,7 @@ public class IndexUpdaterFactory {
                                      @NotNull LongValue indexValue,
                                      @NotNull LongValue indexVersionValue) {
             this.versionIndexLock = queue.versionIndexLockForId(tailerName);
+            this.versionIndexLock.forceUnlockIfProcessIsDead();
             this.indexValue = indexValue;
             this.indexVersionValue = indexVersionValue;
         }
