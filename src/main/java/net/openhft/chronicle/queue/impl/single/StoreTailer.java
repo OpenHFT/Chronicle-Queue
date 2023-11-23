@@ -29,7 +29,6 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.scoped.ScopedResourcePool;
-import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -107,12 +106,6 @@ class StoreTailer extends AbstractCloseable
 
         // always put references to "this" last.
         queue.addCloseListener(this);
-    }
-
-    @Override
-    public @NotNull StoreTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        singleThreadedCheckDisabled(disableThreadSafetyCheck);
-        return this;
     }
 
     @Override
@@ -1003,7 +996,8 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward: while (true) {
+                LoopForward:
+                while (true) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
@@ -1242,7 +1236,7 @@ class StoreTailer extends AbstractCloseable
      *              Must not be null.
      * @param index The index to read the history message in the {@code queue}.
      * @return This ExcerptTailer instance.
-     * @throws IORuntimeException if the provided {@code queue} couldn't be wound to the last index.
+     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
      * @throws NullPointerException if the provided {@code queue} is null.
      */
     @NotNull

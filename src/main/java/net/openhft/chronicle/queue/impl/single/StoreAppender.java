@@ -836,12 +836,6 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public @NotNull StoreAppender disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        super.singleThreadedCheckDisabled(disableThreadSafetyCheck);
-        return this;
-    }
-
-    @Override
     public File currentFile() {
         SingleChronicleQueueStore store = this.store;
         return store == null ? null : store.currentFile();

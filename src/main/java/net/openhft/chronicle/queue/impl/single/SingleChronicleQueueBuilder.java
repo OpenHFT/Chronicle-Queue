@@ -63,8 +63,6 @@ import java.util.function.Supplier;
 import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
-import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
-import static net.openhft.chronicle.wire.WireType.DELTA_BINARY;
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
     public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
@@ -219,41 +217,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
         return builder(basePathFile, WireType.BINARY_LIGHT);
-    }
-
-    @Deprecated(/* to be removed in x.25 */)
-    public static SingleChronicleQueueBuilder fieldlessBinary(@NotNull File name) {
-        return builder(name, WireType.FIELDLESS_BINARY);
-    }
-
-    @Deprecated(/* to be removed in x.25 */)
-    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
-        return builder(basePathFile, DEFAULT_ZERO_BINARY);
-    }
-
-    @Deprecated(/* to be removed in x.25 */)
-    public static SingleChronicleQueueBuilder deltaBinary(@NotNull File basePathFile) {
-        return builder(basePathFile, DELTA_BINARY);
-    }
-
-    /**
-     * @param name               the file name
-     * @param deltaIntervalShift default value of 6, the shift for deltaInterval, the should be a
-     *                           number between 0-63 ( inclusive ), default the delta messaging is
-     *                           check pointed every 64 messages, so the default {@code
-     *                           deltaIntervalShift  == 6}, as {@code 1 << 6 == 64 }
-     * @return the SingleChronicleQueueBuilder
-     */
-    @Deprecated(/* to be removed in x.25 */)
-    public static SingleChronicleQueueBuilder deltaBinary(@NotNull File name, byte deltaIntervalShift) {
-        @NotNull SingleChronicleQueueBuilder ret = deltaBinary(name);
-
-        if (deltaIntervalShift < 0 || deltaIntervalShift > 63)
-            throw new IllegalArgumentException("deltaIntervalShift=" + deltaIntervalShift + ", but " +
-                    "should be a value between 0-63 inclusive");
-
-        ret.deltaCheckpointInterval(1 << deltaIntervalShift);
-        return ret;
     }
 
     @NotNull
