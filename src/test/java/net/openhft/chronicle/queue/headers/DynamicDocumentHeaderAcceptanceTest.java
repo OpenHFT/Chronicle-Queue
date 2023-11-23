@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -61,6 +62,17 @@ public class DynamicDocumentHeaderAcceptanceTest extends QueueTestCommon {
         assertEquals("1", tailer.readText());
         assertEquals("2", tailer.readText());
         assertEquals("3", tailer.readText());
+    }
+
+    @Test
+    public void insertMetadataInStream() {
+        appender.writeText("1");
+        try (DocumentContext context = appender.writingDocument(true)) {
+            context.wire().bytes().write("Test");
+        }
+        appender.writeText("2");
+        assertEquals("1", tailer.readText());
+        assertEquals("2", tailer.readText());
     }
 
 }
