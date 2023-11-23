@@ -546,7 +546,7 @@ class StoreAppender extends AbstractCloseable
         assert wire != null;
         this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
 
-        documentHeaderData.onAppenderContextOpen(wire.bytes(), store);
+        documentHeaderData.onAppenderContextOpen(wire.bytes(), store, metaData);
 
         context.isClosed = false;
         context.rollbackOnClose = false;
@@ -605,7 +605,7 @@ class StoreAppender extends AbstractCloseable
             beforeAppend(wire, wire.headerNumber() + 1);
             Bytes<?> wireBytes = wire.bytes();
             wireBytes.write(bytes);
-            updateHeaders();
+            updateHeaders(false); // FIXME Fix hardcoding
             lastIndex(wire.headerNumber());
             lastPosition = positionOfHeader;
             store.writePosition(positionOfHeader);
@@ -620,9 +620,9 @@ class StoreAppender extends AbstractCloseable
     /**
      * Update the header that contains length + complete bit + metadata bit. Also updates the dynamic header.
      */
-    private void updateHeaders() throws StreamCorruptedException {
-        wire.updateHeader(positionOfHeader, false, 0);
-        documentHeaderData.onAppenderContextClose(wire.bytes(), store);
+    private void updateHeaders(boolean metadata) throws StreamCorruptedException {
+        wire.updateHeader(positionOfHeader, metadata, 0);
+        documentHeaderData.onAppenderContextClose(wire.bytes(), store, metadata);
     }
 
     /**
@@ -954,7 +954,7 @@ class StoreAppender extends AbstractCloseable
                 if (handleRollbackOnClose()) return;
 
                 if (wire == StoreAppender.this.wire) {
-                    updateHeaderAndIndex();
+                    updateHeaderAndIndex(metaData);
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
@@ -1015,12 +1015,12 @@ class StoreAppender extends AbstractCloseable
                 throw new InterruptedException();
         }
 
-        private void updateHeaderAndIndex() throws StreamCorruptedException {
+        private void updateHeaderAndIndex(boolean metaData) throws StreamCorruptedException {
             if (wire == null) throw new NullPointerException("Wire must not be null");
             if (store == null) throw new NullPointerException("Store must not be null");
 
             try {
-                updateHeaders();
+                updateHeaders(metaData);
             } catch (IllegalStateException e) {
                 if (queue.isClosed())
                     return;
@@ -1029,7 +1029,7 @@ class StoreAppender extends AbstractCloseable
 
             lastPosition = positionOfHeader;
 
-            if (!metaData) {
+            if (!this.metaData) {
                 lastIndex(wire.headerNumber());
                 store.writePosition(positionOfHeader);
                 if (lastIndex != Long.MIN_VALUE) {

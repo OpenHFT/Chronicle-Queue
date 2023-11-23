@@ -66,13 +66,35 @@ public class DynamicDocumentHeaderAcceptanceTest extends QueueTestCommon {
 
     @Test
     public void insertMetadataInStream() {
+        System.out.println("--- writeText");
         appender.writeText("1");
+        System.out.println("--- writeMetadata");
         try (DocumentContext context = appender.writingDocument(true)) {
-            context.wire().bytes().write("Test");
+            // Even just opening the metadata record is sufficient to blow up...
         }
+        System.out.println("--- writeText");
         appender.writeText("2");
         assertEquals("1", tailer.readText());
         assertEquals("2", tailer.readText());
     }
+
+    @Test
+    public void openMetadataDoc() {
+        try (DocumentContext context = appender.writingDocument(true)) {
+            // Even just opening the metadata record is sufficient to blow up...
+        }
+    }
+
+    @Test
+    public void writeAndReadMetadata() {
+        try (DocumentContext context = appender.writingDocument(true)) {
+            context.wire().write("Test").text("Yes");
+        }
+        try (DocumentContext context = tailer.readingDocument(true)) {
+            String text = context.wire().read("Test").text();
+            assertEquals("Test", text);
+        }
+    }
+
 
 }
