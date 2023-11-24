@@ -529,7 +529,7 @@ class StoreAppender extends AbstractCloseable
             // queue moved since we last touched it - recalculate header number
 
             try {
-                wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                wire.headerNumber(queue.rollCycle().toIndex(cycle, store.approximateLastSequenceNumber(this)));
             } catch (StreamCorruptedException ex) {
                 Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
             }
@@ -1082,7 +1082,7 @@ class StoreAppender extends AbstractCloseable
             }
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
-                    wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
+                    wire.headerNumber(queue.rollCycle().toIndex(cycle, store.approximateLastSequenceNumber(StoreAppender.this)));
                     long headerNumber0 = wire.headerNumber();
                     assert (((AbstractWire) this.wire).isInsideHeader());
                     return isMetaData() ? headerNumber0 : headerNumber0 + 1;

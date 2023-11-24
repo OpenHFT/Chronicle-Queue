@@ -482,7 +482,7 @@ class StoreTailer extends AbstractCloseable
                 // after toEnd() call, index is past the end of the queue
                 // so try to go back one (to the last record in the queue)
                 if ((int) queue.rollCycle().toSequenceNumber(index()) < 0) {
-                    long lastSeqNum = store.lastSequenceNumber(this);
+                    long lastSeqNum = store().approximateLastSequenceNumber(this);
                     if (lastSeqNum == -1) {
                         windBackCycle(cycle);
                         return moveToIndexInternal(index());
@@ -576,7 +576,7 @@ class StoreTailer extends AbstractCloseable
 
         if (direction == BACKWARD) {
             try {
-                long lastSequenceNumber0 = store().lastSequenceNumber(this);
+                long lastSequenceNumber0 = store().approximateLastSequenceNumber(this);
                 return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
 
             } catch (Exception e) {
@@ -788,7 +788,7 @@ class StoreTailer extends AbstractCloseable
                 resetWires();
             }
 
-            sequenceNumber = this.store.lastSequenceNumber(this);
+            sequenceNumber = this.store().approximateLastSequenceNumber(this);
         }
         // give the position of the last entry and
         // flag we want to count it even though we don't know if it will be meta data or not.
@@ -1326,9 +1326,8 @@ class StoreTailer extends AbstractCloseable
         return moveToState.indexMoveCount;
     }
 
-    @Deprecated(/* To be removed in 5.25 */) // Should not be providing accessors to reference-counted objects
     @NotNull
-    WireStore store() {
+    private SingleChronicleQueueStore store() {
         if (store == null)
             setCycle(cycle());
         return store;
