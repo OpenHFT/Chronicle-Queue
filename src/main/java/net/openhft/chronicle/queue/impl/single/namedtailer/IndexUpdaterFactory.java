@@ -2,6 +2,8 @@ package net.openhft.chronicle.queue.impl.single.namedtailer;
 
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.TableStoreWriteLock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,6 +29,8 @@ public class IndexUpdaterFactory {
         } else if (tailerName.startsWith(SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX)) {
             // Replicated named tailers use an additional version field updated on each index mutation
             return new VersionedIndexUpdater(
+                    tailerName,
+                    queue,
                     queue.indexForId(tailerName),
                     queue.indexVersionForId(tailerName)
             );
@@ -69,24 +73,36 @@ public class IndexUpdaterFactory {
      */
     public static class VersionedIndexUpdater implements IndexUpdater, Closeable {
 
+        private final TableStoreWriteLock versionIndexLock;
+
         private final LongValue indexValue;
 
         private final LongValue indexVersionValue;
 
-        public VersionedIndexUpdater(@NotNull LongValue indexValue, @NotNull LongValue indexVersionValue) {
+        public VersionedIndexUpdater(@NotNull String tailerName,
+                                     @NotNull SingleChronicleQueue queue,
+                                     @NotNull LongValue indexValue,
+                                     @NotNull LongValue indexVersionValue) {
+            this.versionIndexLock = queue.versionIndexLockForId(tailerName);
+            this.versionIndexLock.forceUnlockIfProcessIsDead();
             this.indexValue = indexValue;
             this.indexVersionValue = indexVersionValue;
         }
 
         @Override
         public void close() throws IOException {
-            closeQuietly(indexValue, indexVersionValue);
+            closeQuietly(versionIndexLock, indexValue, indexVersionValue);
         }
 
         @Override
         public void update(long index) {
-            indexValue.setValue(index);
-            indexVersionValue.addAtomicValue(1);
+            try {
+                versionIndexLock.lock();
+                indexValue.setVolatileValue(index);
+                indexVersionValue.addAtomicValue(1);
+            } finally {
+                versionIndexLock.unlock();
+            }
         }
 
         @Override
