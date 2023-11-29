@@ -2,13 +2,13 @@ package net.openhft.chronicle.queue.bench.multiprocess;
 
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.bench.CLIUtils;
+import net.openhft.chronicle.queue.bench.util.CLIUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 
-import static net.openhft.chronicle.queue.bench.CLIUtils.addOption;
+import static net.openhft.chronicle.queue.bench.util.CLIUtils.addOption;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
@@ -27,7 +27,7 @@ public class ProducerService {
         Options options = new Options();
         addOption(options, "h", "help", false, "Help", false);
         addOption(options, "p", "payload", true, "Payload Size (approximate)", false);
-        CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
+        CommandLine commandLine = CLIUtils.parseCommandLine(ProducerService.class.getSimpleName(), args, options);
 
         datum = new Datum(CLIUtils.getIntOption(commandLine, 'p', 128));
 

@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.bench;
+package net.openhft.chronicle.queue.bench.util;
 
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
@@ -10,32 +10,32 @@ public class CLIUtils {
         return Integer.parseInt(commandLine.getOptionValue(r, Integer.toString(defaultValue)));
     }
 
-    public static CommandLine parseCommandLine(@NotNull final String[] args, final Options options) {
+    public static CommandLine parseCommandLine(String appName, @NotNull final String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
         try {
             commandLine = parser.parse(options, args);
 
             if (commandLine.hasOption('h')) {
-                printHelpAndExit(options);
+                printHelpAndExit(options, appName);
             }
         } catch (ParseException e) {
-            printHelpAndExit(options, 1, e.getMessage());
+            printHelpAndExit(options, 1, e.getMessage(), appName);
         }
 
         return commandLine;
     }
 
-    public static void printHelpAndExit(final Options options) {
-        printHelpAndExit(options, 0, null);
+    public static void printHelpAndExit(final Options options, String simpleName) {
+        printHelpAndExit(options, 0, null, simpleName);
     }
 
-    public static void printHelpAndExit(final Options options, int status, String message) {
+    public static void printHelpAndExit(final Options options, int status, String message, String simpleName) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
                 180,
-                QueueContendedWritesJLBHBenchmark.class.getSimpleName(),
+                simpleName,
                 message,
                 options,
                 HelpFormatter.DEFAULT_LEFT_PAD,

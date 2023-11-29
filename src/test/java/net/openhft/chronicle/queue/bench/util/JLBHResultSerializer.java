@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.bench;
+package net.openhft.chronicle.queue.bench.util;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.jlbh.JLBHResult;
@@ -12,6 +12,13 @@ import java.time.Duration;
 import java.util.Optional;
 
 public class JLBHResultSerializer {
+    public static final String THE_PROBE = "TheProbe";
+    public static final String RESULT_CSV = "result.csv";
+
+    public static void runResultToCSV(JLBHResult jlbhResult) throws IOException {
+        runResultToCSV(jlbhResult, RESULT_CSV, THE_PROBE);
+    }
+
     public static void runResultToCSV(JLBHResult jlbhResult, String fileName, String... probes) throws IOException {
         Bytes<?> bytes3 = Bytes.allocateElasticOnHeap();
         TextWire wire3 = new TextWire(bytes3);

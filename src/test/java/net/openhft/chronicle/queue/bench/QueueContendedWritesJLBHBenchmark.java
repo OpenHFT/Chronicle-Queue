@@ -23,6 +23,9 @@ import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.*;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.bench.multiprocess.ProducerService;
+import net.openhft.chronicle.queue.bench.util.CLIUtils;
+import net.openhft.chronicle.queue.bench.util.JLBHResultSerializer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.apache.commons.cli.*;
@@ -50,9 +53,11 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     private Thread writerThread1;
     private Thread writerThread2;
 
+    private  NanoSampler theProbe;
+
     public static void main(String[] args) throws FileNotFoundException {
         Options options = CLIUtils.createOptions();
-        CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
+        CommandLine commandLine = CLIUtils.parseCommandLine(ProducerService.class.getSimpleName(), args, options);
 
         // disable as otherwise single GC event skews results heavily
         iterations = CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS);
@@ -67,7 +72,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         new JLBH(lth, System.out, jlbhResult -> {
             if (commandLine.hasOption('f')) {
                 try {
-                    JLBHResultSerializer.runResultToCSV(jlbhResult, "result.csv");
+                    JLBHResultSerializer.runResultToCSV(jlbhResult);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -83,6 +88,8 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         this.jlbh = jlbh;
         concurrent = jlbh.addProbe("Concurrent");
         concurrent2 = jlbh.addProbe("Concurrent2");
+        theProbe = jlbh.addProbe(JLBHResultSerializer.THE_PROBE);
+
         queue = single("replica").rollCycle(LARGE_DAILY).doubleBuffer(false).build();
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
@@ -110,7 +117,9 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
             }
         }
 
-        jlbh.sampleNanos(System.nanoTime() - startTimeNS);
+        long durationNs = System.nanoTime() - startTimeNS;
+        jlbh.sampleNanos(durationNs);
+        theProbe.sampleNanos(durationNs);
         written++;
         if (written % 10_000 == 0)
             System.err.println("Written: " + written);

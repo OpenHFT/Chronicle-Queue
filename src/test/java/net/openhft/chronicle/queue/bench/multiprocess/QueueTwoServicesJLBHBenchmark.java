@@ -23,8 +23,8 @@ import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.bench.CLIUtils;
-import net.openhft.chronicle.queue.bench.JLBHResultSerializer;
+import net.openhft.chronicle.queue.bench.util.CLIUtils;
+import net.openhft.chronicle.queue.bench.util.JLBHResultSerializer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.apache.commons.cli.CommandLine;
@@ -33,13 +33,12 @@ import org.apache.commons.cli.Options;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import static net.openhft.chronicle.queue.bench.CLIUtils.addOption;
+import static net.openhft.chronicle.queue.bench.util.CLIUtils.addOption;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
 public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
     public static final int DEFAULT_ITERATIONS = 100_000;
-    public static final String THE_PROBE = "TheProbe";
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
@@ -57,7 +56,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
         Options options = CLIUtils.createOptions();
         addOption(options, "p", "payload", true, "Payload Size (approximate)", false);
 
-        CommandLine commandLine = CLIUtils.parseCommandLine(args, options);
+        CommandLine commandLine = CLIUtils.parseCommandLine(ProducerService.class.getSimpleName(), args, options);
 
         datum = new Datum(CLIUtils.getIntOption(commandLine, 'p', 128));
 
@@ -75,7 +74,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
             if (commandLine.hasOption('f')) {
                 try {
                     JLBHResultSerializer.runResultToCSV(jlbhResult, "result.csv",
-                            QueueTwoServicesJLBHBenchmark.THE_PROBE);
+                            JLBHResultSerializer.THE_PROBE);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -90,7 +89,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
         this.jlbh = jlbh;
         queue = single("replica").rollCycle(LARGE_DAILY).doubleBuffer(false).build();
-        theProbe = jlbh.addProbe(THE_PROBE);
+        theProbe = jlbh.addProbe(JLBHResultSerializer.THE_PROBE);
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();
