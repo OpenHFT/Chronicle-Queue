@@ -20,14 +20,21 @@ package net.openhft.chronicle.queue.bench;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.bench.util.CLIUtils;
+import net.openhft.chronicle.queue.bench.util.JLBHResultSerializer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
+
+import java.io.IOException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
@@ -44,6 +51,8 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private ExcerptAppender appender;
     private JLBH jlbh;
 
+    private static NanoSampler theProbe;
+
     static {
         System.setProperty("disable.thread.safety", "true");
         System.setProperty("jvm.resource.tracing", "false");
@@ -51,6 +60,9 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     }
 
     public static void main(String[] args) {
+        Options options = CLIUtils.createOptions();
+        CommandLine commandLine = CLIUtils.parseCommandLine(QueueLargeMessageJLBHBenchmark.class.getSimpleName(), args, options);
+        // disable as otherwise single GC event skews results heavily
         int throughput = MSG_THROUGHPUT / MSG_LENGTH;
         int warmUp = Math.min(50 * throughput, 12_000);
         iterations = Math.min(20 * throughput, 100_000);
@@ -59,11 +71,19 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
                 .warmUpIterations(warmUp)
                 .iterations(iterations)
                 .throughput(throughput)
-                .recordOSJitter(false)
+                .recordOSJitter(commandLine.hasOption('j'))
                 .skipFirstRun(true)
-                .runs(5)
+                .runs(CLIUtils.getIntOption(commandLine, 'r', 5))
                 .jlbhTask(new QueueLargeMessageJLBHBenchmark());
-        new JLBH(lth).start();
+        new JLBH(lth, System.out, jlbhResult -> {
+            if (commandLine.hasOption('f')) {
+                try {
+                    JLBHResultSerializer.runResultToCSV(jlbhResult);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
     }
 
     @Override
@@ -75,6 +95,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
         appender = sourceQueue.createAppender();
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
+        theProbe = jlbh.addProbe(JLBHResultSerializer.THE_PROBE);
         this.jlbh = jlbh;
     }
 
