@@ -51,7 +51,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private ExcerptAppender appender;
     private JLBH jlbh;
 
-    private static NanoSampler theProbe;
+    private NanoSampler theProbe;
 
     static {
         System.setProperty("disable.thread.safety", "true");
@@ -124,7 +124,9 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
                     bytes.read(bytesArr2.clear(), length);
                 else
                     bytes.read(bytesArr);
-                jlbh.sample(System.nanoTime() - start);
+                long durationNs = System.nanoTime() - start;
+                jlbh.sample(durationNs);
+                theProbe.sampleNanos(durationNs);
             }
         }
     }
