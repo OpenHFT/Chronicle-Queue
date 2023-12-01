@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -105,14 +106,14 @@ public class ThreadedQueueTest extends QueueTestCommon {
     public void testTailerReadingEmptyQueue() {
         final File path = getTmpDir();
 
-        try (final ChronicleQueue rqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)
+        try (final ChronicleQueue rqueue = SingleChronicleQueueBuilder.builder(path, WireType.FIELDLESS_BINARY)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build()) {
 
             final ExcerptTailer tailer = rqueue.createTailer();
 
-            try (final ChronicleQueue wqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)
+            try (final ChronicleQueue wqueue = SingleChronicleQueueBuilder.builder(path, WireType.FIELDLESS_BINARY)
                     .testBlockSize()
                     .rollCycle(TEST_DAILY)
                     .build();

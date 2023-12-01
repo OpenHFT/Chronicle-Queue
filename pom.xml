@@ -242,7 +242,7 @@
                         <configuration>
                             <referenceVersion>5.24ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
-                            <binaryCompatibilityPercentageRequired>94.9</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>91.5</binaryCompatibilityPercentageRequired>
                             <extraOptions>
                                 <!--This skips "internal" but checks "impl"-->
                                 <extraOption>

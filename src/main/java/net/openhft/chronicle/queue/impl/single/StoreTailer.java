@@ -29,7 +29,6 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.scoped.ScopedResourcePool;
-import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -107,12 +106,6 @@ class StoreTailer extends AbstractCloseable
 
         // always put references to "this" last.
         queue.addCloseListener(this);
-    }
-
-    @Override
-    public @NotNull StoreTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        singleThreadedCheckDisabled(disableThreadSafetyCheck);
-        return this;
     }
 
     @Override
@@ -489,7 +482,7 @@ class StoreTailer extends AbstractCloseable
                 // after toEnd() call, index is past the end of the queue
                 // so try to go back one (to the last record in the queue)
                 if ((int) queue.rollCycle().toSequenceNumber(index()) < 0) {
-                    long lastSeqNum = store.lastSequenceNumber(this);
+                    long lastSeqNum = store().approximateLastSequenceNumber(this);
                     if (lastSeqNum == -1) {
                         windBackCycle(cycle);
                         return moveToIndexInternal(index());
@@ -583,7 +576,7 @@ class StoreTailer extends AbstractCloseable
 
         if (direction == BACKWARD) {
             try {
-                long lastSequenceNumber0 = store().lastSequenceNumber(this);
+                long lastSequenceNumber0 = store().approximateLastSequenceNumber(this);
                 return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
 
             } catch (Exception e) {
@@ -795,7 +788,7 @@ class StoreTailer extends AbstractCloseable
                 resetWires();
             }
 
-            sequenceNumber = this.store.lastSequenceNumber(this);
+            sequenceNumber = this.store().approximateLastSequenceNumber(this);
         }
         // give the position of the last entry and
         // flag we want to count it even though we don't know if it will be meta data or not.
@@ -1003,7 +996,8 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward: while (true) {
+                LoopForward:
+                while (true) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
@@ -1242,7 +1236,7 @@ class StoreTailer extends AbstractCloseable
      *              Must not be null.
      * @param index The index to read the history message in the {@code queue}.
      * @return This ExcerptTailer instance.
-     * @throws IORuntimeException if the provided {@code queue} couldn't be wound to the last index.
+     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
      * @throws NullPointerException if the provided {@code queue} is null.
      */
     @NotNull
@@ -1332,9 +1326,8 @@ class StoreTailer extends AbstractCloseable
         return moveToState.indexMoveCount;
     }
 
-    @Deprecated(/* To be removed in 5.25 */) // Should not be providing accessors to reference-counted objects
     @NotNull
-    WireStore store() {
+    private SingleChronicleQueueStore store() {
         if (store == null)
             setCycle(cycle());
         return store;

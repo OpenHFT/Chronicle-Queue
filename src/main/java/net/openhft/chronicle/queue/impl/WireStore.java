@@ -56,8 +56,6 @@ public interface WireStore extends CommonStore, Closeable {
      */
     long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws StreamCorruptedException;
 
-    long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException;
-
     /**
      * Sets the position using the provided parameters.
      *

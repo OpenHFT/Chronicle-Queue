@@ -50,19 +50,6 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, Si
     ChronicleQueue queue();
 
     /**
-     * When set to <code>true</code> this Appender or Tailer can be shared between thread provided you ensure they used in a thread safe manner.
-     *
-     * @param disableThreadSafetyCheck true to turn off the thread safety check
-     * @return this.
-     */
-    @Deprecated(/* to be removed in x.25 */)
-    @NotNull
-    default E disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        singleThreadedCheckDisabled(disableThreadSafetyCheck);
-        return (E) this;
-    }
-
-    /**
      * @return the current file being worked on or null if not known.
      */
     @Nullable

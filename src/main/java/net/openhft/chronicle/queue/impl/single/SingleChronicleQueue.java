@@ -618,37 +618,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     }
 
     /**
-     * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
-     * which is updated last during append operation so may be possible that a single entry is available for reading
-     * but not acknowledged by this method yet.
-     *
-     * @see ExcerptTailer#approximateExcerptsInCycle(int)
-     * @deprecated
-     */
-    @Deprecated(/* To be removed in x.25 */)
-    public long approximateExcerptsInCycle(int cycle) {
-        throwExceptionIfClosed();
-        try (ExcerptTailer tailer = createTailer()) {
-            return tailer.approximateExcerptsInCycle(cycle);
-        }
-    }
-
-    /**
-     * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
-     * expensive operation.
-     *
-     * @see ExcerptTailer#exactExcerptsInCycle(int)
-     * @deprecated
-     */
-    @Deprecated(/* To be removed in x.25 */)
-    public long exactExcerptsInCycle(int cycle) {
-        throwExceptionIfClosed();
-        try (ExcerptTailer tailer = createTailer()) {
-            return tailer.exactExcerptsInCycle(cycle);
-        }
-    }
-
-    /**
      * Will give you the number of excerpts between 2 index?s ( as exists on the current file system ). If intermediate chronicle files are removed
      * this will effect the result.
      *
@@ -661,78 +630,80 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public long countExcerpts(long fromIndex, long toIndex) {
         throwExceptionIfClosed();
 
-        if (fromIndex > toIndex) {
-            long temp = fromIndex;
-            fromIndex = toIndex;
-            toIndex = temp;
-        }
+        try (ExcerptTailer tailer = createTailer()) {
+            if (fromIndex > toIndex) {
+                long temp = fromIndex;
+                fromIndex = toIndex;
+                toIndex = temp;
+            }
 
-        // if the are the same
-        if (fromIndex == toIndex)
-            return 0;
+            // if the are the same
+            if (fromIndex == toIndex)
+                return 0;
 
-        long result = 0;
+            long result = 0;
 
-        // some of the sequences maybe at -1 so we will add 1 to the cycle and update the result
-        // accordingly
-        RollCycle rollCycle = rollCycle();
-        long sequenceNotSet = rollCycle.toSequenceNumber(-1);
+            // some of the sequences maybe at -1 so we will add 1 to the cycle and update the result
+            // accordingly
+            RollCycle rollCycle = rollCycle();
+            long sequenceNotSet = rollCycle.toSequenceNumber(-1);
 
-        if (rollCycle.toSequenceNumber(fromIndex) == sequenceNotSet) {
-            result++;
-            fromIndex++;
-        }
+            if (rollCycle.toSequenceNumber(fromIndex) == sequenceNotSet) {
+                result++;
+                fromIndex++;
+            }
 
-        if (rollCycle.toSequenceNumber(toIndex) == sequenceNotSet) {
-            result--;
-            toIndex++;
-        }
+            if (rollCycle.toSequenceNumber(toIndex) == sequenceNotSet) {
+                result--;
+                toIndex++;
+            }
 
-        int lowerCycle = rollCycle.toCycle(fromIndex);
-        int upperCycle = rollCycle.toCycle(toIndex);
+            int lowerCycle = rollCycle.toCycle(fromIndex);
+            int upperCycle = rollCycle.toCycle(toIndex);
 
-        if (lowerCycle == upperCycle)
-            return toIndex - fromIndex;
+            if (lowerCycle == upperCycle)
+                return toIndex - fromIndex;
 
-        long upperSeqNum = rollCycle.toSequenceNumber(toIndex);
-        long lowerSeqNum = rollCycle.toSequenceNumber(fromIndex);
+            long upperSeqNum = rollCycle.toSequenceNumber(toIndex);
+            long lowerSeqNum = rollCycle.toSequenceNumber(fromIndex);
 
-        if (lowerCycle + 1 == upperCycle) {
-            long l = exactExcerptsInCycle(lowerCycle);
-            result += (l - lowerSeqNum) + upperSeqNum;
+            if (lowerCycle + 1 == upperCycle) {
+                long l = tailer.exactExcerptsInCycle(lowerCycle);
+                result += (l - lowerSeqNum) + upperSeqNum;
+                return result;
+            }
+
+            NavigableSet<Long> cycles;
+            try {
+                cycles = listCyclesBetween(lowerCycle, upperCycle);
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+
+            if (cycles.first() == lowerCycle) {
+                // because we are inclusive, for example  if we were at the end, then this
+                // is 1 except rather than zero
+                long l = tailer.exactExcerptsInCycle(lowerCycle);
+                result += (l - lowerSeqNum);
+            } else
+                throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
+
+            if (cycles.last() == upperCycle) {
+                result += upperSeqNum;
+            } else
+                throw new IllegalStateException("Cycle not found,  upper-cycle=" + Long.toHexString(upperCycle));
+
+            if (cycles.size() == 2)
+                return result;
+
+            final long[] array = cycles.stream().mapToLong(i -> i).toArray();
+            for (int i = 1; i < array.length - 1; i++) {
+                long x = tailer.exactExcerptsInCycle(Math.toIntExact(array[i]));
+                result += x;
+            }
+
             return result;
         }
-
-        NavigableSet<Long> cycles;
-        try {
-            cycles = listCyclesBetween(lowerCycle, upperCycle);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-
-        if (cycles.first() == lowerCycle) {
-            // because we are inclusive, for example  if we were at the end, then this
-            // is 1 except rather than zero
-            long l = exactExcerptsInCycle(lowerCycle);
-            result += (l - lowerSeqNum);
-        } else
-            throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
-
-        if (cycles.last() == upperCycle) {
-            result += upperSeqNum;
-        } else
-            throw new IllegalStateException("Cycle not found,  upper-cycle=" + Long.toHexString(upperCycle));
-
-        if (cycles.size() == 2)
-            return result;
-
-        final long[] array = cycles.stream().mapToLong(i -> i).toArray();
-        for (int i = 1; i < array.length - 1; i++) {
-            long x = exactExcerptsInCycle(Math.toIntExact(array[i]));
-            result += x;
-        }
-
-        return result;
     }
 
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) {
