@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class NegativeEpoch extends QueueTestCommon {
+public class NegativeEpochTest extends QueueTestCommon {
 
     @Test
     public void negativeEpoch() {
