@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -35,7 +36,8 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     @Test
     public void testOneOne() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(OS.getTarget() + "/MethodReaderObjectReuseTest-" + Time.uniqueId()).build()) {
+        String path = OS.getTarget() + "/MethodReaderObjectReuseTest-" + Time.uniqueId();
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
             PingDTO.constructionExpected++;
             PingDTO pdtio = new PingDTO();
             PingDTO.constructionExpected++;
@@ -68,6 +70,8 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                     "ping !PingDTO {\n" +
                     "  bytes: hihihihi\n" +
                     "}\n", sb.toString());
+        } finally {
+            IOTools.deleteDirWithFiles(path);
         }
     }
 

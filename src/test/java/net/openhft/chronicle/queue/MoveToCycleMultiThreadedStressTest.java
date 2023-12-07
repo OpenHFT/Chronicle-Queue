@@ -16,7 +16,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class MoveToCycleMultiThreadedStressTest extends ChronicleQueueTestBase {
+public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private ThreadLocal<ExcerptTailer> tailer;
     private final AtomicLong last = new AtomicLong();

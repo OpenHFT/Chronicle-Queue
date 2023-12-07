@@ -80,7 +80,7 @@ public class WireStorePool extends SimpleCloseable {
      * @param upperCycle the upper cycle
      * @return an array including these cycles and all the intermediate cycles
      */
-    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) {
         throwExceptionIfClosed();
 
         return supplier.cycles(lowerCycle, upperCycle);

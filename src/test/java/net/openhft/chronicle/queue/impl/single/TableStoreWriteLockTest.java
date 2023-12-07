@@ -51,10 +51,11 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     private static final String TEST_LOCK_NAME = "testLock";
     private static final long TIMEOUT_MS = 100;
     private TableStore<Metadata.NoMeta> tableStore;
+    private Path tempDir;
 
     @Before
     public void setUp() {
-        final Path tempDir = IOTools.createTempDirectory("namedTableStoreLockTest");
+        tempDir = IOTools.createTempDirectory("namedTableStoreLockTest");
         tempDir.toFile().mkdirs();
         Path storeDirectory = tempDir.resolve("test_store.cq4t");
         tableStore = SingleTableBuilder.binary(storeDirectory, Metadata.NoMeta.INSTANCE).build();
@@ -69,6 +70,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     @After
     public void tearDown() {
         Closeable.closeQuietly(tableStore);
+        IOTools.deleteDirWithFiles(tempDir.toFile());
     }
 
     @Test(timeout = 5_000)

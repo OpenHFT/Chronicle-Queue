@@ -9,7 +9,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
-import net.openhft.chronicle.testframework.internal.ExceptionTracker;
+import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;

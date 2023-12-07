@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,6 +30,11 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     @Before
     public void setUp() {
         dataDirectory = IOTools.createTempDirectory("EmptyRollCycleTest");
+    }
+
+    @After
+    public void tearDown() {
+        IOTools.deleteDirWithFiles(dataDirectory.toFile());
     }
 
     @Test

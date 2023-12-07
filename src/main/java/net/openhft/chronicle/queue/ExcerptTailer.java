@@ -261,13 +261,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     TailerState state();
 
-    // Ring still needs this
-    @Deprecated(/* to be removed in x.25 */)
-    @Override
-    default ExcerptTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        return this;
-    }
-
     /**
      * Winds this ExcerptTailer to the specified {@code index} of the provided {@code queue} and reads the history message,
      * then moves {@code this} tailer to the message index in the history message.

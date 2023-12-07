@@ -18,15 +18,16 @@
 
 package net.openhft.chronicle.queue.impl.single.stress;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -87,6 +88,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
     public void testRead2() throws ExecutionException, InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
+        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         final ExecutorService es = Executors.newSingleThreadExecutor(
@@ -308,10 +310,11 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    private class ParallelQueueObserver implements Callable {
+    private static class ParallelQueueObserver implements Callable<Integer> {
 
         @NotNull
         private final ExcerptTailer tailer;
+        private final StringBuilder sb = new StringBuilder();
         volatile int documentsRead;
 
         ParallelQueueObserver(@NotNull ChronicleQueue queue) {
@@ -329,7 +332,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                 if (!dc.isPresent())
                     return -2;
 
-                StringBuilder sb = Wires.acquireStringBuilder();
+                sb.setLength(0);
                 dc.wire().read("say").text(sb);
 
                 if (sb.length() == 0) {

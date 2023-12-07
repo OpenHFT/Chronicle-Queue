@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
@@ -35,6 +36,8 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
@@ -60,8 +63,8 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable;
-import static net.openhft.chronicle.wire.Wires.*;
+import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
+import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
 public class
 SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
@@ -70,6 +73,9 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public static final String DISCARD_FILE_SUFFIX = ".discard";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
+    public static final String REPLICATED_NAMED_TAILER_PREFIX = "replicated:";
+    public static final String INDEX_LOCK_FORMAT = "index.%s.lock";
+    public static final String INDEX_VERSION_FORMAT = "index.%s.version";
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
@@ -115,8 +121,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private final LongValue lastIndexMSynced;
     @NotNull
     private final DirectoryListing directoryListing;
-    @NotNull
-    private final QueueLock queueLock;
     @NotNull
     private final WriteLock writeLock;
     private final boolean checkInterrupts;
@@ -192,9 +196,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             }
 
             this.directoryListing.refresh(true);
-            this.queueLock = areEnterpriseFeaturesAvailable() && !builder.readOnly()
-                    ? new TSQueueLock(metaStore, builder.pauserSupplier(), builder.timeoutMS() * 3 / 2)
-                    : new NoopQueueLock();
             this.writeLock = builder.writeLock();
 
             // release the write lock if the process is dead
@@ -218,6 +219,8 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             this.forceDirectoryListingRefreshIntervalMs = builder.forceDirectoryListingRefreshIntervalMs();
 
             sourceId = builder.sourceId();
+
+            DiskSpaceMonitor.INSTANCE.pollDiskSpace(path);
 
             Announcer.announce("net.openhft", "chronicle-queue",
                     AnalyticsFacade.isEnabled()
@@ -377,27 +380,29 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                         return;
                     }
                 }
-                Bytes<?> bytes = acquireBytes();
-                TextWire text = new TextWire(bytes);
-                while (true) {
-                    try (DocumentContext dc = tailer.readingDocument()) {
-                        if (!dc.isPresent()) {
-                            writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
-                            return;
-                        }
-                        if (dc.index() > toIndex)
-                            return;
-                        writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
-                        Wire wire = dc.wire();
-                        long start = wire.bytes().readPosition();
-                        try {
-                            text.clear();
-                            wire.copyTo(text);
-                            writer.append(bytes.toString());
+                try (ScopedResource<Bytes<?>> stlBytes = acquireBytesScoped()) {
+                    Bytes<?> bytes = stlBytes.get();
+                    TextWire text = new TextWire(bytes);
+                    while (true) {
+                        try (DocumentContext dc = tailer.readingDocument()) {
+                            if (!dc.isPresent()) {
+                                writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+                                return;
+                            }
+                            if (dc.index() > toIndex)
+                                return;
+                            writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
+                            Wire wire = dc.wire();
+                            long start = wire.bytes().readPosition();
+                            try {
+                                text.clear();
+                                wire.copyTo(text);
+                                writer.append(bytes.toString());
 
-                        } catch (Exception e) {
-                            wire.bytes().readPosition(start);
-                            writer.append(wire.bytes()).append("\n");
+                            } catch (Exception e) {
+                                wire.bytes().readPosition(start);
+                                writer.append(wire.bytes()).append("\n");
+                            }
                         }
                     }
                 }
@@ -526,22 +531,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     }
 
     /**
-     * @return the {@link QueueLock} This lock is held while the queue replication cluster is back-filling.
-     * By Back-filling we mean that, as part of the fail-over process a sink, may actually have more data than a source,
-     * hence we need to back copy data from the sinks to the source upon startup.
-     * While we are doing this we lock the queue so that new appenders can not be created.
-     * <p>
-     * Queue locks have no impact if you are not using queue replication because the are implemented as a no-op.
-     *
-     * @deprecated this is being removed in x.25 with no replacement
-     */
-    @Deprecated(/* To be removed in x.25 */)
-    @NotNull
-    public QueueLock queueLock() {
-        return queueLock;
-    }
-
-    /**
      * @return the {@link WriteLock} that is used to lock writes to the queue. This is the mechanism used to
      * coordinate writes from multiple threads and processes.
      * <p>This lock should only be held for a short time, as it will block progress of any writers to
@@ -565,21 +554,44 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
-        throwExceptionIfClosed();
-
-        LongValue index = id == null
-                ? null
-                : indexForId(id);
-        final StoreTailer storeTailer = new StoreTailer(this, pool, index);
+        verifyTailerPreconditions(id);
+        IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this);
+        final StoreTailer storeTailer = new StoreTailer(this, pool, indexUpdater);
         directoryListing.refresh(true);
         storeTailer.singleThreadedCheckReset();
         return storeTailer;
+    }
+
+    private void verifyTailerPreconditions(String id) {
+        // Preconditions for all tailer types
+        throwExceptionIfClosed();
+
+        // Named tailer preconditions
+        if (id == null) return;
+        if (appendLock.locked() && id.startsWith(REPLICATED_NAMED_TAILER_PREFIX)) {
+            throw new NamedTailerNotAvailableException(id, NamedTailerNotAvailableException.Reason.NOT_AVAILABLE_ON_SINK);
+        }
     }
 
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
+    }
+
+    @NotNull
+    public LongValue indexVersionForId(@NotNull String id) {
+        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(String.format(INDEX_VERSION_FORMAT, id), -1L));
+    }
+
+    @NotNull
+    public TableStoreWriteLock versionIndexLockForId(@NotNull String id) {
+        return new TableStoreWriteLock(
+                metaStore,
+                pauserSupplier,
+                timeoutMS * 3 / 2,
+                String.format(SingleChronicleQueue.INDEX_LOCK_FORMAT, id)
+        );
     }
 
     @NotNull
@@ -606,37 +618,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     }
 
     /**
-     * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
-     * which is updated last during append operation so may be possible that a single entry is available for reading
-     * but not acknowledged by this method yet.
-     *
-     * @see ExcerptTailer#approximateExcerptsInCycle(int)
-     * @deprecated
-     */
-    @Deprecated(/* To be removed in x.25 */)
-    public long approximateExcerptsInCycle(int cycle) {
-        throwExceptionIfClosed();
-        try (ExcerptTailer tailer = createTailer()) {
-            return tailer.approximateExcerptsInCycle(cycle);
-        }
-    }
-
-    /**
-     * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
-     * expensive operation.
-     *
-     * @see ExcerptTailer#exactExcerptsInCycle(int)
-     * @deprecated
-     */
-    @Deprecated(/* To be removed in x.25 */)
-    public long exactExcerptsInCycle(int cycle) {
-        throwExceptionIfClosed();
-        try (ExcerptTailer tailer = createTailer()) {
-            return tailer.exactExcerptsInCycle(cycle);
-        }
-    }
-
-    /**
      * Will give you the number of excerpts between 2 index?s ( as exists on the current file system ). If intermediate chronicle files are removed
      * this will effect the result.
      *
@@ -649,81 +630,83 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     public long countExcerpts(long fromIndex, long toIndex) {
         throwExceptionIfClosed();
 
-        if (fromIndex > toIndex) {
-            long temp = fromIndex;
-            fromIndex = toIndex;
-            toIndex = temp;
-        }
+        try (ExcerptTailer tailer = createTailer()) {
+            if (fromIndex > toIndex) {
+                long temp = fromIndex;
+                fromIndex = toIndex;
+                toIndex = temp;
+            }
 
-        // if the are the same
-        if (fromIndex == toIndex)
-            return 0;
+            // if the are the same
+            if (fromIndex == toIndex)
+                return 0;
 
-        long result = 0;
+            long result = 0;
 
-        // some of the sequences maybe at -1 so we will add 1 to the cycle and update the result
-        // accordingly
-        RollCycle rollCycle = rollCycle();
-        long sequenceNotSet = rollCycle.toSequenceNumber(-1);
+            // some of the sequences maybe at -1 so we will add 1 to the cycle and update the result
+            // accordingly
+            RollCycle rollCycle = rollCycle();
+            long sequenceNotSet = rollCycle.toSequenceNumber(-1);
 
-        if (rollCycle.toSequenceNumber(fromIndex) == sequenceNotSet) {
-            result++;
-            fromIndex++;
-        }
+            if (rollCycle.toSequenceNumber(fromIndex) == sequenceNotSet) {
+                result++;
+                fromIndex++;
+            }
 
-        if (rollCycle.toSequenceNumber(toIndex) == sequenceNotSet) {
-            result--;
-            toIndex++;
-        }
+            if (rollCycle.toSequenceNumber(toIndex) == sequenceNotSet) {
+                result--;
+                toIndex++;
+            }
 
-        int lowerCycle = rollCycle.toCycle(fromIndex);
-        int upperCycle = rollCycle.toCycle(toIndex);
+            int lowerCycle = rollCycle.toCycle(fromIndex);
+            int upperCycle = rollCycle.toCycle(toIndex);
 
-        if (lowerCycle == upperCycle)
-            return toIndex - fromIndex;
+            if (lowerCycle == upperCycle)
+                return toIndex - fromIndex;
 
-        long upperSeqNum = rollCycle.toSequenceNumber(toIndex);
-        long lowerSeqNum = rollCycle.toSequenceNumber(fromIndex);
+            long upperSeqNum = rollCycle.toSequenceNumber(toIndex);
+            long lowerSeqNum = rollCycle.toSequenceNumber(fromIndex);
 
-        if (lowerCycle + 1 == upperCycle) {
-            long l = exactExcerptsInCycle(lowerCycle);
-            result += (l - lowerSeqNum) + upperSeqNum;
+            if (lowerCycle + 1 == upperCycle) {
+                long l = tailer.exactExcerptsInCycle(lowerCycle);
+                result += (l - lowerSeqNum) + upperSeqNum;
+                return result;
+            }
+
+            NavigableSet<Long> cycles;
+            try {
+                cycles = listCyclesBetween(lowerCycle, upperCycle);
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+
+            if (cycles.first() == lowerCycle) {
+                // because we are inclusive, for example  if we were at the end, then this
+                // is 1 except rather than zero
+                long l = tailer.exactExcerptsInCycle(lowerCycle);
+                result += (l - lowerSeqNum);
+            } else
+                throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
+
+            if (cycles.last() == upperCycle) {
+                result += upperSeqNum;
+            } else
+                throw new IllegalStateException("Cycle not found,  upper-cycle=" + Long.toHexString(upperCycle));
+
+            if (cycles.size() == 2)
+                return result;
+
+            final long[] array = cycles.stream().mapToLong(i -> i).toArray();
+            for (int i = 1; i < array.length - 1; i++) {
+                long x = tailer.exactExcerptsInCycle(Math.toIntExact(array[i]));
+                result += x;
+            }
+
             return result;
         }
-
-        NavigableSet<Long> cycles;
-        try {
-            cycles = listCyclesBetween(lowerCycle, upperCycle);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-
-        if (cycles.first() == lowerCycle) {
-            // because we are inclusive, for example  if we were at the end, then this
-            // is 1 except rather than zero
-            long l = exactExcerptsInCycle(lowerCycle);
-            result += (l - lowerSeqNum);
-        } else
-            throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
-
-        if (cycles.last() == upperCycle) {
-            result += upperSeqNum;
-        } else
-            throw new IllegalStateException("Cycle not found,  upper-cycle=" + Long.toHexString(upperCycle));
-
-        if (cycles.size() == 2)
-            return result;
-
-        final long[] array = cycles.stream().mapToLong(i -> i).toArray();
-        for (int i = 1; i < array.length - 1; i++) {
-            long x = exactExcerptsInCycle(Math.toIntExact(array[i]));
-            result += x;
-        }
-
-        return result;
     }
 
-    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) {
         throwExceptionIfClosed();
 
         return pool.listCyclesBetween(lowerCycle, upperCycle);
@@ -750,7 +733,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             closeQuietly(
                     createAppenderCondition,
                     directoryListing,
-                    queueLock,
                     lastAcknowledgedIndexReplicated,
                     lastIndexReplicated,
                     lastIndexMSynced,
@@ -949,23 +931,24 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
-
-        BytesStore keyBytes = asBytes(key);
-        LongValue longValue = metaStoreMap.get(keyBytes);
-        if (longValue == null) {
-            synchronized (closers) {
-                longValue = metaStoreMap.get(keyBytes);
-                if (longValue == null) {
-                    longValue = metaStore.acquireValueFor(key, defaultValue);
-                    int length = key.length();
-                    HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
-                    key2.write(0, keyBytes, 0, length);
-                    metaStoreMap.put(key2, longValue);
-                    return longValue;
+        try (final ScopedResource<Bytes<?>> bytesTl = acquireBytesScoped()) {
+            BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
+            LongValue longValue = metaStoreMap.get(keyBytes);
+            if (longValue == null) {
+                synchronized (closers) {
+                    longValue = metaStoreMap.get(keyBytes);
+                    if (longValue == null) {
+                        longValue = metaStore.acquireValueFor(key, defaultValue);
+                        int length = key.length();
+                        HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
+                        key2.write(0, keyBytes, 0, length);
+                        metaStoreMap.put(key2, longValue);
+                        return longValue;
+                    }
                 }
             }
+            return longValue;
         }
-        return longValue;
     }
 
     public long tableStoreGet(CharSequence key) {
@@ -974,10 +957,10 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return longValue.getVolatileValue();
     }
 
-    private BytesStore asBytes(CharSequence key) {
+    private BytesStore asBytes(CharSequence key, Bytes<?> bytes) {
         return key instanceof BytesStore
                 ? ((BytesStore) key)
-                : acquireAnotherBytes().append(key);
+                : bytes.append(key);
     }
 
     private static final class CachedCycleTree {
@@ -1022,8 +1005,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                     return null;
                 }
 
-                if (createStrategy != CreateStrategy.READ_ONLY)
-                    checkDiskSpace(that.path);
 
                 throwExceptionIfClosed();
                 if (createStrategy == CreateStrategy.CREATE && !path.exists() && !dateValue.pathExists)
@@ -1081,18 +1062,12 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                             return null;
                         }
 
-                        StringBuilder name = acquireStringBuilder();
-                        ValueIn valueIn = wire.readEventName(name);
-                        if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                            try {
-                                wireStore = valueIn.typedMarshallable();
-                            } catch (Throwable t) {
-                                mappedBytes.close();
-                                throw t;
-                            }
-
-                        } else {
-                            throw new StreamCorruptedException("The first message should be the header, was " + name);
+                        final ValueIn valueIn = readWireStoreValue(wire);
+                        try {
+                            wireStore = valueIn.typedMarshallable();
+                        } catch (Throwable t) {
+                            mappedBytes.close();
+                            throw t;
                         }
                     }
                 } catch (InternalError e) {
@@ -1113,6 +1088,18 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            }
+        }
+
+        @NotNull
+        private ValueIn readWireStoreValue(@NotNull Wire wire) throws StreamCorruptedException {
+            try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
+                StringBuilder name = stlSb.get();
+                ValueIn valueIn = wire.readEventName(name);
+                if (!StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+                    throw new StreamCorruptedException("The first message should be the header, was " + name);
+                }
+                return valueIn;
             }
         }
 
@@ -1162,11 +1149,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             } catch (IOException ex) {
                 Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
-        }
-
-        private void checkDiskSpace(@NotNull final File filePath) {
-            // This operation can stall for 500 ms or more under load.
-            DiskSpaceMonitor.INSTANCE.pollDiskSpace(filePath);
         }
 
         /**
@@ -1222,42 +1204,32 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             NavigableMap<Long, File> tree = cycleTree(false);
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
+            // confirm the current cycle is in the min/max range, delay and refresh
+            // a few times if not as this suggests files have been deleted
             directoryListing.refresh(false);
             if (currentCycle > directoryListing.getMaxCreatedCycle() ||
                     currentCycle < directoryListing.getMinCreatedCycle()) {
-                boolean fileFound = false;
                 for (int i = 0; i < 20; i++) {
                     Jvm.pause(10);
                     directoryListing.refresh(i > 1);
-                    fileFound = (
-                            currentCycle <= directoryListing.getMaxCreatedCycle() &&
-                                    currentCycle >= directoryListing.getMinCreatedCycle());
-                    if (fileFound) {
+                    if (currentCycle <= directoryListing.getMaxCreatedCycle() &&
+                            currentCycle >= directoryListing.getMinCreatedCycle()) {
                         break;
                     }
                 }
-                fileFound |= currentCycleFile.exists();
-
-                if (!fileFound) {
-                    directoryListing.refresh(true);
-                    throw new MissingStoreFileException(
-                            String.format("Expected file to exist for cycle: %d, file: %s.%nminCycle: %d, maxCycle: %d%n" +
-                                            "Available files: %s",
-                                    currentCycle, currentCycleFile,
-                                    directoryListing.getMinCreatedCycle(), directoryListing.getMaxCreatedCycle(),
-                                    Arrays.toString(path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)))));
-                }
             }
 
+            // check that the current cycle is in the tree, do a hard refresh and retry if not
             Long key = dateCache.toLong(currentCycleFile);
             File file = tree.get(key);
-            // already checked that the file should be on-disk, so if it is null, call cycleTree again with force
             if (file == null) {
                 tree = cycleTree(true);
                 file = tree.get(key);
             }
+
+            // The current cycle is no longer on disk, log an error
             if (file == null) {
-                throw new MissingStoreFileException("missing currentCycle, file=" + currentCycleFile);
+                Jvm.error().on(SingleChronicleQueue.class, "The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle, currentCycle=" + currentCycleFile);
             }
 
             switch (direction) {

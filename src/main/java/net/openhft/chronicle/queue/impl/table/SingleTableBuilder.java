@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.util.Builder;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -158,14 +159,20 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
     private TableStore<T> readTableStore(Wire wire) throws StreamCorruptedException {
         wire.readFirstHeader();
 
-        StringBuilder name = Wires.acquireStringBuilder();
-        ValueIn valueIn = wire.readEventName(name);
-        if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-            @NotNull TableStore<T> existing = Objects.requireNonNull(valueIn.typedMarshallable());
-            metadata.overrideFrom(existing.metadata());
-            return existing;
-        } else {
-            throw new StreamCorruptedException("The first message should be the header, was " + name);
+        final ValueIn valueIn = readTableStoreValue(wire);
+        @NotNull TableStore<T> existing = Objects.requireNonNull(valueIn.typedMarshallable());
+        metadata.overrideFrom(existing.metadata());
+        return existing;
+    }
+
+    private ValueIn readTableStoreValue(@NotNull Wire wire) throws StreamCorruptedException {
+        try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
+            StringBuilder name = stlSb.get();
+            ValueIn valueIn = wire.readEventName(name);
+            if (!StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+                throw new StreamCorruptedException("The first message should be the header, was " + name);
+            }
+            return valueIn;
         }
     }
 

@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -134,13 +135,15 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single("test").rollCycle(HOURLY);
 
         builder.build().close();
-        final Wire wire = Wires.acquireBinaryWire();
-        wire.usePadding(true);
-        wire.write().typedMarshallable(builder);
+        try (final ScopedResource<Wire> wireTl = Wires.acquireBinaryWireScoped()) {
+            Wire wire = wireTl.get();
+            wire.usePadding(true);
+            wire.write().typedMarshallable(builder);
 
-        SingleChronicleQueueBuilder builder2 = wire.read().typedMarshallable();
-        assertEquals(builder, builder2);
-        builder2.build().close();
+            SingleChronicleQueueBuilder builder2 = wire.read().typedMarshallable();
+            assertEquals(builder, builder2);
+            builder2.build().close();
+        }
     }
 
     @Test

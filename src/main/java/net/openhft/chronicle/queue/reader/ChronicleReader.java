@@ -39,7 +39,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.ParseException;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -436,21 +435,17 @@ public class ChronicleReader implements Reader {
 
     private void seekBinarySearch(ExcerptTailer tailer) {
         TailerDirection originalDirection = tailer.direction();
-        try {
-            tailer.direction(FORWARD);
-            final Wire key = binarySearch.wireKey();
-            long rv = BinarySearch.search(tailer, key, binarySearch);
-            if (rv == -1) {
-                tailer.toStart();
-            } else if (rv < 0) {
-                scanToFirstEntryFollowingMatch(tailer, key, -rv);
-            } else {
-                scanToFirstMatchingEntry(tailer, key, rv);
-            }
-            tailer.direction(originalDirection);
-        } catch (ParseException e) {
-            throw Jvm.rethrow(e);
+        tailer.direction(FORWARD);
+        final Wire key = binarySearch.wireKey();
+        long rv = BinarySearch.search(tailer, key, binarySearch);
+        if (rv == -1) {
+            tailer.toStart();
+        } else if (rv < 0) {
+            scanToFirstEntryFollowingMatch(tailer, key, -rv);
+        } else {
+            scanToFirstMatchingEntry(tailer, key, rv);
         }
+        tailer.direction(originalDirection);
     }
 
     /**

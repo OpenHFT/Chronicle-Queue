@@ -52,16 +52,6 @@ public class DirectoryUtils {
         return Long.toString(l, 36);
     }
 
-    @Deprecated(/* Remove in x.25. Use IOTools.deleteDirWithFiles */)
-    public static void deleteDir(@NotNull String dir) {
-        IOTools.deleteDirWithFiles(new File(dir));
-    }
-
-    @Deprecated(/* Remove in x.25. Use IOTools.deleteDirWithFiles */)
-    public static void deleteDir(@NotNull File dir) {
-        IOTools.deleteDirWithFiles(dir);
-    }
-
     enum DeleteStatic {
         INSTANCE;
         final Set<File> toDeleteList = Collections.synchronizedSet(new LinkedHashSet<>());

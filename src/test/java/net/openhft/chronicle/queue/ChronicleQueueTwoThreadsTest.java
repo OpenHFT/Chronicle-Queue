@@ -23,6 +23,7 @@ import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -58,8 +59,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
             Bytes<?> bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
-            try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
-                    .fieldlessBinary(name)
+            try (ChronicleQueue rqueue = SingleChronicleQueueBuilder.builder(name, WireType.FIELDLESS_BINARY)
                     .rollCycle(SMALL_DAILY)
                     .testBlockSize()
                     .build()) {
@@ -84,8 +84,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
         Thread appenderThread = new Thread(() -> {
             AffinityLock wlock = AffinityLock.acquireLock();
-            try (ChronicleQueue wqueue = SingleChronicleQueueBuilder
-                    .fieldlessBinary(name)
+            try (ChronicleQueue wqueue = SingleChronicleQueueBuilder.builder(name, WireType.FIELDLESS_BINARY)
                     .rollCycle(SMALL_DAILY)
                     .testBlockSize()
                     .writeBufferMode(buffered ? BufferMode.Asynchronous : BufferMode.None)

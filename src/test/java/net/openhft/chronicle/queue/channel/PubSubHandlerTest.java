@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.channel;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
@@ -33,7 +34,10 @@ public class PubSubHandlerTest extends QueueTestCommon {
 
     public static String createTargetDir(String s) {
         String name = OS.getTarget() + "/" + s + "-" + Time.uniqueId();
-        assertTrue(name, name.contains("target/"));
+        if (!PageUtil.isHugePage(name)) {
+            // hugepages tests do not run out of target/
+            assertTrue(name, name.contains("target/"));
+        }
         final File file = new File(name);
         file.mkdirs();
         return name;
@@ -57,6 +61,7 @@ public class PubSubHandlerTest extends QueueTestCommon {
     @Test
     public void testPubSub() throws IOException {
         final String tmpDir = createTargetDir("testPubSub");
+        assumeFalse("PubSubHandler not supported on hugetlbfs", PageUtil.isHugePage(tmpDir));
 
         try (ChronicleContext context = ChronicleContext.newContext(url).name(tmpDir)) {
             // do we assume a server is running

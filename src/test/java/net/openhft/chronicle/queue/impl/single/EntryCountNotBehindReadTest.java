@@ -52,7 +52,8 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     public void testExcerptsPerCycleNotBehind() throws IOException {
         final File file = Files.createTempDirectory("exact-excerpts-per-cycle").toFile();
         try (final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(file).build()) {
+                     SingleChronicleQueueBuilder.binary(file).build();
+             final ExcerptTailer tailer = queue.createTailer()) {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();
@@ -66,7 +67,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
             while (reader.isAlive()) {
                 final long readIndex = lastIndex.get();
                 if (readIndex != 0) {
-                    checkExactExcerptCount(queue, readIndex);
+                    checkExactExcerptCount(queue, readIndex, tailer);
                 }
             }
         } finally {
@@ -100,11 +101,11 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
         }
     }
 
-    private void checkExactExcerptCount(SingleChronicleQueue queue, long readIndex) {
+    private void checkExactExcerptCount(SingleChronicleQueue queue, long readIndex, ExcerptTailer tailer) {
         final RollCycle cycleType = queue.rollCycle();
         final int cycle = cycleType.toCycle(readIndex);
         final long readCount = cycleType.toSequenceNumber(readIndex) + 1;
-        final long excerptCount = queue.exactExcerptsInCycle(cycle);
+        final long excerptCount = tailer.exactExcerptsInCycle(cycle);
         assertFalse(readCount > excerptCount);
     }
 

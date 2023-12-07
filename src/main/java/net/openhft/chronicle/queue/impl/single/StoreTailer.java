@@ -28,11 +28,12 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
-import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.core.scoped.ScopedResourcePool;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -54,12 +55,12 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
-    static final StringBuilderPool SBP = new StringBuilderPool();
+    static final ScopedResourcePool<StringBuilder> SBP = StringBuilderPool.createThreadLocal(1);
     static final EOFException EOF_EXCEPTION = new EOFException();
     @NotNull
     private final SingleChronicleQueue queue;
     private final WireStorePool storePool;
-    private final LongValue indexValue;
+    private final IndexUpdater indexUpdater;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
     private final Finalizer finalizer;
@@ -81,19 +82,19 @@ class StoreTailer extends AbstractCloseable
         this(queue, storePool, null);
     }
 
-    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, final LongValue indexValue) {
+    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, IndexUpdater indexUpdater) {
         boolean error = true;
         try {
             this.queue = queue;
             this.storePool = storePool;
-            this.indexValue = indexValue;
+            this.indexUpdater = indexUpdater;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
 
-            if (indexValue == null) {
+            if (indexUpdater == null) {
                 toStart();
             } else {
-                moveToIndex(indexValue.getVolatileValue());
+                moveToIndex(indexUpdater.index().getVolatileValue());
             }
             finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
             error = false;
@@ -105,12 +106,6 @@ class StoreTailer extends AbstractCloseable
 
         // always put references to "this" last.
         queue.addCloseListener(this);
-    }
-
-    @Override
-    public @NotNull StoreTailer disableThreadSafetyCheck(boolean disableThreadSafetyCheck) {
-        singleThreadedCheckDisabled(disableThreadSafetyCheck);
-        return this;
     }
 
     @Override
@@ -156,7 +151,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     protected void performClose() {
-        Closeable.closeQuietly(indexValue);
+        Closeable.closeQuietly(indexUpdater);
         // the wire ref count will be released here by setting it to null
         context.wire(null);
         final Wire w0 = wireForIndex;
@@ -487,7 +482,7 @@ class StoreTailer extends AbstractCloseable
                 // after toEnd() call, index is past the end of the queue
                 // so try to go back one (to the last record in the queue)
                 if ((int) queue.rollCycle().toSequenceNumber(index()) < 0) {
-                    long lastSeqNum = store.lastSequenceNumber(this);
+                    long lastSeqNum = store().approximateLastSequenceNumber(this);
                     if (lastSeqNum == -1) {
                         windBackCycle(cycle);
                         return moveToIndexInternal(index());
@@ -536,11 +531,17 @@ class StoreTailer extends AbstractCloseable
             nextIndex = nextIndexWithinFoundCycle(nextCycle);
         else
             try {
-                final int nextCycle0 = queue.nextCycle(this.cycle, direction);
-                if (nextCycle0 == -1)
-                    return Long.MIN_VALUE;
+                int nextCycle0 = this.cycle;
+                while (true) {
+                    nextCycle0 = queue.nextCycle(nextCycle0, direction);
+                    if (nextCycle0 == -1)
+                        return Long.MIN_VALUE;
 
-                nextIndex = nextIndexWithinFoundCycle(nextCycle0);
+                    if (cycle(nextCycle0)) {
+                        nextIndex = nextIndexWithinFoundCycle(nextCycle0);
+                        break;
+                    }
+                }
 
             } catch (ParseException e) {
                 throw new IllegalStateException(e);
@@ -575,7 +576,7 @@ class StoreTailer extends AbstractCloseable
 
         if (direction == BACKWARD) {
             try {
-                long lastSequenceNumber0 = store().lastSequenceNumber(this);
+                long lastSequenceNumber0 = store().approximateLastSequenceNumber(this);
                 return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
 
             } catch (Exception e) {
@@ -591,7 +592,7 @@ class StoreTailer extends AbstractCloseable
      */
     @Override
     public long index() {
-        return indexValue == null ? this.index : indexValue.getValue();
+        return indexUpdater == null ? this.index : indexUpdater.index().getValue();
     }
 
     @Override
@@ -787,7 +788,7 @@ class StoreTailer extends AbstractCloseable
                 resetWires();
             }
 
-            sequenceNumber = this.store.lastSequenceNumber(this);
+            sequenceNumber = this.store().approximateLastSequenceNumber(this);
         }
         // give the position of the last entry and
         // flag we want to count it even though we don't know if it will be meta data or not.
@@ -995,7 +996,8 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward: while (true) {
+                LoopForward:
+                while (true) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
@@ -1112,16 +1114,20 @@ class StoreTailer extends AbstractCloseable
         if (count <= 0)
             return false;
         final RollCycle rollCycle = queue.rollCycle();
-        moveToIndexInternal(rollCycle.toIndex(cycle, count - 1));
-        this.state = FOUND_IN_CYCLE;
-        return true;
+        if (moveToIndexInternal(rollCycle.toIndex(cycle, count - 1))) {
+            this.state = FOUND_IN_CYCLE;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     void index0(final long index) {
-        if (indexValue == null)
+        if (indexUpdater == null) {
             this.index = index;
-        else
-            indexValue.setValue(index);
+        } else {
+            indexUpdater.update(index);
+        }
     }
 
     // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
@@ -1230,7 +1236,7 @@ class StoreTailer extends AbstractCloseable
      *              Must not be null.
      * @param index The index to read the history message in the {@code queue}.
      * @return This ExcerptTailer instance.
-     * @throws IORuntimeException if the provided {@code queue} couldn't be wound to the last index.
+     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
      * @throws NullPointerException if the provided {@code queue} is null.
      */
     @NotNull
@@ -1320,9 +1326,8 @@ class StoreTailer extends AbstractCloseable
         return moveToState.indexMoveCount;
     }
 
-    @Deprecated(/* To be removed in 5.25 */) // Should not be providing accessors to reference-counted objects
     @NotNull
-    WireStore store() {
+    private SingleChronicleQueueStore store() {
         if (store == null)
             setCycle(cycle());
         return store;

@@ -47,6 +47,7 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testOnOrderIdea() {
+        ignoreException("Cannot get access to vectorizedMismatch");
         // what we expect to happen
         OrderListener listener = createMock(OrderListener.class);
         listener.onOrder(new Order("EURUSD", Side.Buy, 1.1167, 1_000_000));

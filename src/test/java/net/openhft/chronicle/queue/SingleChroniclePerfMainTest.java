@@ -18,7 +18,10 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Byteable;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.UncheckedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
@@ -64,7 +67,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
         try (ChronicleQueue chronicle = single(file).blockSize(64 << 20).build();
              ExcerptAppender appender = chronicle.createAppender()) {
-            UncheckedBytes bytes = new UncheckedBytes(NoBytesStore.NO_BYTES);
+            UncheckedBytes bytes = new UncheckedBytes(BytesStore.empty().bytesForRead());
             for (int i = 0; i < count; i++) {
                 long start = System.nanoTime();
                 try (DocumentContext dc = appender.writingDocument()) {

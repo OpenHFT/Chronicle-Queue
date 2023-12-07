@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
@@ -26,6 +27,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
@@ -78,6 +80,7 @@ public class WriteBytesTest extends QueueTestCommon {
     @Test
     public void testWriteBytesAndDump() {
         File dir = getTmpDir();
+        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(dir.getAbsolutePath()));
         final SingleChronicleQueueBuilder builder = binary(dir)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .rollCycle(TEST4_DAILY)

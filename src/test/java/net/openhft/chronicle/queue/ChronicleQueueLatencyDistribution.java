@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.threads.StackSampler;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -119,8 +120,7 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
         final File tmpDir = new File(this.getClass().getSimpleName() + "_" + System.currentTimeMillis());
         tmpDir.deleteOnExit();
         // System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder
-                .fieldlessBinary(tmpDir)
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(tmpDir, WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
                 .build()) {
 

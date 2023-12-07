@@ -18,14 +18,13 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import org.junit.Assume;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongSupplier;
 
@@ -49,6 +48,7 @@ public final class FileModificationTimeTest extends QueueTestCommon {
     @Test
     public void shouldUpdateDirectoryModificationTime() {
         final File dir = getTmpDir();
+        Assume.assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()));
         dir.mkdirs();
 
         final long startModTime = dir.lastModified();
