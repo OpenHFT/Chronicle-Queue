@@ -137,8 +137,8 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>jlbh</artifactId>
+            <version>1.24ea4</version>
             <scope>test</scope>
-            <optional>true</optional>
         </dependency>
 
         <dependency>
