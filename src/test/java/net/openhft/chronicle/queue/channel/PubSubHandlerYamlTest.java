@@ -10,7 +10,6 @@ import static net.openhft.chronicle.queue.channel.PubSubHandlerTest.createTarget
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
-
 public class PubSubHandlerYamlTest extends QueueTestCommon {
     @Test
     public void yamlTest() {

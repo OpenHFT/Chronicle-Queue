@@ -34,9 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -48,7 +46,6 @@ import static net.openhft.chronicle.queue.internal.util.InternalFileUtil.getAllO
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 public class FileUtilTest extends QueueTestCommon {

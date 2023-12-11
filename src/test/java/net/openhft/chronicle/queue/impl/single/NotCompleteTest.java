@@ -51,7 +51,6 @@ import static org.junit.Assert.*;
 @RequiredForClient
 public class NotCompleteTest extends QueueTestCommon {
 
-
     @Override
     @Before
     public void threadDump() {

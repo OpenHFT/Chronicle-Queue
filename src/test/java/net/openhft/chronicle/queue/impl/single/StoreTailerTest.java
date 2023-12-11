@@ -155,7 +155,6 @@ public class StoreTailerTest extends QueueTestCommon {
     @Test
     public void checkAfterWrittenMessageAtIndexMovesToTheCorrectIndex() {
 
-
         // Create three ChronicleQueues, one for input and two for output
         try (ChronicleQueue firstInputQueue =
                      createQueue(dataDirectory, TEST_DAILY, 1, "firstInputQueue");
@@ -247,7 +246,6 @@ public class StoreTailerTest extends QueueTestCommon {
 
         }
     }
-
 
     @Test
     public void shouldHandleCycleRoll() {

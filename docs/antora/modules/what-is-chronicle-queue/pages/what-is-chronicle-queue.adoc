@@ -69,4 +69,3 @@ Chronicle Queue supports a number of semantics:
 
 * Replay only the messages you have missed. This is supported directly using the methodReader/methodWriter builders.
 
-

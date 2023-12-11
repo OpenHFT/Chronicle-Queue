@@ -756,7 +756,6 @@ lunr.Vector = function (elements) {
   this.elements = elements || []
 }
 
-
 /**
  * Calculates the position within the vector to insert a given index.
  *
@@ -2587,7 +2586,6 @@ lunr.Builder.prototype.createFieldVectors = function () {
         termFrequencies = this.fieldTermFrequencies[fieldRef],
         terms = Object.keys(termFrequencies),
         termsLength = terms.length
-
 
     var fieldBoost = this._fields[fieldName].boost || 1,
         docBoost = this._documents[fieldRef.docRef].boost || 1

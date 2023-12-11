@@ -83,5 +83,3 @@ This way, multiple threads can be writing to the queue concurrently.
 Any message which is detected as bad (for example, the thread died), can be marked as meta-data and skipped by the reader.
 ====
 
-
-

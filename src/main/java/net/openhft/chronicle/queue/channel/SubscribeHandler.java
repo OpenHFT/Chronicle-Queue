@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.channel;
 
-
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.SyncMode;
 import net.openhft.chronicle.core.io.Closeable;
@@ -42,7 +41,6 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
     private Consumer<ExcerptTailer> subscriptionIndexController = NO_OP;
 
-
     static void queueTailer(@NotNull Pauser pauser,
                             @NotNull ChronicleChannel channel,
                             @NotNull ChronicleQueue subscribeQueue,
@@ -76,7 +74,6 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
             if (dc.isMetaData()) {
                 return true;
             }
-
 
             Wire wire1 = dc.wire();
             if (filter != null) {
@@ -189,7 +186,6 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
         this.sourceId = sourceId;
         return this;
     }
-
 
     /**
      * @param subscriptionIndexController controls where the subscriptions will start to read from, by allowing the caller to

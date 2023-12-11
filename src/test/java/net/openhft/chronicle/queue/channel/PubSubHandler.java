@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.channel;
 
-
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;

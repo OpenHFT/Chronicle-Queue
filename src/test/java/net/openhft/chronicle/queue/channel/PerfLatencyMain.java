@@ -48,7 +48,6 @@ Percentile   run1         run2         run3         run4         run5      % Var
 99.999:      22577.15      2379.78      4251.65      4595.71      4956.16        41.92
 worst:       40960.00     42270.72     43581.44     44761.09     43581.44         3.78
 
-
 -XX:+UnlockCommercialFeatures
 -XX:+FlightRecorder
 -XX:+UnlockDiagnosticVMOptions

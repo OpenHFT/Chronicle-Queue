@@ -237,7 +237,6 @@ public class TailerDirectionTest extends QueueTestCommon {
                     }
                 }
 
-
                 // Try one more time, should still not be present and should not advance the index
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
                     if (!documentContext.isPresent()) {
