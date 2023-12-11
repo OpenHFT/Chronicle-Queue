@@ -68,7 +68,6 @@ appender.writeDocument(wire -> wire.write("FirstName").text("Rob"));
 appender.writeDocument(wire -> wire.write("LastName").text("Rob"));
 ----
 
-
 === Self-describing Message
 You also have the option to write a "self-describing message". Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
 

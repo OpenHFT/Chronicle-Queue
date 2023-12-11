@@ -38,7 +38,6 @@ import static org.junit.Assert.*;
 
 public class OrderManagerTest extends QueueTestCommon {
 
-
     @Override
     @Before
     public void threadDump() {

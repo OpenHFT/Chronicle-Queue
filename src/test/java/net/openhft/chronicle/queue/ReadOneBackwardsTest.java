@@ -49,7 +49,6 @@ public class ReadOneBackwardsTest extends QueueTestCommon {
             generateHistory(4);
             myOut.myDto(new MyDto());
 
-
             ExcerptTailer tailer = q.createTailer().toEnd().direction(TailerDirection.BACKWARD);
             MethodReader reader = tailer.methodReaderBuilder()
                     .scanning(scanning)

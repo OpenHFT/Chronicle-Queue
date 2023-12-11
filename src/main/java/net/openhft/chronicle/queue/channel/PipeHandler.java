@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.channel;
 
-
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.SyncMode;
 import net.openhft.chronicle.core.Jvm;
@@ -34,7 +33,6 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
 
     private int subscribeSourceId = 0;
     private Consumer<ExcerptTailer> subscriptionIndexController = SubscribeHandler.NO_OP;
-
 
     public PipeHandler() {
     }
@@ -93,7 +91,6 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         this.subscribeSourceId = subscribeSourceId;
         return this;
     }
-
 
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {

@@ -1,7 +1,6 @@
 == System Properties
 Below, a number of relevant System Properties are listed.
 
-
 NOTE: With `getBoolean`, returns if a System Property with the provided {@code systemPropertyKey} either exists, is set to "yes" or is set to "true", see
 https://github.com/OpenHFT/Chronicle-Core/blob/351e79ed593fa656c21b4e5a540a3a5831cd06a3/src/main/java/net/openhft/chronicle/core/Jvm.java#L1184[javadoc].
 

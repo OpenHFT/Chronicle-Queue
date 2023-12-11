@@ -207,7 +207,6 @@ public class PipeHandlerTest extends QueueTestCommon {
         }
     }
 
-
     /**
      * This test verifies the functionality of setting the index upon subscription, which moves to
      * the last message in the queue. It effectively bootstraps only the last message for consumers.

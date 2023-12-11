@@ -48,7 +48,6 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Rule
     public final TemporaryFolder queueDirectory = new TemporaryFolder();
 
-
     @Override
     @Before
     public void threadDump() {
@@ -125,7 +124,6 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertEquals(3, queue.entryCount());
         }
     }
-
 
     private void expectTestText(ChronicleQueue chronicleQueue, int times) {
         try (final ExcerptTailer tailer = chronicleQueue.createTailer()) {

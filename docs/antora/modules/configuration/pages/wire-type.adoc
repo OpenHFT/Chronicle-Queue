@@ -7,7 +7,6 @@ author: Julia Gustafsson
 
 // TODO: Structure with suitable headlines
 
-
 It's possible to configure how Chronicle Queue will store the data by explicitly setting the `WireType`:
 
 For example:

@@ -950,7 +950,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             MyMarshable myMarshable = new MyMarshable();
 
-
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("myMarshable").typedMarshallable(myMarshable);
             }

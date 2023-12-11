@@ -50,7 +50,6 @@ Another example could be to write simple custom code that will encrypt the more 
 
 To enable this form of queue encryption, specify `codingSuppliers` at queue build time and supply the bespoke encryption method.
 
-
 '''
 
 <<../README.adoc#,Back to Chronicle Queue>>

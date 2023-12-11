@@ -1005,7 +1005,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                     return null;
                 }
 
-
                 throwExceptionIfClosed();
                 if (createStrategy == CreateStrategy.CREATE && !path.exists() && !dateValue.pathExists)
                     PrecreatedFiles.renamePreCreatedFileToRequiredFile(path);

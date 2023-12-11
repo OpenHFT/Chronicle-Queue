@@ -164,4 +164,3 @@ In systems that are not always active, it is advised to schedule rolls during th
 === Avoid Large Files
 It is generally recommended limiting the size of queue files to around < 250GB as unmapping a large `.cq4` file has can cause unwanted jitter. Therefore, if possible, use a more regular roll-cycle to avoid any performance penalties associated with unmapping large files.
 
-

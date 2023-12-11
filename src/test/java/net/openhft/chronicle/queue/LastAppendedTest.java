@@ -83,7 +83,6 @@ public class LastAppendedTest extends QueueTestCommon {
             msg.msg("somedata-3");
             msg.msg("somedata-4");
 
-
             final AtomicReference<String> actualValue = new AtomicReference<>();
 
             // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
@@ -121,7 +120,6 @@ public class LastAppendedTest extends QueueTestCommon {
         try (ChronicleQueue outQueue = single(outQueueDir).rollCycle(ROLL_CYCLE).sourceId(1).timeProvider(timeProvider).build();
              ChronicleQueue inQueue = single(inQueueDir).rollCycle(ROLL_CYCLE).sourceId(2).timeProvider(timeProvider).build();
              final ExcerptAppender outQueueAppender = outQueue.createAppender()) {
-
 
             // write some initial data to the inqueue
             final LATMsg msg = inQueue

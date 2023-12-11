@@ -41,7 +41,6 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8,
             new NamedThreadFactory("test"));
 
-
     @Override
     @Before
     public void threadDump() {

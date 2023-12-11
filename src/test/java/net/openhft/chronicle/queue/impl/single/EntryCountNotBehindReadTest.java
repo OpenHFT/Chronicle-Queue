@@ -109,7 +109,6 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
         assertFalse(readCount > excerptCount);
     }
 
-
     private void checkToEnd(SingleChronicleQueue queue, long readIndex) {
         final RollCycle cycleType = queue.rollCycle();
         final int cycle = cycleType.toCycle(readIndex);

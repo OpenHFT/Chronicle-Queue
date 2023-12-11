@@ -404,7 +404,6 @@ public class ToEndTest extends QueueTestCommon {
         }
     }
 
-
     @Ignore("for manual use")
     @Test
     public void shouldReuseStoreWhenNoUpdates() {

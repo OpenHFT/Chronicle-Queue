@@ -39,6 +39,3 @@ author: Julia Gustafsson
     - 20160713.cq4
 ----
 
-
-
-
