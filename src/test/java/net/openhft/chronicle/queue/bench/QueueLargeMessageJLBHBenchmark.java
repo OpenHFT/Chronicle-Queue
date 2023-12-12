@@ -62,7 +62,6 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     public static void main(String[] args) {
         Options options = CLIUtils.createOptions();
         CommandLine commandLine = CLIUtils.parseCommandLine(QueueLargeMessageJLBHBenchmark.class.getSimpleName(), args, options);
-        // disable as otherwise single GC event skews results heavily
         int throughput = MSG_THROUGHPUT / MSG_LENGTH;
         int warmUp = Math.min(50 * throughput, 12_000);
         iterations = Math.min(20 * throughput, 100_000);

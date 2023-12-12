@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.bench.multiprocess;
+package net.openhft.chronicle.queue.bench.interprocess;
 
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 

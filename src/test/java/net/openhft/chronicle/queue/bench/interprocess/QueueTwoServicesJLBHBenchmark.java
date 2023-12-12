@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.queue.bench.multiprocess;
+package net.openhft.chronicle.queue.bench.interprocess;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.NanoSampler;
@@ -60,11 +60,9 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
         datum = new Datum(CLIUtils.getIntOption(commandLine, 'p', 128));
 
-        // disable as otherwise single GC event skews results heavily
-        int iterations = CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS);
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50_000)
-                .iterations(iterations)
+                .iterations(CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS))
                 .throughput(CLIUtils.getIntOption(commandLine, 't', 10_000))
                 .recordOSJitter(commandLine.hasOption('j')).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
@@ -73,8 +71,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
         new JLBH(lth, System.out, jlbhResult -> {
             if (commandLine.hasOption('f')) {
                 try {
-                    JLBHResultSerializer.runResultToCSV(jlbhResult, "result.csv",
-                            JLBHResultSerializer.THE_PROBE);
+                    JLBHResultSerializer.runResultToCSV(jlbhResult);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

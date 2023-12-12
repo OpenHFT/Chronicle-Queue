@@ -24,7 +24,7 @@ import net.openhft.chronicle.jlbh.*;
 import net.openhft.chronicle.jlbh.util.JLBHResultSerializer;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.bench.multiprocess.ProducerService;
+import net.openhft.chronicle.queue.bench.interprocess.ProducerService;
 import net.openhft.chronicle.queue.bench.util.CLIUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.*;
@@ -59,7 +59,6 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         Options options = CLIUtils.createOptions();
         CommandLine commandLine = CLIUtils.parseCommandLine(ProducerService.class.getSimpleName(), args, options);
 
-        // disable as otherwise single GC event skews results heavily
         iterations = CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS);
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(50_000)
