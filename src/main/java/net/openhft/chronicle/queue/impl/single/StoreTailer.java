@@ -53,6 +53,12 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
  */
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
+
+    /**
+     * Temporary feature flag for demonstrating before and after benchmark comparison, will remove prior to merge.
+     */
+    private static final boolean BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED = Jvm.getBoolean("chronicle.queue.backwardsTailerToEndOptimisationEnabled", true);
+
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
     static final StringBuilderPool SBP = new StringBuilderPool();
     static final EOFException EOF_EXCEPTION = new EOFException();
@@ -648,6 +654,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private ScanResult moveToIndexResult0(final long index) {
+
         if (index < 0)
             return NOT_REACHED;
         final RollCycle rollCycle = queue.rollCycle();
@@ -966,23 +973,24 @@ class StoreTailer extends AbstractCloseable
     public ExcerptTailer originalToEnd() {
         throwExceptionIfClosed();
 
-        long index = approximateLastIndex();
+        long approximateLastIndex = approximateLastIndex();
+        long currentIndex = approximateLastIndex;
 
-        if (index == Long.MIN_VALUE) {
+        if (currentIndex == Long.MIN_VALUE) {
             if (state() == TailerState.CYCLE_NOT_FOUND)
                 state = UNINITIALISED;
             return this;
         }
-        ScanResult scanResult = moveToIndexResult(index);
+        ScanResult scanResult = moveToIndexResult(currentIndex);
         switch (scanResult) {
             case NOT_FOUND:
-                if (moveToIndexResult(index - 1) == FOUND)
+                if (moveToIndexResult(currentIndex - 1) == FOUND)
                     state = FOUND_IN_CYCLE;
                 break;
 
             case FOUND:
-                LoopForward: while (true) {
-                    final ScanResult result = moveToIndexResult(++index);
+                LoopForward: while (originalToEndLoopCondition(approximateLastIndex, currentIndex)) {
+                    final ScanResult result = moveToIndexResult(++currentIndex);
                     switch (result) {
                         case NOT_REACHED:
                             throw new NotReachedException("NOT_REACHED after FOUND");
@@ -1000,12 +1008,13 @@ class StoreTailer extends AbstractCloseable
                     }
                 }
 
-                if (direction == BACKWARD)
+                // This entire block will be removed prior to merge
+                if (!BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED && direction == BACKWARD)
                     moveToIndexResult(--index);
 
                 break;
             case NOT_REACHED:
-                throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(index));
+                throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(currentIndex));
             case END_OF_FILE:
                 state = END_OF_CYCLE;
                 break;
@@ -1015,6 +1024,17 @@ class StoreTailer extends AbstractCloseable
 
         return this;
 
+    }
+
+    private boolean originalToEndLoopCondition(long approximateLastIndex, long index) {
+        if (direction == FORWARD) {
+            return true;
+        } else if (BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED && direction == BACKWARD) {
+            // Do not let index run past the approximate last index
+            return index < approximateLastIndex;
+        } else {
+            return true;
+        }
     }
 
     @Override
