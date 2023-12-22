@@ -35,6 +35,8 @@ import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
@@ -49,6 +51,9 @@ import static net.openhft.chronicle.queue.RollCycle.MAX_INDEX_COUNT;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMarshallable, Closeable {
+
+    // FIXME Remove trace logging prior to merge, its for demonstrating the fix
+    private static final Logger log = LoggerFactory.getLogger(SCQIndexing.class);
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
 
@@ -308,6 +313,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         @NotNull final LongArrayValues array1 = arrayForAddress(wireForIndex, secondaryAddress);
         long secondaryOffset = toAddress1(index);
 
+
         do {
             long fromAddress = array1.getValueAt(secondaryOffset);
             if (fromAddress == 0) {
@@ -346,6 +352,10 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                                   final long toIndex,
                                   final long fromKnownIndex,
                                   final long knownAddress) {
+        // FIXME Remove prior to merge
+        //if (log.isTraceEnabled()) {
+//            log.trace("linearScan[fromKnownIndex={}, toIndex={}, msgsToScan={}]", fromKnownIndex, toIndex, toIndex - fromKnownIndex);
+//        }
         long start = System.nanoTime();
         if (toIndex == fromKnownIndex)
             return ScanResult.FOUND;
@@ -357,9 +367,6 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     private void checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
             start) {
-        if (!Jvm.isAssertEnabled())
-            return;
-
         long end = System.nanoTime();
         if (end > start + 100_000) {
             printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");

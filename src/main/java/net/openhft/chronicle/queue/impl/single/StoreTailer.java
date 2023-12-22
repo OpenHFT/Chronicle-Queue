@@ -31,7 +31,6 @@ import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.scoped.ScopedResourcePool;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
-import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.wire.*;
@@ -54,6 +53,12 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
  */
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
+
+    /**
+     * Temporary feature flag for demonstrating before and after benchmark comparison, will remove prior to merge.
+     */
+    private static final boolean BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED = Jvm.getBoolean("chronicle.queue.backwardsTailerToEndOptimisationEnabled", true);
+
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
     static final ScopedResourcePool<StringBuilder> SBP = StringBuilderPool.createThreadLocal(1);
     static final EOFException EOF_EXCEPTION = new EOFException();
@@ -981,7 +986,8 @@ class StoreTailer extends AbstractCloseable
     public ExcerptTailer originalToEnd() {
         throwExceptionIfClosed();
 
-        long index = approximateLastIndex();
+        long approximateLastIndex = approximateLastIndex();
+        long index = approximateLastIndex;
 
         if (index == Long.MIN_VALUE) {
             if (state() == TailerState.CYCLE_NOT_FOUND)
@@ -996,8 +1002,7 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward:
-                while (true) {
+                LoopForward: while (originalToEndLoopCondition(approximateLastIndex, index)) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
@@ -1016,7 +1021,8 @@ class StoreTailer extends AbstractCloseable
                     }
                 }
 
-                if (direction == BACKWARD)
+                // This entire block will be removed prior to merge
+                if (!BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED && direction == BACKWARD)
                     moveToIndexResult(--index);
 
                 break;
@@ -1031,6 +1037,17 @@ class StoreTailer extends AbstractCloseable
 
         return this;
 
+    }
+
+    private boolean originalToEndLoopCondition(long approximateLastIndex, long index) {
+        if (direction == FORWARD) {
+            return true;
+        } else if (BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED && direction == BACKWARD) {
+            // Do not let index run past the approximate last index
+            return index < approximateLastIndex;
+        } else {
+            return true;
+        }
     }
 
     @Override
