@@ -357,9 +357,6 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
 
     private void checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
             start) {
-        if (!Jvm.isAssertEnabled())
-            return;
-
         long end = System.nanoTime();
         if (end > start + 100_000) {
             printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
