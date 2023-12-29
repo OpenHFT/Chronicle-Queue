@@ -31,7 +31,6 @@ import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.scoped.ScopedResourcePool;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
-import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.wire.*;
@@ -981,7 +980,8 @@ class StoreTailer extends AbstractCloseable
     public ExcerptTailer originalToEnd() {
         throwExceptionIfClosed();
 
-        long index = approximateLastIndex();
+        long approximateLastIndex = approximateLastIndex();
+        long index = approximateLastIndex;
 
         if (index == Long.MIN_VALUE) {
             if (state() == TailerState.CYCLE_NOT_FOUND)
@@ -996,8 +996,7 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward:
-                while (true) {
+                LoopForward: while (originalToEndLoopCondition(approximateLastIndex, index)) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
@@ -1016,9 +1015,6 @@ class StoreTailer extends AbstractCloseable
                     }
                 }
 
-                if (direction == BACKWARD)
-                    moveToIndexResult(--index);
-
                 break;
             case NOT_REACHED:
                 throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(index));
@@ -1031,6 +1027,17 @@ class StoreTailer extends AbstractCloseable
 
         return this;
 
+    }
+
+    private boolean originalToEndLoopCondition(long approximateLastIndex, long index) {
+        if (direction == FORWARD) {
+            return true;
+        } else if (direction == BACKWARD) {
+            // Do not let index run past the approximate last index
+            return index < approximateLastIndex;
+        } else {
+            return true;
+        }
     }
 
     @Override
