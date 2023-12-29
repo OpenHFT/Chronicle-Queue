@@ -53,12 +53,6 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
  */
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
-
-    /**
-     * Temporary feature flag for demonstrating before and after benchmark comparison, will remove prior to merge.
-     */
-    private static final boolean BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED = Jvm.getBoolean("chronicle.queue.backwardsTailerToEndOptimisationEnabled", true);
-
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
     static final ScopedResourcePool<StringBuilder> SBP = StringBuilderPool.createThreadLocal(1);
     static final EOFException EOF_EXCEPTION = new EOFException();
@@ -1021,10 +1015,6 @@ class StoreTailer extends AbstractCloseable
                     }
                 }
 
-                // This entire block will be removed prior to merge
-                if (!BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED && direction == BACKWARD)
-                    moveToIndexResult(--index);
-
                 break;
             case NOT_REACHED:
                 throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(index));
@@ -1042,7 +1032,7 @@ class StoreTailer extends AbstractCloseable
     private boolean originalToEndLoopCondition(long approximateLastIndex, long index) {
         if (direction == FORWARD) {
             return true;
-        } else if (BACKWARDS_TAILER_TO_END_OPTIMISATION_ENABLED && direction == BACKWARD) {
+        } else if (direction == BACKWARD) {
             // Do not let index run past the approximate last index
             return index < approximateLastIndex;
         } else {

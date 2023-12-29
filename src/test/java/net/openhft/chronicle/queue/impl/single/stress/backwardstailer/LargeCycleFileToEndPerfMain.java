@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl.single.stress.backwardstailer;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.VanillaBytes;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -34,10 +33,6 @@ public class LargeCycleFileToEndPerfMain {
     private static final int MESSAGE_SIZE_BYTES = 256;
 
     public static void main(String[] args) {
-
-        // Toggle to turn backwards toEnd optimisation on/off
-        System.setProperty("chronicle.queue.backwardsTailerToEndOptimisationEnabled", "true");
-
         File path = Paths.get(OS.getTarget(), LargeCycleFileToEndPerfMain.class.getSimpleName()).toFile();
         cleanup(path);
         RollCycle rollCycle = LargeRollCycles.LARGE_DAILY;
@@ -68,7 +63,6 @@ public class LargeCycleFileToEndPerfMain {
     private static void measureToEndPerf(ExcerptTailer tailer, ExcerptAppender appender) {
         line();
         log.info("Measuring single shot tailer.toEnd() performance");
-        log.info("chronicle.queue.backwardsTailerToEndOptimisationEnabled: {}", Jvm.getBoolean("chronicle.queue.backwardsTailerToEndOptimisationEnabled"));
         log.info("tailer.index()[before]: " + tailer.index());
         long start = System.nanoTime();
         tailer.toEnd();
