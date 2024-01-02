@@ -854,6 +854,16 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
+    @Override
+    public boolean writingIsComplete() {
+        return context.writingIsComplete();
+    }
+
+    @Override
+    public void rollbackIfNotComplete() {
+        context.rollbackIfNotComplete();
+    }
+
     private class Finalizer {
         @Override
         protected void finalize() throws Throwable {
@@ -1121,6 +1131,19 @@ class StoreAppender extends AbstractCloseable
         @Override
         public void chainedElement(boolean chainedElement) {
             this.chainedElement = chainedElement;
+        }
+
+        public boolean writingIsComplete() {
+            return isClosed;
+        }
+
+        @Override
+        public void rollbackIfNotComplete() {
+            if (isClosed) return;
+            chainedElement = false;
+            count = 1;
+            rollbackOnClose = true;
+            close();
         }
     }
 }
