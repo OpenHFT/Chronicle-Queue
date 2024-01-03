@@ -1,5 +1,5 @@
-* xref:queue-operations.adoc[Queue operations]
+* xref:queue-operations.adoc[Queue Operations]
 ** xref:appending.adoc[Appending]
 ** xref:tailing.adoc[Tailing]
-//** xref:indexing.adoc[Indexing]
-** xref:read-write-proxies.adoc[Read/write proxies]
+** xref:indexing.adoc[Indexing]
+** xref:read-write-proxies.adoc[Read/Write Proxies]

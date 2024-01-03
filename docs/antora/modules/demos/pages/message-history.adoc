@@ -7,7 +7,7 @@ author: Peter Lawrey
 
 This demo shows a publisher writing to a queue while a bridger process writes to a second queue, while `MessageHistory` messages are added to each entry.
 
-NOTE: The source code for this demo can be found link:https://github.com/OpenHFT/Chronicle-Queue-Demo/tree/master/message-history-demo[here].
+NOTE: The source code for this demo can be found link:https://github.com/OpenHFT/Chronicle-Queue-Demo/tree/master/message-history-demo[here,window=blank].
 
 == Running the Demo from IntelliJ
 The following steps are needed

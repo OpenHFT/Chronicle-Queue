@@ -5,7 +5,7 @@ author: Julia Gustafsson
 :navtitle: Demos
 :source-highlighter: highlight.js
 
-See runnable demos in https://github.com/OpenHFT/Chronicle-Queue-Demo
+See runnable demos in link:https://github.com/OpenHFT/Chronicle-Queue-Demo[https://github.com/OpenHFT/Chronicle-Queue-Demo,window=blank]
 // Commented out because of incomplete sentences, errors, irrelevant information and figures are not ready
 //Chronicle have tutorials in
 //The TensorFlow tutorials are written as Jupyter notebooks and run directly in Google Colab—a hosted notebook environment that requires no setup. Click the Run in Google Colab button.

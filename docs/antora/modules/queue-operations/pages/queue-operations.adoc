@@ -14,6 +14,6 @@ The details of these concepts are covered in the respective chapters:
 * xref:appending.adoc[Appending]
 * xref:tailing.adoc[Tailing]
 
-There is also a separate chapter that describes data can be managed using a read/write proxies.
+There is also a separate chapter that describes how data can be managed using a read/write proxies.
 
 * xref:read-write-proxies.adoc[Read/write proxies]

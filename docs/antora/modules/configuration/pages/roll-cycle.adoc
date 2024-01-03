@@ -34,7 +34,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
     .rollCycle(RollCycles.DAILY)
     .build();
 ----
-All available roll-cycles can be shown under <<Available roll-cycles>>.
+All available roll-cycles can be shown under <<available_roll_cycles>>.
 
 NOTE: The default roll-cycle is `RollCycle.HOURLY`.
 
@@ -73,7 +73,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
 
 IMPORTANT: We do not recommend changing the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
 
-== Available Roll-Cycles
+== Available Roll-Cycles [[available_roll_cycles]]
 As described earlier, the roll-cycle determines how often a new queue is created. However, each roll-cycle also leverages queues with a varying message capacity. This results in different roll-cycles having a maximum capacity in terms of throughput.
 
 The available roll-cycles and their capacities are summarized in the table below:
@@ -137,7 +137,7 @@ Time zone roll cycles is an *Enterprise feature* and only applies to daily rollo
 === Configuration
 Timezone rolling is set using the configuration method `rollTime(LocalTime rollTime, ZoneId zoneId)`. It is provided an instance of `LocalTime.of(int hour, int minute)` describing at what hour and minute of the day to roll, relative to the given time zone. If no time zone is provided, the default is UTC.
 
-NOTE: Read more about available ZoneId:s in the link:https://docs.oracle.com/javase/8/docs/api/java/util/TimeZone.html[here].
+NOTE: Read more about the available ZoneId's link:https://docs.oracle.com/javase/8/docs/api/java/util/TimeZone.html[here].
 
 Below is an example of a queue that performs daily rolls at 5 PM, London time:
 

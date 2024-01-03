@@ -1,2 +1,2 @@
-* xref:quick-start.adoc[Getting started]
+* xref:quick-start.adoc[Getting Started]
 ** xref:glossary.adoc[Glossary]
