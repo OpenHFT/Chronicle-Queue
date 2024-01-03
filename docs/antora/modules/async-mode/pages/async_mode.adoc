@@ -1,6 +1,6 @@
 = Async Mode
-:toc:
-:toc-title: Contents
+:reftext: Async Mode
+:navtitle: Async Mode
 :toclevels: 1
 
 == Chronicle Async Mode
@@ -17,14 +17,11 @@ underlying OS and hardware. This can be enabled by setting `readBufferMode` and 
 Tests on real production client workloads have shown that configuring these parameters on a loaded system can
 immediately reduce latency outlier events by 98%.
 
-https://jerryshea.github.io/2018/07/27/RingBuffer.html[This article] gives some examples of how high-percentile
-latencies can be reduced.
-
 === The mechanics of Chronicle Async Mode
 
 Chronicle Queue Enterprise Async Mode is a multi-writer, multi-reader, zero-garbage collection, monitored buffered queue
 implementation which takes `Bytes`. As the Chronicle stack is built on `Bytes`, you can use the buffer for byte arrays, packed objects, or you can serialise
-(or de-serialise objects out of, or into, it using https://github.com/OpenHFT/Chronicle-Wire[Chronicle Wire].
+(or de-serialise objects out of, or into, it using https://github.com/OpenHFT/Chronicle-Wire[Chronicle Wire,window=_blank].
 
 Backing the buffer with a persistent BytesStore (that is, one backed with a memory-mapped file) means it will be
 visible to multiple processes. All processes can write to, and read from, the buffer.

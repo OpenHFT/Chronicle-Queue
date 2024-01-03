@@ -65,7 +65,7 @@ The first 30-bits of the header contains the length of the data in order for rea
 * Whether this message is user-data, or meta-data required to support the queue itself, used internally.
 * Whether the message is complete or not.
 
-.A logical representation of the Queue message header. The actual alignment in memory depends on the link:https://en.wikipedia.org/wiki/Endianness[endianness].
+.A logical representation of the Queue message header. The actual alignment in memory depends on the link:https://en.wikipedia.org/wiki/Endianness[endianness,window=blank].
 image::message-header.svg[Queue Message Header, width=800px]
 
 [NOTE]

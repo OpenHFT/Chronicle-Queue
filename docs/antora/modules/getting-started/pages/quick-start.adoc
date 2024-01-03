@@ -7,11 +7,11 @@ author: Julia Gustafsson
 
 This section helps you get started with Chronicle Queue in a few minutes. The process can be summed up in five steps:
 
-. <<Installing Chronicle Queue>>
-. <<Creating a New Queue>>
-. <<Writing to a Queue>>
-. <<Reading From a Queue>>
-. <<Cleaning Up>>
+. <<installing_chronicle_queue>>
+. <<creating_a_new_queue>>
+. <<writing_to_a_queue>>
+. <<reading_from_a_queue>>
+. <<cleaning_up>>
 
 The provided guide does not intend to be an exhaustive explanation of these steps but rather provide enough information to get you up and running quickly. Hence, most of the topics are explained in greater depth throughout the Chronicle Queue documentation.
 
@@ -22,7 +22,7 @@ Before starting with the set up, make sure your development environment meets th
 * Java 8 update 180+ or later
 * Access to the internet to allow Maven or Gradle to download the JARs needed
 
-== Installing Chronicle Queue
+== Installing Chronicle Queue [[installing_chronicle_queue]]
 The installation is performed by notifying your build tool that the Chronicle Queue dependency is required to compile your source code. Below are instructions for installation using Maven or Gradle.
 
 === Maven
@@ -36,7 +36,7 @@ Install Chronicle Queue with Maven by adding the following code in the project's
   <version><!--Latest version--></version> #<1>
 </dependency>
 ----
-<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central].
+<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central,window=blank].
 
 === Gradle
 Install Chronicle Queue with Gradle by adding the following code in the project's build.gradle-file:
@@ -47,12 +47,12 @@ dependencies {
   implementation 'net.openhft:chronicle-queue:<Latest version>' #<1>
 }
 ----
-<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central].
+<1> To be replaced with the latest version on link:https://search.maven.org/artifact/net.openhft/chronicle-queue[Maven Central,window=blank].
 
 == Hello World with Chronicle Queue
 Now that the installation is complete it is time to create a first queue and try appending and reading messages from it.
 
-=== Creating a New Queue
+=== Creating a New Queue [[creating_a_new_queue]]
 A new Chronicle Queue is obtained from a builder by passing the field `singleBuilder` the path where the queue is to be stored. The example below creates an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
 
 [source, java]
@@ -68,7 +68,7 @@ The queue files will reside in the directory `getting-started` and files are nam
 ${java.io.tmpdir}/getting-started/{today}.cq4
 ----
 
-=== Writing to a Queue
+=== Writing to a Queue [[writing_to_a_queue]]
 Messages are written, or appended, to a queue using an appender. The appender writes messages to the end of the queue only, there is no way to insert messages at a specific location.
 
 Here is how you can append a simple text message containing the text "Hello World!":
@@ -81,7 +81,7 @@ appender.writeText("Hello World!"); #<2>
 <1> Creates an appender
 <2> Writes "Hello World!" to the queue
 
-=== Reading From a Queue
+=== Reading From a Queue [[reading_from_a_queue]]
 Reading a from a queue is easiest done using a tailer, namely `ExcerptTailer`. The term _tailing_ stems from reading from the queue's tail, i.e. the end of the queue. However, you are not limited to only read from the end of the queue using the tailer.
 
 Here is how it is used to read the "Hello World" message that was just written to the queue:
@@ -102,7 +102,7 @@ You can also dump the raw contents of the queue to the console using the method 
 queue.dump();
 ----
 
-=== Cleaning Up
+=== Cleaning Up [[cleaning_up]]
 Chronicle Queue stores its data off-heap, therefore it is recommended that you call `.close()` once you have finished working with Chronicle Queue to free up resources.
 
 [source, java]

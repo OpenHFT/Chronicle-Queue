@@ -5,8 +5,6 @@ author: Julia Gustafsson
 :navtitle: Performance tuning
 :source-highlighter: highlight.js
 
-NOTE: TBW, I have only pasted text here that seems to fit under this category
-
 == Using High Resolution Timings Across Machines
 On most systems `System.nanoTime()` is roughly the number of nanoseconds since the system last rebooted (although different JVMs may behave differently). This is the same across JVMs on the same machine, but wildly different between machines. The absolute difference when it comes to machines is meaningless. However, the information can be used to detect outliers; you can’t determine what the best latency is, but you can determine how far off the best latencies you are. This is useful if you are focusing on the 99th percentile latencies. We have a class called `RunningMinimum` to obtain timings from different machines, while compensating for a drift in the nanoTime between machines. The more often you take measurements, the more accurate this running minimum is.
 

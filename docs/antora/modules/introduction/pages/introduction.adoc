@@ -32,7 +32,7 @@ NOTE: The documentation primarily covers usage of Chronicle Queue with Java. If 
 == Where to Begin
 If this is your first time getting to know Chronicle Queue, you may want to familiarize yourself with the overall capabilities of Queue by reading xref:what-is-chronicle-queue:what-is-chronicle-queue.adoc[What is Chronicle Queue?]. Thereafter, follow the xref:getting-started:quick-start.adoc[Quick-start Guide] to get set up in minutes. Then you are ready to explore the rest of the chapters that explores
 
-In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You find our demonstrations [here].
+In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You can find our demos link:https://github.com/OpenHFT/Chronicle-Queue-Demo/tree/main[here,window=blank].
 
 == Chronicle Queue Enterprise
 Chronicle Queue Enterprise is a commercially supported version of Chronicle Queue OSS. This documentation covers the open source functionality but is also extended by a few chapters describing enterprise specific features. These sections are clearly marked with a star-symbol (★) and include:
@@ -50,4 +50,4 @@ For more information on Chronicle Queue Enterprise, please contact link:mailto:s
 == Phone Home
 Chronicle Queue sends usage data and platform information via a secure connection to Google Analytics, a web analytics service provided by Google, Inc.("Google"). This data is collected to learn how Chronicle's products are used, which in turn helps us focus our resources more efficiently in our effort to improve our libraries and provide better and more widely adopted solutions for the community.
 
-Learn more about what data is collected and why link:https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc[here.]
+Learn more about what data is collected and why link:https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc[here.,window=blank]
