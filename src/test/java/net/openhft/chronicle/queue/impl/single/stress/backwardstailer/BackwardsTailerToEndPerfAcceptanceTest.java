@@ -12,7 +12,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.jupiter.api.Disabled;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -25,8 +24,6 @@ import java.util.List;
 
 import static org.junit.Assert.assertTrue;
 
-@Ignore("Disabled as too flaky when run as part of the full test suite")
-@Disabled("Disabled as too flaky when run as part of the full test suite")
 @RunWith(Parameterized.class)
 public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
 
@@ -65,24 +62,28 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
         log.info("Baseline performance captured. rollCycle={}", rollCycle);
     }
 
+    @Ignore("Disabled as too flaky when run as part of the full test suite")
     @Test
     public void fromBeginning() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration);
     }
 
+    @Ignore("Disabled as too flaky when run as part of the full test suite")
     @Test
     public void lessThanBoundary() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration);
     }
 
+    @Ignore("Disabled as too flaky when run as part of the full test suite")
     @Test
     public void onBoundary() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing(), TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration);
     }
 
+    @Ignore("Disabled as too flaky when run as part of the full test suite")
     @Test
     public void greaterThanBoundary() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() - 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
