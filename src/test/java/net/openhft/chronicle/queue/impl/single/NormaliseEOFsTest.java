@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -15,6 +16,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -26,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class NormaliseEOFsTest extends QueueTestCommon {
 
     private static final String LOG_LEVEL_PROPERTY = "org.slf4j.simpleLogger.log." + StoreAppender.class.getName();
-    private static final String QUEUE_PATH = "normaliseEOFsTest";
+    private static final File QUEUE_PATH = Paths.get(OS.getTarget(), "normaliseEOFsTest").toFile();
     private Map<ExceptionKey, Integer> exceptionMap;
 
     @Before
@@ -55,6 +59,11 @@ public class NormaliseEOFsTest extends QueueTestCommon {
         System.clearProperty(LOG_LEVEL_PROPERTY);
     }
 
+    @After
+    public void cleanupQueueData() {
+        IOTools.deleteDirWithFilesOrThrow(QUEUE_PATH);
+    }
+
     @Test
     public void normaliseShouldResumeFromPreviousNormalisation() {
         SetTimeProvider setTimeProvider = new SetTimeProvider();
@@ -65,7 +74,8 @@ public class NormaliseEOFsTest extends QueueTestCommon {
                 excerptAppender.normaliseEOFs();
             }
             final Pattern logPattern = Pattern.compile("Normalising from cycle (\\d+)");
-            final List<Integer> startIndices = exceptionMap.keySet().stream()
+            // Note a defensive copy of exceptionMap is used as this code has yielded concurrent modification exceptions leading to flakiness under load
+            final List<Integer> startIndices = new LinkedHashMap<>(exceptionMap).keySet().stream()
                     .map(exceptionKey -> logPattern.matcher(exceptionKey.message))
                     .filter(Matcher::matches)
                     .map(matcher -> Integer.parseInt(matcher.group(1)))
