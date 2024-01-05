@@ -76,7 +76,7 @@ public class ChronicleQueueTestBase extends QueueTestCommon {
     }
 
     @NotNull
-    public File getTmpDir() {
+    protected File getTmpDir() {
         final String methodName = testName.getMethodName();
         String name = methodName == null ? "unknown" : methodName;
         final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
