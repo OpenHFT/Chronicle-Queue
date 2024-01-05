@@ -30,20 +30,13 @@ import net.openhft.chronicle.testframework.internal.ExceptionTracker;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
-import java.io.File;
-import java.nio.file.Paths;
 import java.util.function.Predicate;
 
 public class QueueTestCommon {
     protected ThreadDump threadDump;
     protected boolean finishedNormally;
     protected ExceptionTracker<ExceptionKey> exceptionTracker;
-
-    @Rule
-    private TestName testName = new TestName();
 
     @Before
     public void assumeFinishedNormally() {
