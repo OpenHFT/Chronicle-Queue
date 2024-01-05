@@ -5,7 +5,6 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +21,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
-public class BackwardsTailerBoundaryTest extends QueueTestCommon {
+public class BackwardsTailerBoundaryTest extends ChronicleQueueTestBase {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerBoundaryTest.class);
 
@@ -37,7 +36,7 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         final List<Object[]> data = new ArrayList<>();
-        data.add(new Object[]{TestRollCycles.TEST4_DAILY});
+        data.add(new Object[]{RollCycles.TEST4_DAILY});
         return data;
     }
 

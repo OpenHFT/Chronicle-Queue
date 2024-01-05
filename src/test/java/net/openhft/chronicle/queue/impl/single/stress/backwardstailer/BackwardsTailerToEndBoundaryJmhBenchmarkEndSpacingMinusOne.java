@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.impl.single.stress.backwardstailer;
 
 import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
+import net.openhft.chronicle.queue.RollCycles;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -15,7 +15,7 @@ public class BackwardsTailerToEndBoundaryJmhBenchmarkEndSpacingMinusOne {
 
     @Setup(Level.Trial)
     public void setup() {
-        RollCycle rollCycle = LargeRollCycles.LARGE_DAILY;
+        RollCycle rollCycle = RollCycles.LARGE_DAILY;
         state.setup(rollCycle.defaultIndexSpacing() - 1);
     }
 

@@ -5,13 +5,9 @@ import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,14 +24,14 @@ import java.util.concurrent.TimeUnit;
 public class LargeCycleFileToEndPerfMain {
 
     private static final Logger log = LoggerFactory.getLogger(LargeCycleFileToEndPerfMain.class);
-    private static final int MESSAGE_COUNT = LargeRollCycles.LARGE_DAILY.defaultIndexCount() * LargeRollCycles.LARGE_DAILY.defaultIndexSpacing() * 25;
+    private static final int MESSAGE_COUNT = RollCycles.LARGE_DAILY.defaultIndexCount() * RollCycles.LARGE_DAILY.defaultIndexSpacing() * 25;
     private static final int WARMUP_ITERATIONS = 10_000;
     private static final int MESSAGE_SIZE_BYTES = 256;
 
     public static void main(String[] args) {
         File path = Paths.get(OS.getTarget(), LargeCycleFileToEndPerfMain.class.getSimpleName()).toFile();
         cleanup(path);
-        RollCycle rollCycle = LargeRollCycles.LARGE_DAILY;
+        RollCycle rollCycle = RollCycles.LARGE_DAILY;
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.set(System.currentTimeMillis());
 

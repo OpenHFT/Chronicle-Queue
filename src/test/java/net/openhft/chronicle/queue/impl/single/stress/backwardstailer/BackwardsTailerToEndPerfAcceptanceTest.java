@@ -5,9 +5,6 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
-import net.openhft.chronicle.queue.rollcycles.LegacyRollCycles;
-import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +21,7 @@ import java.util.List;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
+public class BackwardsTailerToEndPerfAcceptanceTest extends ChronicleQueueTestBase {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerToEndPerfAcceptanceTest.class);
 
@@ -42,13 +39,13 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         final List<Object[]> data = new ArrayList<>();
-        data.add(new Object[]{TestRollCycles.TEST_HOURLY, TailerIndexStartPosition.BEGINNING});
+        data.add(new Object[]{RollCycles.TEST_HOURLY, TailerIndexStartPosition.BEGINNING});
 
-        data.add(new Object[]{LegacyRollCycles.DAILY, TailerIndexStartPosition.BEGINNING});
-        data.add(new Object[]{LegacyRollCycles.DAILY, TailerIndexStartPosition.MIDDLE});
+        data.add(new Object[]{RollCycles.DAILY, TailerIndexStartPosition.BEGINNING});
+        data.add(new Object[]{RollCycles.DAILY, TailerIndexStartPosition.MIDDLE});
 
-        data.add(new Object[]{LargeRollCycles.LARGE_DAILY, TailerIndexStartPosition.BEGINNING});
-        data.add(new Object[]{TestRollCycles.TEST2_DAILY, TailerIndexStartPosition.BEGINNING});
+        data.add(new Object[]{RollCycles.LARGE_DAILY, TailerIndexStartPosition.BEGINNING});
+        data.add(new Object[]{RollCycles.TEST2_DAILY, TailerIndexStartPosition.BEGINNING});
         return data;
     }
 
@@ -98,7 +95,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
         for (int i = 0; i < entriesToWrite; i++) {
             appender.writeText("message_" + i);
 
-            if (rollCycle.equals(TestRollCycles.TEST2_DAILY)) {
+            if (rollCycle.equals(RollCycles.TEST2_DAILY)) {
                 log.info("lastIndexAppended={}", appender.lastIndexAppended());
             }
 
