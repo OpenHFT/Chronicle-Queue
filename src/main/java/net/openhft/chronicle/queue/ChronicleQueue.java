@@ -169,9 +169,9 @@ public interface ChronicleQueue extends Closeable {
      *
      * @param id unique id for a tailer which uses to track where it was up to
      * @return a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}
-     * @see #createTailer()
-     * @throws net.openhft.chronicle.core.io.ClosedIllegalStateException if required resources are closed
+     * @throws net.openhft.chronicle.core.io.ClosedIllegalStateException                if required resources are closed
      * @throws net.openhft.chronicle.queue.impl.single.NamedTailerNotAvailableException if named tailer is not available
+     * @see #createTailer()
      */
     @NotNull
     default ExcerptTailer createTailer(String id) {
@@ -196,9 +196,7 @@ public interface ChronicleQueue extends Closeable {
      * this method every time an appender is needed.
      *
      * @return Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread
-     * @deprecated It is recommended to use {@link #createAppender()} instead
      */
-    @Deprecated(/* To be removed in x.27 */)
     @NotNull
     ExcerptAppender acquireAppender();
 
