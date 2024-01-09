@@ -507,8 +507,13 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
-        throwExceptionIfClosed();
-        if (readOnly)
+        return ThreadLocalAppender.acquireThreadLocalAppender(this);
+    }
+
+    @NotNull
+    ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
+        queue.throwExceptionIfClosed();
+        if (queue.readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
         ExcerptAppender res = strongExcerptAppenderThreadLocal.get();
