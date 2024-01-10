@@ -13,6 +13,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static org.junit.Assert.*;
 
 public class BrokenChainTest extends QueueTestCommon {
@@ -28,7 +29,7 @@ public class BrokenChainTest extends QueueTestCommon {
     public void brokenChainQueue() {
         try (ChronicleQueue queue = ChronicleQueue.single(OS.getTarget() + "/brokernChain-" + System.nanoTime());
              // using createAppender() doesn't work as the chained methods uses acquireAppender()
-             ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = acquireThreadLocalAppender(queue);
              ExcerptTailer tailer = queue.createTailer()) {
 
             First writer = appender.methodWriter(First.class);

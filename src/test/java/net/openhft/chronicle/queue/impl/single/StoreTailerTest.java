@@ -41,6 +41,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
@@ -213,7 +214,7 @@ public class StoreTailerTest extends QueueTestCommon {
             outputWriter.onEvent("out1");
 
             // Get the index of the last message appended to the output queue
-            long index = outputQueue.acquireAppender().lastIndexAppended();
+            long index = acquireThreadLocalAppender(outputQueue).lastIndexAppended();
             // Get the current indices of the tailers for the input queues
             index1 = tailer1.index();
             index2 = tailer2.index();

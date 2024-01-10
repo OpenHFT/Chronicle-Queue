@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
@@ -51,7 +52,7 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
         @NotNull File path = getTmpDir();
         IOTools.deleteDirWithFiles(path);
         try (SingleChronicleQueue queue = createQueue(path, rollCycle);
-             ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = acquireThreadLocalAppender(queue);
              ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD)) {
 
             assertEquals("Backwards tailer should start at index 0 when no queue data", 0, tailer.index());

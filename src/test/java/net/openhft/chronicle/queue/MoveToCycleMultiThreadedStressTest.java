@@ -16,6 +16,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
+
 public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private ThreadLocal<ExcerptTailer> tailer;
@@ -58,7 +60,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
                 .build()) {
             this.queue = q;
             tailer = ThreadLocal.withInitial(q::createTailer);
-            ExcerptAppender excerptAppender = q.acquireAppender();
+            ExcerptAppender excerptAppender = acquireThreadLocalAppender(q);
             excerptAppender.writeText("first");
             updateLast(excerptAppender);
 
@@ -90,7 +92,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private Void append() {
 
-        final ExcerptAppender excerptAppender = queue.acquireAppender();
+        final ExcerptAppender excerptAppender = acquireThreadLocalAppender(queue);
 
         for (int i = 0; i < 50; i++) {
             excerptAppender.writeText("hello");

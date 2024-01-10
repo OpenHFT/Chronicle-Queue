@@ -13,6 +13,7 @@ import java.io.File;
 import java.nio.file.Paths;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 
 public class BackwardsTailerJmhState {
 
@@ -31,7 +32,7 @@ public class BackwardsTailerJmhState {
                 .rollCycle(rollCycle)
                 .build();
         log.info("Populating queue with data");
-        try (ExcerptAppender appender = queue.acquireAppender()) {
+        try (ExcerptAppender appender = acquireThreadLocalAppender(queue)) {
             for (int i = 0; i < numberOfEntries; i++) {
                 appender.writeText(Integer.toString(i));
             }

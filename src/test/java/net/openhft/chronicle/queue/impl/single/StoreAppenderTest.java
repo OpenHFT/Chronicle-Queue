@@ -37,6 +37,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -58,7 +59,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Test
     public void clearUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> queue.acquireAppender().singleThreadedCheckReset());
+            assertThrows(UnsupportedOperationException.class, () -> acquireThreadLocalAppender(queue).singleThreadedCheckReset());
         }
     }
 
@@ -66,7 +67,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Test
     public void resetUsedByThreadThrowsUnsupportedOperationException() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> queue.acquireAppender().singleThreadedCheckReset());
+            assertThrows(UnsupportedOperationException.class, () -> acquireThreadLocalAppender(queue).singleThreadedCheckReset());
         }
     }
 

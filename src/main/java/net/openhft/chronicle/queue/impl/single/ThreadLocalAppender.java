@@ -1,8 +1,17 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 
-public class ThreadLocalAppender {
+/**
+ * Internal implementation class that enables the use of a thread local appender. Please ensure that you carefully read
+ * the javadoc and understand the lifecycle of this thread-local appender before use.
+ */
+public final class ThreadLocalAppender {
+
+    private ThreadLocalAppender() {
+        // Intentional no-op
+    }
 
     /**
      * Returns a ExcerptAppender for the given ChronicleQueue that is local to the current Thread.
@@ -18,8 +27,13 @@ public class ThreadLocalAppender {
      * this method every time an appender is needed.
      *
      * @return Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread
+     * @throws IllegalArgumentException if the queue it is passed is not an instance of {@link SingleChronicleQueue}
      */
-    public static ExcerptAppender acquireThreadLocalAppender(SingleChronicleQueue queue) {
-        return queue.acquireThreadLocalAppender(queue);
+    public static ExcerptAppender acquireThreadLocalAppender(ChronicleQueue queue) {
+        if (!(queue instanceof SingleChronicleQueue)) {
+            throw new IllegalArgumentException("acquireThreadLocalAppender only accepts instances of SingleChronicleQueue");
+        }
+        SingleChronicleQueue singleChronicleQueue = (SingleChronicleQueue) queue;
+        return singleChronicleQueue.acquireThreadLocalAppender(singleChronicleQueue);
     }
 }

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
@@ -113,7 +114,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     private long runTest(int entriesToWrite, TailerDirection tailerDirection, TailerIndexStartPosition tailerIndexStartPosition, RollCycle rollCycle) {
         @NotNull File path = getTmpDir();
         try (SingleChronicleQueue queue = createQueue(path, rollCycle);
-             ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = acquireThreadLocalAppender(queue);
              ExcerptTailer tailer = queue.createTailer().direction(tailerDirection)) {
             populateQueue(entriesToWrite, appender);
 

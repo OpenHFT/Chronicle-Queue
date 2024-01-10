@@ -36,6 +36,7 @@ import java.nio.file.Paths;
 import java.util.Random;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
@@ -105,7 +106,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
             thread.start();
 
             UncheckedBytes<BytesStore> bytes = new UncheckedBytes<>(BytesStore.empty().bytesForRead());
-            try (ExcerptAppender appender = chronicle.acquireAppender()) {
+            try (ExcerptAppender appender = acquireThreadLocalAppender(chronicle)) {
                 for (int i = 0; i < count; i++) {
                     long start = System.nanoTime();
                     try (DocumentContext dc = appender.writingDocument()) {

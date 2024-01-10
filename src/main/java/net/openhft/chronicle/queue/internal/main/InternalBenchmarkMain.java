@@ -35,6 +35,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.locks.LockSupport;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
+
 public class InternalBenchmarkMain {
     static volatile boolean running = true;
     static int throughput = Integer.getInteger("throughput", 250); // MB/s
@@ -72,7 +74,7 @@ public class InternalBenchmarkMain {
 
         // Pretoucher will only work with Queue Enterprise in the path
         Thread pretoucher = new Thread(() -> {
-            ExcerptAppender appender = queue.acquireAppender();
+            ExcerptAppender appender = acquireThreadLocalAppender(queue);
             Thread thread = Thread.currentThread();
             while (!thread.isInterrupted()) {
                 appender.pretouch();
@@ -112,7 +114,7 @@ public class InternalBenchmarkMain {
         long next = System.nanoTime();
         long end = (long) (next + runtime * 1e9);
 
-        ExcerptAppender appender = queue.acquireAppender();
+        ExcerptAppender appender = acquireThreadLocalAppender(queue);
         while (end > System.nanoTime()) {
             long start = System.nanoTime();
             try (DocumentContext dc = appender.writingDocument(false)) {
