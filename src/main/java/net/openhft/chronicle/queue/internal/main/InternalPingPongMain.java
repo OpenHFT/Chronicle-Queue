@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
-
 public final class InternalPingPongMain {
     //    static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 30); // seconds
@@ -98,7 +96,7 @@ public final class InternalPingPongMain {
             Jvm.pause(100);
 
             final long finish = System.currentTimeMillis() + runtime * 1000L;
-            final ExcerptAppender appender = acquireThreadLocalAppender(queue);
+            final ExcerptAppender appender = queue.createAppender();
             while (System.currentTimeMillis() < finish) {
                 if (readCount.get() < writeCount.get()) {
                     Thread.yield();

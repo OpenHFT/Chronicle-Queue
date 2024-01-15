@@ -16,8 +16,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
-
 public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private ThreadLocal<ExcerptTailer> tailer;
@@ -57,10 +55,10 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .rollCycle(net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY)
-                .build()) {
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
             this.queue = q;
             tailer = ThreadLocal.withInitial(q::createTailer);
-            ExcerptAppender excerptAppender = acquireThreadLocalAppender(q);
             excerptAppender.writeText("first");
             updateLast(excerptAppender);
 
@@ -92,14 +90,15 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private Void append() {
 
-        final ExcerptAppender excerptAppender = acquireThreadLocalAppender(queue);
+        try (final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-        for (int i = 0; i < 50; i++) {
-            excerptAppender.writeText("hello");
-            updateLast(excerptAppender);
-            Jvm.pause(100);
+            for (int i = 0; i < 50; i++) {
+                excerptAppender.writeText("hello");
+                updateLast(excerptAppender);
+                Jvm.pause(100);
+            }
+            return null;
         }
-        return null;
     }
 
     private void updateLast(ExcerptAppender excerptAppender) {

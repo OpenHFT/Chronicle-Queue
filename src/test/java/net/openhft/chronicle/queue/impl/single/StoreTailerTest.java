@@ -41,7 +41,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
@@ -163,7 +162,8 @@ public class StoreTailerTest extends QueueTestCommon {
              ChronicleQueue secondInputQueue =
                      createQueue(dataDirectory, TEST_DAILY, 2, "secondInputQueue");
              ChronicleQueue outputQueue =
-                     createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue")) {
+                     createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue");
+             ExcerptAppender appender = outputQueue.createAppender()) {
 
             // Create two MethodWriters for writing data to the input queues
             final OnEvents firstWriter = firstInputQueue
@@ -214,7 +214,7 @@ public class StoreTailerTest extends QueueTestCommon {
             outputWriter.onEvent("out1");
 
             // Get the index of the last message appended to the output queue
-            long index = acquireThreadLocalAppender(outputQueue).lastIndexAppended();
+            long index = appender.lastIndexAppended();
             // Get the current indices of the tailers for the input queues
             index1 = tailer1.index();
             index2 = tailer2.index();

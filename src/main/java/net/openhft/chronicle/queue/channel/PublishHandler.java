@@ -13,7 +13,6 @@ import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
 import net.openhft.chronicle.wire.channel.ChronicleContext;
 
 import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 
 public class PublishHandler extends AbstractHandler<PublishHandler> {
     private String publish;
@@ -22,7 +21,7 @@ public class PublishHandler extends AbstractHandler<PublishHandler> {
 
     static void copyFromChannelToQueue(ChronicleChannel channel, Pauser pauser, ChronicleQueue publishQueue, SyncMode syncMode) {
         try (ChronicleQueue publishQ = publishQueue;
-             ExcerptAppender appender = acquireThreadLocalAppender(publishQ)) {
+             ExcerptAppender appender = publishQ.createAppender()) {
             appender.singleThreadedCheckDisabled(true);  // assume we are thread safe
 
             boolean needsSync = false;

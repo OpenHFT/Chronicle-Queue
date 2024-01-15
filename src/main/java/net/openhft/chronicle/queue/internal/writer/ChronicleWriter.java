@@ -29,8 +29,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
-
 public class ChronicleWriter {
     private Path basePath;
     private String methodName;
@@ -38,8 +36,8 @@ public class ChronicleWriter {
     private Class<?> writeTo;
 
     public void execute() throws IOException {
-        try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(this.basePath).build()) {
-            final ExcerptAppender appender = acquireThreadLocalAppender(queue);
+        try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(this.basePath).build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             for (final String file : files) {
                 final Object payload = Marshallable.fromFile(Object.class, file);

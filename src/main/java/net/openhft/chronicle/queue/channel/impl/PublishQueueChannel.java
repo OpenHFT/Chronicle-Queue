@@ -49,7 +49,6 @@ public class PublishQueueChannel implements ChronicleChannel {
     public void close() {
         Closeable.closeQuietly(
                 tailer,
-                acquireThreadLocalAppender(publishQueue),
                 publishQueue);
     }
 

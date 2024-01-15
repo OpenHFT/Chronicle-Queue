@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
@@ -126,10 +125,11 @@ public class NotCompleteTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
 
                 // do an empty write
-                ExcerptAppender appender = acquireThreadLocalAppender(queueWriter);
-                DocumentContext wd = appender.writingDocument();
-                wd.rollbackOnClose();
-                wd.close();
+                try (ExcerptAppender appender = queueWriter.createAppender()) {
+                    DocumentContext wd = appender.writingDocument();
+                    wd.rollbackOnClose();
+                    wd.close();
+                }
                 // check queue unchanged
                 String dump = cleanQueueDump(queueWriter.dump());
                 assertEquals("queue should be unchanged by the failed (rollback) write", cleanedQueueDump, dump);
@@ -171,9 +171,10 @@ public class NotCompleteTest extends QueueTestCommon {
     }
 
     private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
-        ExcerptAppender appender = acquireThreadLocalAppender(queue);
-        PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
-        action.accept(proxy, queue);
+        try (ExcerptAppender appender =queue.createAppender()) {
+            PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
+            action.accept(proxy, queue);
+        }
     }
 
     @After
