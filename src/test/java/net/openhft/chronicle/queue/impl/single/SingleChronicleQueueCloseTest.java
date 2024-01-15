@@ -18,9 +18,12 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.internal.util.ThreadLocalAppender;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static net.openhft.chronicle.queue.internal.util.ThreadLocalAppender.acquireThreadLocalAppender;
 
 public class SingleChronicleQueueCloseTest extends QueueTestCommon {
 
@@ -39,21 +42,24 @@ public class SingleChronicleQueueCloseTest extends QueueTestCommon {
         }
     }
 
+    /**
+     * NOTE: Still uses thread local appender as that is the intent of the test.
+     */
     @Test
     public void reacquireAppenderAfterClose() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = acquireThreadLocalAppender(queue);
             appender.writeText("hello1");
             appender.close();
 
-            final ExcerptAppender appender2 = queue.createAppender();
+            final ExcerptAppender appender2 = acquireThreadLocalAppender(queue);
             appender2.writeText("hello2");
             appender.close();
 
-            final ExcerptAppender appender3 = queue.createAppender();
+            final ExcerptAppender appender3 = acquireThreadLocalAppender(queue);
             appender2.writeText("hello3");
 
-            final ExcerptAppender appender4 = queue.createAppender();
+            final ExcerptAppender appender4 = acquireThreadLocalAppender(queue);
             appender2.writeText("hello4");
 
             Assert.assertSame(appender3, appender4);

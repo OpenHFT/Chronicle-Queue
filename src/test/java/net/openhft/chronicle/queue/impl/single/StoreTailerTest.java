@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.internal.util.ThreadLocalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
@@ -162,8 +163,7 @@ public class StoreTailerTest extends QueueTestCommon {
              ChronicleQueue secondInputQueue =
                      createQueue(dataDirectory, TEST_DAILY, 2, "secondInputQueue");
              ChronicleQueue outputQueue =
-                     createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue");
-             ExcerptAppender appender = outputQueue.createAppender()) {
+                     createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue")) {
 
             // Create two MethodWriters for writing data to the input queues
             final OnEvents firstWriter = firstInputQueue
@@ -214,6 +214,8 @@ public class StoreTailerTest extends QueueTestCommon {
             outputWriter.onEvent("out1");
 
             // Get the index of the last message appended to the output queue
+            // NOTE: Requires thread local appender that is used within the methodWriter
+            ExcerptAppender appender = ThreadLocalAppender.acquireThreadLocalAppender(outputQueue);
             long index = appender.lastIndexAppended();
             // Get the current indices of the tailers for the input queues
             index1 = tailer1.index();

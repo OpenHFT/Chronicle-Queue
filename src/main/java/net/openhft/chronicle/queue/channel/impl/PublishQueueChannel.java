@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue.channel.impl;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.single.ThreadLocalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.NoDocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -13,7 +12,7 @@ import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
 import net.openhft.chronicle.wire.converter.NanoTime;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.*;
+import static net.openhft.chronicle.queue.internal.util.ThreadLocalAppender.*;
 
 public class PublishQueueChannel implements ChronicleChannel {
     private final ChronicleChannelCfg channelCfg;

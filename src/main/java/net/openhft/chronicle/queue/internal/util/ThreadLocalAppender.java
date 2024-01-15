@@ -1,7 +1,8 @@
-package net.openhft.chronicle.queue.impl.single;
+package net.openhft.chronicle.queue.internal.util;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 
 /**
  * Internal implementation class that enables the use of a thread local appender. Please ensure that you carefully read

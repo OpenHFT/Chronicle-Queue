@@ -36,7 +36,7 @@ import java.nio.file.Path;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
+import static net.openhft.chronicle.queue.internal.util.ThreadLocalAppender.acquireThreadLocalAppender;
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low
@@ -201,7 +201,7 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread
      * @deprecated It is recommended to use {@link #createAppender()} instead or for a SingleChronicleQueue you can use the utility method
-     * net.openhft.chronicle.queue.impl.single.ThreadLocalAppender#acquireThreadLocalAppender(net.openhft.chronicle.queue.impl.single.SingleChronicleQueue) which gives you a thread local appender
+     * net.openhft.chronicle.queue.internal.util.ThreadLocalAppender#acquireThreadLocalAppender(net.openhft.chronicle.queue.impl.single.SingleChronicleQueue) which gives you a thread local appender
      */
     @Deprecated(/* To be removed in x.27 */)
     @NotNull

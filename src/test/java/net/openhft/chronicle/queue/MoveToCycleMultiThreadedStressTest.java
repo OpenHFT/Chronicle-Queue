@@ -56,7 +56,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY)
                 .build();
-             ExcerptAppender excerptAppender = queue.createAppender()) {
+             ExcerptAppender excerptAppender = q.createAppender()) {
             this.queue = q;
             tailer = ThreadLocal.withInitial(q::createTailer);
             excerptAppender.writeText("first");

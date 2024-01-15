@@ -40,6 +40,7 @@ import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
+import net.openhft.chronicle.queue.internal.util.ThreadLocalAppender;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -507,7 +508,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     }
 
     @NotNull
-    ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
+    public ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
         queue.throwExceptionIfClosed();
         if (queue.readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
