@@ -18,12 +18,11 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.internal.util.ThreadLocalAppender;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static net.openhft.chronicle.queue.internal.util.ThreadLocalAppender.acquireThreadLocalAppender;
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 
 public class SingleChronicleQueueCloseTest extends QueueTestCommon {
 

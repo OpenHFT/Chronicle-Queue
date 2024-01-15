@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 import static junit.framework.TestCase.fail;
-import static net.openhft.chronicle.queue.internal.util.ThreadLocalAppender.acquireThreadLocalAppender;
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assume.assumeTrue;

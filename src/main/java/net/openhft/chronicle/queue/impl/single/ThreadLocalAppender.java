@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue.internal.util;
+package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;

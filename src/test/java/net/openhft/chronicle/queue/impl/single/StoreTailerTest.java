@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.internal.util.ThreadLocalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;

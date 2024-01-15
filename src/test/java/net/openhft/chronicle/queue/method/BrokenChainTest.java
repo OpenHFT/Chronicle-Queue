@@ -6,7 +6,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.internal.util.ThreadLocalAppender;
+import net.openhft.chronicle.queue.impl.single.ThreadLocalAppender;
 import org.junit.Test;
 
 import java.util.ArrayList;
