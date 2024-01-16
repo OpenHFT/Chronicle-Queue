@@ -34,6 +34,9 @@ public final class ThreadLocalAppender {
      * @throws IllegalArgumentException if the queue it is passed is not an instance of {@link SingleChronicleQueue}
      */
     public ExcerptAppender get() {
+        if (threadLocalAppender.get().isClosing()) {
+            threadLocalAppender.remove();
+        }
         return threadLocalAppender.get();
     }
 
