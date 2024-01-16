@@ -630,6 +630,18 @@
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>InternalAppenderJLBH</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
+                                    </commandlineArgs>
+                                </configuration>
+                            </execution>
                             <!-- QueueMultiThreadedJLBHBenchmark was moved to QE -->
                             <execution>
                                 <id>RollCycleMultiThreadStressTest</id>
