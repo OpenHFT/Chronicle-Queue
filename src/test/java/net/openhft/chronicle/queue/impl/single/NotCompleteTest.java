@@ -171,10 +171,8 @@ public class NotCompleteTest extends QueueTestCommon {
     }
 
     private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
-        try (ExcerptAppender appender =queue.createAppender()) {
-            PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
-            action.accept(proxy, queue);
-        }
+        PersonListener personListener = queue.methodWriter(PersonListener.class);
+        action.accept(personListener, queue);
     }
 
     @After
