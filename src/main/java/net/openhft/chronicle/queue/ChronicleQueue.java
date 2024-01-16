@@ -36,7 +36,7 @@ import java.nio.file.Path;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
+import static net.openhft.chronicle.queue.internal.util.InternalThreadLocalAppenderRegistry.acquireThreadLocalAppender;
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low
@@ -367,7 +367,7 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull final Class<T> tClass) {
-        Supplier<MarshallableOut> marshallableOutSupplier = () -> acquireThreadLocalAppender(this);
+        Supplier<MarshallableOut> marshallableOutSupplier = () -> acquireThreadLocalAppender(this, this::createAppender);
         VanillaMethodWriterBuilder<T> builder = new VanillaMethodWriterBuilder<>(tClass,
                 wireType(),
                 () -> new BinaryMethodWriterInvocationHandler(tClass, false, marshallableOutSupplier));

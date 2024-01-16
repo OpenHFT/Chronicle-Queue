@@ -40,6 +40,7 @@ import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
+import net.openhft.chronicle.queue.internal.util.InternalThreadLocalAppenderRegistry;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -503,7 +504,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
-        return ThreadLocalAppender.acquireThreadLocalAppender(this);
+        return InternalThreadLocalAppenderRegistry.acquireThreadLocalAppender(this, this::createAppender);
     }
 
     @NotNull

@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.internal.util.InternalThreadLocalAppenderRegistry;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
@@ -214,7 +215,7 @@ public class StoreTailerTest extends QueueTestCommon {
 
             // Get the index of the last message appended to the output queue
             // NOTE: Requires thread local appender that is used within the methodWriter
-            ExcerptAppender appender = ThreadLocalAppender.acquireThreadLocalAppender(outputQueue);
+            ExcerptAppender appender = InternalThreadLocalAppenderRegistry.acquireThreadLocalAppender(outputQueue, outputQueue::createAppender);
             long index = appender.lastIndexAppended();
             // Get the current indices of the tailers for the input queues
             index1 = tailer1.index();

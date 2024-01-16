@@ -12,7 +12,7 @@ import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
 import net.openhft.chronicle.wire.converter.NanoTime;
 
-import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.*;
+import static net.openhft.chronicle.queue.internal.util.InternalThreadLocalAppenderRegistry.*;
 
 public class PublishQueueChannel implements ChronicleChannel {
     private final ChronicleChannelCfg channelCfg;
@@ -63,12 +63,12 @@ public class PublishQueueChannel implements ChronicleChannel {
 
     @Override
     public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
-        return acquireThreadLocalAppender(publishQueue).writingDocument(metaData);
+        return acquireThreadLocalAppender(publishQueue, publishQueue::createAppender).writingDocument(metaData);
     }
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) throws UnrecoverableTimeoutException {
-        return acquireThreadLocalAppender(publishQueue).acquireWritingDocument(metaData);
+        return acquireThreadLocalAppender(publishQueue, publishQueue::createAppender).acquireWritingDocument(metaData);
     }
 
     @Override
