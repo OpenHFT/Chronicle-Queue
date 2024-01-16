@@ -11,10 +11,10 @@ import java.util.function.Supplier;
  */
 public final class ThreadLocalAppender {
 
-    private final ThreadLocal<ExcerptAppender> threadLocalAppender;
+    private final ThreadLocal<ExcerptAppender> threadLocalExcerptAppender;
 
     public ThreadLocalAppender(Supplier<ExcerptAppender> excerptAppenderSupplier) {
-        this.threadLocalAppender = CleaningThreadLocal.withCloseQuietly(excerptAppenderSupplier);
+        this.threadLocalExcerptAppender = CleaningThreadLocal.withCloseQuietly(excerptAppenderSupplier);
     }
 
     /**
@@ -34,10 +34,10 @@ public final class ThreadLocalAppender {
      * @throws IllegalArgumentException if the queue it is passed is not an instance of {@link SingleChronicleQueue}
      */
     public ExcerptAppender get() {
-        if (threadLocalAppender.get().isClosing()) {
-            threadLocalAppender.remove();
+        if (threadLocalExcerptAppender.get().isClosing()) {
+            threadLocalExcerptAppender.remove();
         }
-        return threadLocalAppender.get();
+        return threadLocalExcerptAppender.get();
     }
 
 }

@@ -11,9 +11,13 @@ import java.util.function.Supplier;
 /**
  * Registry managing thread local instances of {@link ThreadLocalAppender}s.
  */
-public class InternalThreadLocalAppenderRegistry {
+public final class InternalThreadLocalAppenderRegistry {
 
     private static final Map<ChronicleQueue, ThreadLocalAppender> INSTANCES = new ConcurrentHashMap<>();
+
+    private InternalThreadLocalAppenderRegistry() {
+        // Intentional no-op
+    }
 
     /**
      * Acquire a thread local appender related to the current queue. The supplier will be used to create the appender
