@@ -113,7 +113,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     private long runTest(int entriesToWrite, TailerDirection tailerDirection, TailerIndexStartPosition tailerIndexStartPosition, RollCycle rollCycle) {
         @NotNull File path = getTmpDir();
         try (SingleChronicleQueue queue = createQueue(path, rollCycle);
-             ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer().direction(tailerDirection)) {
             populateQueue(entriesToWrite, appender);
 

@@ -72,11 +72,12 @@ public class InternalBenchmarkMain {
 
         // Pretoucher will only work with Queue Enterprise in the path
         Thread pretoucher = new Thread(() -> {
-            ExcerptAppender appender = queue.acquireAppender();
-            Thread thread = Thread.currentThread();
-            while (!thread.isInterrupted()) {
-                appender.pretouch();
-                Jvm.pause(10);
+            try (ExcerptAppender appender = queue.createAppender()) {
+                Thread thread = Thread.currentThread();
+                while (!thread.isInterrupted()) {
+                    appender.pretouch();
+                    Jvm.pause(10);
+                }
             }
         });
         pretoucher.setDaemon(true);
@@ -112,7 +113,7 @@ public class InternalBenchmarkMain {
         long next = System.nanoTime();
         long end = (long) (next + runtime * 1e9);
 
-        ExcerptAppender appender = queue.acquireAppender();
+        ExcerptAppender appender = queue.createAppender();
         while (end > System.nanoTime()) {
             long start = System.nanoTime();
             try (DocumentContext dc = appender.writingDocument(false)) {

@@ -27,7 +27,6 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -52,22 +51,6 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Before
     public void threadDump() {
         super.threadDump();
-    }
-
-    @Ignore("net/openhft/chronicle/queue/channel/PublishHandler.java:25")
-    @Test
-    public void clearUsedByThreadThrowsUnsupportedOperationException() throws IOException {
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> queue.acquireAppender().singleThreadedCheckReset());
-        }
-    }
-
-    @Ignore("net/openhft/chronicle/queue/channel/PublishHandler.java:25")
-    @Test
-    public void resetUsedByThreadThrowsUnsupportedOperationException() throws IOException {
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            assertThrows(UnsupportedOperationException.class, () -> queue.acquireAppender().singleThreadedCheckReset());
-        }
     }
 
     @Test

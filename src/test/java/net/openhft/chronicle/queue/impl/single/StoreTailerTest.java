@@ -213,7 +213,9 @@ public class StoreTailerTest extends QueueTestCommon {
             outputWriter.onEvent("out1");
 
             // Get the index of the last message appended to the output queue
-            long index = outputQueue.acquireAppender().lastIndexAppended();
+            // NOTE: Requires thread local appender that is used within the methodWriter
+            ExcerptAppender appender = ThreadLocalAppender.acquireThreadLocalAppender(outputQueue);
+            long index = appender.lastIndexAppended();
             // Get the current indices of the tailers for the input queues
             index1 = tailer1.index();
             index2 = tailer2.index();

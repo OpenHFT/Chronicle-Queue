@@ -36,8 +36,8 @@ public class ChronicleWriter {
     private Class<?> writeTo;
 
     public void execute() throws IOException {
-        try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(this.basePath).build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+        try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(this.basePath).build();
+             final ExcerptAppender appender = queue.createAppender()) {
 
             for (final String file : files) {
                 final Object payload = Marshallable.fromFile(Object.class, file);

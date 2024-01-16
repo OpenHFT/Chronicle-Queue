@@ -5,7 +5,6 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.openjdk.jmh.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +30,7 @@ public class BackwardsTailerJmhState {
                 .rollCycle(rollCycle)
                 .build();
         log.info("Populating queue with data");
-        try (ExcerptAppender appender = queue.acquireAppender()) {
+        try (ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < numberOfEntries; i++) {
                 appender.writeText(Integer.toString(i));
             }

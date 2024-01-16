@@ -55,10 +55,10 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .rollCycle(net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY)
-                .build()) {
+                .build();
+             ExcerptAppender excerptAppender = q.createAppender()) {
             this.queue = q;
             tailer = ThreadLocal.withInitial(q::createTailer);
-            ExcerptAppender excerptAppender = q.acquireAppender();
             excerptAppender.writeText("first");
             updateLast(excerptAppender);
 
@@ -90,14 +90,15 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private Void append() {
 
-        final ExcerptAppender excerptAppender = queue.acquireAppender();
+        try (final ExcerptAppender excerptAppender = queue.createAppender()) {
 
-        for (int i = 0; i < 50; i++) {
-            excerptAppender.writeText("hello");
-            updateLast(excerptAppender);
-            Jvm.pause(100);
+            for (int i = 0; i < 50; i++) {
+                excerptAppender.writeText("hello");
+                updateLast(excerptAppender);
+                Jvm.pause(100);
+            }
+            return null;
         }
-        return null;
     }
 
     private void updateLast(ExcerptAppender excerptAppender) {

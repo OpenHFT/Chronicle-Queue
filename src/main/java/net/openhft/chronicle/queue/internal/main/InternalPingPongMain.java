@@ -96,7 +96,7 @@ public final class InternalPingPongMain {
             Jvm.pause(100);
 
             final long finish = System.currentTimeMillis() + runtime * 1000L;
-            final ExcerptAppender appender = queue.acquireAppender();
+            final ExcerptAppender appender = queue.createAppender();
             while (System.currentTimeMillis() < finish) {
                 if (readCount.get() < writeCount.get()) {
                     Thread.yield();

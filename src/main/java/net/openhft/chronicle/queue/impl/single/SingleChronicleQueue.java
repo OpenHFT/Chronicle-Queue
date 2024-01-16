@@ -464,10 +464,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
     /**
      * Construct a new {@link ExcerptAppender} once the {@link #createAppenderCondition} is met.
-     * <p>
-     * This should be called by any sub-classes that require an appender but don't want to use
-     * the thread-local one that can be acquired via {@link #acquireAppender()}
-     *
      * @return The new appender
      */
     @NotNull

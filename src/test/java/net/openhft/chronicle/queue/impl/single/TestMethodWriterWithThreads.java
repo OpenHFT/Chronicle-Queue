@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 import static junit.framework.TestCase.fail;
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assume.assumeTrue;
@@ -104,7 +105,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
                                     j++;
                         } finally {
                             // close appender acquired by creates above
-                            Closeable.closeQuietly(q.acquireAppender(), tailer);
+                            Closeable.closeQuietly(acquireThreadLocalAppender(q), tailer);
                         }
                         if (fail.get())
                             fail();

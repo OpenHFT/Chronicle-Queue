@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
+import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +33,10 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
+
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low
@@ -363,10 +367,11 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     default <T> VanillaMethodWriterBuilder<T> methodWriterBuilder(@NotNull final Class<T> tClass) {
+        Supplier<MarshallableOut> marshallableOutSupplier = () -> acquireThreadLocalAppender(this);
         VanillaMethodWriterBuilder<T> builder = new VanillaMethodWriterBuilder<>(tClass,
                 wireType(),
-                () -> new BinaryMethodWriterInvocationHandler(tClass, false, this::acquireAppender));
-        builder.marshallableOutSupplier(this::acquireAppender);
+                () -> new BinaryMethodWriterInvocationHandler(tClass, false, marshallableOutSupplier));
+        builder.marshallableOutSupplier(marshallableOutSupplier);
         return builder;
     }
 

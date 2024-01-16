@@ -12,6 +12,8 @@ import net.openhft.chronicle.wire.channel.ChronicleChannel;
 import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
 import net.openhft.chronicle.wire.converter.NanoTime;
 
+import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.*;
+
 public class PublishQueueChannel implements ChronicleChannel {
     private final ChronicleChannelCfg channelCfg;
     private final AbstractHandler publishHandler;
@@ -46,7 +48,6 @@ public class PublishQueueChannel implements ChronicleChannel {
     public void close() {
         Closeable.closeQuietly(
                 tailer,
-                publishQueue.acquireAppender(),
                 publishQueue);
     }
 
@@ -62,12 +63,12 @@ public class PublishQueueChannel implements ChronicleChannel {
 
     @Override
     public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
-        return publishQueue.acquireAppender().writingDocument(metaData);
+        return acquireThreadLocalAppender(publishQueue).writingDocument(metaData);
     }
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) throws UnrecoverableTimeoutException {
-        return publishQueue.acquireAppender().acquireWritingDocument(metaData);
+        return acquireThreadLocalAppender(publishQueue).acquireWritingDocument(metaData);
     }
 
     @Override

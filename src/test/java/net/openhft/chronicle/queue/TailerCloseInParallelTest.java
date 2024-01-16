@@ -23,7 +23,9 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.UncheckedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.*;
+import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ClosedIllegalStateException;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -31,12 +33,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.print.Doc;
 import java.nio.file.Paths;
 import java.util.Random;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
@@ -105,7 +107,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
             thread.start();
 
             UncheckedBytes<BytesStore> bytes = new UncheckedBytes<>(BytesStore.empty().bytesForRead());
-            try (ExcerptAppender appender = chronicle.acquireAppender()) {
+            try (ExcerptAppender appender = chronicle.createAppender()) {
                 for (int i = 0; i < count; i++) {
                     long start = System.nanoTime();
                     try (DocumentContext dc = appender.writingDocument()) {

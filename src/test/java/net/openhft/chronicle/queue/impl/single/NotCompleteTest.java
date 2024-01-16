@@ -125,10 +125,11 @@ public class NotCompleteTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
 
                 // do an empty write
-                ExcerptAppender appender = queueWriter.acquireAppender();
-                DocumentContext wd = appender.writingDocument();
-                wd.rollbackOnClose();
-                wd.close();
+                try (ExcerptAppender appender = queueWriter.createAppender()) {
+                    DocumentContext wd = appender.writingDocument();
+                    wd.rollbackOnClose();
+                    wd.close();
+                }
                 // check queue unchanged
                 String dump = cleanQueueDump(queueWriter.dump());
                 assertEquals("queue should be unchanged by the failed (rollback) write", cleanedQueueDump, dump);
@@ -170,9 +171,8 @@ public class NotCompleteTest extends QueueTestCommon {
     }
 
     private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
-        ExcerptAppender appender = queue.acquireAppender();
-        PersonListener proxy = appender.methodWriterBuilder(PersonListener.class).get();
-        action.accept(proxy, queue);
+        PersonListener personListener = queue.methodWriter(PersonListener.class);
+        action.accept(personListener, queue);
     }
 
     @After

@@ -102,25 +102,25 @@ public class Example {
     }
 
     public static void main(String[] args) throws IOException {
-
         // will write the .cq4 file to working directory
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files
-                .createTempDirectory("queue").toFile()).build();
-        ExcerptAppender appender = queue.acquireAppender();
-        ExcerptTailer tailer = queue.createTailer();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                .path(Files.createTempDirectory("queue").toFile()).build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
 
-        MyObject me = new MyObject();
-        me.name = "rob";
-        me.age = 40;
+            MyObject me = new MyObject();
+            me.name = "rob";
+            me.age = 40;
 
-        // write 'MyObject' to the queue
-        appender.writeDocument(me);
+            // write 'MyObject' to the queue
+            appender.writeDocument(me);
 
-        // read 'MyObject' from the queue
-        MyObject result = new MyObject();
-        tailer.readDocument(result);
+            // read 'MyObject' from the queue
+            MyObject result = new MyObject();
+            tailer.readDocument(result);
 
-       // System.out.println(result);
+           // System.out.println(result);
+        }
     }
 }
 ----

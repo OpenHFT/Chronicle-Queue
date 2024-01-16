@@ -51,7 +51,7 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
         @NotNull File path = getTmpDir();
         IOTools.deleteDirWithFiles(path);
         try (SingleChronicleQueue queue = createQueue(path, rollCycle);
-             ExcerptAppender appender = queue.acquireAppender();
+             ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD)) {
 
             assertEquals("Backwards tailer should start at index 0 when no queue data", 0, tailer.index());
