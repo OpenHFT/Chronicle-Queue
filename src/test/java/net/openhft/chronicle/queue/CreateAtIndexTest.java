@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.impl.single.IllegalIndexException;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
@@ -30,7 +31,8 @@ import java.io.File;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 @RequiredForClient
 public class CreateAtIndexTest extends QueueTestCommon {
@@ -83,20 +85,16 @@ public class CreateAtIndexTest extends QueueTestCommon {
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .build();
-            InternalAppender appender = (InternalAppender) queue.createAppender()) {
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
-            try {
-                appender.writeBytes(0x421d00000003L, HELLO_WORLD);
-                fail();
-            } catch (IllegalStateException e) {
-                assertTrue(e.getMessage().startsWith("Unable to move to index 421d00000003 beyond the end of the queue"));
-            }
+            IllegalIndexException e = assertThrows(IllegalIndexException.class, () -> appender.writeBytes(0x421d00000003L, HELLO_WORLD));
+            assertEquals("Index provided is after the next index in the queue, provided index = 421d00000003, last index in queue = 421d00000001", e.getMessage());
         }
 
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .build();
-            InternalAppender appender = (InternalAppender) queue.createAppender()) {
+             InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             appender.writeBytes(0x421d00000002L, HELLO_WORLD);
             appender.writeBytes(0x421d00000003L, HELLO_WORLD);
@@ -117,7 +115,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
                 .build();
-            ExcerptAppender appender = queue.createAppender()) {
+             ExcerptAppender appender = queue.createAppender()) {
 
             try (DocumentContext dc = appender.writingDocument()) {
 

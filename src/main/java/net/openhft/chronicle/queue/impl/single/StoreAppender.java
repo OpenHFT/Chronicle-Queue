@@ -52,6 +52,22 @@ import static net.openhft.chronicle.wire.Wires.*;
 
 class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
+
+    /**
+     * Determines behaviour when validating that the index passed to {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)}
+     * is at or beyond the end of the queue.
+     */
+    protected enum IndexValidationMode {
+        /**
+         * We read the queue contents when validating
+         */
+        SAFE,
+        /**
+         * We trust the last index/position header in the store file when validating
+         */
+        UNSAFE
+    }
+
     /**
      * Keep track of where we've normalised EOFs to, so we don't re-do immutable, older cycles every time.
      * This is the key in the table-store where we store that information
@@ -613,38 +629,73 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    /**
-     * Write bytes at an index, but only if the index is at the end of the queue (*or* end of cycle).
-     * If index is after the end of the queue (or cycle), throw an IllegalStateException.
-     * If the index is before the end of the queue then do not overwrite the contents of the queue.
-     * <p>If the index is at the end of a cycle (but not the queue) this will overwrite the EOF marker
-     * of that cycle. It is the caller's responsibility to call {@link #normaliseEOFs()} after.
-     * <p>Users are advised that the behaviour of this method may change in the future
-     * <p>Thread-safe
-     *
-     * @param index index to write at. Only if index is at the end of the queue (or cycle) will the bytes get written
-     * @param bytes payload
-     */
+    @Override
     public void writeBytes(final long index, @NotNull final BytesStore bytes) {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
         try {
-            writeBytesInternal(index, bytes);
+            writeBytesInternal(index, bytes, IndexValidationMode.SAFE);
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    @Override
+    public void unsafeWriteBytes(final long index, @NotNull final BytesStore bytes) {
+        throwExceptionIfClosed();
+        checkAppendLock();
+        writeLock.lock();
+        try {
+            writeBytesInternal(index, bytes, IndexValidationMode.UNSAFE);
         } finally {
             writeLock.unlock();
         }
     }
 
     /**
-     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
-     * the queue file and cause data loss.
+     * @deprecated Use {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)} instead
      */
+    @Deprecated(/* To be removed in x.27 */)
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
-        writeBytesInternal(index, bytes, false);
+        writeBytesInternal(index, bytes, IndexValidationMode.SAFE);
     }
 
+    /**
+     * @deprecated This method makes no sense when metadata=true, use {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)} instead
+     */
+    @Deprecated(/* To be removed in x.27 */)
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
+        writeBytesInternal(index, bytes, metadata, IndexValidationMode.SAFE);
+    }
+
+    /**
+     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
+     * the queue file and cause data loss.
+     *
+     * @param index               Index to append at
+     * @param bytes               The excerpt bytes
+     * @param indexValidationMode How stringent to be when validating the append index
+     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
+     */
+    protected void writeBytesInternal(final long index, @NotNull BytesStore bytes, IndexValidationMode indexValidationMode) {
+        writeBytesInternal(index, bytes, false, indexValidationMode);
+    }
+
+    /**
+     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
+     * the queue file and cause data loss.
+     *
+     * @param index               Index to append at
+     * @param bytes               The excerpt bytes
+     * @param metadata            Whether to write the excerpt as metadata, this is legacy and should always be set to false
+     * @param indexValidationMode How stringent to be when validating the append index
+     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
+     * @deprecated Use {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)} instead
+     */
+    @SuppressWarnings("DeprecatedIsStillUsed")  // will be collapsed into the caller when deprecated
+    @Deprecated(/* For removal in x.27 */)
+    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata, IndexValidationMode indexValidationMode) {
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
@@ -657,14 +708,14 @@ class StoreAppender extends AbstractCloseable
             rollCycleTo(cycle, this.cycle > cycle);
 
         // in case our cached headerNumber is incorrect.
-        resetPosition(true);
+        resetPosition(indexValidationMode == IndexValidationMode.SAFE);
 
         long headerNumber = wire.headerNumber();
 
         boolean isNextIndex = index == headerNumber + 1;
         if (!isNextIndex) {
             if (index > headerNumber + 1)
-                throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue, current: " + Long.toHexString(headerNumber));
+                throw new IllegalIndexException(index, headerNumber);
 
             // this can happen when using queue replication when we are back filling from a number of sinks at them same time
             // its normal behaviour in the is use case so should not be a WARN
@@ -935,6 +986,7 @@ class StoreAppender extends AbstractCloseable
 
         /**
          * Close this {@link StoreAppenderContext}.
+         *
          * @param unlock true if the {@link this#writeLock} should be unlocked.
          */
         public void close(boolean unlock) {
@@ -1034,6 +1086,7 @@ class StoreAppender extends AbstractCloseable
 
         /**
          * Clean-up after close.
+         *
          * @param unlock true if the {@link this#writeLock} should be unlocked.
          */
         private void closeCleanup(boolean unlock) {
