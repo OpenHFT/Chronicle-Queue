@@ -631,7 +631,7 @@
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>InternalAppenderJLBH</id>
+                                <id>InternalAppenderJLBH-SAFE</id>
                                 <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
@@ -639,6 +639,18 @@
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
                                     <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
+                                    </commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>InternalAppenderJLBH-UNSAFE</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DunsafeAppends -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
                                     </commandlineArgs>
                                 </configuration>
                             </execution>

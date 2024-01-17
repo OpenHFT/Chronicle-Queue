@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.bench;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
@@ -8,6 +9,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
@@ -17,6 +19,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 public class InternalAppenderJLBH implements JLBHTask {
 
     private static final String QUEUE_PATH = "internalAppend";
+    private static final boolean UNSAFE_APPENDS = Jvm.getBoolean("unsafeAppends", false);
 
     static {
         System.setProperty("jvm.resource.tracing", "false");
@@ -63,13 +66,18 @@ public class InternalAppenderJLBH implements JLBHTask {
     @Override
     public void run(long startTimeNS) {
         long index = rollCycle.toIndex(0, sequenceNumber);
-        appender.writeBytes(index, payload);
+        if (UNSAFE_APPENDS) {
+            appender.unsafeWriteBytes(index, payload);
+        } else {
+            appender.writeBytes(index, payload);
+        }
         jlbh.sample(System.nanoTime() - startTimeNS);
         sequenceNumber++;
     }
 
     @Override
     public void complete() {
+        TeamCityHelper.teamCityStatsLastRun(InternalAppenderJLBH.class.getSimpleName() + (UNSAFE_APPENDS ? "-UNSAFE" : "-SAFE"), jlbh, ITERATIONS, System.out);
         Closeable.closeQuietly(appender, queue);
         BackgroundResourceReleaser.releasePendingResources();
         IOTools.deleteDirWithFiles(QUEUE_PATH);
