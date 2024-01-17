@@ -18,12 +18,11 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
@@ -37,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
@@ -51,6 +51,57 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Before
     public void threadDump() {
         super.threadDump();
+    }
+
+    @Test
+    public void writeBytesInternalDoesNotWorkForMetadata() throws IOException {
+        RollCycle rollCycle = RollCycles.DEFAULT;
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(new SetTimeProvider())
+                .rollCycle(rollCycle)
+                .build();
+             final StoreAppender appender = (StoreAppender) queue.createAppender()) {
+            queue.writeLock().lock();
+            try {
+                appender.writeBytesInternal(rollCycle.toIndex(0, 0), Bytes.from("one"));
+                appender.writeBytesInternal(rollCycle.toIndex(0, 1), Bytes.from("two"));
+                appender.writeBytesInternal(rollCycle.toIndex(0, 2), Bytes.from("three"));
+                appender.writeBytesInternal(rollCycle.toIndex(0, 3), Bytes.from("metadata"), true);
+            } finally {
+                queue.writeLock().unlock();
+            }
+        }
+    }
+
+    @Test
+    public void writeBytesInternalDoesNotWorkForMetadataDifferentApproach() throws IOException {
+        RollCycle rollCycle = RollCycles.DEFAULT;
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(new SetTimeProvider())
+                .rollCycle(rollCycle)
+                .build();
+             final StoreAppender appender = (StoreAppender) queue.createAppender();
+             final ExcerptTailer tailer = queue.createTailer()) {
+            queue.writeLock().lock();
+            try {
+                appender.writeBytesInternal(rollCycle.toIndex(0, 0), Bytes.from("one"));
+                appender.writeBytesInternal(rollCycle.toIndex(0, 1), Bytes.from("two"));
+                appender.writeBytesInternal(rollCycle.toIndex(0, 2), Bytes.from("three"));
+                // This only appears to work, it appends nothing
+                appender.writeBytesInternal(rollCycle.toIndex(0, 2), Bytes.from("metadata"), true);
+            } finally {
+                queue.writeLock().unlock();
+            }
+
+            for (int i = 0; i < 4; i++) {
+                try (final DocumentContext documentContext = tailer.readingDocument()) {
+                    assertTrue(documentContext.isPresent());
+                    if (i == 3) {
+                        assertTrue(documentContext.isMetaData());
+                    }
+                }
+            }
+        }
     }
 
     @Test
