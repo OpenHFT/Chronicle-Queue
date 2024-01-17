@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
@@ -73,5 +74,6 @@ public class InternalAppenderJLBH implements JLBHTask {
         Closeable.closeQuietly(appender, queue);
         BackgroundResourceReleaser.releasePendingResources();
         IOTools.deleteDirWithFiles(QUEUE_PATH);
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
     }
 }
