@@ -45,7 +45,7 @@ Once a queue’s roll-cycle has been set, it cannot be changed at a later time. 
 [main] WARN SingleChronicleQueue - Overriding roll cycle from FIVE_MINUTELY to FAST_HOURLY
 ----
 
-In thise case, the persisted roll-cycle is `FAST_HOURLY`, and a new `SingleChronicleQueue` instance has been created, configured to use a `FIVE_MINUTELY` roll-cycle.
+In this case, the persisted roll-cycle is `FAST_HOURLY`, and a new `SingleChronicleQueue` instance has been created, configured to use a `FIVE_MINUTELY` roll-cycle.
 
 [#epoch]
 == Controlling the Exact Roll Time
