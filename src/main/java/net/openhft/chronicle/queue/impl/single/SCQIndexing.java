@@ -48,7 +48,7 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycle.MAX_INDEX_COUNT;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
-class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMarshallable, Closeable {
+class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable, WriteMarshallable, Closeable {
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
 
@@ -76,6 +76,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
     Sequence sequence;
     // visible for testing
     int linearScanCount;
+    int linearScanByPositionCount;
     Collection<Closeable> closeables = new ArrayList<>();
 
     /**
@@ -448,6 +449,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                                long indexOfNext,
                                long startAddress,
                                boolean inclusive) throws EOFException {
+        linearScanByPositionCount++;
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
         long i;
@@ -520,7 +522,8 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                 ".readPosition()=" + bytes.readPosition() + ",toPosition=" + toPosition);
     }
 
-    long nextEntryToBeIndexed() {
+    @Override
+    public long nextEntryToBeIndexed() {
         return nextEntryToBeIndexed.getVolatileValue();
     }
 
@@ -699,12 +702,14 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         throw new IllegalStateException("Unable to index " + sequenceNumber + ", the number of entries exceeds max number for the current rollcycle");
     }
 
+    @Override
     public boolean indexable(long index) {
         throwExceptionIfClosed();
 
         return (index & (indexSpacing - 1)) == 0;
     }
 
+    @Override
     public long lastSequenceNumber(@NotNull ExcerptContext ec, boolean approximate)
             throws StreamCorruptedException {
         throwExceptionIfClosed();
@@ -728,15 +733,17 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
     }
 
-    int indexCount() {
+    @Override
+    public int indexCount() {
         return indexCount;
     }
 
-    int indexSpacing() {
+    @Override
+    public int indexSpacing() {
         return indexSpacing;
     }
 
-    long moveToEnd(final Wire wire) {
+    public long moveToEnd(final Wire wire) {
         Sequence sequence1 = this.sequence;
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
@@ -774,6 +781,16 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
             }
         }
         return -1;
+    }
+
+    @Override
+    public int linearScanCount() {
+        return linearScanCount;
+    }
+
+    @Override
+    public int linearScanByPositionCount() {
+        return linearScanByPositionCount;
     }
 
     enum IndexingFields implements WireKey {
