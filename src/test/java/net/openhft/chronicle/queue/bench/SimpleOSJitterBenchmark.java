@@ -47,6 +47,7 @@ public class SimpleOSJitterBenchmark implements JLBHTask {
                 .warmUpIterations(20_000)
                 .iterations(CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS))
                 .throughput(CLIUtils.getIntOption(commandLine, 't', DEFAULT_THROUGHPUT))
+                .accountForCoordinatedOmission(commandLine.hasOption('c'))
                 .recordOSJitter(true)
                 .runs(CLIUtils.getIntOption(commandLine, 'r', 3))
                 .jlbhTask(new SimpleOSJitterBenchmark());

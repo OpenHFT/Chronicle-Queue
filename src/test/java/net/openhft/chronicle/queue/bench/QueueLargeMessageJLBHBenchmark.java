@@ -72,6 +72,9 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
                 .throughput(throughput)
                 .recordOSJitter(commandLine.hasOption('j'))
                 .skipFirstRun(true)
+//                number of iterations
+//                accountForCoordinatedOmission
+                .accountForCoordinatedOmission(commandLine.hasOption('c'))
                 .runs(CLIUtils.getIntOption(commandLine, 'r', 5))
                 .jlbhTask(new QueueLargeMessageJLBHBenchmark());
         new JLBH(lth, System.out, jlbhResult -> {

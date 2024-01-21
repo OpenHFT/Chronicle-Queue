@@ -64,7 +64,8 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
                 .warmUpIterations(50_000)
                 .iterations(CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS))
                 .throughput(CLIUtils.getIntOption(commandLine, 't', 10_000))
-                .recordOSJitter(commandLine.hasOption('j')).accountForCoordinatedOmission(false)
+                .recordOSJitter(commandLine.hasOption('j'))
+                .accountForCoordinatedOmission(commandLine.hasOption('c'))
                 .skipFirstRun(true)
                 .runs(CLIUtils.getIntOption(commandLine, 'r', 3))
                 .jlbhTask(new QueueTwoServicesJLBHBenchmark());

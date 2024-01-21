@@ -67,6 +67,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
                 .recordOSJitter(commandLine.hasOption('j')).accountForCoordinatedOmission(false)
                 .skipFirstRun(true)
                 .runs(CLIUtils.getIntOption(commandLine, 'r', 3))
+                .accountForCoordinatedOmission(commandLine.hasOption('c'))
                 .jlbhTask(new QueueContendedWritesJLBHBenchmark());
         new JLBH(lth, System.out, jlbhResult -> {
             if (commandLine.hasOption('f')) {

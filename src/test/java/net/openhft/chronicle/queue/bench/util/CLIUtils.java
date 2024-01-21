@@ -68,6 +68,7 @@ public class CLIUtils {
         addOption(options, "t", "throughput", true, "Throughput", false);
         addOption(options, "i", "iterations", true, "Iterations", false);
         addOption(options, "r", "runs", true, "Number of runs", false);
+        addOption(options, "c", "afco", false, "accountForCoordinatedOmission", false);
         return options;
     }
 }
