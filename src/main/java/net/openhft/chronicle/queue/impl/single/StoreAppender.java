@@ -379,6 +379,7 @@ class StoreAppender extends AbstractCloseable
         try {
             if (store == null || wire == null)
                 return false;
+            store.performConsistencyCheck(this);
             long position = store.writePosition();
             position(position, position);
 
@@ -537,6 +538,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
+        store.performConsistencyCheck(this);
+        store.startWrite();
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
         long pos = positionOfHeader;
@@ -1008,6 +1011,7 @@ class StoreAppender extends AbstractCloseable
                         wire = StoreAppender.this.wire;
                     }
                 }
+                store.completeWrite();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new InterruptedRuntimeException(e);
@@ -1021,6 +1025,7 @@ class StoreAppender extends AbstractCloseable
         private boolean handleRollbackOnClose() {
             if (rollbackOnClose) {
                 doRollback();
+                store.completeWrite();
                 return true;
             }
             return false;

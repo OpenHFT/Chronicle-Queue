@@ -34,7 +34,8 @@ public enum MetaDataField implements WireKey {
     lastIndexReplicated,
     sourceId,
     dataFormat,
-    metadata;
+    metadata,
+    writeInProgress;
 
     @Nullable
     @Override

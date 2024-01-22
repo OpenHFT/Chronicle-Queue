@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.core.values.BooleanValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -39,6 +40,8 @@ import java.io.*;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.String.format;
+
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
@@ -49,6 +52,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     // retains the MappedBytes used by the MappedFile
     @NotNull
     private final LongValue writePosition;
+    @Nullable
+    private final BooleanValue writeInProgress;
     @NotNull
     private final MappedBytes mappedBytes;
     @NotNull
@@ -70,6 +75,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
         try {
             writePosition = loadWritePosition(wire);
+            writeInProgress = loadWriteInProgress(wire);
             this.mappedBytes = (MappedBytes) wire.bytes();
             this.mappedFile = mappedBytes.mappedFile();
             mappedFile.reserve(this);
@@ -115,12 +121,56 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newTwoLongReference().get();
+        this.writeInProgress = wireType.newBooleanReference().get();
         this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(writePosition,
                 rollCycle.defaultIndexCount(),
                 rollCycle.defaultIndexSpacing());
         this.dataVersion = 1;
 
         singleThreadedCheckDisabled(true);
+    }
+
+    public void startWrite() {
+        writeInProgress.setValue(true);
+    }
+
+    public void completeWrite() {
+        writeInProgress.setValue(false);
+    }
+
+    /**
+     * This should be false when you're first acquire the write lock, if it's not
+     * it means someone failed during a write and the queue needs to be checked
+     * for consistency.
+     *
+     * @return true if there's a write in progress, false otherwise
+     */
+    public boolean writeInProgress() {
+        return writeInProgress != null && writeInProgress.getValue();
+    }
+
+    public void performConsistencyCheck(ExcerptContext ec) {
+        try {
+            if (writeInProgress()) {
+                Jvm.startup().on(SingleChronicleQueueStore.class, format("Incomplete write detected, running consistency check, sequence %x -> %x", sequence.getSequence(writePosition.getVolatileValue()), writePosition.getVolatileValue()));
+                final long lastEntrySequence = exactLastSequenceNumber(ec);
+                final long endMarkerPosition = ec.wireForIndex().bytes().readPosition();
+                ScanResult lastEntryScan = indexing.moveToIndex0(ec, lastEntrySequence);
+                final long lastEntryPosition = ec.wire().bytes().readPosition();
+                final long previousEntrySequence = Math.max(0, lastEntrySequence - 1);
+                ScanResult previousEntryScan = indexing.moveToIndex0(ec, previousEntrySequence);
+                final long previousEntryPosition = ec.wire().bytes().readPosition();
+                if (lastEntrySequence >= 0) {
+                    Jvm.startup().on(SingleChronicleQueueStore.class, format("Setting position for sequence %x -> %x, %s (previous entry: %x -> %x, %s) (endMarkerPosition: %x)", lastEntrySequence, lastEntryPosition, lastEntryScan,
+                            previousEntrySequence, previousEntryPosition, previousEntryScan, endMarkerPosition));
+                    writePosition(lastEntryPosition);
+                    setPositionForSequenceNumber(ec, lastEntrySequence, lastEntryPosition);
+                }
+                writeInProgress.setValue(false);
+            }
+        } catch (StreamCorruptedException e) {
+            throw new IllegalStateException("Stream corrupted", e);
+        }
     }
 
     @NotNull
@@ -133,6 +183,17 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 wireOut.int128forBinding(0L, 0L, (TwoLongValue) value) :
                 wireOut.int64forBinding(0L, value);
 
+    }
+
+    @Nullable
+    private BooleanValue loadWriteInProgress(@NotNull WireIn wire) {
+        final ValueIn read = wire.read(MetaDataField.writeInProgress);
+        if (read.isPresent()) {
+            final BooleanValue ret = wire.newBooleanReference();
+            read.bool(ret);
+            return ret;
+        }
+        return null;
     }
 
     private LongValue loadWritePosition(@NotNull WireIn wire) {
@@ -177,7 +238,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     @Override
     public String shortDump() {
-        return dump(WireType.BINARY_LIGHT,true);
+        return dump(WireType.BINARY_LIGHT, true);
     }
 
     @Override
@@ -280,7 +341,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
     @Override
     protected void performClose() {
-        Closeable.closeQuietly(writePosition);
+        Closeable.closeQuietly(writePosition, writeInProgress);
         Closeable.closeQuietly(indexing);
 
         // this can be null if we're partially initialised
@@ -347,6 +408,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         intForBinding(wireOut, writePosition)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
                 .write(MetaDataField.dataFormat).int32(dataVersion);
+        if (writeInProgress != null) {
+            wire.write(MetaDataField.writeInProgress).boolForBinding(false, writeInProgress);
+        }
     }
 
     @Override
