@@ -29,12 +29,14 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 
 import java.io.IOException;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 public class SimpleOSJitterBenchmark implements JLBHTask {
 
-    public static final int DEFAULT_ITERATIONS = 1_000_000;
-    public static final int DEFAULT_THROUGHPUT = 100_000;
+    public static final int DEFAULT_ITERATIONS = 60;
+    public static final int DEFAULT_THROUGHPUT = 1;
     private JLBH jlbh;
     private NanoSampler theProbe;
 
@@ -43,9 +45,10 @@ public class SimpleOSJitterBenchmark implements JLBHTask {
         CommandLine commandLine = CLIUtils.parseCommandLine(ProducerService.class.getSimpleName(), args, options);
 
         //Create the JLBH options you require for the benchmark
+        int iterations = CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS);
         JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(20_000)
-                .iterations(CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS))
+                .warmUpIterations(iterations)
+                .iterations(iterations)
                 .throughput(CLIUtils.getIntOption(commandLine, 't', DEFAULT_THROUGHPUT))
                 .accountForCoordinatedOmission(commandLine.hasOption('c'))
                 .recordOSJitter(true)
@@ -70,8 +73,8 @@ public class SimpleOSJitterBenchmark implements JLBHTask {
     public void run(long startTimeNS) {
 //        long start = System.nanoTime();          // (1)
         long start = startTimeNS;                       // (2)
-        LockSupport.parkNanos(1);
-
+//        System.out.println(new Date()+" sdfasdf");
+        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(1));
         final long delta = System.nanoTime() - start;
         jlbh.sample(delta);
         theProbe.sampleNanos(delta);
