@@ -78,6 +78,7 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
+            <version>2.25ea7</version>
         </dependency>
 
         <dependency>
