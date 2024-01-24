@@ -41,6 +41,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 public class QueueLargeMessageJLBHAWSBenchmark implements JLBHTask {
     private static final int MSG_LENGTH = Integer.getInteger("length", 1_000_000);
     private static final boolean MSG_DIRECT = Jvm.getBoolean("direct");
+    public static final String QUEUE_PATH = "large";
     static byte[] bytesArr = new byte[MSG_LENGTH];
     static Bytes<?> bytesArr2 = Bytes.allocateDirect(MSG_LENGTH);
     private SingleChronicleQueue sourceQueue;
@@ -86,10 +87,10 @@ public class QueueLargeMessageJLBHAWSBenchmark implements JLBHTask {
 
     @Override
     public void init(JLBH jlbh) {
-        IOTools.deleteDirWithFiles("large", 3);
+        IOTools.deleteDirWithFiles(QUEUE_PATH, 3);
 
-        sourceQueue = single("large").blockSize(1L << 30).build();
-        sinkQueue = single("large").blockSize(1L << 30).build();
+        sourceQueue = single(QUEUE_PATH).blockSize(1L << 30).build();
+        sinkQueue = single(QUEUE_PATH).blockSize(1L << 30).build();
         appender = sourceQueue.createAppender();
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
