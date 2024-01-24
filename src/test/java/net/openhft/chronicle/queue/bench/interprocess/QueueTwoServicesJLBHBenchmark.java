@@ -33,12 +33,12 @@ import org.apache.commons.cli.Options;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import static net.openhft.chronicle.queue.bench.interprocess.ProducerService.createQueue;
 import static net.openhft.chronicle.queue.bench.util.CLIUtils.addOption;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
 public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
     public static final int DEFAULT_ITERATIONS = 100_000;
+    public static final int DEFAULT_THROUGHPUT = 10_000;
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
@@ -60,10 +60,12 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
         datum = new Datum(CLIUtils.getIntOption(commandLine, 'p', 128));
 
+        int iterations = CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS);
+        int throughput = CLIUtils.getIntOption(commandLine, 't', DEFAULT_THROUGHPUT);
         JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(50_000)
-                .iterations(CLIUtils.getIntOption(commandLine, 'i', DEFAULT_ITERATIONS))
-                .throughput(CLIUtils.getIntOption(commandLine, 't', 10_000))
+                .warmUpIterations(iterations)
+                .iterations(iterations)
+                .throughput(throughput)
                 .recordOSJitter(commandLine.hasOption('j'))
                 .accountForCoordinatedOmission(commandLine.hasOption('c'))
                 .skipFirstRun(true)
@@ -86,7 +88,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
         IOTools.deleteDirWithFiles("replica", 10);
 
         this.jlbh = jlbh;
-        queue = single("replica").rollCycle(LARGE_DAILY).doubleBuffer(false).build();
+        queue = createQueue();
         theProbe = jlbh.addProbe(JLBHResultSerializer.THE_PROBE);
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
@@ -107,7 +109,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
                     long durationNs = nanoTime - ts;
                     if (written < 10 || written % 10000 == 0) {
-                        System.out.println("nanoTime " + nanoTime + " ts = " + ts + " durationNs = " + durationNs);
+                        System.out.println(written+" nanoTime " + nanoTime + " ts = " + ts + " durationNs = " + durationNs);
                     }
                     theProbe.sampleNanos(durationNs);
                     break;
@@ -118,7 +120,7 @@ public class QueueTwoServicesJLBHBenchmark implements JLBHTask {
 
         jlbh.sampleNanos(System.nanoTime() - startTimeNS);
         written++;
-        if (written % 10_000 == 0)
+        if (written % DEFAULT_THROUGHPUT == 0)
             System.err.println("Written: " + written);
     }
 
