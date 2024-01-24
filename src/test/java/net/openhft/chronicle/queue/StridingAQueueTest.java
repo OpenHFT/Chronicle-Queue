@@ -82,7 +82,7 @@ public class StridingAQueueTest extends QueueTestCommon {
                 "--- !!data #binary\n" +
                 "listing.lowestCycle: 1567498753\n" +
                 "--- !!data #binary\n" +
-                "listing.modCount: 7\n" +
+                "listing.modCount: 8\n" +
                 "--- !!data #binary\n" +
                 "chronicle.write.lock: -9223372036854775808\n" +
                 "--- !!data #binary\n" +

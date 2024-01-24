@@ -530,16 +530,15 @@ class StoreTailer extends AbstractCloseable
             nextIndex = nextIndexWithinFoundCycle(nextCycle);
         else
             try {
-                int nextCycle0 = this.cycle;
-                while (true) {
-                    nextCycle0 = queue.nextCycle(nextCycle0, direction);
-                    if (nextCycle0 == -1)
-                        return Long.MIN_VALUE;
+                final int nextCycle0 = queue.nextCycle(this.cycle, direction);
+                if (nextCycle0 == -1)
+                    return Long.MIN_VALUE;
 
-                    if (cycle(nextCycle0)) {
-                        nextIndex = nextIndexWithinFoundCycle(nextCycle0);
-                        break;
-                    }
+                if (cycle(nextCycle0)) {
+                    nextIndex = nextIndexWithinFoundCycle(nextCycle0);
+                } else {
+                    queue.refreshDirectoryListing();
+                    return Long.MIN_VALUE;
                 }
 
             } catch (ParseException e) {

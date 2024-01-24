@@ -289,7 +289,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "\"3\"\n" +
                                 "...\n" +
                                 "# 130660 bytes remaining\n",
-                        queue.dump());
+                        queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
 
                 // allow parallel tailer to finish iteration
                 for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
@@ -309,7 +309,7 @@ public class RollCycleTest extends QueueTestCommon {
         Thread.interrupted();
     }
 
-    class ParallelQueueObserver implements Runnable, StoreFileListener {
+    static class ParallelQueueObserver implements Runnable, StoreFileListener {
         ChronicleQueue queue;
         CountDownLatch progressLatch;
         volatile int documentsRead;
