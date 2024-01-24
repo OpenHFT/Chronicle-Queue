@@ -126,8 +126,10 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             if (!INITIAL_MAX_FILENAME.equals(maxFilename))
                 max = fileNameToCycleFunction.applyAsInt(maxFilename);
 
-            if (currentMin0 == min && currentMax0 == max)
+            if (currentMin0 == min && currentMax0 == max) {
+                modCount.addAtomicValue(1);
                 return;
+            }
 
             minCycleValue.setOrderedValue(min);
             if (maxCycleValue.compareAndSwapValue(currentMax, max)) {
