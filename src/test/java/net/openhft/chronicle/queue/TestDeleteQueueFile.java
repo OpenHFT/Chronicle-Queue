@@ -391,7 +391,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                         long lastReadIndex = -5;
                         int currentCycle = -1;
                         while (running.get()) {
-                            try (final DocumentContext documentContext = tailer.readingDocument()) {
+                            try (final DocumentContext documentContext = readingDocumentWithRetries(tailer)) {
                                 if (!documentContext.isPresent()) {
                                     logIterationResult(direction, tailer, cyclesRead, lastReadIndex);
                                     break;
@@ -414,6 +414,17 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 Jvm.error().on(TestDeleteQueueFile.class, "Error occurred", e);
             }
             Jvm.startup().on(TestDeleteQueueFile.class, "Tailer thread terminated: " + direction);
+        }
+
+        private DocumentContext readingDocumentWithRetries(ExcerptTailer excerptTailer) {
+            DocumentContext documentContext = null;
+            for (int i = 0; i < 2; i++) {
+                documentContext = excerptTailer.readingDocument();
+                if (documentContext.isPresent()) {
+                    break;
+                }
+            }
+            return documentContext;
         }
 
         private OptionalLong lastAvailableIndex() {

@@ -18,16 +18,16 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
-import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.testframework.ExecutorServiceUtil;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,9 +36,7 @@ import org.junit.Test;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
@@ -275,6 +273,73 @@ public class StoreTailerTest extends QueueTestCommon {
             }
 
         }
+    }
+
+    @Test
+    public void shouldHaltAtPartiallyInitialisedRollCycle() throws ExecutionException, InterruptedException {
+        expectException("Renamed un-acquirable segment file to");
+        File dir = getTmpDir();
+        SetTimeProvider tp = new SetTimeProvider();
+        try (final SingleChronicleQueue producerQueue = createQueue(dir, tp, 500);
+             final SingleChronicleQueue consumerQueue = createQueue(dir, tp, 1000)) {
+            try (final ExcerptAppender appender = producerQueue.createAppender()) {
+                appender.writeText("one");
+                appender.writeText("two");
+                // trigger a roll
+                tp.advanceMillis(TimeUnit.DAYS.toMillis(1));
+                appender.writeText("three");
+                appender.writeText("four");
+            }
+
+            // simulate second cycle being partially initialised
+            final SingleChronicleQueueStore secondCycle = producerQueue.storeForCycle(1, 0, false, null);
+            final MappedBytes bytes = secondCycle.bytes();
+            bytes.writeInt(0, Wires.NOT_COMPLETE);
+            bytes.releaseLast();
+            producerQueue.closeStore(secondCycle);
+
+            ExecutorService ex = Executors.newFixedThreadPool(3);
+            // Read the queue with the partially initialised roll cycle
+            try (final ExcerptTailer tailer = consumerQueue.createTailer()) {
+                assertEquals("one", tailer.readText());
+                assertEquals("two", tailer.readText());
+
+                // Start the appender, it will over-write the second cycle then create a third
+                final Future<?> submit = ex.submit(() -> appendTwoMoreCycles(tp, producerQueue));
+
+                // These reads should proceed after the appends have completed
+                String firstRead;
+                while ((firstRead = tailer.readText()) == null) {
+                    Jvm.pause(1);
+                }
+                assertEquals("other-three", firstRead);
+                assertEquals("other-four", tailer.readText());
+                assertEquals("five", tailer.readText());
+                assertEquals("six", tailer.readText());
+                submit.get();
+            } finally {
+                ExecutorServiceUtil.shutdownAndWaitForTermination(ex);
+            }
+        }
+    }
+
+    private void appendTwoMoreCycles(SetTimeProvider timeProvider, SingleChronicleQueue queue) {
+        try (final ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("other-three");
+            appender.writeText("other-four");
+            // trigger a roll
+            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
+            appender.writeText("five");
+            appender.writeText("six");
+        }
+    }
+
+    private SingleChronicleQueue createQueue(File dir, TimeProvider timeProvider, long timeouMS) {
+        return SingleChronicleQueueBuilder.binary(dir)
+                .timeProvider(timeProvider)
+                .rollCycle(RollCycles.FAST_DAILY)
+                .timeoutMS(timeouMS)
+                .build();
     }
 
     private SingleChronicleQueueBuilder minutely(@NotNull File file, TimeProvider timeProvider) {
