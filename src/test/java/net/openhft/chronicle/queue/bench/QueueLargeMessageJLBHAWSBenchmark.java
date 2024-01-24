@@ -66,7 +66,7 @@ public class QueueLargeMessageJLBHAWSBenchmark implements JLBHTask {
         int throughput = CLIUtils.getIntOption(commandLine, 't', 10_000);
 
         JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(throughput * 10)
+                .warmUpIterations(iterations)
                 .iterations(iterations)
                 .throughput(throughput)
                 .recordOSJitter(commandLine.hasOption('j'))
