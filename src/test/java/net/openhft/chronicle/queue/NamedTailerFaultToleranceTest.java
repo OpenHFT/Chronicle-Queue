@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * This test demonstrates that:
  * <ul>
  *     <li>For normal tailers the index is not persisted unless the context was properly closed</li>
- *     <li>For method readers it seems that if a method read operation fails midway the index advancement is still persisted</li>
+ *     <li>For method readers we expect that if there is a failure during the read then the index advancement should not be persisted</li>
  * </ul>
  */
 public class NamedTailerFaultToleranceTest extends QueueTestCommon {
@@ -54,8 +54,7 @@ public class NamedTailerFaultToleranceTest extends QueueTestCommon {
     /**
      * This test creates a method writer and reader. The queue is populated with method writer invocations and then a
      * separate process is started that will use a method reader to read 2 messages. The method reader will call System
-     * exit on its second invocation. Given that this invocation failed we would expect the index to not be advanced
-     * however it is.
+     * exit on its second invocation.
      */
     @Test
     public void namedTailerIndexShouldNotBePersistedMidRead_methodWriter() throws InterruptedException {
@@ -77,6 +76,7 @@ public class NamedTailerFaultToleranceTest extends QueueTestCommon {
     private static void assertNamedTailerIndex(long expected) {
         try (ChronicleQueue queue = createQueueInstance(); LongValue indexValue = queue.indexForId(TAILER_NAME)) {
             long index = indexValue.getVolatileValue();
+            log.info("Actual named tailer index={}", index);
             assertEquals(expected, index);
         }
     }
@@ -125,8 +125,8 @@ public class NamedTailerFaultToleranceTest extends QueueTestCommon {
             AtomicInteger counter = new AtomicInteger(0);
 
             StringConsumer consumer = (s) -> {
-                log.info("Consumed, data={}", s);
-                if (counter.get() == 1) {
+                log.info("Consuming, data={}", s);
+                if (counter.get() >= 1) {
                     log.info("Calling System.exit(-1) [in separate process pid={}]", Jvm.getProcessId());
                     System.exit(-1);
                 }
