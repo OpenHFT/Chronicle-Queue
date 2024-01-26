@@ -43,6 +43,25 @@ public class NamedTailerFaultToleranceTest extends QueueTestCommon {
     }
 
     @Test
+    public void namedTailerIndexSemantics_start() {
+        try (ChronicleQueue queue = createQueueInstance(); ExcerptAppender appender = queue.createAppender()) {
+            assertNamedTailerIndex(0);
+        }
+    }
+
+    @Test
+    public void namedTailerIndexSemantics_readOnce() {
+        try (ChronicleQueue queue = createQueueInstance();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer(TAILER_NAME)) {
+            appender.writeText("a");
+            assertNamedTailerIndex(0);
+            tailer.readText();
+            assertNamedTailerIndex(1);
+        }
+    }
+
+    @Test
     public void namedTailerIndexShouldNotBePersistedMidRead_regularTailer() throws InterruptedException {
         seedInitialQueueData();
         assertNamedTailerIndex(0);
