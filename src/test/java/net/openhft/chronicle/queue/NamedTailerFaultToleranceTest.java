@@ -65,7 +65,8 @@ public class NamedTailerFaultToleranceTest extends QueueTestCommon {
     public void namedTailerIndexShouldNotBePersistedMidRead_regularTailer() throws InterruptedException {
         seedInitialQueueData();
         assertNamedTailerIndex(0);
-        Process start = JavaProcessBuilder.create(RegularTailerProcess.class).inheritingIO().start();
+        // NOTE: call inheritingIO on the JavaProcessBuilder to capture stdout, turned off as causes issues with surefire.
+        Process start = JavaProcessBuilder.create(RegularTailerProcess.class).start();
         start.waitFor(10, TimeUnit.SECONDS);
         assertNamedTailerIndex(1);
     }
@@ -87,7 +88,7 @@ public class NamedTailerFaultToleranceTest extends QueueTestCommon {
         }
 
         assertNamedTailerIndex(0);
-        Process start = JavaProcessBuilder.create(MethodReaderTailerProcess.class).inheritingIO().start();
+        Process start = JavaProcessBuilder.create(MethodReaderTailerProcess.class).start();
         start.waitFor(10, TimeUnit.SECONDS);
         assertNamedTailerIndex(1);
     }
