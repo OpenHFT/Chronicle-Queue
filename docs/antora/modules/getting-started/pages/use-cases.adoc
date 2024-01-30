@@ -12,9 +12,7 @@ Most messaging systems are consumer-centric. Flow control is implemented to avoi
 
 Chronicle Queue is a producer-centric solution and does everything possible to never push back on the producer, or tell it to slow down. This makes it a powerful tool, providing a big buffer between your system, and an upstream producer over which you have little, or no, control.
 
-IMPORTANT: Chronicle Queue does *not* support operating off any network file system, be it NFS, AFS, SAN-based storage or anything else.
-The reason for this is those file systems do not provide all the required primitives for memory-mapped files Chronicle Queue uses.
-If any networking is needed (e.g. to make the data accessible to multiple hosts), the only supported way is Chronicle Queue Replication (Enterprise feature).
+IMPORTANT: If using Chronicle Queue on NFS, there are a number of considerations to take into account. See https://github.com/OpenHFT/Chronicle-Queue/blob/ea/docs/FAQ.adoc#creating-chronicle-queue-on-network-file-system-nfs-mount[this Chronicle Queue documentation] for more information. If any networking is needed (e.g. to make the data accessible to multiple hosts), the recommended solution is to use Chronicle Queue Replication (Enterprise feature).
 
 == Market Data
 
