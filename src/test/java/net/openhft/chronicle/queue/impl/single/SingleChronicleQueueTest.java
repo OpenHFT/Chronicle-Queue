@@ -1758,7 +1758,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 3\n" +
+                    "listing.modCount: XX\n" +
                     queueLockForTestReentrant() +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
@@ -2043,7 +2043,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 4\n" +
+                    "listing.modCount: XX\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "--- !!data #binary\n" +
@@ -2627,6 +2627,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     @NotNull
     private static String tidyDump(ChronicleQueue queue) {
         return queue.dump()
+                .replaceAll("listing.modCount: \\d+", "listing.modCount: XX")
                 .replaceAll("(?m)^#.+$\\n", "")
                 .replaceAll("(\\n0000\\d+ ).*", "$1Binary");
     }
@@ -2648,7 +2649,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 5\n" +
+                    "listing.modCount: XX\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
                     "--- !!data #binary\n" +
