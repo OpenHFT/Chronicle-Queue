@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.bench;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
@@ -43,6 +44,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
     private JLBH jlbh;
+    private NanoSampler writeTime;
 
     static {
         System.setProperty("disable.thread.safety", "true");
@@ -76,6 +78,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         this.jlbh = jlbh;
+        writeTime = jlbh.addProbe("writeTime");
     }
 
     @Override
@@ -92,6 +95,7 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
             else
                 bytes.write(bytesArr);
         }
+        writeTime.sampleNanos(System.nanoTime() - startTimeNS);
 
         try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.wire() != null) {
