@@ -396,7 +396,7 @@ class StoreAppender extends AbstractCloseable
             assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
             return originalHeaderNumber != wire.headerNumber();
 
-        } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
+        } catch (BufferOverflowException | StreamCorruptedException e) {
             throw new AssertionError(e);
         }
     }
@@ -863,7 +863,7 @@ class StoreAppender extends AbstractCloseable
                 assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
             }
-        } catch (@NotNull EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
+        } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
             throw new AssertionError(e);
         }
         return true;

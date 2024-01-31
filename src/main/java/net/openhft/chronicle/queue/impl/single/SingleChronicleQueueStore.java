@@ -234,7 +234,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
         try {
             return indexing.moveToIndex(ec, index);
-        } catch (@NotNull UnrecoverableTimeoutException e) {
+        } catch (UnrecoverableTimeoutException e) {
             return ScanResult.NOT_REACHED;
         }
     }

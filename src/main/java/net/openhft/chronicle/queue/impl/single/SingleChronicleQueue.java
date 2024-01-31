@@ -1085,7 +1085,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
                 }
                 return wireStore;
 
-            } catch (@NotNull TimeoutException | IOException e) {
+            } catch (TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
             }

@@ -768,7 +768,7 @@ class StoreTailer extends AbstractCloseable
 
             return approximateLastCycle2(lastCycle);
 
-        } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
+        } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -968,7 +968,7 @@ class StoreTailer extends AbstractCloseable
 
             index(rollCycle.toIndex(wireStore.cycle(), sequenceNumber));
 
-        } catch (@NotNull UnrecoverableTimeoutException e) {
+        } catch (UnrecoverableTimeoutException e) {
             throw new IllegalStateException(e);
         }
 
