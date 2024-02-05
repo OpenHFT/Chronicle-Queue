@@ -109,7 +109,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Boolean ringBufferForceCreateReader;
     private Boolean ringBufferReopenReader;
     private Supplier<Pauser> ringBufferPauserSupplier;
-    private HandlerPriority drainerPriority;
+    private HandlerPriority drainerPriority = HandlerPriority.CONCURRENT;
     private int drainerTimeoutMS = -1;
 
     @Nullable
@@ -919,7 +919,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     /**
      * Priority for async mode drainer handler
      *
-     * @return drainerPriority, default is null
+     * @return drainerPriority
      */
     public HandlerPriority drainerPriority() {
         return drainerPriority;

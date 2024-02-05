@@ -191,4 +191,13 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
             // This will throw if we attempt to create the createAppender condition
         }
     }
+
+    /**
+     * Ensure that drainer priority is set to default value on constructing a SingleChronicleQueueBuilder
+     */
+    @Test
+    public void drainerPriorityIsSetByDefault() {
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single();
+        assertNotNull(builder.drainerPriority()); // priority may change from CONCURRENT in future
+    }
 }
