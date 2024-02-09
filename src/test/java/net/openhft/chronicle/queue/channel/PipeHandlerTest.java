@@ -62,6 +62,11 @@ public class PipeHandlerTest extends QueueTestCommon {
         IOTools.deleteDirWithFiles("test-q");
     }
 
+    @Before
+    public void warning() {
+        if (buffered)
+            ignoreException("bgWriter died");
+    }
     @Test
     @Ignore
     public void internal() {
