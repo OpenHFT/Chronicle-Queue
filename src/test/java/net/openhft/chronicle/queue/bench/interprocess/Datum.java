@@ -7,6 +7,6 @@ class Datum extends SelfDescribingMarshallable {
     public byte[] filler0;
 
     public Datum(int size) {
-        filler0 = new byte[size];
+        filler0 = new byte[size - 8];
     }
 }
