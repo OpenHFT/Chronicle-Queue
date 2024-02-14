@@ -61,7 +61,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
-    private static final int TRIES = 5;
+    private static final int TRIES = 10;
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
             new NamedThreadFactory("test"));
