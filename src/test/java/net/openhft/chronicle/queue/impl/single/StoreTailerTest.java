@@ -38,6 +38,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
@@ -489,6 +490,36 @@ public class StoreTailerTest extends QueueTestCommon {
                 assertTrue(dc.isMetaData());
                 assertEquals("header", dc.wire().readEvent(String.class));
             }
+        }
+    }
+
+    @Test
+    public void toEndWorksWhenLastCycleIsEmpty() {
+        File dir = getTmpDir();
+        SetTimeProvider stp = new SetTimeProvider();
+
+        Supplier<SingleChronicleQueue> createQueue = () -> SingleChronicleQueueBuilder.binary(dir)
+                .timeProvider(stp)
+                .rollCycle(TEST_SECONDLY)
+                .build();
+        try (SingleChronicleQueue queue = createQueue.get()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("At index 0");
+                appender.writeText("At index 1");
+                appender.writeText("At index 2");
+            }
+            stp.advanceMillis(100_000);
+            try (ExcerptAppender appender = queue.createAppender();
+                 DocumentContext documentContext = appender.writingDocument()) {
+                // This will create an empty roll cycle
+                documentContext.rollbackOnClose();
+            }
+        }
+
+        try (SingleChronicleQueue queue = createQueue.get();
+             ExcerptTailer appender = queue.createTailer()) {
+            assertEquals(2, appender.direction(TailerDirection.BACKWARD).toEnd().index());
+            assertEquals(3, appender.direction(TailerDirection.FORWARD).toEnd().index());
         }
     }
 
