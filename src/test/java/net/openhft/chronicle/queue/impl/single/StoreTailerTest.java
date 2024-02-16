@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -37,6 +38,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -314,6 +316,36 @@ public class StoreTailerTest extends ChronicleQueueTestBase {
                 assertTrue(dc.isMetaData());
                 assertEquals("header", dc.wire().readEvent(String.class));
             }
+        }
+    }
+
+    @Test
+    public void toEndWorksWhenLastCycleIsEmpty() {
+        File dir = getTmpDir();
+        SetTimeProvider stp = new SetTimeProvider();
+
+        Supplier<SingleChronicleQueue> createQueue = () -> SingleChronicleQueueBuilder.binary(dir)
+                .timeProvider(stp)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
+        try (SingleChronicleQueue queue = createQueue.get()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("At index 0");
+                appender.writeText("At index 1");
+                appender.writeText("At index 2");
+            }
+            stp.advanceMillis(100_000);
+            try (ExcerptAppender appender = queue.createAppender();
+                 DocumentContext documentContext = appender.writingDocument()) {
+                // This will create an empty roll cycle
+                documentContext.rollbackOnClose();
+            }
+        }
+
+        try (SingleChronicleQueue queue = createQueue.get();
+             ExcerptTailer appender = queue.createTailer()) {
+            assertEquals(2, appender.direction(TailerDirection.BACKWARD).toEnd().index());
+            assertEquals(3, appender.direction(TailerDirection.FORWARD).toEnd().index());
         }
     }
 
