@@ -143,7 +143,6 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         ignoreException("ms to check the disk space of");
         ignoreException("seconds to ASYNC");
         ignoreException("Running test with ");
-        ignoreException("strict.discard.warning ");
 
         finishedNormally = false;
         stress0();
