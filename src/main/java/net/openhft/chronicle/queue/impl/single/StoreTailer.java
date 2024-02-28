@@ -982,7 +982,8 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward: while (originalToEndLoopCondition(approximateLastIndex, index)) {
+                LoopForward:
+                while (originalToEndLoopCondition(approximateLastIndex, index)) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
@@ -1103,7 +1104,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean tryWindBack(final int cycle) {
-        final long count = exactExcerptsInCycle(cycle);
+        final long count = excerptsInCycle(cycle);
         if (count <= 0)
             return false;
         final RollCycle rollCycle = queue.rollCycle();
@@ -1188,22 +1189,10 @@ class StoreTailer extends AbstractCloseable
     }
 
     @Override
-    public long approximateExcerptsInCycle(int cycle) {
+    public long excerptsInCycle(int cycle) {
         throwExceptionIfClosed();
         try {
-            return moveToCycle(cycle) ? store.approximateLastSequenceNumber(this) + 1 : -1;
-        } catch (StreamCorruptedException e) {
-            throw new IllegalStateException(e);
-        } finally {
-            releaseStore();
-        }
-    }
-
-    @Override
-    public long exactExcerptsInCycle(int cycle) {
-        throwExceptionIfClosed();
-        try {
-            return moveToCycle(cycle) ? store.exactLastSequenceNumber(this) + 1 : -1;
+            return moveToCycle(cycle) ? store.lastSequenceNumber(this) + 1 : -1;
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
         } finally {

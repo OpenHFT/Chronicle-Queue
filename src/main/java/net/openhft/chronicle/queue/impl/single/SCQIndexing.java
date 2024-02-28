@@ -37,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
+import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -556,7 +557,7 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         try {
             return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive);
         } catch (EOFException e) {
-            throw new IllegalStateException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -670,12 +671,12 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
         return (index & (indexSpacing - 1)) == 0;
     }
 
-    public long lastSequenceNumber(@NotNull ExcerptContext ec, boolean approximate)
+    public long lastSequenceNumber(@NotNull ExcerptContext ec)
             throws StreamCorruptedException {
         throwExceptionIfClosed();
 
         Sequence sequence1 = this.sequence;
-        if (approximate && sequence1 != null) {
+        if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
                 long address = writePosition.getVolatileValue(0);
@@ -686,7 +687,12 @@ class SCQIndexing extends AbstractCloseable implements Demarshallable, WriteMars
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
                     break;
-                return sequence;
+                try {
+                    Wire wireForIndex = ec.wireForIndex();
+                    return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
+                } catch (EOFException e) {
+                    throw new UncheckedIOException(e);
+                }
             }
         }
 

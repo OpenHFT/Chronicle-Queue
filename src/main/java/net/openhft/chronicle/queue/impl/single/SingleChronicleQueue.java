@@ -614,7 +614,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * which is updated last during append operation so may be possible that a single entry is available for reading
      * but not acknowledged by this method yet.
      *
-     * @see ExcerptTailer#approximateExcerptsInCycle(int)
+     * @see ExcerptTailer#excerptsInCycle(int)
      * @deprecated
      */
     @Deprecated(/* To be removed in x.25 */)
@@ -623,7 +623,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // TODO: this function may require some re-work now that acquireTailer has been deprecated
         StoreTailer tailer = acquireTailer();
         try {
-            return tailer.moveToCycle(cycle) ? tailer.store.approximateLastSequenceNumber(tailer) + 1 : -1;
+            return tailer.moveToCycle(cycle) ? tailer.store.lastSequenceNumber(tailer) + 1 : -1;
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
         } finally {
@@ -635,7 +635,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
      * expensive operation.
      *
-     * @see ExcerptTailer#exactExcerptsInCycle(int)
+     * @see ExcerptTailer#excerptsInCycle(int)
      * @deprecated
      */
     @Deprecated(/* To be removed in x.25 */)
@@ -644,7 +644,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // TODO: this function may require some re-work now that acquireTailer has been deprecated
         StoreTailer tailer = acquireTailer();
         try {
-            return tailer.moveToCycle(cycle) ? tailer.store.exactLastSequenceNumber(tailer) + 1 : -1;
+            return tailer.moveToCycle(cycle) ? tailer.store.lastSequenceNumber(tailer) + 1 : -1;
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
         } finally {

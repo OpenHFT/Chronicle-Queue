@@ -35,7 +35,7 @@ public final class QueueSystemProperties {
      * Default unset value: false
      * Activation values  : "", "yes", or "true"
      */
-    public static final boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
+    public static boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     /**
      * Name of a system property used to specify the default roll cycle.
