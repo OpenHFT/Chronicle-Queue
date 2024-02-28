@@ -24,6 +24,7 @@ import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -77,6 +78,11 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
                 dc.wire().write("key2").text("hello world 6");
             }
         }
+    }
+
+    @Before
+    public void setUp() {
+        ignoreException("Forced unlocking `chronicle.write.lock` in lock");
     }
 
     @Test

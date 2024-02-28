@@ -613,14 +613,14 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
      * which is updated last during append operation so may be possible that a single entry is available for reading
      * but not acknowledged by this method yet.
      *
-     * @see ExcerptTailer#approximateExcerptsInCycle(int)
+     * @see ExcerptTailer#excerptsInCycle(int)
      * @deprecated
      */
     @Deprecated(/* To be removed in x.25 */)
     public long approximateExcerptsInCycle(int cycle) {
         throwExceptionIfClosed();
         try (ExcerptTailer tailer = createTailer()) {
-            return tailer.approximateExcerptsInCycle(cycle);
+            return tailer.excerptsInCycle(cycle);
         }
     }
 
@@ -628,14 +628,14 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
      * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
      * expensive operation.
      *
-     * @see ExcerptTailer#exactExcerptsInCycle(int)
+     * @see ExcerptTailer#excerptsInCycle(int)
      * @deprecated
      */
     @Deprecated(/* To be removed in x.25 */)
     public long exactExcerptsInCycle(int cycle) {
         throwExceptionIfClosed();
         try (ExcerptTailer tailer = createTailer()) {
-            return tailer.exactExcerptsInCycle(cycle);
+            return tailer.excerptsInCycle(cycle);
         }
     }
 
