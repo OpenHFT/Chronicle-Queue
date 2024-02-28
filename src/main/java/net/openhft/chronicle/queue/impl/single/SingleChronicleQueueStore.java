@@ -177,7 +177,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     @Override
     public String shortDump() {
-        return dump(WireType.BINARY_LIGHT,true);
+        return dump(WireType.BINARY_LIGHT, true);
     }
 
     @Override
@@ -315,20 +315,25 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return indexing.sequenceForPosition(ec, position, inclusive);
     }
 
-    @Override
-    @Deprecated(/* To be removed in 5.25 */)
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        return approximateLastSequenceNumber(ec);
+        throwExceptionIfClosedInSetter();
+        return indexing.lastSequenceNumber(ec);
     }
 
+    /**
+     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
+     */
+    @Deprecated(/* To be removed in x.26 */)
     public long approximateLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        throwExceptionIfClosedInSetter();
-        return indexing.lastSequenceNumber(ec, true);
+        return lastSequenceNumber(ec);
     }
 
+    /**
+     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
+     */
+    @Deprecated(/* To be removed in x.26 */)
     public long exactLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        throwExceptionIfClosedInSetter();
-        return indexing.lastSequenceNumber(ec, false);
+        return lastSequenceNumber(ec);
     }
 
     @NotNull

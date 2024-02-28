@@ -141,7 +141,7 @@ public enum BinarySearch {
         try {
             long lowSeqNum = 0;
 
-            long highSeqNum = tailer.approximateExcerptsInCycle(cycle) - 1;
+            long highSeqNum = tailer.excerptsInCycle(cycle) - 1;
 
             // nothing to search
             if (highSeqNum < lowSeqNum)
