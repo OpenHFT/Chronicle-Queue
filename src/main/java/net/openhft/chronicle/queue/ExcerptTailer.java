@@ -230,11 +230,12 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * Calling this method may move ExcerptTailer to the specified cycle and release its store.
      *
      * @return the approximate number of excerpts in a cycle.
+     *
+     * @deprecated Use {@link #excerptsInCycle(int)} instead
      */
+    @Deprecated(/* To be removed in x.27 */)
     default long approximateExcerptsInCycle(int cycle) {
-        try (ExcerptTailer tailer = queue().createTailer()) {
-            return tailer.approximateExcerptsInCycle(cycle);
-        }
+        return excerptsInCycle(cycle);
     }
 
     /**
@@ -244,10 +245,24 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * Calling this method may move ExcerptTailer to the specified cycle and release its store.
      *
      * @return the exact number of excerpts in a cycle.
+     *
+     * @deprecated Use {@link #excerptsInCycle(int)} instead
      */
+    @Deprecated(/* To be removed in x.27 */)
     default long exactExcerptsInCycle(int cycle) {
+        return excerptsInCycle(cycle);
+    }
+
+    /**
+     * Return the exact number of excerpts in a cycle available for reading.
+     * <p>
+     * Calling this method may move ExcerptTailer to the specified cycle and release its store.
+     *
+     * @return the exact number of excerpts in a cycle.
+     */
+    default long excerptsInCycle(int cycle) {
         try (ExcerptTailer tailer = queue().createTailer()) {
-            return tailer.exactExcerptsInCycle(cycle);
+            return tailer.excerptsInCycle(cycle);
         }
     }
 

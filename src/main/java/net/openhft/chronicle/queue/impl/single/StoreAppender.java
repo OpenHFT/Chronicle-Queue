@@ -118,7 +118,7 @@ class StoreAppender extends AbstractCloseable
                         }
                     }
                     if (wire != null)
-                        resetPosition(false);
+                        resetPosition();
                 }
             } finally {
                 writeLock.unlock();
@@ -328,7 +328,7 @@ class StoreAppender extends AbstractCloseable
         assert wire.startUse();
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
-        resetPosition(false);
+        resetPosition();
         queue.onRoll(cycle);
     }
 
@@ -358,7 +358,7 @@ class StoreAppender extends AbstractCloseable
      * @return true if the header number is changed, otherwise false
      * @throws UnrecoverableTimeoutException todo
      */
-    private boolean resetPosition(boolean exact) {
+    private boolean resetPosition() {
         long originalHeaderNumber = wire.headerNumber();
         try {
             if (store == null || wire == null)
@@ -369,8 +369,7 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> bytes = wire.bytes();
             assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
-            final long lastSequenceNumber = exact ? store.exactLastSequenceNumber(this)
-                    : store.approximateLastSequenceNumber(this);
+            final long lastSequenceNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
             assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
@@ -445,7 +444,7 @@ class StoreAppender extends AbstractCloseable
                     rollCycleTo(cycle);
 
                 long safeLength = queue.overlapSize();
-                resetPosition(false);
+                resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
                 // sets the writeLimit based on the safeLength
@@ -653,7 +652,7 @@ class StoreAppender extends AbstractCloseable
             rollCycleTo(cycle, this.cycle > cycle);
 
         // in case our cached headerNumber is incorrect.
-        resetPosition(true);
+        resetPosition();
 
         long headerNumber = wire.headerNumber();
 
