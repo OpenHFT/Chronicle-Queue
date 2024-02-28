@@ -669,7 +669,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             long lowerSeqNum = rollCycle.toSequenceNumber(fromIndex);
 
             if (lowerCycle + 1 == upperCycle) {
-                long l = tailer.exactExcerptsInCycle(lowerCycle);
+                long l = tailer.excerptsInCycle(lowerCycle);
                 result += (l - lowerSeqNum) + upperSeqNum;
                 return result;
             }
@@ -684,7 +684,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             if (cycles.first() == lowerCycle) {
                 // because we are inclusive, for example  if we were at the end, then this
                 // is 1 except rather than zero
-                long l = tailer.exactExcerptsInCycle(lowerCycle);
+                long l = tailer.excerptsInCycle(lowerCycle);
                 result += (l - lowerSeqNum);
             } else
                 throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
@@ -699,7 +699,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
 
             final long[] array = cycles.stream().mapToLong(i -> i).toArray();
             for (int i = 1; i < array.length - 1; i++) {
-                long x = tailer.exactExcerptsInCycle(Math.toIntExact(array[i]));
+                long x = tailer.excerptsInCycle(Math.toIntExact(array[i]));
                 result += x;
             }
 

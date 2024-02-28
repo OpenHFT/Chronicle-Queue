@@ -481,7 +481,7 @@ class StoreTailer extends AbstractCloseable
                 // after toEnd() call, index is past the end of the queue
                 // so try to go back one (to the last record in the queue)
                 if ((int) queue.rollCycle().toSequenceNumber(index()) < 0) {
-                    long lastSeqNum = store().approximateLastSequenceNumber(this);
+                    long lastSeqNum = store().lastSequenceNumber(this);
                     if (lastSeqNum == -1) {
                         windBackCycle(cycle);
                         return moveToIndexInternal(index());
@@ -574,7 +574,7 @@ class StoreTailer extends AbstractCloseable
 
         if (direction == BACKWARD) {
             try {
-                long lastSequenceNumber0 = store().approximateLastSequenceNumber(this);
+                long lastSequenceNumber0 = store().lastSequenceNumber(this);
                 return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
 
             } catch (Exception e) {
@@ -787,7 +787,7 @@ class StoreTailer extends AbstractCloseable
                 resetWires();
             }
 
-            sequenceNumber = this.store().approximateLastSequenceNumber(this);
+            sequenceNumber = this.store().lastSequenceNumber(this);
         }
         // give the position of the last entry and
         // flag we want to count it even though we don't know if it will be meta data or not.
@@ -1117,7 +1117,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     private boolean tryWindBack(final int cycle) {
-        final long count = exactExcerptsInCycle(cycle);
+        final long count = excerptsInCycle(cycle);
         if (count <= 0)
             return false;
         final RollCycle rollCycle = queue.rollCycle();
@@ -1206,22 +1206,10 @@ class StoreTailer extends AbstractCloseable
     }
 
     @Override
-    public long approximateExcerptsInCycle(int cycle) {
+    public long excerptsInCycle(int cycle) {
         throwExceptionIfClosed();
         try {
-            return moveToCycle(cycle) ? store.approximateLastSequenceNumber(this) + 1 : -1;
-        } catch (StreamCorruptedException e) {
-            throw new IllegalStateException(e);
-        } finally {
-            releaseStore();
-        }
-    }
-
-    @Override
-    public long exactExcerptsInCycle(int cycle) {
-        throwExceptionIfClosed();
-        try {
-            return moveToCycle(cycle) ? store.exactLastSequenceNumber(this) + 1 : -1;
+            return moveToCycle(cycle) ? store.lastSequenceNumber(this) + 1 : -1;
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
         } finally {

@@ -27,7 +27,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         assertEquals(0, linearScanByPositionCountStart);
         long lastSequenceNumber = indexing.lastSequenceNumber(appender, true);
         assertEquals(0, lastSequenceNumber);
-        assertEquals(0, indexing.linearScanByPositionCount());
+        assertEquals(1, indexing.linearScanByPositionCount());
     }
 
     @Test

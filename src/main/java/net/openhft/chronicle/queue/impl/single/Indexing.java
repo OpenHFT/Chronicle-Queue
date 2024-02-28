@@ -18,7 +18,26 @@ public interface Indexing {
 
     boolean indexable(long index);
 
-    long lastSequenceNumber(ExcerptContext ec, boolean approximate) throws StreamCorruptedException;
+    /**
+     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
+     */
+    @Deprecated(/* To be removed in x.26 */)
+    default long lastSequenceNumber(ExcerptContext ec, boolean approximate) throws StreamCorruptedException {
+        return lastSequenceNumber(ec);
+    }
+
+    /**
+     * Get the sequence number of the last entry present in the cycle.
+     * <p>
+     * Note: If you're not holding the write lock when you call this and there are concurrent writers,
+     * the value may be stale by the time it's returned. If you're holding the write lock it is guaranteed
+     * to be accurate.
+     *
+     * @param ex An {@link ExcerptContext} used to scan the roll cycle if necssary
+     * @return the sequence of the last excerpt in the cycle
+     * @throws StreamCorruptedException
+     */
+    long lastSequenceNumber(ExcerptContext ex) throws StreamCorruptedException;
 
     int linearScanCount();
 

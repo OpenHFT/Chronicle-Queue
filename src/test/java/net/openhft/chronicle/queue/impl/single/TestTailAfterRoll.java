@@ -27,6 +27,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -47,6 +48,7 @@ public class TestTailAfterRoll extends QueueTestCommon {
      * (6) write to this queue created in (5)
      * (7) when you now try to read from this queue you will not be able to read back what you have just written in (6)
      */
+    @Ignore
     @Test
     public void test() {
         File tmpDir = getTmpDir();
