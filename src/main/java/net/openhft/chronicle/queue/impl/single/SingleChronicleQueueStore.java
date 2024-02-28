@@ -315,14 +315,25 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return indexing.sequenceForPosition(ec, position, inclusive);
     }
 
+    /**
+     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
+     */
+    @Deprecated(/* To be removed in x.26 */)
     public long approximateLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        throwExceptionIfClosedInSetter();
-        return indexing.lastSequenceNumber(ec, true);
+        return lastSequenceNumber(ec);
     }
 
+    /**
+     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
+     */
+    @Deprecated(/* To be removed in x.26 */)
     public long exactLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
+        return lastSequenceNumber(ec);
+    }
+
+    public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
         throwExceptionIfClosedInSetter();
-        return indexing.lastSequenceNumber(ec, false);
+        return indexing.lastSequenceNumber(ec);
     }
 
     @NotNull

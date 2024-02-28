@@ -57,6 +57,7 @@ class StoreAppender extends AbstractCloseable
      * Determines behaviour when validating that the index passed to {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)}
      * is at or beyond the end of the queue.
      */
+    @Deprecated(/* To be removed in x.26 */)
     protected enum IndexValidationMode {
         /**
          * We read the queue contents when validating
@@ -135,7 +136,7 @@ class StoreAppender extends AbstractCloseable
                         }
                     }
                     if (wire != null)
-                        resetPosition(false);
+                        resetPosition();
                 }
             } finally {
                 writeLock.unlock();
@@ -344,7 +345,7 @@ class StoreAppender extends AbstractCloseable
 
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
-        resetPosition(false);
+        resetPosition();
         queue.onRoll(cycle);
     }
 
@@ -374,7 +375,7 @@ class StoreAppender extends AbstractCloseable
      * @return true if the header number is changed, otherwise false
      * @throws UnrecoverableTimeoutException todo
      */
-    private boolean resetPosition(boolean exact) {
+    private boolean resetPosition() {
         long originalHeaderNumber = wire.headerNumber();
         try {
             if (store == null || wire == null)
@@ -385,8 +386,7 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> bytes = wire.bytes();
             assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
-            final long lastSequenceNumber = exact ? store.exactLastSequenceNumber(this)
-                    : store.approximateLastSequenceNumber(this);
+            final long lastSequenceNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
             assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
@@ -453,7 +453,7 @@ class StoreAppender extends AbstractCloseable
                     rollCycleTo(cycle);
 
                 long safeLength = queue.overlapSize();
-                resetPosition(false);
+                resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
                 // sets the writeLimit based on the safeLength
@@ -545,7 +545,7 @@ class StoreAppender extends AbstractCloseable
             // queue moved since we last touched it - recalculate header number
 
             try {
-                wire.headerNumber(queue.rollCycle().toIndex(cycle, store.approximateLastSequenceNumber(this)));
+                wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
             } catch (StreamCorruptedException ex) {
                 Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
             }
@@ -635,38 +635,39 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock();
         writeLock.lock();
         try {
-            writeBytesInternal(index, bytes, IndexValidationMode.SAFE);
+            writeBytesInternal(index, bytes);
         } finally {
             writeLock.unlock();
         }
     }
 
+    /**
+     * @deprecated Use {@link #writeBytes(long, BytesStore)} instead
+     */
+    @Deprecated(/* To be removed in x.26 */)
     @Override
     public void unsafeWriteBytes(final long index, @NotNull final BytesStore bytes) {
-        throwExceptionIfClosed();
-        checkAppendLock();
-        writeLock.lock();
-        try {
-            writeBytesInternal(index, bytes, IndexValidationMode.UNSAFE);
-        } finally {
-            writeLock.unlock();
-        }
+        writeBytes(index, bytes);
     }
 
     /**
-     * @deprecated Use {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)} instead
+     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
+     * the queue file and cause data loss.
+     *
+     * @param index               Index to append at
+     * @param bytes               The excerpt bytes
+     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
-    @Deprecated(/* To be removed in x.27 */)
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
-        writeBytesInternal(index, bytes, IndexValidationMode.SAFE);
+        writeBytesInternal(index, bytes, false);
     }
 
     /**
-     * @deprecated This method makes no sense when metadata=true, use {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)} instead
+     * @deprecated This method makes no sense when metadata=true, use {@link #writeBytesInternal(long, BytesStore)} instead
      */
     @Deprecated(/* To be removed in x.27 */)
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
-        writeBytesInternal(index, bytes, metadata, IndexValidationMode.SAFE);
+    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata, IndexValidationMode indexValidationMode) {
+        writeBytesInternal(index, bytes, metadata);
     }
 
     /**
@@ -677,9 +678,11 @@ class StoreAppender extends AbstractCloseable
      * @param bytes               The excerpt bytes
      * @param indexValidationMode How stringent to be when validating the append index
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
+     * @deprecated Use {@link #writeBytesInternal(long, BytesStore)} instead
      */
+    @Deprecated(/* To be removed in x.26 */)
     protected void writeBytesInternal(final long index, @NotNull BytesStore bytes, IndexValidationMode indexValidationMode) {
-        writeBytesInternal(index, bytes, false, indexValidationMode);
+        writeBytesInternal(index, bytes, false);
     }
 
     /**
@@ -689,13 +692,11 @@ class StoreAppender extends AbstractCloseable
      * @param index               Index to append at
      * @param bytes               The excerpt bytes
      * @param metadata            Whether to write the excerpt as metadata, this is legacy and should always be set to false
-     * @param indexValidationMode How stringent to be when validating the append index
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
-     * @deprecated Use {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)} instead
+     * @deprecated Use {@link #writeBytesInternal(long, BytesStore)} instead
      */
     @SuppressWarnings("DeprecatedIsStillUsed")  // will be collapsed into the caller when deprecated
-    @Deprecated(/* For removal in x.27 */)
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata, IndexValidationMode indexValidationMode) {
+    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
@@ -708,7 +709,7 @@ class StoreAppender extends AbstractCloseable
             rollCycleTo(cycle, this.cycle > cycle);
 
         // in case our cached headerNumber is incorrect.
-        resetPosition(indexValidationMode == IndexValidationMode.SAFE);
+        resetPosition();
 
         long headerNumber = wire.headerNumber();
 
@@ -1145,7 +1146,7 @@ class StoreAppender extends AbstractCloseable
             }
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
-                    wire.headerNumber(queue.rollCycle().toIndex(cycle, store.approximateLastSequenceNumber(StoreAppender.this)));
+                    wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
                     long headerNumber0 = wire.headerNumber();
                     assert (((AbstractWire) this.wire).isInsideHeader());
                     return isMetaData() ? headerNumber0 : headerNumber0 + 1;
