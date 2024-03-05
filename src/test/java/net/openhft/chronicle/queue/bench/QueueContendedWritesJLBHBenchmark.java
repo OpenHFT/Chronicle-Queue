@@ -32,12 +32,13 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.openhft.chronicle.queue.RollCycles.LARGE_DAILY;
 import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.LARGE_DAILY;
 
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     public static final int ITERATIONS = 100_000;
+    private static final String PATH = System.getProperty("path", "replica");
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
     private JLBH jlbh;
@@ -65,12 +66,12 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
 
     @Override
     public void init(JLBH jlbh) {
-        IOTools.deleteDirWithFiles("replica", 10);
+        IOTools.deleteDirWithFilesOrThrow(PATH);
 
         this.jlbh = jlbh;
         concurrent = jlbh.addProbe("Concurrent");
         concurrent2 = jlbh.addProbe("Concurrent2");
-        queue = single("replica").rollCycle(LARGE_DAILY).doubleBuffer(false).build();
+        queue = single(PATH).rollCycle(LARGE_DAILY).doubleBuffer(false).build();
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();
