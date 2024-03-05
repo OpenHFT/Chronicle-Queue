@@ -36,7 +36,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
-    public static final String PATH = System.getProperty("path", "replica");
+    private static final String PATH = System.getProperty("path", "replica");
     private static final int ITERATIONS = 1_000_000;
     private final IFacade datum = Values.newNativeReference(IFacade.class);
     private SingleChronicleQueue sourceQueue;

@@ -57,7 +57,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     private static final int RUNS = 5;
     private static final long SPARSEBLOCK = 1L << 40;
     private static final long NORMALBLOCK = 64L << 20;
-    private static final String ROOTDIR="/mnt/local/benchmark/";
+    private static final String ROOTDIR = System.getProperty("path", "bench");
 
     static {
         System.setProperty("disable.thread.safety", "true");

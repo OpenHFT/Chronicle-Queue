@@ -34,11 +34,12 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 
 public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private static final int MSG_THROUGHPUT = Integer.getInteger("throughput", 50_000_000);
+    private static final int ITERATIONS = Integer.getInteger("iterations", 1_000);
     private static final int MSG_LENGTH = Integer.getInteger("length", 1_000_000);
+    private static final String PATH = System.getProperty("path", "replica");
     private static final boolean MSG_DIRECT = Jvm.getBoolean("direct");
     static byte[] bytesArr = new byte[MSG_LENGTH];
     static Bytes<?> bytesArr2 = Bytes.allocateDirect(MSG_LENGTH);
-    private static int iterations;
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;
@@ -54,12 +55,10 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
 
     public static void main(String[] args) {
         int throughput = MSG_THROUGHPUT / MSG_LENGTH;
-        int warmUp = Math.min(50 * throughput, 12_000);
-        iterations = Math.min(20 * throughput, 100_000);
 
         JLBHOptions lth = new JLBHOptions()
-                .warmUpIterations(warmUp)
-                .iterations(iterations)
+                .warmUpIterations(12_000)
+                .iterations(ITERATIONS)
                 .throughput(throughput)
                 .recordOSJitter(false)
                 .skipFirstRun(true)
@@ -70,10 +69,10 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
 
     @Override
     public void init(JLBH jlbh) {
-        IOTools.deleteDirWithFiles("large", 3);
+        IOTools.deleteDirWithFilesOrThrow(PATH);
 
-        sourceQueue = single("large").blockSize(1L << 30).build();
-        sinkQueue = single("large").blockSize(1L << 30).build();
+        sourceQueue = single(PATH).blockSize(1L << 30).build();
+        sinkQueue = single(PATH).blockSize(1L << 30).build();
         appender = sourceQueue.createAppender();
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
@@ -116,6 +115,6 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     public void complete() {
         sinkQueue.close();
         sourceQueue.close();
-        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, iterations, System.out);
+        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
     }
 }
