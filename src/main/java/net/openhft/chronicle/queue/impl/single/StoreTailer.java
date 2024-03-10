@@ -150,6 +150,7 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     protected void performClose() {
+//        queue.removeCloseListener((java.io.Closeable) this);
         Closeable.closeQuietly(indexUpdater);
         // the wire ref count will be released here by setting it to null
         context.wire(null);

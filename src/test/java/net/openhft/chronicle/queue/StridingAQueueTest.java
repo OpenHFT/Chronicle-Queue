@@ -46,22 +46,23 @@ public class StridingAQueueTest extends QueueTestCommon {
 
             assertEquals(getExpected(), queue.dump().replaceAll("(?m)^#.+$\\n", ""));
             StringWriter sw = new StringWriter();
-            ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd().striding(true);
-            MethodReader reader = tailer.methodReader(Mocker.logging(SAQMessage.class, "", sw));
-            while (reader.readOne()) ;
-            assertEquals("hi[4, 9]\n" +
-                            "hi[4, 8]\n" +
-                            "hi[4, 4]\n" +
-                            "hi[4, 0]\n" +
-                            "hi[3, 8]\n" +
-                            "hi[3, 4]\n" +
-                            "hi[3, 0]\n" +
-                            "hi[2, 7]\n" +
-                            "hi[2, 5]\n" +
-                            "hi[2, 1]\n" +
-                            "hi[1, 4]\n" +
-                            "hi[1, 0]\n",
-                    sw.toString().replace("\r", ""));
+            try (ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd().striding(true)) {
+                MethodReader reader = tailer.methodReader(Mocker.logging(SAQMessage.class, "", sw));
+                while (reader.readOne()) ;
+                assertEquals("hi[4, 9]\n" +
+                                "hi[4, 8]\n" +
+                                "hi[4, 4]\n" +
+                                "hi[4, 0]\n" +
+                                "hi[3, 8]\n" +
+                                "hi[3, 4]\n" +
+                                "hi[3, 0]\n" +
+                                "hi[2, 7]\n" +
+                                "hi[2, 5]\n" +
+                                "hi[2, 1]\n" +
+                                "hi[1, 4]\n" +
+                                "hi[1, 0]\n",
+                        sw.toString().replace("\r", ""));
+            }
         }
     }
 
