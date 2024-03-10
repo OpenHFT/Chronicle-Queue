@@ -36,6 +36,7 @@
         <additionalparam>-Xdoclint:none</additionalparam>
         <sonar.organization>openhft</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <compiler.release>8</compiler.release>
     </properties>
 
     <dependencyManagement>
@@ -285,9 +286,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                <configuration combine.self="override"> <!-- Required so that this configuration does not inherit from parent pom -->
+                    <failOnWarning>false</failOnWarning>
+                    <showDeprecation>false</showDeprecation>
+                    <showWarnings>false</showWarnings>
+                    <showDeprecation>false</showDeprecation>
+                    <!-- compilerArgs are set in parent pom to fail on deprecation. We have not turned this on for queue
+                    yet but will. To turn it remove compilerArgs below. A number of deprecation fixes will be required.
+                    Note that -parameters is still passed as this is set in the parent pom and we don't want to lose it.
+                    -->
+                    <compilerArgs>
+                        <compilerArg>-parameters</compilerArg>
+                    </compilerArgs>
+                    <source>${compiler.release}</source>
+                    <target>${compiler.release}</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
@@ -464,6 +476,27 @@
     </build>
 
     <profiles>
+        <profile>
+            <!-- prevents "bootstrap class path not set in conjunction with -source 8" -->
+            <id>set-compiler-release</id>
+            <activation>
+                <jdk>[9,21]</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+        <profile>
+            <!-- -source 8 no longer supported in Java 21 -->
+            <id>set-compiler-release2</id>
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+            <properties>
+                <compiler.release>11</compiler.release>
+                <maven.compiler.release>11</maven.compiler.release>
+            </properties>
+        </profile>
         <profile>
             <id>assertions</id>
             <properties>
