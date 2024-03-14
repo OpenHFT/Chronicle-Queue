@@ -1,30 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<!--
+  ~ Copyright 2016 chronicle.software
+  ~
+  ~ Licensed under the *Apache License, Version 2.0* (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>net.openhft</groupId>
     <artifactId>java-parent-pom</artifactId>
     <version>1.25.4</version>
-    <relativePath></relativePath>
+    <relativePath />
   </parent>
+
   <artifactId>chronicle-queue</artifactId>
+
   <version>5.25ea13-SNAPSHOT</version>
   <packaging>bundle</packaging>
   <name>OpenHFT/Chronicle Queue</name>
   <description>Java library for persisted low latency messaging (Java 8+)</description>
-  <scm>
-    <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
-    <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</developerConnection>
-    <tag>develop</tag>
-    <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
-  </scm>
   <properties>
     <zero.cost.assertions>disabled</zero.cost.assertions>
-    <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <additionalparam>-Xdoclint:none</additionalparam>
     <sonar.organization>openhft</sonar.organization>
+    <sonar.host.url>https://sonarcloud.io</sonar.host.url>
   </properties>
+
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -43,50 +56,88 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
   <dependencies>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>assertions-${zero.cost.assertions}</artifactId>
       <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>chronicle-core</artifactId>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>chronicle-bytes</artifactId>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>chronicle-wire</artifactId>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>chronicle-threads</artifactId>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>affinity</artifactId>
       <optional>true</optional>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>jlbh</artifactId>
       <optional>true</optional>
     </dependency>
+
     <dependency>
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>5.2.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-inline</artifactId>
+      <version>5.2.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>2.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.9.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- for testing -->
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>chronicle-values</artifactId>
@@ -98,61 +149,64 @@
         </exclusion>
       </exclusions>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>chronicle-core</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>5.9.2</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <version>5.9.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <version>5.9.2</version>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.junit.vintage</groupId>
       <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>chronicle-test-framework</artifactId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <!-- for benchmarks -->
+
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
@@ -163,107 +217,47 @@
       <artifactId>jmh-generator-annprocess</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest</artifactId>
-      <version>2.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>5.7.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
-      <version>5.2.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest</artifactId>
-      <version>2.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>5.7.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
-      <version>5.2.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest</artifactId>
-      <version>2.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>5.7.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
-      <version>5.2.0</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
+
   <repositories>
     <repository>
+      <id>third-party-release</id>
+      <name>ThirdParty Repository</name>
+      <url>
+        https://nexus.chronicle.software/content/repositories/thirdparty/
+      </url>
       <releases>
         <enabled>true</enabled>
       </releases>
-      <id>third-party-release</id>
-      <name>ThirdParty Repository</name>
-      <url>https://nexus.chronicle.software/content/repositories/thirdparty/</url>
     </repository>
     <repository>
+      <id>chronicle-enterprise-snapshots</id>
+      <name>Snapshot Repository</name>
+      <url>
+        https://nexus.chronicle.software/content/repositories/snapshots
+      </url>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
-      <id>chronicle-enterprise-snapshots</id>
-      <name>Snapshot Repository</name>
-      <url>https://nexus.chronicle.software/content/repositories/snapshots</url>
     </repository>
     <repository>
+      <id>chronicle-enterprise-release</id>
+      <url>
+        https://nexus.chronicle.software/content/repositories/releases
+      </url>
       <releases>
         <enabled>true</enabled>
       </releases>
-      <id>chronicle-enterprise-release</id>
-      <url>https://nexus.chronicle.software/content/repositories/releases</url>
     </repository>
   </repositories>
+
   <build>
-    <resources>
-      <resource>
-        <filtering>true</filtering>
-        <directory>src/main/resources</directory>
-        <includes>
-          <include>**/queue.pom.properties</include>
-        </includes>
-      </resource>
-      <resource>
-        <filtering>false</filtering>
-        <directory>src/main/resources</directory>
-        <excludes>
-          <exclude>**/queue.pom.properties</exclude>
-        </excludes>
-      </resource>
-    </resources>
+
     <plugins>
       <plugin>
         <groupId>net.openhft</groupId>
         <artifactId>binary-compatibility-enforcer-plugin</artifactId>
+
         <executions>
           <execution>
             <phase>verify</phase>
@@ -275,6 +269,7 @@
               <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
               <binaryCompatibilityPercentageRequired>89</binaryCompatibilityPercentageRequired>
               <extraOptions>
+                <!--This skips "internal" but checks "impl"-->
                 <extraOption>
                   <name>-keep-internal</name>
                 </extraOption>
@@ -287,14 +282,19 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <forkCount>1</forkCount>
+          <!--                    <reuseForks>false</reuseForks>-->
           <runOrder>hourly</runOrder>
         </configuration>
       </plugin>
+
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
         <executions>
           <execution>
@@ -306,7 +306,9 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <source>1.8</source>
@@ -314,29 +316,39 @@
           <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Bundle-SymbolicName>${project.groupId}.${project.artifactId}
+            </Bundle-SymbolicName>
+            <Bundle-Name>OpenHFT :: ${project.artifactId}</Bundle-Name>
+            <Export-Package>net.openhft.chronicle.queue.*</Export-Package>
+          </instructions>
+        </configuration>
         <executions>
+          <!--
+            This execution makes sure that the manifest is available
+            when the tests are executed
+          -->
           <execution>
             <goals>
               <goal>manifest</goal>
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <instructions>
-            <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-            <Bundle-Name>OpenHFT :: ${project.artifactId}</Bundle-Name>
-            <Export-Package>net.openhft.chronicle.queue.*</Export-Package>
-          </instructions>
-        </configuration>
       </plugin>
+
+      <!-- benchmark network latency with Wire -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+
         <executions>
+          <!-- run this first -->
           <execution>
             <id>Gateway</id>
             <goals>
@@ -358,6 +370,9 @@
               <classpathScope>test</classpathScope>
             </configuration>
           </execution>
+
+          <!-- PIPING MICROSERVICE LOW LATENCY TEST -->
+          <!-- run this second with -Durl=tcp://localhost:1248 or the host of your choice -->
           <execution>
             <id>PipeClient</id>
             <goals>
@@ -375,6 +390,9 @@
               <classpathScope>test</classpathScope>
             </configuration>
           </execution>
+
+          <!-- PIPING MICROSERVICE LATENCY WITH HIGH THROUGHPUT TEST -->
+          <!-- run this second with -Durl=tcp://localhost:1248 or the host of your choice -->
           <execution>
             <id>PipeClient-Throughput</id>
             <goals>
@@ -400,6 +418,9 @@
               <classpathScope>test</classpathScope>
             </configuration>
           </execution>
+
+          <!-- PIPING MICROSERVICE LOW LATENCY TEST -->
+          <!-- run this second with -Durl=tcp://localhost:1248 or the host of your choice -->
           <execution>
             <id>PipeThroughput</id>
             <goals>
@@ -417,17 +438,13 @@
               <classpathScope>test</classpathScope>
             </configuration>
           </execution>
+
         </executions>
       </plugin>
+
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
           <archive>
             <manifest>
@@ -435,15 +452,42 @@
             </manifest>
           </archive>
         </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
+
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
           <source>8</source>
         </configuration>
       </plugin>
     </plugins>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>**/queue.pom.properties</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <excludes>
+          <exclude>**/queue.pom.properties</exclude>
+        </excludes>
+      </resource>
+    </resources>
+
   </build>
+
   <profiles>
     <profile>
       <id>assertions</id>
@@ -451,18 +495,20 @@
         <zero.cost.assertions>enabled</zero.cost.assertions>
       </properties>
     </profile>
+
     <profile>
       <id>bundled-nexus-staging</id>
       <repositories>
         <repository>
+          <id>chronicle-enterprise-release</id>
+          <url>https://nexus.chronicle.software/content/repositories/releases</url>
           <releases>
             <enabled>true</enabled>
           </releases>
-          <id>chronicle-enterprise-release</id>
-          <url>https://nexus.chronicle.software/content/repositories/releases</url>
         </repository>
       </repositories>
     </profile>
+
     <profile>
       <id>shade</id>
       <activation>
@@ -474,6 +520,7 @@
       <build>
         <plugins>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
             <executions>
               <execution>
@@ -521,13 +568,20 @@
         </plugins>
       </build>
     </profile>
+
     <profile>
       <id>run-benchmarks</id>
+      <properties />
       <build>
         <plugins>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
+
+            <configuration>
+              <classpathScope>test</classpathScope>
+              <cleanupDaemonThreads>false</cleanupDaemonThreads>
+            </configuration>
             <executions>
               <execution>
                 <id>ByteArrayJLBHBenchmark</id>
@@ -537,7 +591,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -548,7 +603,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderBenchmark</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderBenchmark
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -559,7 +615,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderSkipBenchmark</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderSkipBenchmark
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -570,7 +627,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -581,7 +639,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -592,7 +651,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -603,7 +663,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -614,9 +675,11 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DunsafeAppends -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DunsafeAppends -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
+                  </commandlineArgs>
                 </configuration>
               </execution>
+              <!-- QueueMultiThreadedJLBHBenchmark was moved to QE -->
               <execution>
                 <id>RollCycleMultiThreadStressTest</id>
                 <phase>test</phase>
@@ -625,7 +688,8 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressTest</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressTest
+                  </commandlineArgs>
                 </configuration>
               </execution>
               <execution>
@@ -636,18 +700,17 @@
                 </goals>
                 <configuration>
                   <executable>${java.home}/bin/java</executable>
-                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressReadOnlyTest</commandlineArgs>
+                  <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressReadOnlyTest
+                  </commandlineArgs>
                 </configuration>
               </execution>
             </executions>
-            <configuration>
-              <classpathScope>test</classpathScope>
-              <cleanupDaemonThreads>false</cleanupDaemonThreads>
-            </configuration>
           </plugin>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
+              <!-- Disable unit tests -->
               <skip>true</skip>
             </configuration>
           </plugin>
@@ -655,4 +718,13 @@
       </build>
     </profile>
   </profiles>
+
+  <scm>
+    <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
+    <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
+    <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
+    </developerConnection>
+    <tag>develop</tag>
+  </scm>
+
 </project>

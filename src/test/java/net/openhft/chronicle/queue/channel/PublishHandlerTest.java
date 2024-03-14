@@ -43,7 +43,6 @@ class PublishHandlerTest {
 
     private final ChronicleContext contextMock = mock(ChronicleContext.class);
 
-    //Sapient generated method id: ${590cd13f-424c-34cb-95b0-2654fa9768cf}, hash: C01C07207BFB5E217EC02BA11521A6F2
     @Test()
     void publishTest() {
         //Arrange Statement(s)
@@ -54,7 +53,6 @@ class PublishHandlerTest {
         assertAll("result", () -> assertThat(result, is(nullValue())));
     }
 
-    //Sapient generated method id: ${125fc076-78de-38a4-953e-6a261fd08c0c}, hash: F4B9EC14656F94B400B40E5EA82CDE4F
     @Test()
     void publish1Test() {
         //Arrange Statement(s)
@@ -65,7 +63,6 @@ class PublishHandlerTest {
         assertAll("result", () -> assertThat(result, equalTo(target)));
     }
 
-    //Sapient generated method id: ${65afb4f3-4b94-34a1-9621-6c7f9580bb34}, hash: 618C98420B01AFC7E671285A6B786961
     @Test()
     void syncModeTest() {
         //Arrange Statement(s)
@@ -76,7 +73,6 @@ class PublishHandlerTest {
         assertAll("result", () -> assertThat(result, is(nullValue())));
     }
 
-    //Sapient generated method id: ${cca940fa-019f-3145-835a-8b85259845ed}, hash: E8F6167CAE2D8B90632A43FF16D7AFA4
     @Test()
     void syncMode1Test() {
         //Arrange Statement(s)
@@ -87,7 +83,6 @@ class PublishHandlerTest {
         assertAll("result", () -> assertThat(result, equalTo(target)));
     }
 
-    //Sapient generated method id: ${cb27ab1e-0b67-347f-8320-3e7d949d1c3d}, hash: B229D5D2B895EEA7A583F1FCCC81310C
     @Test()
     void publishSourceIdTest() {
         //Arrange Statement(s)
@@ -98,7 +93,6 @@ class PublishHandlerTest {
         assertAll("result", () -> assertThat(result, equalTo(0)));
     }
 
-    //Sapient generated method id: ${d34fb813-ac8a-3459-bdbf-11648429438c}, hash: 402F2B629C0C17DA11CB20FB1E23285D
     @Test()
     void publishSourceId1Test() {
         //Arrange Statement(s)
@@ -109,7 +103,6 @@ class PublishHandlerTest {
         assertAll("result", () -> assertThat(result, equalTo(target)));
     }
 
-    //Sapient generated method id: ${5ee56fb1-1efb-35fb-b1bb-d35d0790b8a8}, hash: 46D1C15FEC40B9EAD904DC6B2CEEF42B
     @Test()
     void runWhenDefaultBranch() throws Throwable {
         /* Branches:
@@ -135,7 +128,6 @@ class PublishHandlerTest {
         }
     }
 
-    //Sapient generated method id: ${729cdc87-0956-3895-bd0a-826db7b5b8f4}, hash: 4DA80895F1C55BFFF94A20D9E92801E6
     @Test()
     void asInternalChannelTest() {
         //Arrange Statement(s)
