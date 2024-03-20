@@ -68,7 +68,7 @@ public enum RollCycles implements RollCycle {
     /**
      * 0xffffffff entries per week, indexing every 256th entry, leave as 4K and 256 for historical reasons. Cycle starts Sunday 00:00
      */
-    WEEKLY(/*-----------*/"yyyy'W'ww", 7 * 24 * 60 * 60 * 1000, 4 << 10, 256, Constants.SUNDAY_00_00),
+    WEEKLY(/*-----------*/"YYYY'W'ww", 7 * 24 * 60 * 60 * 1000, 4 << 10, 256, RollCycleArithmetic.SUNDAY_00_00),
 
     // these are kept for historical reasons
     /**
@@ -373,12 +373,5 @@ public enum RollCycles implements RollCycle {
         mappings.put(RollCycles.HUGE_DAILY, LargeRollCycles.HUGE_DAILY);
 
         return Collections.unmodifiableMap(mappings);
-    }
-
-    static class Constants {
-        /**
-         * Sunday 1970 Jan 4th 00:00:00 UTC
-         */
-        public static final int SUNDAY_00_00 = 259_200_000;
     }
 }

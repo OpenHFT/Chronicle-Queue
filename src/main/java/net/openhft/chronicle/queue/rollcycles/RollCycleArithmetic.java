@@ -8,6 +8,10 @@ import static net.openhft.chronicle.queue.RollCycle.MAX_INDEX_COUNT;
  * Reusable optimised arithmetic for converting between cycles/indices/sequenceNumbers
  */
 public final class RollCycleArithmetic {
+    /**
+     * Sunday 1970 Jan 4th 00:00:00 UTC
+     */
+    public static final int SUNDAY_00_00 = 259_200_000;
     private final int cycleShift;
     private final int indexCount;
     private final int indexSpacing;
