@@ -148,7 +148,8 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         try {
             rollCycle = builder.rollCycle();
             cycleCalculator = cycleCalculator(builder.rollTimeZone());
-            epoch = builder.epoch();
+            long epoch0 = builder.epoch();
+            epoch = epoch0 == 0 ? rollCycle.defaultEpoch() : epoch0;
             dateCache = new RollingResourcesCache(rollCycle, epoch, textToFile(builder), fileToText());
 
             storeFileListener = builder.storeFileListener();

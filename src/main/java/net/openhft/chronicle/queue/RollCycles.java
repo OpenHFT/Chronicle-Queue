@@ -65,6 +65,10 @@ public enum RollCycles implements RollCycle {
      * 0xffffffff entries per day, indexing every 256th entry, leave as 4K and 256 for historical reasons.
      */
     FAST_DAILY(/*-----------*/"yyyyMMdd'F'", 24 * 60 * 60 * 1000, 4 << 10, 256),
+    /**
+     * 0xffffffff entries per week, indexing every 256th entry, leave as 4K and 256 for historical reasons. Cycle starts Sunday 00:00
+     */
+    WEEKLY(/*-----------*/"yyyy'W'ww", 7 * 24 * 60 * 60 * 1000, 4 << 10, 256, Constants.SUNDAY_00_00),
 
     // these are kept for historical reasons
     /**
@@ -220,11 +224,16 @@ public enum RollCycles implements RollCycle {
 
     private final String format;
     private final int lengthInMillis;
+    private final int defaultEpoch;
     private final RollCycleArithmetic arithmetic;
 
     RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
+        this(format, lengthInMillis, indexCount, indexSpacing, 0);
+    }
+    RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing, int defaultEpoch) {
         this.format = format;
         this.lengthInMillis = lengthInMillis;
+        this.defaultEpoch = defaultEpoch;
         this.arithmetic = RollCycleArithmetic.of(indexCount, indexSpacing);
     }
 
@@ -262,6 +271,11 @@ public enum RollCycles implements RollCycle {
     @Override
     public int lengthInMillis() {
         return this.lengthInMillis;
+    }
+
+    @Override
+    public int defaultEpoch() {
+        return this.defaultEpoch;
     }
 
     /**
@@ -359,5 +373,12 @@ public enum RollCycles implements RollCycle {
         mappings.put(RollCycles.HUGE_DAILY, LargeRollCycles.HUGE_DAILY);
 
         return Collections.unmodifiableMap(mappings);
+    }
+
+    static class Constants {
+        /**
+         * Sunday 1970 Jan 4th 00:00:00 UTC
+         */
+        public static final int SUNDAY_00_00 = 259_200_000;
     }
 }
