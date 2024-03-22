@@ -473,7 +473,15 @@
             </activation>
             <properties>
                 <maven.compiler.release>8</maven.compiler.release>
-                <maven.compiler.implicit>false</maven.compiler.implicit>
+            </properties>
+        </profile>
+        <profile>
+            <id>java17-implicit-none</id>
+            <activation>
+                <jdk>[17,</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.implicit>none</maven.compiler.implicit>
             </properties>
         </profile>
         <profile>
