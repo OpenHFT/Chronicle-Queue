@@ -473,6 +473,7 @@
             </activation>
             <properties>
                 <maven.compiler.release>8</maven.compiler.release>
+                <maven.compiler.implicit>false</maven.compiler.implicit>
             </properties>
         </profile>
         <profile>
