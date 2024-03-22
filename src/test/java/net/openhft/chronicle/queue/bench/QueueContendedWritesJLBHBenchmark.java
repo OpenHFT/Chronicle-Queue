@@ -26,6 +26,7 @@ import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
@@ -71,7 +72,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         this.jlbh = jlbh;
         concurrent = jlbh.addProbe("Concurrent");
         concurrent2 = jlbh.addProbe("Concurrent2");
-        queue = single(PATH).rollCycle(LARGE_DAILY).doubleBuffer(false).build();
+        queue = single(PATH).rollCycle(RollCycles.FAST_DAILY).doubleBuffer(false).build();
         tailer = queue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         tailer.toStart();

@@ -51,7 +51,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         ignoreException("Metadata file not found in readOnly mode");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
 
-        final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
+        final Path path = Paths.get(OS.getUserDir(), TEST_QUEUE_FILE);
         final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");
         if (metadata.toFile().exists())
             Files.delete(metadata);

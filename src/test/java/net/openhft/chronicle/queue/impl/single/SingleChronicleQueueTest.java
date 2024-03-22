@@ -440,7 +440,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assumeTrue(appender instanceof StoreAppender);
                 StoreAppender storeAppender = (StoreAppender) appender;
                 ((SingleChronicleQueue) queue).writeLock().lock();
-                storeAppender.writeBytesInternal(0, test, StoreAppender.IndexValidationMode.SAFE);
+                storeAppender.writeBytesInternal(0, test);
             }
         }
         assertEquals(expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet(), appenderListenerDump.toString());
