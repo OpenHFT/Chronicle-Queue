@@ -62,6 +62,8 @@ public interface InternalAppender extends ExcerptAppender {
      * @param index index the index to append at
      * @param bytes bytes the contents of the excerpt to write
      * @throws IllegalIndexException if the index specified is larger than the valid next indices of the queue
+     * @deprecated Use {@link #writeBytes(long, BytesStore)} instead
      */
+    @Deprecated(/* For removal in x.26 */)
     void unsafeWriteBytes(long index, BytesStore bytes);
 }
