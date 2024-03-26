@@ -24,7 +24,7 @@ public class BackwardsTailerJmhState {
     public void setup(int numberOfEntries) {
         queuePath = Paths.get(OS.getTarget(), BackwardsTailerToEndBoundaryJmhBenchmark.class.getSimpleName()).toFile();
         IOTools.deleteDirWithFiles(queuePath);
-        RollCycle rollCycle = RollCycles.LARGE_DAILY;
+        RollCycle rollCycle = RollCycles.FAST_DAILY;
         this.queue = SingleChronicleQueueBuilder.builder()
                 .path(queuePath)
                 .rollCycle(rollCycle)

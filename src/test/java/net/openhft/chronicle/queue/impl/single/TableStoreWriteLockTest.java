@@ -202,6 +202,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Test(timeout = 5_000)
     public void forceUnlockQuietlyWillUnlockWithNoWarningIfLockedByAnotherProcess() throws IOException, TimeoutException, InterruptedException {
         try (final TableStoreWriteLock testLock = createTestLock()) {

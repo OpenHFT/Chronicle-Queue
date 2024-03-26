@@ -168,12 +168,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return mappedFile.file();
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public String dump() {
         return dump(WireType.BINARY_LIGHT, false);
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public String shortDump() {
