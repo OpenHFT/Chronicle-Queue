@@ -29,6 +29,7 @@ public class RollCyclesDeprecationChecksTest extends QueueTestCommon {
         RollCycles.warnIfDeprecated(new CustomRollCycle());
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void shouldIndicateIfARollCycleIsDeprecated() {
         assertTrue(RollCycles.isDeprecated(RollCycles.HOURLY));

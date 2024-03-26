@@ -150,7 +150,7 @@ public class ContendedWriterTest extends QueueTestCommon {
                         startAndMonitors[i].histo.toMicrosFormat());
             }
         } finally {
-            Closeable.closeQuietly(queues);
+            Closeable.closeQuietly((Object[]) queues);
         }
     }
 

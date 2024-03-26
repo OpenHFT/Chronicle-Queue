@@ -88,7 +88,7 @@ public class WriteBytesTest extends QueueTestCommon {
         try (ChronicleQueue queue = builder
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-            final boolean useSparseFiles = builder.useSparseFiles();
+            @SuppressWarnings("deprecation") final boolean useSparseFiles = builder.useSparseFiles();
 
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
                 byte finalI = (byte) i;

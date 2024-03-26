@@ -80,6 +80,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throw read_only;
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public String dump() {
@@ -91,6 +92,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         return metadata.toString();
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public String shortDump() {

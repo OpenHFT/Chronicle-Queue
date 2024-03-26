@@ -164,6 +164,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         return mappedFile.file();
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public String dump() {
@@ -187,6 +188,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         }
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public String shortDump() {

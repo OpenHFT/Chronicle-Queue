@@ -144,6 +144,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private final long[] chunkCount = {0};
     private final SyncMode syncMode;
 
+    @SuppressWarnings("deprecation")
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
             rollCycle = builder.rollCycle();
@@ -501,6 +502,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return storeSupplier;
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
@@ -722,7 +724,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void performClose() {
         synchronized (closers) {
@@ -987,7 +988,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             singleThreadedCheckDisabled(true);
         }
 
-        @SuppressWarnings("resource")
         @Override
         public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
             throwExceptionIfClosed();
