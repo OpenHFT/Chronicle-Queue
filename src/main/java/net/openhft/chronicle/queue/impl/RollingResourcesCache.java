@@ -24,11 +24,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
+import java.time.temporal.WeekFields;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -110,7 +112,19 @@ public class RollingResourcesCache {
     private int parseCount0(@NotNull String name) {
         try {
             TemporalAccessor parse = formatter.parse(name);
-
+            if (!parse.isSupported(ChronoField.EPOCH_DAY)) {
+                final WeekFields weekFields = WeekFields.of(formatter.getLocale());
+                if (parse.isSupported(weekFields.weekBasedYear()) && parse.isSupported(weekFields.weekOfWeekBasedYear())) {
+                    int year = Math.toIntExact(parse.getLong(weekFields.weekBasedYear()));
+                    int week = Math.toIntExact(parse.getLong(weekFields.weekOfWeekBasedYear()));
+                    LocalDate ld = LocalDate.now()
+                            .withYear(year)
+                            .with(weekFields.weekOfYear(), week)
+                            .with(weekFields.dayOfWeek(), 1);
+                    return Math.toIntExact(ld.toEpochDay());
+                }
+                throw new UnsupportedOperationException("Unable to parse " + name + " using format " + format);
+            }
             long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
             if (parse.isSupported(ChronoField.SECOND_OF_DAY))
                 epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);

@@ -52,6 +52,13 @@ public interface RollCycle {
     int lengthInMillis();
 
     /**
+     * @return the default epoch offset if one is not set
+     */
+    default int defaultEpoch() {
+        return 0;
+    }
+
+    /**
      * @return the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
      */
     int defaultIndexCount();
