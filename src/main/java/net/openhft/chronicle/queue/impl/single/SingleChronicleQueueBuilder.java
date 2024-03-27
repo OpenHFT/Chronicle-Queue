@@ -1117,9 +1117,17 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    @Override
+    /**
+     * WARNING: Avoid using this method as it can have unintended consequences.
+     * We plan to phase it out.
+     * It's only a shallow copy so field will have the same objects.
+     */
     public SingleChronicleQueueBuilder clone() {
-        return deepCopy();
+        try {
+            return (SingleChronicleQueueBuilder) super.clone();
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
     }
 
     /**
