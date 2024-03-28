@@ -1123,6 +1123,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * It's only a shallow copy so field will have the same objects.
      */
     public SingleChronicleQueueBuilder clone() {
+        // software.chronicle.enterprise.queue.replication.strategy.FastButInconsistentQueueReplicationStrategyTest fails if deepCopy() is used instead
         try {
             return (SingleChronicleQueueBuilder) super.clone();
         } catch (Exception e) {

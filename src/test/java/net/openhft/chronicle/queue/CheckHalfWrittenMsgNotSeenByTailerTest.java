@@ -120,6 +120,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
     @Test
     public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
         Assume.assumeTrue(OS.isLinux() && OS.is64Bit());
+        ignoreException("Forced unlocking `chronicle.write.lock` in lock file:target/halfWritten");
 
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
