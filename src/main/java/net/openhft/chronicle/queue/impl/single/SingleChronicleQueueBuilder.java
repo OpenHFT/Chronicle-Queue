@@ -1119,7 +1119,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     @Override
     public SingleChronicleQueueBuilder clone() {
-        return deepCopy();
+        // software.chronicle.enterprise.queue.replication.strategy.FastButInconsistentQueueReplicationStrategyTest fails if deepCopy() is used instead
+        try {
+            return (SingleChronicleQueueBuilder) super.clone();
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
     }
 
     /**
