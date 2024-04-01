@@ -115,7 +115,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 "  readBufferMode: None,\n" +
                 "  wireType: BINARY_LIGHT,\n" +
                 "  path: " + tmpDir + ",\n" +
-                "  rollCycle: !net.openhft.chronicle.queue.RollCycles DAILY,\n" +
+                "  rollCycle: !net.openhft.chronicle.queue.rollcycles.LegacyRollCycles DAILY,\n" +
                 "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +
                 "  rollTime: 17:02,\n" +
                 "  rollTimeZone: !java.time.ZoneRegion {\n" +

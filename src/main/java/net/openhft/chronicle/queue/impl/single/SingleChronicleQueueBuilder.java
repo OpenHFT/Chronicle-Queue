@@ -252,18 +252,21 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                     if (rollCyclePropertyParts.length < 2) {
                         Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                 "Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
-                    } else {
-                        @SuppressWarnings("unchecked")
+                    }
+                    else {
+                        @SuppressWarnings("unchecked,rawtypes")
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
+                        @SuppressWarnings("unchecked")
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
-                            return RollCycles.warnIfDeprecated((RollCycle) instance);
+                            return (RollCycle) instance;
                         } else {
                             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                     "Configured default rollcycle is not a subclass of RollCycle");
                         }
                     }
                 } else {
+                    @SuppressWarnings("unchecked")
                     Object instance = ObjectUtils.newInstance(rollCycleClass);
                     if (instance instanceof RollCycle) {
                         return (RollCycle) instance;
@@ -739,7 +742,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
         assert rollCycle != null;
-        this.rollCycle = RollCycles.warnIfDeprecated(rollCycle);
+        this.rollCycle = rollCycle;
         return this;
     }
 
