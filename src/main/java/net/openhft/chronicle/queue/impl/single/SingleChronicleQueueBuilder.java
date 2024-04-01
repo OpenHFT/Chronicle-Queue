@@ -30,7 +30,6 @@ import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.Builder;
 import net.openhft.chronicle.core.util.ObjectUtils;
-import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
@@ -138,8 +137,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private SecretKeySpec key;
 
     private int maxTailers;
-    // TODO: x.26 make this AsyncBufferCreator
-    private ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator;
+    private AsyncBufferCreator bufferBytesStoreCreator;
     private Long pretouchIntervalMillis;
     private LocalTime rollTime;
     private ZoneId rollTimeZone;
@@ -549,29 +547,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public int maxTailers() {
         return maxTailers;
-    }
-
-    @Deprecated(/* To be removed in x.26 - use asyncBufferCreator */)
-    public SingleChronicleQueueBuilder bufferBytesStoreCreator(ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator) {
-        this.bufferBytesStoreCreator = bufferBytesStoreCreator;
-        return this;
-    }
-
-    /**
-     * Creator for BytesStore for async mode. Allows visibility of data to be controlled.
-     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE etc.
-     * <p>
-     * If you are using more than one {@link ChronicleQueue} object to access the async'd queue then you
-     * will need to set this.
-     * <p>
-     * This is an enterprise feature.
-     *
-     * @return bufferBytesStoreCreator
-     */
-    @Deprecated(/* To be removed in x.26 - use asyncBufferCreator */)
-    @Nullable
-    public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
-        return bufferBytesStoreCreator;
     }
 
     public SingleChronicleQueueBuilder asyncBufferCreator(AsyncBufferCreator asyncBufferCreator) {

@@ -164,13 +164,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         return mappedFile.file();
     }
 
-    @SuppressWarnings("deprecation")
-    @NotNull
-    @Override
-    public String dump() {
-        return dump(wireType);
-    }
-
     @Override
     public String dump(WireType wireType) {
         return dump(wireType, false);
@@ -186,15 +179,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         } finally {
             bytes.releaseLast();
         }
-    }
-
-    @SuppressWarnings("deprecation")
-    @NotNull
-    @Override
-    public String shortDump() {
-        throwExceptionIfClosed();
-
-        return dump(wireType, true);
     }
 
     @Override

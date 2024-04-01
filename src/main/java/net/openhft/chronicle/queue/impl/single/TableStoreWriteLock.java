@@ -171,12 +171,4 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             forceUnlock(lockedBy());
     }
 
-    /**
-     * Don't use this - for internal use only
-     * Does not warn when force unlocked
-     */
-    @Deprecated(/* to be removed in x.26. No replacement provided - use forceUnlock */)
-    public void forceUnlockQuietly() {
-        lock.setValue(UNLOCKED);
-    }
 }
