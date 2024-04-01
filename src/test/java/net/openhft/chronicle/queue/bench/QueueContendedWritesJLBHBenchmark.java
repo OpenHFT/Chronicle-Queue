@@ -33,7 +33,6 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static net.openhft.chronicle.queue.RollCycles.LARGE_DAILY;
 import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 

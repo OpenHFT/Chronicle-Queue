@@ -185,19 +185,6 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
     }
 
     @NotNull
-    @Override
-    @Deprecated(/* to be removed in x.26*/)
-    public SingleTableBuilder<T> clone() {
-        try {
-            @SuppressWarnings("unchecked")
-            SingleTableBuilder<T> clone = (SingleTableBuilder) super.clone();
-            return clone;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    @NotNull
     public File file() {
         return file;
     }

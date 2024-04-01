@@ -80,22 +80,8 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throw read_only;
     }
 
-    @SuppressWarnings("deprecation")
-    @NotNull
-    @Override
-    public String dump() {
-        return metadata.toString();
-    }
-
     @Override
     public String dump(WireType wireType) {
-        return metadata.toString();
-    }
-
-    @SuppressWarnings("deprecation")
-    @NotNull
-    @Override
-    public String shortDump() {
         return metadata.toString();
     }
 

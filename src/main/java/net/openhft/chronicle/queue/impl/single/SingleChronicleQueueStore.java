@@ -168,20 +168,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return mappedFile.file();
     }
 
-    @SuppressWarnings("deprecation")
-    @NotNull
-    @Override
-    public String dump() {
-        return dump(WireType.BINARY_LIGHT, false);
-    }
-
-    @SuppressWarnings("deprecation")
-    @NotNull
-    @Override
-    public String shortDump() {
-        return dump(WireType.BINARY_LIGHT,true);
-    }
-
     @Override
     public String dump(WireType wireType) {
         return dump(wireType, false);
@@ -315,22 +301,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         throwExceptionIfClosed();
 
         return indexing.sequenceForPosition(ec, position, inclusive);
-    }
-
-    /**
-     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    public long approximateLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        return lastSequenceNumber(ec);
-    }
-
-    /**
-     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    public long exactLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        return lastSequenceNumber(ec);
     }
 
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {

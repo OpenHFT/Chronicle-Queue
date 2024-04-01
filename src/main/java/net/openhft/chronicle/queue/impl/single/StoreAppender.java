@@ -54,22 +54,6 @@ class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
 
     /**
-     * Determines behaviour when validating that the index passed to {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)}
-     * is at or beyond the end of the queue.
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    protected enum IndexValidationMode {
-        /**
-         * We read the queue contents when validating
-         */
-        SAFE,
-        /**
-         * We trust the last index/position header in the store file when validating
-         */
-        UNSAFE
-    }
-
-    /**
      * Keep track of where we've normalised EOFs to, so we don't re-do immutable, older cycles every time.
      * This is the key in the table-store where we store that information
      */
@@ -642,15 +626,6 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * @deprecated Use {@link #writeBytes(long, BytesStore)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    @Override
-    public void unsafeWriteBytes(final long index, @NotNull final BytesStore bytes) {
-        writeBytes(index, bytes);
-    }
-
-    /**
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
      * the queue file and cause data loss.
      *
@@ -659,29 +634,6 @@ class StoreAppender extends AbstractCloseable
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
-        writeBytesInternal(index, bytes, false);
-    }
-
-    /**
-     * @deprecated This method makes no sense when metadata=true, use {@link #writeBytesInternal(long, BytesStore)} instead
-     */
-    @Deprecated(/* To be removed in x.27 */)
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata, IndexValidationMode indexValidationMode) {
-        writeBytesInternal(index, bytes, metadata);
-    }
-
-    /**
-     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
-     * the queue file and cause data loss.
-     *
-     * @param index               Index to append at
-     * @param bytes               The excerpt bytes
-     * @param indexValidationMode How stringent to be when validating the append index
-     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
-     * @deprecated Use {@link #writeBytesInternal(long, BytesStore)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    protected void writeBytesInternal(final long index, @NotNull BytesStore bytes, IndexValidationMode indexValidationMode) {
         writeBytesInternal(index, bytes, false);
     }
 
