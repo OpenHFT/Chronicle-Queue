@@ -775,7 +775,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                         return sequence;
 
                     int len = Wires.lengthOf(header) + 4;
-                    len += BytesUtil.padOffset(len);
+                    len += (int) BytesUtil.padOffset(len);
 
                     bytes.readSkip(len);
                     endAddress += len;

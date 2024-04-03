@@ -101,7 +101,7 @@ public class RollCyclesTest extends QueueTestCommon {
     public void shouldHandleReasonableDateRange() {
         final int currentCycle = DefaultCycleCalculator.INSTANCE.currentCycle(cycle, timeProvider, 0);
         // ~ 14 Jul 2017 to 18 May 2033
-        for (long nowMillis = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += 3e10) {
+        for (long nowMillis = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += (long) 3e10) {
             clock.set(nowMillis);
             long index = cycle.toIndex(currentCycle, 0);
             assertEquals(currentCycle, cycle.toCycle(index));
