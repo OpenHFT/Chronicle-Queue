@@ -150,7 +150,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
     }
 
     @Override
-    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
+    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg<?> channelCfg) {
         return new SubscribeQueueChannel(channelCfg, this, newQueue(context, subscribe, syncMode, sourceId));
     }
 

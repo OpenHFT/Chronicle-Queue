@@ -100,7 +100,7 @@ public class PublishHandler extends AbstractHandler<PublishHandler> {
     }
 
     @Override
-    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
+    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg<?> channelCfg) {
         return new PublishQueueChannel(channelCfg, this, newQueue(context, publish, syncMode, publishSourceId));
     }
 }

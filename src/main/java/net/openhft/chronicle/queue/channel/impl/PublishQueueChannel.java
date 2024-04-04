@@ -15,13 +15,13 @@ import net.openhft.chronicle.wire.converter.NanoTime;
 import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.*;
 
 public class PublishQueueChannel implements ChronicleChannel {
-    private final ChronicleChannelCfg channelCfg;
+    private final ChronicleChannelCfg<?> channelCfg;
     private final AbstractHandler publishHandler;
     private final ChannelHeader headerOut;
     private final ChronicleQueue publishQueue;
     private final ExcerptTailer tailer;
 
-    public PublishQueueChannel(ChronicleChannelCfg channelCfg, AbstractHandler publishHandler, ChronicleQueue publishQueue) {
+    public PublishQueueChannel(ChronicleChannelCfg<?> channelCfg, AbstractHandler publishHandler, ChronicleQueue publishQueue) {
         this.channelCfg = channelCfg;
         this.publishHandler = publishHandler;
         this.headerOut = publishHandler.responseHeader(null);
@@ -30,7 +30,7 @@ public class PublishQueueChannel implements ChronicleChannel {
     }
 
     @Override
-    public ChronicleChannelCfg channelCfg() {
+    public ChronicleChannelCfg<?> channelCfg() {
         return channelCfg;
     }
 
