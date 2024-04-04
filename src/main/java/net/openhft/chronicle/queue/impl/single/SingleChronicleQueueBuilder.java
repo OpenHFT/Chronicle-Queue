@@ -94,9 +94,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
-    @Deprecated(/* To be removed in 5.25 */)
-    private Boolean useSparseFiles;
-    private Long sparseCapacity;
     private File path;
     private RollCycle rollCycle;
     private Long epoch; // default is 1970-01-01 00:00:00.000 UTC
@@ -289,13 +286,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueue build() {
         preBuild();
-        if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null &&
-                (rollCycle == null || rollCycle.lengthInMillis() > 60_000)) {
-            RollCycle rc = rollCycle == null ? RollCycles.FAST_DAILY : rollCycle;
-            final long msgs = rc.maxMessagesPerCycle();
-            sparseCapacity = Math.min(512L << 30, Math.max(4L << 30, msgs * 128));
-            useSparseFiles = true;
-        }
 
         SingleChronicleQueue chronicleQueue;
 
@@ -649,34 +639,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
-    @Deprecated(/* To be removed in 5.25 */)
-    public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
-        if (useSparseFiles && OS.isLinux() && OS.is64Bit())
-            this.useSparseFiles = useSparseFiles;
-        if (!useSparseFiles)
-            this.useSparseFiles = useSparseFiles;
-        return this;
-    }
-
-    @Deprecated(/* To be removed in 5.25 */)
-    public SingleChronicleQueueBuilder sparseCapacity(long sparseCapacity) {
-        this.sparseCapacity = sparseCapacity;
-        return this;
-    }
-
-    public long sparseCapacity() {
-        long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
-
-        // can add an index2index & an index in one go.
-        long minSize = Math.max(SMALL_BLOCK_SIZE, 32L * indexCount());
-        return Math.max(minSize, bs);
-    }
-
-    @Deprecated(/* To be removed in 5.25 */)
-    public boolean useSparseFiles() {
-        return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
-    }
-
     /**
      * THIS IS FOR TESTING ONLY.
      * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.
@@ -766,20 +728,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * when set to {@code true}. uses a ring buffer to buffer appends, excerpts are written to the
-     * Chronicle Queue using a background thread. See also {@link #writeBufferMode()}
-     *
-     * @param isBuffered {@code true} if the append is buffered
-     * @return this
-     */
-    @NotNull
-    @Deprecated // use writeBufferMode(Asynchronous) instead
-    public SingleChronicleQueueBuilder buffered(boolean isBuffered) {
-        this.writeBufferMode = isBuffered ? BufferMode.Asynchronous : BufferMode.None;
-        return this;
-    }
-
-    /**
      * @return BufferMode to use for writes. Only None is available is the OSS
      */
     @NotNull
@@ -792,7 +740,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * When writeBufferMode is set to {@code Asynchronous}, uses a ring buffer to buffer appends, excerpts are written to the
      * Chronicle Queue using a background thread.
      * See also {@link #bufferCapacity()}
-     * See also {@link #bufferBytesStoreCreator()}
      * See also software.chronicle.enterprise.ring.EnterpriseRingBuffer
      *
      * @param writeBufferMode bufferMode for writing
@@ -814,7 +761,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * When readBufferMode is set to {@code Asynchronous}, reads from the ring buffer. This requires
      * that {@link #writeBufferMode()} is also set to {@code Asynchronous}.
      * See also {@link #bufferCapacity()}
-     * See also {@link #bufferBytesStoreCreator()}
      * See also software.chronicle.enterprise.ring.EnterpriseRingBuffer
      *
      * @param readBufferMode BufferMode for read

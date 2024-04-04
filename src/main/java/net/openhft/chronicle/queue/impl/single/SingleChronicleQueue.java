@@ -131,9 +131,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
-    @Deprecated
-    private final boolean useSparseFile;
-    private final long sparseCapacity;
     final AppenderListener appenderListener;
     protected int sourceId;
     private int cycleFileRenamed = -1;
@@ -166,8 +163,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
             blockSize = builder.blockSize();
             // the maximum message size is 1L << 30 so greater overlapSize has no effect
             overlapSize = calcOverlapSize(blockSize);
-            useSparseFile = builder.useSparseFiles();
-            sparseCapacity = builder.sparseCapacity();
             eventLoop = builder.eventLoop();
             bufferCapacity = builder.bufferCapacity();
             onRingBufferStats = builder.onRingBufferStats();
@@ -883,9 +878,7 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     @PackageLocal
     MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
-        final MappedFile mappedFile = useSparseFile
-                ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
-                : MappedFile.of(file, chunkSize, overlapSize, readOnly);
+        final MappedFile mappedFile = MappedFile.of(file, chunkSize, overlapSize, readOnly);
         mappedFile.syncMode(syncMode);
         return mappedFile;
     }

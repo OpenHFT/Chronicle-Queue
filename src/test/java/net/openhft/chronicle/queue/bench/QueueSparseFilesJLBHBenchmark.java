@@ -72,7 +72,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     public static void main(String... args) {
         System.out.println("-Dthroughput=" + throughput
                 + " -DrunTime=" + runTime);
-        for (int round = 1; round <= 3; round++) {
+        for (int round = 2; round <= 3; round++) {
             System.out.println("========\nround= " + round + "\n========\n");
             JLBHOptions lth = new JLBHOptions()
                     .warmUpIterations(WARMUP)
@@ -92,11 +92,7 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
     public void init(JLBH jlbh) {
         IOTools.deleteDirWithFiles(ROOTDIR, 5);
 
-        if (round == 1) {
-            // Uses sparse file for memory mapping
-            sourceQueue = single(ROOTDIR + "sparseFile").useSparseFiles(true).sparseCapacity(SPARSEBLOCK).build();
-            sinkQueue = single(ROOTDIR + "sparseFile").useSparseFiles(true).sparseCapacity(SPARSEBLOCK).build();
-        } else if (round == 2) {
+        if (round == 2) {
             // UsesConfigures chunking for memory mapping using a large memory block
             sourceQueue = single(ROOTDIR + "chunking-largeBlockSize").blockSize(SPARSEBLOCK).build();
             sinkQueue = single(ROOTDIR + "chunking-largeBlockSize").blockSize(SPARSEBLOCK).build();
