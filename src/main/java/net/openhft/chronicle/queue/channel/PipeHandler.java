@@ -129,7 +129,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
     }
 
     @Override
-    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
+    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg<?> channelCfg) {
         return new QueuesChannel(channelCfg, this, newQueue(context, publish, syncMode, publishSourceId), newQueue(context, subscribe, syncMode, 0));
     }
 
