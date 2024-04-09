@@ -141,7 +141,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
     private final long[] chunkCount = {0};
     private final SyncMode syncMode;
 
-    @SuppressWarnings("deprecation")
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
             rollCycle = builder.rollCycle();
@@ -497,7 +496,6 @@ SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue 
         return storeSupplier;
     }
 
-    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {

@@ -48,7 +48,6 @@ public class MicroToucherTest extends QueueTestCommon {
         touchPage(b -> b.blockSize(64 << 20), 66561);
     }
 
-    @SuppressWarnings("deprecation")
     public void touchPage(Consumer<SingleChronicleQueueBuilder> configure, int pagesExpected) {
         long start = System.nanoTime();
         String path = OS.getTarget() + "/touchPage-" + System.nanoTime();

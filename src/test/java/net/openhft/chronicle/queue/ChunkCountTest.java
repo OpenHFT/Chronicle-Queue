@@ -32,7 +32,6 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static org.junit.Assert.assertEquals;
 
 public class ChunkCountTest extends QueueTestCommon {
-    @SuppressWarnings("deprecation")
     @Test
     public void chunks() {
         File tempFile = IOTools.createTempFile("chunks");

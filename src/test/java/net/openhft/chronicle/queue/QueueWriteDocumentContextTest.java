@@ -220,7 +220,6 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @NotNull
     protected SingleChronicleQueue createQueue(String s) {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(tempDir(s))

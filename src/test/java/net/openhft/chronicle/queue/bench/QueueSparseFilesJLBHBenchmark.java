@@ -87,7 +87,6 @@ public class QueueSparseFilesJLBHBenchmark implements JLBHTask {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public void init(JLBH jlbh) {
         IOTools.deleteDirWithFiles(ROOTDIR, 5);
