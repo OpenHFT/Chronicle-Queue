@@ -938,7 +938,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         /**
-         * Close this {@link StoreAppenderContext}.
+         * Close this .
          *
          * @param unlock true if the {@link this#writeLock} should be unlocked.
          */

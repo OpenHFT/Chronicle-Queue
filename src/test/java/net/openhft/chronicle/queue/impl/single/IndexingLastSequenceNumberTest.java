@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 /**
- * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext, boolean)}.
+ * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext)}.
  */
 class IndexingLastSequenceNumberTest extends IndexingTestCommon {
 

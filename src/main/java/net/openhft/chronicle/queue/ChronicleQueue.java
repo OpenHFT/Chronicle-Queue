@@ -70,11 +70,11 @@ import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquir
 public interface ChronicleQueue extends Closeable {
 
     /**
-     * Creates and returns a new {@link ChronicleQueue} that will be backed by
+     * Creates and returns a new  that will be backed by
      * files located in the directory named by the provided {@code pathName}.
      *
      * @param pathName of the directory to use for storing the queue
-     * @return a new {@link ChronicleQueue} that will be stored
+     * @return a new  that will be stored
      * in the directory given by the provided {@code pathName}
      * @throws NullPointerException if the provided {@code pathName} is {@code null}.
      */
