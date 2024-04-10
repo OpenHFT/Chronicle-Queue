@@ -32,7 +32,6 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static org.junit.Assert.assertEquals;
 
 public class ChunkCountTest extends QueueTestCommon {
-    @SuppressWarnings("deprecation")
     @Test
     public void chunks() {
         File tempFile = IOTools.createTempFile("chunks");
@@ -53,7 +52,7 @@ public class ChunkCountTest extends QueueTestCommon {
                     pos = dc.wire().bytes().writePosition();
                     dc.wire().bytes().writeSkip(16000);
                 }
-                final long expected = builder.useSparseFiles() ? 1 : 1 + (pos >> 18);
+                final long expected = 1 + (pos >> 18);
 
                 assertEquals("i: " + i, expected, queue.chunkCount());
             }
