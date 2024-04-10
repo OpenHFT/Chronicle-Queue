@@ -34,7 +34,7 @@ public interface InternalAppender extends ExcerptAppender {
      *     <dt>Greater than the next valid indices for the queue</dt>
      *     <dd>An {@link IllegalIndexException} is thrown</dd>
      *
-     *     <td>Less than or equal to the last index in the queue</td>
+     *     <dt>Less than or equal to the last index in the queue</dt>
      *     <dd>The method returns without modifying the queue</dd>
      * </dl>
      *

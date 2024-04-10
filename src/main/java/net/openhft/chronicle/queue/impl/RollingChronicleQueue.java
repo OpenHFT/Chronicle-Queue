@@ -36,7 +36,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      *                       1, 1970, 00:00:00 GMT
      * @param createIfAbsent create missing stores if true, or return null if missing
      * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent
-     * is <code>false</code> and absent
+     * is {@code false} and absent
      */
     @Nullable
     SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);

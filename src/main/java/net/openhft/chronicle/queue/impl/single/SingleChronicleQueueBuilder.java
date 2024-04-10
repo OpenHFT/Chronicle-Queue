@@ -975,8 +975,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward
      * (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a
      * heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
-     * </p>
-     */
+         */
     public SingleChronicleQueueBuilder doubleBuffer(boolean doubleBuffer) {
         this.doubleBuffer = doubleBuffer;
         return this;
@@ -1056,7 +1055,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * updates all the fields in <code>this</code> that are null, from the parentBuilder
+     * updates all the fields in {@code this} that are null, from the parentBuilder
      *
      * @param parentBuilder the parentBuilder Chronicle Queue Builder
      * @return that

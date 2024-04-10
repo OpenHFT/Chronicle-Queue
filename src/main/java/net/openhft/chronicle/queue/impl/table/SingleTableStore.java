@@ -226,9 +226,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         wire.writeAlignTo(Integer.BYTES, 0);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
 
@@ -317,9 +314,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public <R> R doWithExclusiveLock(@NotNull final Function<TableStore<T>, ? extends R> code) {
         return doWithExclusiveLock(file(), code, () -> this);
