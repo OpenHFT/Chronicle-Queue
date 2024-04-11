@@ -74,6 +74,7 @@ public class FileUtilTest extends QueueTestCommon {
             assertEquals(FileState.CLOSED, FileUtil.state(testFile));
 
             try (BufferedReader br = new BufferedReader(new FileReader(testFile))) {
+                assertNotNull(br);
                 // The file is now held open
                 assertEquals(FileState.OPEN, FileUtil.state(testFile));
             }

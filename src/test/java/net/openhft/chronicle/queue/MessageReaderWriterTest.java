@@ -76,7 +76,7 @@ public class MessageReaderWriterTest extends QueueTestCommon {
         }
     }
 
-    private static <T> T printAll(@NotNull Class<T> tClass, Class... additional) throws IllegalArgumentException {
+    private static <T> T printAll(@NotNull Class<T> tClass, Class<?>... additional) throws IllegalArgumentException {
         return ObjectUtils.onMethodCall((method, args) -> {
             @NotNull String argsStr = args == null ? "()" : Arrays.toString(args);
             System.out.println(method.getName() + " " + argsStr);

@@ -583,7 +583,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public void writeBytes(@NotNull final BytesStore bytes) {
+    public void writeBytes(@NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
@@ -614,7 +614,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public void writeBytes(final long index, @NotNull final BytesStore bytes) {
+    public void writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
@@ -633,22 +633,7 @@ class StoreAppender extends AbstractCloseable
      * @param bytes               The excerpt bytes
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
-        writeBytesInternal(index, bytes, false);
-    }
-
-    /**
-     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
-     * the queue file and cause data loss.
-     *
-     * @param index               Index to append at
-     * @param bytes               The excerpt bytes
-     * @param metadata            Whether to write the excerpt as metadata, this is legacy and should always be set to false
-     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
-     * @deprecated Use {@link #writeBytesInternal(long, BytesStore)} instead
-     */
-    @SuppressWarnings("DeprecatedIsStillUsed")  // will be collapsed into the caller when deprecated
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
+    protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
@@ -677,7 +662,7 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        writeBytesInternal(bytes, metadata);
+        writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
@@ -687,7 +672,7 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void writeBytesInternal(@NotNull final BytesStore bytes, boolean metadata) {
+    private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
@@ -845,14 +830,16 @@ class StoreAppender extends AbstractCloseable
         return store == null ? null : store.currentFile();
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void sync() {
         if (store == null || wire == null)
             return;
 
         final Bytes<?> bytes = wire.bytes();
-        if (bytes.bytesStore() instanceof MappedBytesStore) {
-            MappedBytesStore mbs = (MappedBytesStore) bytes.bytesStore();
+        BytesStore store = bytes.bytesStore();
+        if (store instanceof MappedBytesStore) {
+            MappedBytesStore mbs = (MappedBytesStore) store;
             mbs.syncUpTo(bytes.writePosition());
             queue.lastIndexMSynced(lastIndex);
         }

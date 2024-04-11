@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class RollCycleTest extends QueueTestCommon {
 
@@ -95,7 +96,7 @@ public class RollCycleTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
         try (ChronicleQueue queue0 = observer.queue) {
-
+            assertNotNull(queue0);
             int cyclesToWrite = 3;
             Thread thread = new Thread(observer);
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)

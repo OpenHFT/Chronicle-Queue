@@ -125,6 +125,7 @@ public class PerfLatencyMain implements JLBHTask {
         });
         readerThread = new Thread(() -> {
             try (AffinityLock lock = AffinityLock.acquireLock()) {
+                assert lock != null;
                 while (!Thread.currentThread().isInterrupted()) {
                     reader.readOne();
                 }
@@ -142,6 +143,7 @@ public class PerfLatencyMain implements JLBHTask {
         final MS ms = serviceConstructor.apply(out);
         MethodReader reader = server.methodReader(ms);
         try (AffinityLock lock = AffinityLock.acquireLock()) {
+            assert lock != null;
             while (!server.isClosed()) {
                 reader.readOne();
             }

@@ -1,7 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 public class NamedTailerNotAvailableException extends IllegalStateException {
-
+    private static final long serialVersionUID = 0L;
     private final String tailerName;
 
     private final Reason reason;

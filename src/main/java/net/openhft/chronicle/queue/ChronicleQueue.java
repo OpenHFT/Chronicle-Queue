@@ -164,7 +164,7 @@ public interface ChronicleQueue extends Closeable {
      * The id is used to persistently store the latest index for the Tailer. Any new Tailer with
      * a previously used id will continue where the old one left off.
      * <b>
-     * A Tailer is <em>NOT thread-safe</em>. A Tailer can be created by one Thread and might be used by at most one other Thread.</em>.
+     * A Tailer is <em>NOT thread-safe</em>. A Tailer can be created by one Thread and might be used by at most one other Thread.
      * Sharing a Tailer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>
@@ -344,7 +344,7 @@ public interface ChronicleQueue extends Closeable {
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
     @NotNull
-    default <T> T methodWriter(@NotNull final Class<T> tClass, Class... additional) {
+    default <T> T methodWriter(@NotNull final Class<T> tClass, Class<?>... additional) {
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
         Stream.of(additional).forEach(builder::addInterface);
         return builder.build();
@@ -428,7 +428,6 @@ public interface ChronicleQueue extends Closeable {
     /**
      * Returns the last index that was msync-ed to disk. If no
      * such index exists, returns -1.
-     * <p>
      *
      * @return the last index that was msync-ed to disk
      */

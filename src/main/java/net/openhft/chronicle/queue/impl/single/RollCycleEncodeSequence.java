@@ -21,9 +21,8 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
-import net.openhft.chronicle.wire.Sequence;
 
-class RollCycleEncodeSequence implements Sequence {
+class RollCycleEncodeSequence implements net.openhft.chronicle.wire.Sequence {
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
     private final long sequenceMask;
@@ -60,10 +59,11 @@ class RollCycleEncodeSequence implements Sequence {
      * @param forWritePosition the last write position, expected to be the end of queue
      * @return NOT_FOUND_RETRY if the sequence for this write position can not be found, or NOT_FOUND if sequenceValue==null or the sequence for this {@code writePosition}
      */
+    @SuppressWarnings("deprecation")
     public long getSequence(long forWritePosition) {
 
         if (writePositionAndSequence == null)
-            return Sequence.NOT_FOUND;
+            return net.openhft.chronicle.wire.Sequence.NOT_FOUND;
 
         // We only deal with the 2nd long in the TwoLongValue, and we use it to keep track of current position
         // and current sequence. We use the same encoding as index (cycle number is shifted left by cycleShift
@@ -74,7 +74,7 @@ class RollCycleEncodeSequence implements Sequence {
 
         final long sequenceValue = this.writePositionAndSequence.getVolatileValue2();
         if (sequenceValue == 0)
-            return Sequence.NOT_FOUND;
+            return net.openhft.chronicle.wire.Sequence.NOT_FOUND;
 
         long writePositionAsCycle = toLongValue(forWritePosition, 0);
         long lowerBitsOfWp = toLowerBitsWritePosition(writePositionAsCycle);
@@ -83,7 +83,7 @@ class RollCycleEncodeSequence implements Sequence {
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
 
-        return Sequence.NOT_FOUND_RETRY;
+        return net.openhft.chronicle.wire.Sequence.NOT_FOUND_RETRY;
     }
 
     private long toLongValue(long cycle, long sequenceNumber) {

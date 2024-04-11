@@ -44,6 +44,7 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
 public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
@@ -187,7 +188,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 //                        if (false && index %17 == 0) {
                         try (final ChronicleQueue dq = createQueue(destinationDir, null);
                              final ExcerptAppender da = dq.createAppender()) {
-
+                            assumeNotNull(dq);
+                            assumeNotNull(da);
                         }
                         //                      }
                     }

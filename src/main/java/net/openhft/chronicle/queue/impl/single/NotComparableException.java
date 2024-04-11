@@ -26,6 +26,7 @@ package net.openhft.chronicle.queue.impl.single;
  * of the binary search.
  */
 public final class NotComparableException extends RuntimeException {
+    private static final long serialVersionUID = 0L;
 
     public static final NotComparableException INSTANCE = new NotComparableException();
 

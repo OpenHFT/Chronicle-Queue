@@ -38,6 +38,7 @@ import static net.openhft.chronicle.core.Jvm.getProcessId;
  * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
  * for a timed-out lock to be overridden.
  */
+@SuppressWarnings("this-escape")
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
     protected static final String UNLOCK_MAIN_MSG = ". You can manually unlock with net.openhft.chronicle.queue.main.UnlockMain";
     protected static final String UNLOCKING_FORCIBLY_MSG = ". Unlocking forcibly. Note that this feature is designed to recover " +
@@ -49,7 +50,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     protected final LongValue lock;
     protected final ThreadLocal<TimingPauser> pauser;
     protected final File path;
-    protected final TableStore tableStore;
+    protected final TableStore<?> tableStore;
     private final String lockKey;
 
     public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauserSupplier) {

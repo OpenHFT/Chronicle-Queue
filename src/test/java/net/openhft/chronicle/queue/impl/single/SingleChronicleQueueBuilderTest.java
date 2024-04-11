@@ -164,7 +164,8 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
 
         final File tmpDir = getTmpDir();
         final int firstSourceId = 1;
-        try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId).build()) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId).build()) {
+            assertNotNull(queue);
             // just create the queue
         }
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId + 1).build()) {
@@ -177,17 +178,19 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         assumeFalse(OS.isWindows());
 
         final File tmpDir = getTmpDir();
-        try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).build()) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).build()) {
+            assertNotNull(queue);
             // just create the queue
         }
 
-        try (SingleChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir)
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir)
                 .createAppenderConditionCreator(q -> {
                     fail("This should never be called");
                     return null;
                 })
                 .readOnly(true)
                 .build()) {
+            assertNotNull(queue);
             // This will throw if we attempt to create the createAppender condition
         }
     }

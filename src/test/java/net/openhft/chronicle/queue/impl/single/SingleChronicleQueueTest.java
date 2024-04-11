@@ -72,6 +72,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
+@SuppressWarnings("try")
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends QueueTestCommon {
 
@@ -326,7 +327,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     new NamedThreadFactory("service1"));
             ScheduledExecutorService service2 = null;
             try {
-                Future f = service1.submit(() -> {
+                Future<?> f = service1.submit(() -> {
                     try (final ExcerptAppender appender = queue.createAppender()) {
 
                         try (final DocumentContext dc = appender.writingDocument()) {
@@ -3840,7 +3841,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     private static class BytesWithIndex implements Closeable {
-        private BytesStore bytes;
+        private BytesStore<?, ?> bytes;
         private long index;
 
         public BytesWithIndex(Bytes<?> bytes, long index) {

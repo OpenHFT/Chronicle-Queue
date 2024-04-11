@@ -41,6 +41,7 @@ public class StackSampler {
      * Constructs a new StackSampler and starts the background thread
      * responsible for sampling the stack trace.
      */
+    @SuppressWarnings("this-escape")
     public StackSampler() {
         sampler = new Thread(this::sampling, "Thread sampler");
         sampler.setDaemon(true);

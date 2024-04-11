@@ -4,6 +4,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ClosedIORuntimeException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
@@ -111,7 +112,7 @@ public class ChannelHandlerYamlTester implements YamlTester {
                     if (channel.isClosed())
                         return;
                     Jvm.warn().on(ChannelHandlerYamlTester.class, "Timeout on " + channel + ", closing");
-                    channel.close();
+                    Closeable.closeQuietly(channel);
                 });
                 thread.start();
                 try {

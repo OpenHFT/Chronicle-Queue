@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static net.openhft.chronicle.queue.bench.BenchmarkUtils.join;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
+@SuppressWarnings("try")
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     public static final int ITERATIONS = 100_000;
     private static final String PATH = System.getProperty("path", "replica");

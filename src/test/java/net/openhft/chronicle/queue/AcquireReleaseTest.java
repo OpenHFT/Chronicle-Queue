@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 @RequiredForClient
 public class AcquireReleaseTest extends QueueTestCommon {
@@ -141,6 +142,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
 
             // other appender is created
             try (final ExcerptAppender secondAppender = queue.createAppender()) {
+                assertNotNull(secondAppender);
                 // Here store is Acquired twice (second time in cleanupStoreFilesWithNoData())
                 // Do nothing with it
             }

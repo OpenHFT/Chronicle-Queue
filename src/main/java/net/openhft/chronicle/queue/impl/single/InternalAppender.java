@@ -42,6 +42,6 @@ public interface InternalAppender extends ExcerptAppender {
      * @param bytes bytes the contents of the excerpt to write
      * @throws IllegalIndexException if the index specified is larger than the valid next indices of the queue
      */
-    void writeBytes(long index, BytesStore bytes);
+    void writeBytes(long index, BytesStore<?, ?> bytes);
 
 }

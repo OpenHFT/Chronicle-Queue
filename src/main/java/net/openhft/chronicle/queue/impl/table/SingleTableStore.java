@@ -84,8 +84,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         if (wire.bytes().readRemaining() > 0) {
             this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
         } else {
-            //noinspection unchecked
-            this.metadata = (T) Metadata.NoMeta.INSTANCE;
+            @SuppressWarnings("unchecked")
+            T instance = (T) Metadata.NoMeta.INSTANCE;
+            this.metadata = instance;
         }
 
         mappedWire = wireType.apply(mappedBytes);

@@ -29,6 +29,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
+    @SuppressWarnings("try")
     @Test
     public void shouldNotSkipMessageAtStartOfQueue() {
         final File tmpDir = getTmpDir();

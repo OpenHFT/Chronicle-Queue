@@ -45,7 +45,7 @@ public class TableStoreTest extends QueueTestCommon {
 
         final File tempFile = Files.createTempFile(file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
 
-        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
+        try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue a = table.acquireValueFor("a");
              LongValue b = table.acquireValueFor("b")) {
             assertEquals(Long.MIN_VALUE, a.getVolatileValue());
@@ -66,7 +66,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "# 130972 bytes remaining\n", table.dump(WireType.BINARY_LIGHT));
         }
 
-        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
+        try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue c = table.acquireValueFor("c");
              LongValue b = table.acquireValueFor("b")) {
             assertEquals(Long.MIN_VALUE, c.getVolatileValue());
@@ -99,13 +99,13 @@ public class TableStoreTest extends QueueTestCommon {
 
         final File tempFile = Files.createTempFile(file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
 
-        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
+        try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue b = table.acquireValueFor("b")) {
             assertEquals(Long.MIN_VALUE, b.getVolatileValue());
             assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2));
         }
 
-        try (TableStore table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
+        try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
              LongValue b = table.acquireValueFor("b")) {
             assertEquals(2, b.getVolatileValue());
             assertThrows(IllegalStateException.class, () -> table.acquireValueFor("d"));

@@ -13,7 +13,7 @@ public class QueuesChannel implements ChronicleChannel {
     private final PublishQueueChannel publishQueueChannel;
     private final SubscribeQueueChannel subscribeQueueChannel;
 
-    public QueuesChannel(ChronicleChannelCfg<?> channelCfg, AbstractHandler handler, ChronicleQueue publishQueue, ChronicleQueue subscribeQueue) {
+    public QueuesChannel(ChronicleChannelCfg<?> channelCfg, AbstractHandler<?> handler, ChronicleQueue publishQueue, ChronicleQueue subscribeQueue) {
         publishQueueChannel = new PublishQueueChannel(channelCfg, handler, publishQueue);
         subscribeQueueChannel = new SubscribeQueueChannel(channelCfg, handler, subscribeQueue);
     }

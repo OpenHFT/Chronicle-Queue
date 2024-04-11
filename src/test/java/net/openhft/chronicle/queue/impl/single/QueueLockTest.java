@@ -80,7 +80,7 @@ public class QueueLockTest extends QueueTestCommon {
 
                 // lock the queue
                 try (DocumentContext dc = excerptAppender.writingDocument()) {
-
+                    assertNotNull(dc);
                     final CountDownLatch started = new CountDownLatch(1);
                     final CountDownLatch finished = new CountDownLatch(1);
                     final AtomicBoolean recoveredAndAcquiredTheLock = new AtomicBoolean();
@@ -92,7 +92,9 @@ public class QueueLockTest extends QueueTestCommon {
                                 build()) {
                             started.countDown();
                             try (final ExcerptAppender queue2Appender = queue2.createAppender();
-                                 final DocumentContext ignored = queue2Appender.writingDocument()) {
+                                 final DocumentContext context = queue2Appender.writingDocument()) {
+                                assertNotNull(context);
+
                                 recoveredAndAcquiredTheLock.set(true);
                                 System.out.println("Done");
                             } catch (UnrecoverableTimeoutException e) {

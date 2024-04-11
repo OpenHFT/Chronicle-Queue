@@ -89,6 +89,7 @@ public class PublishHandler extends AbstractHandler<PublishHandler> {
         return this;
     }
 
+    @SuppressWarnings("try")
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();

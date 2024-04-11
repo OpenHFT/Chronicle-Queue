@@ -35,6 +35,7 @@ public class PubSubHandler extends AbstractHandler<PubSubHandler> {
         } else {
             Thread tailerThread = new Thread(() -> {
                 try (AffinityLock lock = context.affinityLock()) {
+                    assert lock != null;
                     queueTailer(pauser, channel);
                 }
             }, "pubsub~tailers");
@@ -45,7 +46,7 @@ public class PubSubHandler extends AbstractHandler<PubSubHandler> {
         Thread.currentThread().setName("pubsub~reader");
         Map<String, Publication> publicationMap = new LinkedHashMap<>();
         try (AffinityLock lock = context.affinityLock()) {
-
+            assert lock != null;
             while (!channel.isClosed()) {
                 try (DocumentContext dc = channel.readingDocument()) {
                     pauser.unpause();
