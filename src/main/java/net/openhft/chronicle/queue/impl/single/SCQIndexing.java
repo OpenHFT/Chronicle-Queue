@@ -52,6 +52,7 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable, WriteMarshallable, Closeable {
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
+    private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
@@ -79,7 +80,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     int linearScanCount;
     int linearScanByPositionCount;
     Collection<Closeable> closeables = new ArrayList<>();
-    private long lastScanedIndex = -1;
+    private long lastScannedIndex = -1;
 
     /**
      * used by {@link Demarshallable}
@@ -354,7 +355,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
         if (REPORT_LINEAR_SCAN) {
-            printLinearScanTime(lastScanedIndex, fromKnownIndex, start, "linearScan by index");
+            printLinearScanTime(lastScannedIndex, fromKnownIndex, start, "linearScan by index");
         }
         return scanResult;
     }
@@ -366,13 +367,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         // took too long to scan?
         long end = System.nanoTime();
-        if (end < start + 100_000)
+        if (end < start + LINEAR_SCAN_WARN_THRESHOLD_NS)
             return;
 
-        doPrintLinerScanTime(toIndex, fromKnownIndex, start, desc, end);
+        doPrintLinearScanTime(toIndex, fromKnownIndex, start, desc, end);
     }
 
-    private void doPrintLinerScanTime(long toIndex, long fromKnownIndex, long start, String desc, long end) {
+    private void doPrintLinearScanTime(long toIndex, long fromKnownIndex, long start, String desc, long end) {
         StackTrace st = null;
         if (Jvm.isDebugEnabled(getClass())) {
             int time = Jvm.isArm() ? 20_000_000 : 250_000;
@@ -410,12 +411,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             try {
                 if (wire.readDataHeader()) {
                     if (i == toIndex) {
-                        lastScanedIndex = i;
+                        lastScannedIndex = i;
                         return ScanResult.FOUND;
                     }
                     int header = bytes.readVolatileInt();
                     if (Wires.isNotComplete(header)) { // or isEndOfFile
-                        lastScanedIndex = i;
+                        lastScannedIndex = i;
                         return ScanResult.NOT_REACHED;
                     }
                     bytes.readSkip(Wires.lengthOf(header));
@@ -427,7 +428,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     return ScanResult.END_OF_FILE;
                 }
             }
-            lastScanedIndex = i;
+            lastScannedIndex = i;
             return i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
         }
     }
