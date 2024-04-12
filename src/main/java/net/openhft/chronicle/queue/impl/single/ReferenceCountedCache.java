@@ -39,6 +39,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     private final ThrowingFunction<K, T, E> creator;
     private final ReferenceChangeListener referenceChangeListener;
 
+    @SuppressWarnings("this-escape")
     public ReferenceCountedCache(final Function<T, V> transformer,
                                  final ThrowingFunction<K, T, E> creator) {
         this.transformer = transformer;

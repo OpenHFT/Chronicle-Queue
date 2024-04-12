@@ -47,7 +47,7 @@ public class MicroToucher {
             lastPageTouched = nextPage;
             try {
                 // best effort
-                final BytesStore bs = bytes.bytesStore();
+                final BytesStore<?, ?> bs = bytes.bytesStore();
                 if (bs.inside(nextPage, 8))
                     touchPage(nextPage, bs);
             } catch (Throwable ignored) {
@@ -71,12 +71,12 @@ public class MicroToucher {
         if (bufferWire == null)
             return;
 
-        BytesStore bytes = bufferWire.bytes().bytesStore();
+        BytesStore<?, ?> bytes = bufferWire.bytes().bytesStore();
         sync(bytes, start, length);
         this.lastPageSynced += length;
     }
 
-    private void sync(BytesStore bytes, long start, long length) {
+    private void sync(BytesStore<?, ?> bytes, long start, long length) {
         if (!bytes.inside(start, length))
             return;
 //        long a = System.nanoTime();
@@ -84,7 +84,7 @@ public class MicroToucher {
 //        System.out.println("sync took " + (System.nanoTime() - a) / 1000);
     }
 
-    protected boolean touchPage(long nextPage, BytesStore bs) {
+    protected boolean touchPage(long nextPage, BytesStore<?, ?> bs) {
         return bs.compareAndSwapLong(nextPage, 0, 0);
     }
 }

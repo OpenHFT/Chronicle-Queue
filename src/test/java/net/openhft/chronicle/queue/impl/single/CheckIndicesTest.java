@@ -51,8 +51,8 @@ public class CheckIndicesTest extends QueueTestCommon {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).epoch(System.currentTimeMillis()).build()) {
             queue0 = queue;
             newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::appendToQueue, 0, 1, TimeUnit.MICROSECONDS);
-            Future f = newSingleThreadScheduledExecutor().submit(this::checkIndices);
-            Future f2 = newSingleThreadScheduledExecutor().submit(this::checkIndices);
+            Future<Callable<Void>> f = newSingleThreadScheduledExecutor().submit(this::checkIndices);
+            Future<Callable<Void>> f2 = newSingleThreadScheduledExecutor().submit(this::checkIndices);
 
             for (; ; ) {
                 if (f.isDone())

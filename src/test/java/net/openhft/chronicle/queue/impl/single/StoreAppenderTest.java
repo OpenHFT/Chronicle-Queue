@@ -162,7 +162,7 @@ public class StoreAppenderTest extends QueueTestCommon {
                 appender.writeText(TEST_TEXT);
                 acquire(waitingToAcquire);
                 try (final DocumentContext documentContext = appender.writingDocument()) {
-                    throw new AssertionError("We shouldn't get here");
+                    throw new AssertionError("We shouldn't get here " + documentContext);
                 } catch (InterruptedRuntimeException e) {
                     // This is expected, we should get interrupted, clear the interrupt
                     Thread.interrupted();

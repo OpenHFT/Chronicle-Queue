@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * importance is ensuring that queue paths are added to the monitor appropriately by calling the
  * {@link DiskSpaceMonitor#pollDiskSpace(File)} method.
  */
+@SuppressWarnings("try")
 class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
 
     /**

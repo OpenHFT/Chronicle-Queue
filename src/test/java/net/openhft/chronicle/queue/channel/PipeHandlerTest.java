@@ -32,8 +32,7 @@ import java.util.stream.Collectors;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.Assume.*;
 
 @RunWith(Parameterized.class)
 public class PipeHandlerTest extends QueueTestCommon {
@@ -155,11 +154,11 @@ public class PipeHandlerTest extends QueueTestCommon {
         @Override
         public void accept(ExcerptTailer excerptTailer) {
             try (DocumentContext ignore = excerptTailer.toEnd().direction(BACKWARD).readingDocument()) {
-                // read one
+                assumeNotNull(ignore);
             }
 
-            try (DocumentContext ignore =   excerptTailer.direction(FORWARD).direction(FORWARD).readingDocument()) {
-                // read one
+            try (DocumentContext ignore = excerptTailer.direction(FORWARD).direction(FORWARD).readingDocument()) {
+                assumeNotNull(ignore);
             }
         }
     }

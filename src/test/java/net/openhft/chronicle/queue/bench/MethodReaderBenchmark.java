@@ -118,6 +118,7 @@ public class MethodReaderBenchmark implements JLBHTask {
 
         consumerThread = new Thread(() -> {
             try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
+                assert affinityLock != null;
 
                 tailer = queue.createTailer();
                 tailer.singleThreadedCheckDisabled(true);

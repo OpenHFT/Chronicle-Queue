@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
@@ -31,7 +32,7 @@ public class SingleChronicleQueueCloseTest extends QueueTestCommon {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
             final ExcerptAppender appender = queue.createAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(1));
-            queue.close();
+            Closeable.closeQuietly(queue);
             try {
                 appender.writeDocument(w -> w.write(TestKey.test).int32(2));
                 Assert.fail();

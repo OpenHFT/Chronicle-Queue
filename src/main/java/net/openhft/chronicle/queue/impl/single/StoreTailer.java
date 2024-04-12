@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedBytesStore;
 import net.openhft.chronicle.bytes.util.DecoratedBufferUnderflowException;
@@ -1356,14 +1357,16 @@ class StoreTailer extends AbstractCloseable
         return store == null ? null : store.currentFile();
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void sync() {
         if (store == null)
             return;
 
         final Bytes<?> bytes = privateWire().bytes();
-        if (bytes.bytesStore() instanceof MappedBytesStore) {
-            MappedBytesStore mbs = (MappedBytesStore) bytes.bytesStore();
+        BytesStore store = bytes.bytesStore();
+        if (store instanceof MappedBytesStore) {
+            MappedBytesStore mbs = (MappedBytesStore) store;
             mbs.syncUpTo(bytes.readPosition());
             queue.lastIndexMSynced(lastReadIndex);
         }

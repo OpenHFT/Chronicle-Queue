@@ -28,7 +28,7 @@ import java.nio.BufferUnderflowException;
 
 public class DummyDataSmall extends DummyData {
     @Override
-    public void readMarshallable(BytesIn bytes) throws IORuntimeException, BufferUnderflowException, IllegalStateException {
+    public void readMarshallable(BytesIn<?> bytes) throws IORuntimeException, BufferUnderflowException, IllegalStateException {
         timeNS = bytes.readLong();
         int len = bytes.readUnsignedByte();
         if ((byte) len == -1) {
@@ -41,7 +41,7 @@ public class DummyDataSmall extends DummyData {
     }
 
     @Override
-    public void writeMarshallable(BytesOut bytes) throws IllegalStateException, BufferOverflowException, BufferUnderflowException, ArithmeticException {
+    public void writeMarshallable(BytesOut<?> bytes) throws IllegalStateException, BufferOverflowException, BufferUnderflowException, ArithmeticException {
         bytes.writeLong(timeNS);
         if (data == null) {
             bytes.writeUnsignedByte( -1);

@@ -32,6 +32,7 @@ import java.util.function.Function;
 public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     private final T metadata;
 
+    @SuppressWarnings("this-escape")
     public ReadonlyTableStore(T metadata) {
         this.metadata = metadata;
         singleThreadedCheckDisabled(true);

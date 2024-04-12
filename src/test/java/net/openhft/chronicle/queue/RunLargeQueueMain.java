@@ -37,7 +37,7 @@ public enum RunLargeQueueMain {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(args[0]).blockSize((int) (BLOCK_SIZE * (1 << 20))).build();
              ExcerptAppender appender = queue.createAppender()) {
             ExcerptTailer tailer = queue.createTailer();
-            BytesStore bytes = BytesStore.nativeStore(MSG_SIZE);
+            BytesStore<?, Void> bytes = BytesStore.nativeStore(MSG_SIZE);
             Bytes<?> bytes2 = Bytes.allocateDirect(MSG_SIZE);
             for (int t = 1; t <= FILE_SIZE; t++) {
                 long start = System.currentTimeMillis();

@@ -345,7 +345,7 @@ public interface ChronicleQueue extends Closeable {
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
     @NotNull
-    default <T> T methodWriter(@NotNull final Class<T> tClass, Class... additional) {
+    default <T> T methodWriter(@NotNull final Class<T> tClass, Class<?>... additional) {
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
         Stream.of(additional).forEach(builder::addInterface);
         return builder.build();

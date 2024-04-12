@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -60,7 +61,7 @@ public class OvertakeTest extends QueueTestCommon {
                     i[0]++;
                 });
                 if (additionalClose) {
-                    dc.close();
+                    Closeable.closeQuietly(dc);
                 }
             }
         }

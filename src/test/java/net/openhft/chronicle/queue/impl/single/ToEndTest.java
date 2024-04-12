@@ -225,6 +225,8 @@ public class ToEndTest extends QueueTestCommon {
 
                 // if this appender isn't created, the tailer toEnd doesn't cause a roll.
                 try (ExcerptAppender appender = queue.createAppender()) {
+                    assertNotNull(appender);
+
                     checkOneFile(baseDir);
 
                     ExcerptTailer tailer = queue.createTailer();

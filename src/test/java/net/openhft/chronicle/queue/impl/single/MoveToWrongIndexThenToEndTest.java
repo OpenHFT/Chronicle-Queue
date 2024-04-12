@@ -62,6 +62,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     private final ExcerptAppender appender;
     private Bytes<ByteBuffer> outbound;
 
+    @SuppressWarnings("this-escape")
     public MoveToWrongIndexThenToEndTest() {
         basePath = getTmpDir().toPath();
 

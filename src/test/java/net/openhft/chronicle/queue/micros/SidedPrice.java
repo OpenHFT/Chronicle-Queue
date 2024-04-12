@@ -26,6 +26,7 @@ public class SidedPrice extends SelfDescribingMarshallable {
     Side side;
     double price, quantity;
 
+    @SuppressWarnings("this-escape")
     public SidedPrice(String symbol, long timestamp, Side side, double price, double quantity) {
         init(symbol, timestamp, side, price, quantity);
     }

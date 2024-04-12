@@ -93,6 +93,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     final File path;
     final String fileAbsolutePath;
     // Uses this.closers as a lock. concurrent read, locking for write.
+    @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
     private final StoreSupplier storeSupplier;
     private final long epoch;
@@ -376,7 +377,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         return;
                     }
                 }
-                try (ScopedResource<Bytes<?>> stlBytes = acquireBytesScoped()) {
+                try (ScopedResource<Bytes<Void>> stlBytes = acquireBytesScoped()) {
                     Bytes<?> bytes = stlBytes.get();
                     TextWire text = new TextWire(bytes);
                     while (true) {
@@ -496,6 +497,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return storeSupplier;
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
@@ -910,7 +912,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
     }
 
-    public TableStore metaStore() {
+    public TableStore<SCQMeta> metaStore() {
         return metaStore;
     }
 
@@ -925,7 +927,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
-        try (final ScopedResource<Bytes<?>> bytesTl = acquireBytesScoped()) {
+        try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
             if (longValue == null) {
@@ -951,9 +953,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return longValue.getVolatileValue();
     }
 
-    private BytesStore asBytes(CharSequence key, Bytes<?> bytes) {
+    @SuppressWarnings("unchecked")
+    private BytesStore<?,Void> asBytes(CharSequence key, Bytes<Void> bytes) {
         return key instanceof BytesStore
-                ? ((BytesStore) key)
+                ? ((BytesStore<?, Void>) key)
                 : bytes.append(key);
     }
 
@@ -1111,6 +1114,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return success ? CreateStrategy.CREATE : CreateStrategy.READ_ONLY;
         }
 
+        @SuppressWarnings("deprecation")
         private void createIndexThenUpdateHeader(AbstractWire wire, int cycle, SingleChronicleQueueStore wireStore) {
             // Should very carefully prepare all data structures before publishing initial header
             wire.usePadding(wireStore.dataVersion() > 0);

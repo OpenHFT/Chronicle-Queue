@@ -93,7 +93,7 @@ public class CycleNotFoundTest extends QueueTestCommon {
             }
         };
 
-        List<Future> tailers = new ArrayList<>();
+        List<Future<?>> tailers = new ArrayList<>();
         for (int i = 0; i < NUMBER_OF_TAILERS; i++) {
             tailers.add(executorService.submit(reader));
         }
@@ -127,7 +127,7 @@ public class CycleNotFoundTest extends QueueTestCommon {
         // System.out.println("appender is done.");
 
         // wait for all the tailer to finish
-        for (Future f : tailers) {
+        for (Future<?> f : tailers) {
             f.get();
         }
         executorService.shutdownNow();

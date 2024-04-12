@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 public class IndexNotAvailableException extends IllegalStateException {
+    private static final long serialVersionUID = 0L;
     public IndexNotAvailableException(String s) {
         super(s);
     }

@@ -222,7 +222,7 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                 long next = System.nanoTime();
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
-                BytesStore bytes24 = BytesStore.nativeStore(24);
+                BytesStore<?, Void> bytes24 = BytesStore.nativeStore(24);
                 for (int i = -WARMUP; i < ITERATIONS; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {

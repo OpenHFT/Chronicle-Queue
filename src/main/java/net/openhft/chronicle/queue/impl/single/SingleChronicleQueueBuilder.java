@@ -67,7 +67,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
 
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
-    private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
+    private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
 
@@ -125,8 +125,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     // enterprise stuff
     private int deltaCheckpointInterval = -1;
-    private Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier;
-    private Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier;
+    private Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier;
+    private Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier;
     private Updater<Bytes<?>> messageInitializer;
     private Consumer<Bytes<?>> messageHeaderReader;
     private SecretKeySpec key;
@@ -240,14 +240,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
         if (rollCyclePropertyParts.length > 0) {
             try {
-                Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
+                Class<?> rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
                 if (Enum.class.isAssignableFrom(rollCycleClass)) {
                     if (rollCyclePropertyParts.length < 2) {
                         Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                 "Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
                     }
                     else {
-                        @SuppressWarnings("unchecked,rawtypes")
+                        @SuppressWarnings({"unchecked","rawtypes"})
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         @SuppressWarnings("unchecked")
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
@@ -554,9 +554,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return asyncBufferCreator
      */
     public AsyncBufferCreator asyncBufferCreator() {
-        if (bufferBytesStoreCreator instanceof AsyncBufferCreator)
-            return (AsyncBufferCreator) bufferBytesStoreCreator;
-        return null;
+        return bufferBytesStoreCreator;
     }
 
     /**
@@ -979,17 +977,17 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    public Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier() {
+    public Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier() {
         return encodingSupplier;
     }
 
-    public Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier() {
+    public Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier() {
         return decodingSupplier;
     }
 
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable
-                                                       Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
-                                                       @Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier) {
+                                                       Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier,
+                                                       @Nullable Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
         this.encodingSupplier = encodingSupplier;

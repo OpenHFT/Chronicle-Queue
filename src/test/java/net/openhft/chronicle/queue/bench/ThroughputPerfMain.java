@@ -65,7 +65,7 @@ public class ThroughputPerfMain {
     private static final String PATH = System.getProperty("path", OS.TMP);
     private static final long blockSizeMB = Long.getLong("blockSizeMB", OS.isSparseFileSupported() ? 512L << 10 : 256L);
 
-    private static BytesStore nbs;
+    private static BytesStore<?, ?> nbs;
 
     public static void main(String[] args) {
         String base = PATH + "/delete-" + Time.uniqueId() + ".me";

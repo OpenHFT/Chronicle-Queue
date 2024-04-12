@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -81,7 +82,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             assertTrue(Math.signum(bytes.readInt()) >= 0);
 
             if (manuallyReleaseResources) {
-                tailer.close();
+                Closeable.closeQuietly(tailer);
             }
         } finally {
             bytes.releaseLast();

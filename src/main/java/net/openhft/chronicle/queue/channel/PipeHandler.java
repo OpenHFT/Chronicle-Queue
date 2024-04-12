@@ -32,6 +32,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
     private int publishSourceId = 0;
 
     private int subscribeSourceId = 0;
+    @SuppressWarnings("unchecked")
     private Consumer<ExcerptTailer> subscriptionIndexController = SubscribeHandler.NO_OP;
 
     public PipeHandler() {
@@ -92,6 +93,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         return this;
     }
 
+    @SuppressWarnings("try")
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();

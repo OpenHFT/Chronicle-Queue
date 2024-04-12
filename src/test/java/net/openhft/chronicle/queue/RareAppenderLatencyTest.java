@@ -103,7 +103,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             }
 
             // Write a bunch of messages from another thread.
-            Future f = appenderES.submit(() -> {
+            Future<?> f = appenderES.submit(() -> {
                 try (ExcerptAppender appender = queue.createAppender()) {
                     long start = System.currentTimeMillis();
                     for (int i = 0; i < HEAVY_MSGS; i++) {
