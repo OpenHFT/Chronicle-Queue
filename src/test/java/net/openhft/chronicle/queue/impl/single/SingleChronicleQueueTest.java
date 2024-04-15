@@ -72,7 +72,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-@SuppressWarnings("try")
+@SuppressWarnings({"try", "serial"})
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends QueueTestCommon {
 
