@@ -52,6 +52,7 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable, WriteMarshallable, Closeable {
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
+    private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
@@ -79,6 +80,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     int linearScanCount;
     int linearScanByPositionCount;
     Collection<Closeable> closeables = new ArrayList<>();
+    private long lastScannedIndex = -1;
 
     /**
      * used by {@link Demarshallable}
@@ -348,25 +350,30 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                   final long toIndex,
                                   final long fromKnownIndex,
                                   final long knownAddress) {
-        long start = System.nanoTime();
         if (toIndex == fromKnownIndex)
             return ScanResult.FOUND;
+        long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
-        if (REPORT_LINEAR_SCAN)
-            checkLinearScanTime(toIndex, fromKnownIndex, start);
+        if (REPORT_LINEAR_SCAN) {
+            printLinearScanTime(lastScannedIndex, fromKnownIndex, start, "linearScan by index");
+        }
         return scanResult;
     }
 
-    private void checkLinearScanTime(final long toIndex, final long fromKnownIndex, final long
-            start) {
+    private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, String desc) {
+        // still warming up?
+        if (toIndex <= 1)
+            return;
+
+        // took too long to scan?
         long end = System.nanoTime();
-        if (end > start + 100_000) {
-            printLinearScanTime(toIndex, fromKnownIndex, start, end, "linearScan by index");
-        }
+        if (end < start + LINEAR_SCAN_WARN_THRESHOLD_NS)
+            return;
+
+        doPrintLinearScanTime(toIndex, fromKnownIndex, start, desc, end);
     }
 
-    private boolean printLinearScanTime(long toIndex, long fromKnownIndex, long start, long end,
-                                        String desc) {
+    private void doPrintLinearScanTime(long toIndex, long fromKnownIndex, long start, String desc, long end) {
         StackTrace st = null;
         if (Jvm.isDebugEnabled(getClass())) {
             int time = Jvm.isArm() ? 20_000_000 : 250_000;
@@ -376,12 +383,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         long tookUS = (end - start) / 1000;
-        Jvm.perf().on(getClass(), "Took " + tookUS + " us to " + desc + " from " +
-                        fromKnownIndex + " to " + toIndex + " = (0x" + Long.toHexString(toIndex)
-                        + "-0x" + Long.toHexString(fromKnownIndex) + ")=" +
-                        (toIndex - fromKnownIndex),
-                st);
-        return true;
+        String message = "Took " + tookUS + " us to " + desc + " " +
+                fromKnownIndex + " to index " + toIndex;
+        Jvm.perf().on(getClass(), message, st);
     }
 
     @NotNull
@@ -407,10 +411,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             try {
                 if (wire.readDataHeader()) {
                     if (i == toIndex) {
+                        lastScannedIndex = i;
                         return ScanResult.FOUND;
                     }
                     int header = bytes.readVolatileInt();
                     if (Wires.isNotComplete(header)) { // or isEndOfFile
+                        lastScannedIndex = i;
                         return ScanResult.NOT_REACHED;
                     }
                     bytes.readSkip(Wires.lengthOf(header));
@@ -422,6 +428,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     return ScanResult.END_OF_FILE;
                 }
             }
+            lastScannedIndex = i;
             return i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
         }
     }
@@ -435,12 +442,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
-        long start = System.nanoTime();
+        long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
-        long end = System.nanoTime();
-        int time = Jvm.isArm() ? 1_000_000 : 100_000;
-        if (end > start + time) {
-            printLinearScanTime(toPosition, startAddress, start, end, "linearScan by position");
+        if (REPORT_LINEAR_SCAN) {
+            printLinearScanTime(index, startAddress, start, "linearScan by position");
         }
         return index;
     }
