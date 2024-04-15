@@ -202,7 +202,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * Sets the Read After Replica Acknowledged property of this Tailer to the
      * provided {@code readAfterReplicaAcknowledged}.
      * <p>
-     * Enterprise Queue only: if replication enabled, setting this to <code>true</code> on a source queue ensures that
+     * Enterprise Queue only: if replication enabled, setting this to {@code true} on a source queue ensures that
      * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
      * This will block forever if no sinks acknowledge receipt.
      *
@@ -214,7 +214,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     /**
      * Returns the Read After Replica Acknowledged property of this Tailer.
      * <p>
-     * Enterprise Queue only: if replication enabled, setting this to <code>true</code> on a source queue ensures that
+     * Enterprise Queue only: if replication enabled, setting this to {@code true} on a source queue ensures that
      * this tailer will not read until at least one of the sinks has acknowledged receipt of the excerpt.
      * This will block forever if no sinks acknowledge receipt.
      *

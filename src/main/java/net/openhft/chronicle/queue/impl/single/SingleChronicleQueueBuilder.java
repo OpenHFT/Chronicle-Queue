@@ -1117,7 +1117,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    @Deprecated(/* to be removed in x.26*/)
+    /**
+     * WARNING: Avoid using this method as it can have unintended consequences.
+     * We plan to phase it out.
+     * It's only a shallow copy so field will have the same objects.
+     */
     public SingleChronicleQueueBuilder clone() {
         try {
             return (SingleChronicleQueueBuilder) super.clone();
@@ -1127,7 +1131,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * updates all the fields in <code>this</code> that are null, from the parentBuilder
+     * updates all the fields in {@code this} that are null, from the parentBuilder
      *
      * @param parentBuilder the parentBuilder Chronicle Queue Builder
      * @return that

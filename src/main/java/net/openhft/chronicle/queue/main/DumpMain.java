@@ -26,14 +26,11 @@ import java.io.PrintStream;
 /**
  * Parameters to the methods in this class can be set using any of the
  * following system properties:
- *
+ * <p>
  * private static final String FILE = System.getProperty("file");
  * private static final boolean SKIP_TABLE_STORE = Jvm.getBoolean("skipTableStoreDump");
  * private static final boolean UNALIGNED = Jvm.getBoolean("dumpUnaligned");
  * private static final int LENGTH = ", 0".length();
- *
- * @apiNote  This class was made final as per 2.21 and does not
- *           support sub-classing any longer.
  */
 public final class DumpMain {
 
