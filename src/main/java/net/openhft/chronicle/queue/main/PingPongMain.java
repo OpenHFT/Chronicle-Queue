@@ -22,7 +22,7 @@ import net.openhft.chronicle.queue.internal.main.InternalPingPongMain;
 
 /**
  * System Properties:
- *
+ * <p>
  *    static int runtime = Integer.getInteger("runtime", 30); // seconds
  *    static String basePath = System.getProperty("path", OS.TMP);
  */

@@ -428,7 +428,6 @@ public interface ChronicleQueue extends Closeable {
     /**
      * Returns the last index that was msync-ed to disk. If no
      * such index exists, returns -1.
-     * <p>
      *
      * @return the last index that was msync-ed to disk
      */

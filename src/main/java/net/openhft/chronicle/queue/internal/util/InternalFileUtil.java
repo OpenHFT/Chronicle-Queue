@@ -129,7 +129,7 @@ public final class InternalFileUtil {
      * is returned.
      *
      * @param file to check
-     * @return true if the given {@code file } is used by any process
+     * @return FileState if the given {@code file } is used by any process
      * @throws UnsupportedOperationException if this operation is not
      *                                       supported for the current platform (e.g. Windows).
      */
@@ -151,7 +151,7 @@ public final class InternalFileUtil {
      *
      * @param file         to check
      * @param allOpenFiles The set of all open files retrieve from {@link #getAllOpenFiles()}
-     * @return true if the given {@code file } is used by any process
+     * @return FileState if the given {@code file } is used by any process
      * @throws UnsupportedOperationException if this operation is not
      *                                       supported for the current platform (e.g. Windows).
      */
@@ -169,7 +169,7 @@ public final class InternalFileUtil {
      * has the file open for reading or writing).
      *
      * @param file to check
-     * @return true if the given {@code file } is used by any process
+     * @return FileState if the given {@code file } is used by any process
      */
     // Todo: Here is a candidate for Windows. Verify that it works
     private static FileState stateWindows(@NotNull File file) {

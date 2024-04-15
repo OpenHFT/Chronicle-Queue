@@ -23,7 +23,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import java.util.function.Consumer;
 
 /**
- * Handle the document from the queue that is read in <code>ChronicleReader</code>.
+ * Handle the document from the queue that is read in {@code ChronicleReader}.
  * Particularly useful when you need more than the text representation e.g.
  * when your queue is written in binary.
  */
