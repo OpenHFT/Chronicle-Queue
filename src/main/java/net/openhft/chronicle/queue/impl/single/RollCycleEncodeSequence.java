@@ -21,8 +21,9 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
+import net.openhft.chronicle.wire.Sequence;
 
-class RollCycleEncodeSequence implements net.openhft.chronicle.wire.Sequence {
+class RollCycleEncodeSequence implements Sequence {
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
     private final long sequenceMask;
@@ -63,7 +64,7 @@ class RollCycleEncodeSequence implements net.openhft.chronicle.wire.Sequence {
     public long getSequence(long forWritePosition) {
 
         if (writePositionAndSequence == null)
-            return net.openhft.chronicle.wire.Sequence.NOT_FOUND;
+            return Sequence.NOT_FOUND;
 
         // We only deal with the 2nd long in the TwoLongValue, and we use it to keep track of current position
         // and current sequence. We use the same encoding as index (cycle number is shifted left by cycleShift
@@ -74,7 +75,7 @@ class RollCycleEncodeSequence implements net.openhft.chronicle.wire.Sequence {
 
         final long sequenceValue = this.writePositionAndSequence.getVolatileValue2();
         if (sequenceValue == 0)
-            return net.openhft.chronicle.wire.Sequence.NOT_FOUND;
+            return Sequence.NOT_FOUND;
 
         long writePositionAsCycle = toLongValue(forWritePosition, 0);
         long lowerBitsOfWp = toLowerBitsWritePosition(writePositionAsCycle);
@@ -83,7 +84,7 @@ class RollCycleEncodeSequence implements net.openhft.chronicle.wire.Sequence {
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
 
-        return net.openhft.chronicle.wire.Sequence.NOT_FOUND_RETRY;
+        return Sequence.NOT_FOUND_RETRY;
     }
 
     private long toLongValue(long cycle, long sequenceNumber) {
