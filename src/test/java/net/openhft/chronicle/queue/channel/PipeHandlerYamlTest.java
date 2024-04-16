@@ -9,6 +9,7 @@ import org.junit.Test;
 import static net.openhft.chronicle.queue.channel.PubSubHandlerTest.createTargetDir;
 import static org.junit.Assume.assumeFalse;
 
+@SuppressWarnings("deprecated")
 public class PipeHandlerYamlTest extends QueueTestCommon {
     @Test
     public void yamlTest() {

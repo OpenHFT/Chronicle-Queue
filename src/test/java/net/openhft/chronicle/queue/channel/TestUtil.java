@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings("deprecated")
 public final class TestUtil {
 
     public static void allowCommentsOutOfOrder(YamlTester yamlTester) {
