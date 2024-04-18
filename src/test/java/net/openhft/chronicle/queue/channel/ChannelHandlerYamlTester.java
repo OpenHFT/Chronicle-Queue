@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+@SuppressWarnings("deprecated")
 // TODO move the chronicle-wire
 public class ChannelHandlerYamlTester implements YamlTester {
 
