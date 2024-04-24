@@ -106,6 +106,10 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
      * Otherwise {@code false} is returned if the lock is held by this process or another live process.
      */
     public boolean forceUnlockIfProcessIsDead() {
+        return forceUnlockIfProcessIsDead(true);
+    }
+
+    protected boolean forceUnlockIfProcessIsDead(boolean warn) {
         long pid;
         for (; ; ) {
             pid = this.lock.getVolatileValue();
@@ -115,8 +119,13 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             // mask off thread (if used)
             int realPid = (int) pid;
             if (!Jvm.isProcessAlive(realPid)) {
-                Jvm.warn().on(this.getClass(), format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
-                        lockKey, this.path, realPid));
+                final String message = format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
+                        lockKey, this.path, realPid);
+                if (warn) {
+                    Jvm.warn().on(this.getClass(), message);
+                } else {
+                    Jvm.debug().on(this.getClass(), message);
+                }
                 if (lock.compareAndSwapValue(pid, UNLOCKED))
                     return true;
             } else
