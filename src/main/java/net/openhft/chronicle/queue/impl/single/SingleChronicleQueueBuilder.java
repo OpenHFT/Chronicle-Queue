@@ -1159,7 +1159,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public WriteLock appendLock() {
-        return readOnly() ? WriteLock.NO_OP : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2, TableStoreWriteLock.APPEND_LOCK_KEY);
+        return readOnly() ? WriteLock.NO_OP : new AppendLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2);
     }
 
     /**
