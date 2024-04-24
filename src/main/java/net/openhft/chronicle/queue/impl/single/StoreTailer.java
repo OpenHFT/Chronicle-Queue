@@ -1215,7 +1215,7 @@ class StoreTailer extends AbstractCloseable
 
 
     @Override
-    public void acknowledgedIndexReplicatedCheck(final AcknowledgedIndexReplicatedCheck acknowledgedIndexReplicatedCheck) {
+    public void acknowledgedIndexReplicatedCheck(final @NotNull AcknowledgedIndexReplicatedCheck acknowledgedIndexReplicatedCheck) {
         readAfterReplicaAcknowledged(true);
         this.acknowledgedIndexReplicatedCheck = acknowledgedIndexReplicatedCheck;
     }
