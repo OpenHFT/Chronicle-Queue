@@ -32,7 +32,7 @@ public class WireStorePool extends SimpleCloseable {
     private final WireStoreSupplier supplier;
     private final StoreFileListener storeFileListener;
 
-    WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
+    private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
         this.storeFileListener = storeFileListener;
     }
