@@ -235,6 +235,10 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *     return index <= lastSequenceAck + tolerateNumberOfUnAckedMessages;
      * }
      * </pre>
+     * <p>
+     * This feature is exclusive to Enterprise Queue and is disabled when accessing a queue file role.
+     * Specifically, it's unavailable when the in-flight message originated from a cycle other than the current one.
+     * For more information about cycles, see RollCycles and {@link RollCycle#toCycle(long)}.
      *
      * @param acknowledgedIndexReplicatedCheck as a custom implementation of {@code acknowledgedIndexReplicatedCheck}
      */
