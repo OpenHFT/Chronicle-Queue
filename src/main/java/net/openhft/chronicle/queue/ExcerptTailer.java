@@ -329,6 +329,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
          * @param index           the index of the next message for the tailer to read
          * @param lastSequenceAck the last index that has been acknowledged as replicated
          * @return true if you are ok for the tailer to read the message at {@code index}
+         * <p>
+         * NOTE: this callback is not called during a roll,
+         * as all messages must be acknowledged before they are seen during this period.
          */
         boolean acknowledgedIndexReplicatedCheck(long index, long lastSequenceAck);
     }
