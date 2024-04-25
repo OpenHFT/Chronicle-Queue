@@ -212,6 +212,41 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
+     * Allows you to control the number of in flight messages that are allowed when setting {@code acknowledgedIndexReplicatedCheck},  By default, this is set to:
+     * <p>
+     * <p>
+     * By providing a custom implementation of {@code acknowledgedIndexReplicatedCheck} you can control the number of in-flight messages that are allowed before the message is available to be read by the tailer.
+     * And in addition, then acknowledgedIndexReplicatedCheck will be set to true.
+     * <p>
+     * below is the default implementation:
+     * <pre>
+     * boolean acknowledgedIndexReplicatedCheck(long index, long lastSequenceAck) {
+     *      return index == lastSequenceAck;
+     * }
+     * </pre>
+     * <p>
+     * With this default implementation it will ensure tailer will not be able to read a message until it has been acknowledged that it has been full replicated.
+     * <p>
+     * However, if you wish to tolerate a number of in-flight or pending messages before the message.,
+     * You can set this to a different implementation. For example, if you wish to tolerate one unacknowledged message, set {@code tolerateNumberOfUnAckedMessages} to 1, as shown below:
+     * <pre>
+     * boolean acknowledgedIndexReplicatedCheck(long index, long lastSequenceAck) {
+     *     int tolerateNumberOfUnAckedMessages = 1;
+     *     return index <= lastSequenceAck + tolerateNumberOfUnAckedMessages;
+     * }
+     * </pre>
+     * <p>
+     * This feature is exclusive to Enterprise Queue and is disabled when accessing a queue file role.
+     * Specifically, it's unavailable when the in-flight message originated from a cycle other than the current one.
+     * For more information about cycles, see RollCycles and {@link RollCycle#toCycle(long)}.
+     *
+     * @param acknowledgedIndexReplicatedCheck as a custom implementation of {@code acknowledgedIndexReplicatedCheck}
+     */
+    default void acknowledgedIndexReplicatedCheck(AcknowledgedIndexReplicatedCheck acknowledgedIndexReplicatedCheck) {
+        throw new UnsupportedOperationException("This method is not supported by this implementation");
+    }
+
+    /**
      * Returns the Read After Replica Acknowledged property of this Tailer.
      * <p>
      * Enterprise Queue only: if replication enabled, setting this to {@code true} on a source queue ensures that
@@ -232,7 +267,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * Calling this method may move ExcerptTailer to the specified cycle and release its store.
      *
      * @return the approximate number of excerpts in a cycle.
-     *
      * @deprecated Use {@link #excerptsInCycle(int)} instead
      */
     @Deprecated(/* To be removed in x.27 */)
@@ -247,7 +281,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * Calling this method may move ExcerptTailer to the specified cycle and release its store.
      *
      * @return the exact number of excerpts in a cycle.
-     *
      * @deprecated Use {@link #excerptsInCycle(int)} instead
      */
     @Deprecated(/* To be removed in x.27 */)
@@ -289,5 +322,17 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      */
     default @NotNull ExcerptTailer afterWrittenMessageAtIndex(@NotNull ChronicleQueue queue, long index) {
         throw new UnsupportedOperationException("todo");
+    }
+
+    interface AcknowledgedIndexReplicatedCheck {
+        /**
+         * @param index           the index of the next message for the tailer to read
+         * @param lastSequenceAck the last index that has been acknowledged as replicated
+         * @return true if you are ok for the tailer to read the message at {@code index}
+         * <p>
+         * NOTE: this callback is not called during a roll,
+         * as all messages must be acknowledged before they are seen during this period.
+         */
+        boolean acknowledgedIndexReplicatedCheck(long index, long lastSequenceAck);
     }
 }

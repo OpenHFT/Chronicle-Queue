@@ -469,10 +469,25 @@ class StoreTailer extends AbstractCloseable
         return true;
     }
 
+    private AcknowledgedIndexReplicatedCheck acknowledgedIndexReplicatedCheck
+            = (index, lastSequenceAck) -> index == lastSequenceAck;
+
     private boolean inACycleCheckRep() {
         final long lastSequenceAck = queue.lastAcknowledgedIndexReplicated();
         final long index = index();
-        return index > lastSequenceAck;
+        if (lastSequenceAck == -1)
+            return true; // don't allow the message to be read
+        if (index == Long.MIN_VALUE)
+            return false; // allow the message to be read
+
+        // check both are in the same roll cycle
+        if (queue.rollCycle().toCycle(index) != queue.rollCycle().toCycle(lastSequenceAck))
+            // don't allow the message to be read, until the ack has caught up with the current cycle
+            // as trying to calculate the number of message between the last cycle and the current cycle
+            // to too closely in terms of performance to calculate.
+            return true;
+
+        return !acknowledgedIndexReplicatedCheck.acknowledgedIndexReplicatedCheck(index, lastSequenceAck);
     }
 
     private boolean inACycleNotForward() {
@@ -996,7 +1011,8 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward: while (originalToEndLoopCondition(approximateLastIndex, index)) {
+                LoopForward:
+                while (originalToEndLoopCondition(approximateLastIndex, index)) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {
                         case NOT_REACHED:
@@ -1194,8 +1210,14 @@ class StoreTailer extends AbstractCloseable
     @Override
     public void readAfterReplicaAcknowledged(final boolean readAfterReplicaAcknowledged) {
         throwExceptionIfClosed();
-
         this.readAfterReplicaAcknowledged = readAfterReplicaAcknowledged;
+    }
+
+
+    @Override
+    public void acknowledgedIndexReplicatedCheck(final @NotNull AcknowledgedIndexReplicatedCheck acknowledgedIndexReplicatedCheck) {
+        readAfterReplicaAcknowledged(true);
+        this.acknowledgedIndexReplicatedCheck = acknowledgedIndexReplicatedCheck;
     }
 
     @Override
