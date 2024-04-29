@@ -21,6 +21,7 @@ import java.util.function.Predicate;
 
 import static net.openhft.chronicle.queue.channel.PublishHandler.copyFromChannelToQueue;
 
+@SuppressWarnings("deprecation")
 public class PipeHandler extends AbstractHandler<PipeHandler> {
     private String publish;
     private String subscribe;

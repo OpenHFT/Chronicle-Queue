@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("deprecation")
 public class PubSubHandler extends AbstractHandler<PubSubHandler> {
     private final Map<String, Subscription> subscriptionMap = new LinkedHashMap<>();
     private final List<Subscription> prioritySubscriptions = new ArrayList<>();

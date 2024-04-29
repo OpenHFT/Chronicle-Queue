@@ -57,7 +57,7 @@ public class InternalAppenderJLBH implements JLBHTask {
                 .rollCycle(rollCycle)
                 .timeProvider(timeProvider)
                 .build();
-        appender = (InternalAppender) queue.acquireAppender();
+        appender = (InternalAppender) queue.createAppender();
         this.jlbh = jlbh;
     }
 

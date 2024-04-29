@@ -23,8 +23,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.*;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 
+@SuppressWarnings("deprecation")
 @RunWith(Parameterized.class)
 public final class MessageHistoryTest extends QueueTestCommon {
     @Rule

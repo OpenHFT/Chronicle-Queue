@@ -6,14 +6,12 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.NoDocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.channel.AbstractHandler;
-import net.openhft.chronicle.wire.channel.ChannelHeader;
-import net.openhft.chronicle.wire.channel.ChronicleChannel;
-import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
+import net.openhft.chronicle.wire.channel.*;
 import net.openhft.chronicle.wire.converter.NanoTime;
 
 import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.*;
 
+@SuppressWarnings("deprecation")
 public class PublishQueueChannel implements ChronicleChannel {
     private final ChronicleChannelCfg<?> channelCfg;
     private final AbstractHandler<?> publishHandler;

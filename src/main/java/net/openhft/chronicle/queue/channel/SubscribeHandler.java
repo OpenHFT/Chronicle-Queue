@@ -20,6 +20,7 @@ import java.util.function.Predicate;
 
 import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
 
+@SuppressWarnings("deprecation")
 public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
     private static class NoOp extends SelfDescribingMarshallable implements Consumer<ExcerptTailer> {

@@ -2,9 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -16,6 +14,7 @@ import static org.junit.Assert.*;
 /**
  * test reading the queue backwards using readOne
  */
+@SuppressWarnings("deprecation")
 public class ReadOneBackwardsTest extends QueueTestCommon {
 
     @Test

@@ -30,7 +30,7 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
-import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -49,6 +49,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("deprecation")
 public class QueueTestCommon {
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
     private final List<File> tmpDirs = new ArrayList<>();

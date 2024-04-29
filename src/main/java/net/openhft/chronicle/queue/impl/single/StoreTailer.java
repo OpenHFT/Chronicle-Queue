@@ -1327,6 +1327,7 @@ class StoreTailer extends AbstractCloseable
         }
     }
 
+    @SuppressWarnings("deprecation")
     private String extraInfo(@NotNull final ExcerptTailer tailer, @NotNull final VanillaMessageHistory messageHistory) {
         return String.format(
                 ". That sourceIndex was determined fom the last entry written to queue %s " +

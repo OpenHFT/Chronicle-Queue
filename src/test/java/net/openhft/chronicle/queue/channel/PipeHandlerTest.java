@@ -34,6 +34,7 @@ import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 
+@SuppressWarnings("deprecation")
 @RunWith(Parameterized.class)
 public class PipeHandlerTest extends QueueTestCommon {
     private final boolean buffered;

@@ -4,11 +4,9 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.channel.AbstractHandler;
-import net.openhft.chronicle.wire.channel.ChannelHeader;
-import net.openhft.chronicle.wire.channel.ChronicleChannel;
-import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
+import net.openhft.chronicle.wire.channel.*;
 
+@SuppressWarnings("deprecation")
 public class QueuesChannel implements ChronicleChannel {
     private final PublishQueueChannel publishQueueChannel;
     private final SubscribeQueueChannel subscribeQueueChannel;

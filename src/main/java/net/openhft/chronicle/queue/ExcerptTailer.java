@@ -214,7 +214,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     /**
      * Allows you to control the number of in flight messages that are allowed when setting {@code acknowledgedIndexReplicatedCheck},  By default, this is set to:
      * <p>
-     * <p>
      * By providing a custom implementation of {@code acknowledgedIndexReplicatedCheck} you can control the number of in-flight messages that are allowed before the message is available to be read by the tailer.
      * And in addition, then acknowledgedIndexReplicatedCheck will be set to true.
      * <p>

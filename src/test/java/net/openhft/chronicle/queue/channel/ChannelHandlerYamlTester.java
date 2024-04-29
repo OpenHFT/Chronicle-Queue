@@ -13,11 +13,8 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.YamlWire;
-import net.openhft.chronicle.wire.channel.ChannelHandler;
-import net.openhft.chronicle.wire.channel.ChronicleChannel;
-import net.openhft.chronicle.wire.channel.ChronicleContext;
-import net.openhft.chronicle.wire.utils.YamlAgitator;
-import net.openhft.chronicle.wire.utils.YamlTester;
+import net.openhft.chronicle.wire.channel.*;
+import net.openhft.chronicle.wire.utils.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,8 +25,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-@SuppressWarnings("deprecated")
-// TODO move the chronicle-wire
+@SuppressWarnings("deprecation")
 public class ChannelHandlerYamlTester implements YamlTester {
 
     static final TesterControl testerControl = Jvm::pause;

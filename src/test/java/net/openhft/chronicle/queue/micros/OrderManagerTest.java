@@ -26,7 +26,7 @@ import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
-import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.*;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,6 +36,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
+@SuppressWarnings("deprecation")
 public class OrderManagerTest extends QueueTestCommon {
 
     @Override

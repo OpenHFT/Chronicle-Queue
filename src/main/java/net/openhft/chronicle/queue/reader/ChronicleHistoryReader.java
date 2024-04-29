@@ -39,6 +39,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("deprecation")
 public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;

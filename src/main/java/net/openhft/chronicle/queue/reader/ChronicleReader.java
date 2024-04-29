@@ -51,6 +51,7 @@ import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
+@SuppressWarnings("deprecation")
 public class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 

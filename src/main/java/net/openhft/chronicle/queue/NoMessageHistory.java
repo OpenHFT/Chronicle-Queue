@@ -17,9 +17,10 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.*;
 
 // Is this being used?
+@SuppressWarnings("deprecation")
 public enum NoMessageHistory implements MessageHistory {
     INSTANCE;
 
