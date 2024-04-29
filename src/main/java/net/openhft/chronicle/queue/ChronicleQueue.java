@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
 import net.openhft.chronicle.wire.MarshallableOut;
@@ -479,4 +480,43 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     String dumpLastHeader();
+
+    /**
+     * Creates a pretoucher which can be called from another thread to pre-load pages into the page cache.
+     * <p>Enterprise Queue only
+     *
+     * @return pretoucher
+     */
+    default Pretoucher createPretoucher() {
+        return new Pretoucher() {
+            @Override
+            public void execute() {
+                // no-op
+            }
+            @Override
+            public void close() {
+                // no-op
+            }
+        };
+    }
+
+    /**
+     * Await for async operations to complete.
+     * <p>Enterprise Queue only
+     *
+     * @return success
+     */
+    default boolean awaitAsync() {
+        return true;
+    }
+
+    /**
+     * Create non-async tailer.
+     * <p>Enterprise Queue only
+     *
+     * @return tailer
+     */
+    default ExcerptTailer nonAsyncTailer() {
+        return createTailer();
+    }
 }
