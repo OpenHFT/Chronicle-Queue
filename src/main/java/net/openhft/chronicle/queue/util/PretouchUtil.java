@@ -19,13 +19,13 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.threads.EventHandler;
-import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 
+@Deprecated(/* To be removed in x.27. Instead use ChronicleQueue#createPretoucher */)
 public final class PretouchUtil {
     private static final PretoucherFactory INSTANCE;
 
@@ -47,19 +47,10 @@ public final class PretouchUtil {
     }
 
     public static Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
-        return INSTANCE.createPretoucher(queue);
+        return queue.createPretoucher();
     }
 
     private static class PretouchFactoryEmpty implements PretoucherFactory {
-        private static class EmptyPretoucher implements Pretoucher {
-            @Override
-            public void execute() throws InvalidEventHandlerException {
-            }
-
-            @Override
-            public void close() {
-            }
-        }
 
         @Override
         public EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
@@ -68,7 +59,7 @@ public final class PretouchUtil {
 
         @Override
         public Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
-            return new EmptyPretoucher();
+            return queue.createPretoucher();
         }
     }
 }
