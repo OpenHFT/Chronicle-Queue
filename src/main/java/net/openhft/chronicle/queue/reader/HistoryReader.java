@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-@Deprecated(/* to be moved in x.27 */)
 public interface HistoryReader {
 
     HistoryReader withMessageSink(final Consumer<String> messageSink);
