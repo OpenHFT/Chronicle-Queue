@@ -28,7 +28,6 @@ import net.openhft.chronicle.wire.*;
 
 import java.nio.ByteBuffer;
 
-@SuppressWarnings("deprecation")
 public final class MethodReaderQueueEntryReader implements QueueEntryReader {
 
     private final ExcerptTailer tailer;

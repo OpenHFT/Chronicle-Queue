@@ -39,7 +39,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("deprecation")
 public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
@@ -161,7 +160,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         final WireParselet parselet = parselet();
         final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(methodIdToName(methodId), wire.read());
         final MessageHistory prev = MessageHistory.get();
-        MessageHistory.set(new VanillaMessageHistory());
+        MessageHistory.emptyHistory();
         try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, fieldNumberParselet, null, parselet)) {
             while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
                 ++counter;

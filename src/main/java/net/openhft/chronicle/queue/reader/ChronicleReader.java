@@ -51,7 +51,6 @@ import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 
-@SuppressWarnings("deprecation")
 public class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
@@ -100,7 +99,7 @@ public class ChronicleReader implements Reader {
             try (final ChronicleQueue queue = createQueue();
                  final ExcerptTailer tailer = queue.createTailer(tailerId);
                  final ExcerptTailer toEndTailer = queue.createTailer()) {
-                MessageHistory.set(new VanillaMessageHistory());
+                MessageHistory.emptyHistory();
 
                 MessageCountingMessageConsumer messageConsumer = new MessageCountingMessageConsumer(matchLimit, createMessageConsumers());
                 QueueEntryReader queueEntryReader = createQueueEntryReader(tailer, messageConsumer);
@@ -125,7 +124,7 @@ public class ChronicleReader implements Reader {
             } catch (final RuntimeException e) {
                 retryLastOperation = handleRuntimeException(e);
             } finally {
-                MessageHistory.set(null);
+                MessageHistory.clear();
             }
         } while (retryLastOperation);
 

@@ -36,7 +36,6 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
-@SuppressWarnings("deprecation")
 public class OrderManagerTest extends QueueTestCommon {
 
     @Override

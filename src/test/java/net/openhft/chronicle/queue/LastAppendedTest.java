@@ -22,7 +22,7 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.Test;
 
 import java.io.File;
@@ -34,7 +34,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
-@SuppressWarnings("deprecation")
 public class LastAppendedTest extends QueueTestCommon {
 
     public static final RollCycle ROLL_CYCLE = TEST4_SECONDLY;

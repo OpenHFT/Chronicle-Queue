@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 
-@SuppressWarnings("deprecation")
 public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
