@@ -235,6 +235,7 @@ class StoreAppender extends AbstractCloseable
      * first create or have an appender that was created on this thread, and then use this appender to call the pretouch()
      */
     @Override
+    @SuppressWarnings("deprecation")
     public void pretouch() {
         throwExceptionIfClosed();
 
