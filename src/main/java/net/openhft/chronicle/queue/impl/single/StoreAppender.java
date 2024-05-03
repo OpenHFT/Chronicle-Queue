@@ -856,6 +856,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     private class Finalizer {
+        @SuppressWarnings({"removal", "deprecation"})
         @Override
         protected void finalize() throws Throwable {
             super.finalize();
