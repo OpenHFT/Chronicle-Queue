@@ -124,6 +124,8 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
         runCommand(JavaProcessBuilder.create(HalfWriteAMessage.class).withProgramArguments(queueDirectory.getAbsolutePath()).start());
+        // as exit is true, we could get a forced unlock exception
+        ignoreException("Forced unlocking");
 
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
