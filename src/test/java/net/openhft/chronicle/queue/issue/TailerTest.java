@@ -103,5 +103,4 @@ public class TailerTest extends QueueTestCommon {
     private ChronicleQueue createQueue() {
         return ChronicleQueue.singleBuilder(QUEUE_PATH).build();
     }
-
 }

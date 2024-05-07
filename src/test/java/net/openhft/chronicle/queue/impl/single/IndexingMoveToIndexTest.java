@@ -59,5 +59,4 @@ class IndexingMoveToIndexTest extends IndexingTestCommon {
         assertFalse(tailer.moveToIndex(nonExistentIndex));
         assertEquals(nonExistentIndex, tailer.index());
     }
-
 }

@@ -153,7 +153,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
-
     }
 
     @Test
@@ -189,7 +188,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
-
     }
 
     private void testQueue(@NotNull final ChronicleQueue queue) {
@@ -408,6 +406,5 @@ public class SingleCQFormatTest extends QueueTestCommon {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 }

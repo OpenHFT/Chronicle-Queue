@@ -33,5 +33,4 @@ public class QueueExamples1 {
     interface Printer {
         void print(String message);
     }
-
 }

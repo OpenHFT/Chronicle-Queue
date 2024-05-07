@@ -102,5 +102,4 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
             IOTools.deleteDirWithFiles(queuePath);
         }
     }
-
 }

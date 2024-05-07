@@ -32,12 +32,10 @@ public class QueueExamples2 {
             final boolean successIfMessageRead = methodReader.readOne();
             Thread.yield();
         }
-
     }
 
     // this interface has to be deployed to both java processes
     interface Printer {
         void print(String message);
     }
-
 }

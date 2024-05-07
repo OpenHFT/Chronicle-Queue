@@ -32,5 +32,4 @@ public class CycleOverflowTest extends QueueTestCommon {
             IOTools.deleteDirWithFiles(path);
         }
     }
-
 }

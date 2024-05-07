@@ -32,5 +32,4 @@ public class HugetlbfsTest {
             IOTools.deleteDirWithFiles(path);
         }
     }
-
 }

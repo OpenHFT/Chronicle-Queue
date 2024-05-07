@@ -157,5 +157,4 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
-
 }

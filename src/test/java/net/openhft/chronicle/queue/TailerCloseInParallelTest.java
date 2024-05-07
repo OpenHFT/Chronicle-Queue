@@ -176,4 +176,3 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         void readFrom(T t);
     }
 }
-

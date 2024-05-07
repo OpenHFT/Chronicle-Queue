@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,5 +29,4 @@ class IndexingSpacingAndCountTest extends IndexingTestCommon {
             appender.writeText("<test>");
         }
     }
-
 }

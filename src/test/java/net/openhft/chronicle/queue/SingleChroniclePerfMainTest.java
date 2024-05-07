@@ -825,4 +825,3 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         IFacadeSon getSonAt(int idx);
     }
 }
-

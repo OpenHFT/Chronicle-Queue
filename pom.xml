@@ -447,24 +447,6 @@
 
     <profiles>
         <profile>
-            <id>java11-release8</id>
-            <activation>
-                <jdk>[11,</jdk>
-            </activation>
-            <properties>
-                <maven.compiler.release>8</maven.compiler.release>
-            </properties>
-        </profile>
-        <profile>
-            <id>java17-implicit-none</id>
-            <activation>
-                <jdk>[17,</jdk>
-            </activation>
-            <properties>
-                <maven.compiler.implicit>none</maven.compiler.implicit>
-            </properties>
-        </profile>
-        <profile>
             <id>assertions</id>
             <properties>
                 <zero.cost.assertions>enabled</zero.cost.assertions>

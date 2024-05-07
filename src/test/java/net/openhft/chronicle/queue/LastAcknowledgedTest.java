@@ -79,7 +79,6 @@ public class LastAcknowledgedTest extends QueueTestCommon {
         }
     }
 
-
     @Test
     public void testReadBeforeAcknowledgment() throws IOException {
 

@@ -7,7 +7,6 @@ import java.io.StreamCorruptedException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
 /**
  * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext)}.
  */
@@ -73,5 +72,4 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         long lastSequenceNumber = indexing(queue).lastSequenceNumber(appender);
         assertEquals(1, lastSequenceNumber);
     }
-
 }

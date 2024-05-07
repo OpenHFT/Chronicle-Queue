@@ -107,5 +107,4 @@ public class LargeCycleFileToEndPerfMain {
     private static void line() {
         log.info("--------------------------------------------------------------------------------");
     }
-
 }

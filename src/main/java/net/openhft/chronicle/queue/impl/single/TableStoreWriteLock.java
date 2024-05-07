@@ -170,5 +170,4 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         if (locked())
             forceUnlock(lockedBy());
     }
-
 }

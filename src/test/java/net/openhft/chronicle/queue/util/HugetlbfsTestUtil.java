@@ -56,5 +56,4 @@ public final class HugetlbfsTestUtil {
 
         return Paths.get(hugetlbfsPath, testName.getMethodName()).toString();
     }
-
 }

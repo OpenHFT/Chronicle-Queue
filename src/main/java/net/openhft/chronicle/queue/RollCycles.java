@@ -149,5 +149,4 @@ public enum RollCycles implements RollCycle {
     public int toCycle(long index) {
         return arithmetic.toCycle(index);
     }
-
 }

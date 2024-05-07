@@ -273,7 +273,6 @@ public class StoreTailerTest extends QueueTestCommon {
                 // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");
             }
-
         }
     }
 

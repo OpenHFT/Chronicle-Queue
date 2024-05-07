@@ -106,7 +106,6 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
             if (rollCycle.equals(TestRollCycles.TEST2_DAILY)) {
                 log.info("lastIndexAppended={}", appender.lastIndexAppended());
             }
-
         }
     }
 
@@ -150,5 +149,4 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     public enum TailerIndexStartPosition {
         BEGINNING, MIDDLE
     }
-
 }

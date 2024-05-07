@@ -152,4 +152,3 @@ public class TestBinarySearch extends QueueTestCommon {
         }
     }
 }
-

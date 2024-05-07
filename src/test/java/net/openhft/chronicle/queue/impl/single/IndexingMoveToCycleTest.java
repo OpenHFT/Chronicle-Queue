@@ -30,5 +30,4 @@ class IndexingMoveToCycleTest extends IndexingTestCommon {
         assertEquals(-2147483648, tailer.cycle());
         assertEquals("test", tailer.readText());
     }
-
 }

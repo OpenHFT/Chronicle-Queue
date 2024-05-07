@@ -60,6 +60,5 @@ public class LatinCharTest extends QueueTestCommon {
 
             assertEquals(expected, actual);
         }
-
     }
 }
