@@ -615,8 +615,8 @@ Chronicle Queue supports Linux container technology. The below is in regards to 
 
 You need to ensure that:
 
-* containers https://docs.docker.com/engine/reference/run/#ipc-settings---ipc[share IPC namespace] (run with `--ipc=host`)
-* containers https://docs.docker.com/engine/reference/run/#pid-settings---pid[share PID namespace] (run with `--pid=host`)
+* containers https://docs.docker.com/reference/cli/docker/container/run/#ipc[share IPC namespace] (run with `--ipc=host`)
+* containers https://docs.docker.com/reference/cli/docker/container/run/#pid[share PID namespace] (run with `--pid=host`)
 * queues are mounted on bind-mounted folders from the host (i.e. `-v /host/dir/1/:/container/dir`)
 
 Our performance tests have shown minimal performance degradation when compared to running directly on the host.
