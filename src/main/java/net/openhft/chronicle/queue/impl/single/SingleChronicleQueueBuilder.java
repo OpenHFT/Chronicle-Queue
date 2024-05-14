@@ -37,6 +37,7 @@ import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
+import net.openhft.chronicle.queue.providers.EnterpriseQueueFactories;
 import net.openhft.chronicle.threads.MediumEventLoop;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
@@ -47,7 +48,6 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
-import java.lang.reflect.Constructor;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -68,7 +68,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
 
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
-    private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
 
@@ -78,17 +77,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         CLASS_ALIASES.addAlias(SCQRoll.class, "SCQSRoll");
         CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
-
-        {
-            Constructor co;
-            try {
-                co = ((Class) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
-                Jvm.setAccessible(co);
-            } catch (Exception e) {
-                co = null;
-            }
-            ENTERPRISE_QUEUE_CONSTRUCTOR = co;
-        }
     }
 
     private BufferMode writeBufferMode = BufferMode.None;
@@ -235,7 +223,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public static boolean areEnterpriseFeaturesAvailable() {
-        return ENTERPRISE_QUEUE_CONSTRUCTOR != null;
+        return EnterpriseQueueFactories.get().areEnterpriseFeaturesAvailable();
     }
 
     private static RollCycle loadDefaultRollCycle() {
@@ -300,10 +288,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         // It is important to check enterprise features after preBuild()
         // Enterprise-only config options can be loaded from the metadata
-        if (checkEnterpriseFeaturesRequested())
-            chronicleQueue = buildEnterprise();
-        else
-            chronicleQueue = new SingleChronicleQueue(this);
+        if (checkEnterpriseFeaturesRequested() && !areEnterpriseFeaturesAvailable()) {
+            throw new IllegalStateException("Enterprise features requested but Chronicle Queue Enterprise is not in the class path!");
+        }
+        chronicleQueue = EnterpriseQueueFactories.get().newInstance(this);
 
         postBuild(chronicleQueue);
 
@@ -342,21 +330,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public static boolean onlyAvailableInEnterprise(final String feature) {
-        if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
+        if (!areEnterpriseFeaturesAvailable())
             Jvm.warn().on(SingleChronicleQueueBuilder.class, feature + " is only supported in Chronicle Queue Enterprise. If you would like to use this feature, please contact sales@chronicle.software for more information.");
         return true;
-    }
-
-    @NotNull
-    private SingleChronicleQueue buildEnterprise() {
-        if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
-            throw new IllegalStateException("Enterprise features requested but Chronicle Queue Enterprise is not in the class path!");
-
-        try {
-            return (SingleChronicleQueue) ENTERPRISE_QUEUE_CONSTRUCTOR.newInstance(this);
-        } catch (Exception e) {
-            throw new IllegalStateException("Couldn't create an instance of Enterprise queue", e);
-        }
     }
 
     public SingleChronicleQueueBuilder aesEncryption(@Nullable byte[] keyBytes) {
