@@ -246,8 +246,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                     if (rollCyclePropertyParts.length < 2) {
                         Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                 "Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
-                    }
-                    else {
+                    } else {
                         @SuppressWarnings({"unchecked","rawtypes"})
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         @SuppressWarnings("unchecked")
