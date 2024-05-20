@@ -35,5 +35,4 @@ public interface QueueEntryHandler extends BiConsumer<WireIn, Consumer<String>>,
     static QueueEntryHandler messageToText(@NotNull final WireType wireType) {
         return new InternalMessageToTextQueueEntryHandler(wireType);
     }
-
 }

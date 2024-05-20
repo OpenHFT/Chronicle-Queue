@@ -189,7 +189,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
     /**
      * @param subscriptionIndexController controls where the subscriptions will start to read from, by allowing the caller to
-     *                                    {@link net.openhft.chronicle.queue.ExcerptTailer#moveToIndex(long) to control the first read location
+     *                                    {@link net.openhft.chronicle.queue.ExcerptTailer#moveToIndex(long)} to control the first read location
      */
     public SubscribeHandler subscriptionIndexController(Consumer<ExcerptTailer> subscriptionIndexController) {
         this.subscriptionIndexController = subscriptionIndexController;

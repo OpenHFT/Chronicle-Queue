@@ -45,19 +45,20 @@ In the following example we will:
 ----
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-
-...
-
+----
+[source, Java]
+----
 // will write the .cq4 file to working directory
-SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(".").build();
-ExcerptAppender appender = queue.acquireAppender();
-ExcerptTailer tailer = queue.createTailer();
+try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(".").build();
+     ExcerptAppender appender = queue.createAppender();
+     ExcerptTailer tailer = queue.createTailer()) {
 
-// write 'hello world' to the queue
-appender.writeText("hello word");
+  // write 'hello world' to the queue
+  appender.writeText("hello word");
 
-// read 'hello world' from the queue
-System.out.println(tailer.readText());
+  // read 'hello world' from the queue
+  System.out.println(tailer.readText());
+}
 
 ----
 
@@ -65,7 +66,8 @@ Create a tmp directory for the Chronicle Queue giving the name starting `Java_te
 
 [source,java]
 ----
-SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files.createTempDirectory("SimpleChronicle").toFile()).build();
+File tmpPath = Files.createTempDirectory("SimpleChronicle").toFile();
+SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpPath).build();
 ----
 
 Create appender and reader:

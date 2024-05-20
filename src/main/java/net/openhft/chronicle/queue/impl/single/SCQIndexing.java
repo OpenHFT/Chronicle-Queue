@@ -484,11 +484,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
                     int header = bytes.readVolatileInt(bytes.readPosition());
                     throwIndexNotWritten(toPosition, startAddress, bytes, header);
+                    break;
                 case META_DATA:
                     break;
                 case DATA:
                     ++i;
                     break;
+                case EOF:
+                    throw new AssertionError("EOF should have been handled");
             }
 
             if (bytes.readPosition() == toPosition)
@@ -780,7 +783,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                         return sequence;
 
                     int len = Wires.lengthOf(header) + 4;
-                    len += BytesUtil.padOffset(len);
+                    len += (int) BytesUtil.padOffset(len);
 
                     bytes.readSkip(len);
                     endAddress += len;

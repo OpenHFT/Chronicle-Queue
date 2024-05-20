@@ -108,5 +108,4 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     public boolean readOnly() {
         return true;
     }
-
 }

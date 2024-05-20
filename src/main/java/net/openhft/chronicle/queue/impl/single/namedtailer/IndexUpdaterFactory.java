@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl.single.namedtailer;
 
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.TableStoreWriteLock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -65,7 +64,6 @@ public class IndexUpdaterFactory {
         public LongValue index() {
             return indexValue;
         }
-
     }
 
     /**

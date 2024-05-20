@@ -337,5 +337,4 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public T metadata() {
         return metadata;
     }
-
 }
