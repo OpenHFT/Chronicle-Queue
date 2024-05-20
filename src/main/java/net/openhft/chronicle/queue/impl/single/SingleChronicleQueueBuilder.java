@@ -36,10 +36,7 @@ import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
-import net.openhft.chronicle.threads.MediumEventLoop;
-import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.threads.TimeoutPauser;
-import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.threads.*;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -1112,7 +1109,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         @Override
         public TimingPauser get() {
-            return new TimeoutPauser(500_000);
+            return new YieldingPauser(500_000);
         }
     }
 }
