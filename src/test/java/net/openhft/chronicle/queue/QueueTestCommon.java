@@ -35,10 +35,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
-import org.junit.rules.ErrorCollector;
-import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
+import org.junit.rules.*;
 import org.junit.runner.Description;
 
 import java.io.File;
@@ -67,6 +64,10 @@ public class QueueTestCommon {
     // *************************************************************************
     // JUNIT Rules
     // *************************************************************************
+
+    // catch-all timeout for when it has not been specified
+    @Rule
+    public Timeout globalTimeout = Timeout.seconds(60);
 
     @Rule
     public final TestName testName = new TestName();
