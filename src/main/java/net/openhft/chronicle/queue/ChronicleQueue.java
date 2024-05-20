@@ -146,7 +146,7 @@ public interface ChronicleQueue extends Closeable {
     /**
      * Creates and returns a new ExcerptTailer for this ChronicleQueue.
      * <b>
-     * A Tailer is <em>NOT thread-safe</em>. A Tailer can be created by one Thread and might be used by at most one other Thread.</em>.
+     * A Tailer is <em>NOT thread-safe</em>. A Tailer can be created by one Thread and might be used by at most one other Thread.
      * Sharing a Tailer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>
@@ -165,7 +165,7 @@ public interface ChronicleQueue extends Closeable {
      * The id is used to persistently store the latest index for the Tailer. Any new Tailer with
      * a previously used id will continue where the old one left off.
      * <b>
-     * A Tailer is <em>NOT thread-safe</em>. A Tailer can be created by one Thread and might be used by at most one other Thread.</em>.
+     * A Tailer is <em>NOT thread-safe</em>. A Tailer can be created by one Thread and might be used by at most one other Thread.
      * Sharing a Tailer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>

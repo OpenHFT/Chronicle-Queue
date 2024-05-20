@@ -188,5 +188,4 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private int getMinCycleValue() {
         return (int) minCycleValue.getVolatileValue();
     }
-
 }

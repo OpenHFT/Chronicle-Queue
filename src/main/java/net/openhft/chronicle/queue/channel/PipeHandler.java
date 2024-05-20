@@ -158,7 +158,7 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
 
     /**
      * @param subscriptionIndexController controls where the subscriptions will start to read from, by allowing the caller to
-     *                                    {@link net.openhft.chronicle.queue.ExcerptTailer#moveToIndex(long) to control the first read location
+     *                                    {@link net.openhft.chronicle.queue.ExcerptTailer#moveToIndex(long)} to control the first read location
      */
     public PipeHandler subscriptionIndexController(Consumer<ExcerptTailer> subscriptionIndexController) {
         this.subscriptionIndexController = subscriptionIndexController;

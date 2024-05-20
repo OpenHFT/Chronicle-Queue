@@ -35,7 +35,7 @@ public interface Indexing {
      *
      * @param ex An {@link ExcerptContext} used to scan the roll cycle if necssary
      * @return the sequence of the last excerpt in the cycle
-     * @throws StreamCorruptedException
+     * @throws StreamCorruptedException if the index is corrupt
      */
     long lastSequenceNumber(ExcerptContext ex) throws StreamCorruptedException;
 

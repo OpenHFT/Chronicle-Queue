@@ -449,4 +449,3 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return mappedFile.file();
     }
 }
-

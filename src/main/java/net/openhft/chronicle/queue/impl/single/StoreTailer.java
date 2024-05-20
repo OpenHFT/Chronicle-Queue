@@ -1213,7 +1213,6 @@ class StoreTailer extends AbstractCloseable
         this.readAfterReplicaAcknowledged = readAfterReplicaAcknowledged;
     }
 
-
     @Override
     public void acknowledgedIndexReplicatedCheck(final @NotNull AcknowledgedIndexReplicatedCheck acknowledgedIndexReplicatedCheck) {
         readAfterReplicaAcknowledged(true);
@@ -1256,6 +1255,7 @@ class StoreTailer extends AbstractCloseable
      * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
      * @throws NullPointerException if the provided {@code queue} is null.
      */
+    @Deprecated(/* to be removed in x.27 */)
     @NotNull
     @Override
     public ExcerptTailer afterWrittenMessageAtIndex(@NotNull final ChronicleQueue queue, long index) {

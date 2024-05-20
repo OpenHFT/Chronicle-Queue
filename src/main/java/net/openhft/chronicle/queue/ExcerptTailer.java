@@ -232,7 +232,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * <pre>
      * boolean acknowledgedIndexReplicatedCheck(long index, long lastSequenceAck) {
      *     int tolerateNumberOfUnAckedMessages = 1;
-     *     return index <= lastSequenceAck + tolerateNumberOfUnAckedMessages;
+     *     return index &lt;= lastSequenceAck + tolerateNumberOfUnAckedMessages;
      * }
      * </pre>
      * <p>

@@ -79,16 +79,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
 
-        {
-            Constructor co;
-            try {
-                co = ((Class) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
-                Jvm.setAccessible(co);
-            } catch (Exception e) {
-                co = null;
-            }
-            ENTERPRISE_QUEUE_CONSTRUCTOR = co;
+        Constructor<?> co;
+        try {
+            co = ((Class<?>) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
+            Jvm.setAccessible(co);
+        } catch (Exception e) {
+            co = null;
         }
+        ENTERPRISE_QUEUE_CONSTRUCTOR = co;
     }
 
     private BufferMode writeBufferMode = BufferMode.None;
@@ -1038,20 +1036,19 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     /**
      * <p>
      * Enables double-buffered writes on contention.
-     * </p><p>
+     * <p>
      * Normally, all writes to the queue will be serialized based on the write lock acquisition. Each time {@link ExcerptAppender#writingDocument()}
      * is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write
      * lock is unlocked, and in turn locks the queue for itself.
-     * </p><p>
+     * <p>
      * When double-buffering is enabled, if appender sees that the write lock is acquired upon {@link ExcerptAppender#writingDocument()} call,
      * it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition
      * until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block),
      * allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
-     * </p><p>
+     * <p>
      * This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward
      * (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a
      * heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
-     * </p>
      */
     public SingleChronicleQueueBuilder doubleBuffer(boolean doubleBuffer) {
         this.doubleBuffer = doubleBuffer;

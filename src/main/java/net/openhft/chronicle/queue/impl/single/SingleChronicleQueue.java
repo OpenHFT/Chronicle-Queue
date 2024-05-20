@@ -66,8 +66,8 @@ import static net.openhft.chronicle.queue.TailerDirection.NONE;
 import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
 import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
-public class
-SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
+@SuppressWarnings("this-escape")
+public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     public static final String DISCARD_FILE_SUFFIX = ".discard";
