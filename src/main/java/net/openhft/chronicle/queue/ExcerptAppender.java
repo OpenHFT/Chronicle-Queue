@@ -28,8 +28,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.</p>
- * <p><b>NOTE:</b> Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.</p>
+ * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
+ * <p><b>NOTE:</b> Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.
  */
 @SingleThreaded
 public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
