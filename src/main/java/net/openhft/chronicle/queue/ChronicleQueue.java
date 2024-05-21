@@ -18,6 +18,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
@@ -498,6 +499,10 @@ public interface ChronicleQueue extends Closeable {
                 // no-op
             }
         };
+    }
+
+    default EventHandler createPretoucherEventHandler() {
+        return () -> false;
     }
 
     /**
