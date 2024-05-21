@@ -230,7 +230,8 @@ public class ChronicleReader implements Reader {
     private boolean writeToSink(long index, String text) {
         if (displayIndex)
             messageSink.accept("0x" + Long.toHexString(index) + ": ");
-        messageSink.accept(text);
+        if (!text.isEmpty())
+            messageSink.accept(text);
         return true;
     }
 
