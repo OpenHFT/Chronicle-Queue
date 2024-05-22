@@ -32,7 +32,7 @@ import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
-import net.openhft.chronicle.threads.TimeoutPauser;
+import net.openhft.chronicle.threads.YieldingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -3816,7 +3816,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             createAppenderLock.unlock();
 
             // Assert appender is acquired
-            TimeoutPauser pauser = new TimeoutPauser(0);
+            YieldingPauser pauser = new YieldingPauser(0);
             while (!gotAppender.get()) {
                 pauser.pause(1, TimeUnit.SECONDS);
             }
