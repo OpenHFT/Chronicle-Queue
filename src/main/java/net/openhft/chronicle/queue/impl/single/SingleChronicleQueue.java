@@ -746,7 +746,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             eventLoop.close();
     }
 
-    @SuppressWarnings({"removal", "deprecation"})
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
