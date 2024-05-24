@@ -13,6 +13,7 @@ import static org.junit.Assume.assumeFalse;
 public class PipeHandlerYamlTest extends QueueTestCommon {
     @Test
     public void yamlTest() {
+        finishedNormally = false;
         ignoreException("Timeout on ");
         String tmpDir = createTargetDir("yamlTest");
         assumeFalse("PipeHandler not supported on hugetlbfs", PageUtil.isHugePage(tmpDir));
@@ -23,5 +24,6 @@ public class PipeHandlerYamlTest extends QueueTestCommon {
         final YamlTester yamlTester = ChannelHandlerYamlTester.runChannelTest(tmpDir, handler, Says.class, Says.class, "queue-says", "tcp://:0");
         IOTools.deleteDirWithFiles(tmpDir);
         TestUtil.allowCommentsOutOfOrder(yamlTester);
+        finishedNormally = true;
     }
 }

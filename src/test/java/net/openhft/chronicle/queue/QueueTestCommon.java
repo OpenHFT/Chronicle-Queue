@@ -49,6 +49,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.junit.Assert.fail;
+
 public class QueueTestCommon {
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
     private final List<File> tmpDirs = new ArrayList<>();
@@ -94,6 +96,7 @@ public class QueueTestCommon {
     // *************************************************************************
     static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
+    private long freeSpace;
 
     @NotNull
     protected File getTmpDir() {
@@ -120,6 +123,19 @@ public class QueueTestCommon {
         }
     }
 
+    @Before
+    public void recordDiskSpace() {
+        freeSpace = new File(OS.getTarget()).getFreeSpace();
+    }
+
+    @After
+    public void checkSpaceUsed() {
+        long spaceLeft = new File(OS.getTarget()).getFreeSpace();
+        if (freeSpace - spaceLeft > 1 << 30) {
+            fail("Used more than 1 GB of disk space in " + OS.getTarget() + " during the test, was " + (freeSpace - spaceLeft) / 1_000_000 / 1e3 + " GB");
+        }
+
+    }
     @Before
     public void assumeFinishedNormally() {
         finishedNormally = true;

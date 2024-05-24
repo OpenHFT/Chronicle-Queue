@@ -526,6 +526,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         final SingleChronicleQueueBuilder queueBuilder = SingleChronicleQueueBuilder.binary(tempQueueDir.resolve("unitTestQueue"))
                 .rollCycle(RollCycles.FAST_DAILY)
                 .timeProvider(timeProvider)
+                .testBlockSize()
                 .storeFileListener(listener);
         if (builderConsumer != null) {
             builderConsumer.accept(queueBuilder);
