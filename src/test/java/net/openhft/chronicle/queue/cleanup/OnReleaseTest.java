@@ -53,6 +53,7 @@ public class OnReleaseTest extends QueueTestCommon {
                 .binary(path)
                 .rollCycle(MINUTELY)
                 .timeProvider(stp)
+                .testBlockSize()
                 .storeFileListener((c, f) -> {
                     System.out.println("write released " + f);
                     writeRoll.incrementAndGet();
@@ -62,6 +63,7 @@ public class OnReleaseTest extends QueueTestCommon {
                      .binary(path)
                      .rollCycle(MINUTELY)
                      .timeProvider(stp)
+                     .testBlockSize()
                      .storeFileListener((c, f) -> {
                          System.out.println("read released " + f);
                          readRoll.incrementAndGet();

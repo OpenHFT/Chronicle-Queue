@@ -135,6 +135,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
     private SingleChronicleQueueBuilder createBuilder(Path path) {
         SingleChronicleQueueBuilder builder =
                 SingleChronicleQueueBuilder.builder(path, WireType.FIELDLESS_BINARY);
+        builder.testBlockSize();
         builder.rollCycle(RollCycles.DEFAULT);
         return builder;
     }

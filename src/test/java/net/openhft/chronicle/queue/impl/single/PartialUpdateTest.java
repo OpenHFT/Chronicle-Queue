@@ -262,6 +262,7 @@ public class PartialUpdateTest extends QueueTestCommon {
         return SingleChronicleQueueBuilder
                 .binary(queuePath)
                 .timeProvider(setTimeProvider)
+                .testBlockSize()
                 .rollCycle(RollCycles.FAST_HOURLY)
                 .build();
     }
