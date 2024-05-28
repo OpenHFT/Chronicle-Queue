@@ -59,6 +59,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
 
     @Test
     public void largeNumberOfKeyValuePairs() {
+        finishedNormally = false;
         SingleChronicleQueue queue1 = context.newQueueInstance();
         int count = 5_000;
         for (int i = 0; i < count; i++) {
@@ -67,6 +68,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         for (int i = 0; i < count; i++) {
             assertEquals(i, queue1.tableStoreGet("key.prefix." + i));
         }
+        finishedNormally = true;
     }
 
     @Test

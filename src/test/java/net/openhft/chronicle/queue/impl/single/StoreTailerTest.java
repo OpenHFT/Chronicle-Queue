@@ -278,6 +278,8 @@ public class StoreTailerTest extends QueueTestCommon {
 
     @Test
     public void shouldHaltAtPartiallyInitialisedRollCycle() throws ExecutionException, InterruptedException {
+        // Windows doesn't support renaming a file that is open.
+        assumeFalse(OS.isWindows());
         expectException("Renamed un-acquirable segment file to");
         File dir = getTmpDir();
         SetTimeProvider tp = new SetTimeProvider();

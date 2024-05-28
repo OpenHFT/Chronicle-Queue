@@ -26,7 +26,6 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-
     <version>5.26ea0-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle Queue</name>

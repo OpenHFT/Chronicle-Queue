@@ -230,6 +230,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                 .binary(queueDir)
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(timeProvider)
+                .testBlockSize()
                 .build();
     }
 }

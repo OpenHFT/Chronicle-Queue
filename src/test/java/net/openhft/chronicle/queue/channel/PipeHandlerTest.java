@@ -73,6 +73,7 @@ public class PipeHandlerTest extends QueueTestCommon {
 
     @Test
     public void clientOnly() throws IOException {
+        finishedNormally = false;
         String url = "tcp://localhost:65441";
         IOTools.deleteDirWithFiles("target/client", "target/gw");
         try (ChronicleContext context = ChronicleContext.newContext(url).name("target/client").buffered(buffered)) {
@@ -85,15 +86,18 @@ public class PipeHandlerTest extends QueueTestCommon {
 
             doTest(context);
         }
+        finishedNormally = true;
     }
 
     @Test
     public void server() {
+        finishedNormally = false;
         String url = "tcp://:0";
         IOTools.deleteDirWithFiles("target/server");
         try (ChronicleContext context = ChronicleContext.newContext(url).name("target/server").buffered(buffered)) {
             doTest(context);
         }
+        finishedNormally = true;
     }
 
     @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1390")
