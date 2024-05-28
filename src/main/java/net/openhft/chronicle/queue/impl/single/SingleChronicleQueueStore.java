@@ -54,6 +54,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     private final MappedFile mappedFile;
     private final int dataVersion;
+    @SuppressWarnings("deprecation")
     @NotNull
     private final transient Sequence sequence;
 
@@ -65,6 +66,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @param wire a wire
      */
     @UsedViaReflection
+    @SuppressWarnings("this-escape")
     private SingleChronicleQueueStore(@NotNull WireIn wire) {
         boolean failed = true;
 
@@ -102,6 +104,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @param indexCount   the number of entries in each index.
      * @param indexSpacing the spacing between indexed entries.
      */
+    @SuppressWarnings("this-escape")
     public SingleChronicleQueueStore(@NotNull RollCycle rollCycle,
                                      @NotNull final WireType wireType,
                                      @NotNull MappedBytes mappedBytes,
@@ -166,18 +169,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public File file() {
         return mappedFile.file();
-    }
-
-    @NotNull
-    @Override
-    public String dump() {
-        return dump(WireType.BINARY_LIGHT, false);
-    }
-
-    @NotNull
-    @Override
-    public String shortDump() {
-        return dump(WireType.BINARY_LIGHT,true);
     }
 
     @Override
@@ -313,22 +304,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         throwExceptionIfClosed();
 
         return indexing.sequenceForPosition(ec, position, inclusive);
-    }
-
-    /**
-     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    public long approximateLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        return lastSequenceNumber(ec);
-    }
-
-    /**
-     * @deprecated Use {@link #lastSequenceNumber(ExcerptContext)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    public long exactLastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        return lastSequenceNumber(ec);
     }
 
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {

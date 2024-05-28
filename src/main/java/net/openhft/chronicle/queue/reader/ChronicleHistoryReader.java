@@ -160,7 +160,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         final WireParselet parselet = parselet();
         final FieldNumberParselet fieldNumberParselet = (methodId, wire) -> parselet.accept(methodIdToName(methodId), wire.read());
         final MessageHistory prev = MessageHistory.get();
-        MessageHistory.set(new VanillaMessageHistory());
+        MessageHistory.emptyHistory();
         try (final MethodReader mr = new VanillaMethodReader(tailer, true, parselet, fieldNumberParselet, null, parselet)) {
             while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
                 ++counter;

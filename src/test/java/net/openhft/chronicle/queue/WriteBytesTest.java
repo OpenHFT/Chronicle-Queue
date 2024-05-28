@@ -88,8 +88,6 @@ public class WriteBytesTest extends QueueTestCommon {
         try (ChronicleQueue queue = builder
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-            final boolean useSparseFiles = builder.useSparseFiles();
-
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
                 byte finalI = (byte) i;
                 appender.writeBytes(b ->
@@ -1056,9 +1054,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     "--- !!data\n" +
                     "\u007F\u007F\u007F\u007F\u007F\u007F\u007F\u007F\n" +
                     "...\n" +
-                    (useSparseFiles
-                            ? "# 4294963160 bytes remaining\n"
-                            : "# 126928 bytes remaining\n"), queue.dump());
+                    "# 126928 bytes remaining\n", queue.dump());
 
         } finally {
             try {

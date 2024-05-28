@@ -31,7 +31,7 @@ public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
     private static final String EXPECTED_ENVELOPE = "for:rob";
     private static final String MSG = "hello world";
 
-    interface Printer extends MethodFilterOnFirstArg {
+    interface Printer extends MethodFilterOnFirstArg<String> {
         void print(String envelope, String msg);
     }
 
@@ -44,7 +44,7 @@ public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
                     new Printer() {
 
                         @Override
-                        public boolean ignoreMethodBasedOnFirstArg(final String methodName, final Object firstArg) {
+                        public boolean ignoreMethodBasedOnFirstArg(final String methodName, final String firstArg) {
                             assertEquals(EXPECTED_ENVELOPE, firstArg);
                             return false;
                         }
@@ -59,4 +59,3 @@ public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
         }
     }
 }
-

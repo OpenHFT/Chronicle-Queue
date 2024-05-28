@@ -10,9 +10,7 @@ import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.threads.PauserMode;
-import net.openhft.chronicle.wire.channel.ChronicleChannel;
-import net.openhft.chronicle.wire.channel.ChronicleContext;
-import net.openhft.chronicle.wire.channel.ChronicleGatewayMain;
+import net.openhft.chronicle.wire.channel.*;
 
 import java.io.File;
 import java.util.concurrent.locks.LockSupport;
@@ -55,6 +53,7 @@ worst:       40960.00     42270.72     43581.44     44761.09     43581.44       
 -XX:StartFlightRecording=filename=recording_echo2.jfr,settings=profile
  */
 
+@SuppressWarnings("deprecation")
 public class PerfLatencyMain implements JLBHTask {
 
     static final int THROUGHPUT = Integer.getInteger("throughput", 50_000);
@@ -125,6 +124,7 @@ public class PerfLatencyMain implements JLBHTask {
         });
         readerThread = new Thread(() -> {
             try (AffinityLock lock = AffinityLock.acquireLock()) {
+                assert lock != null;
                 while (!Thread.currentThread().isInterrupted()) {
                     reader.readOne();
                 }
@@ -142,6 +142,7 @@ public class PerfLatencyMain implements JLBHTask {
         final MS ms = serviceConstructor.apply(out);
         MethodReader reader = server.methodReader(ms);
         try (AffinityLock lock = AffinityLock.acquireLock()) {
+            assert lock != null;
             while (!server.isClosed()) {
                 reader.readOne();
             }
@@ -178,4 +179,3 @@ public class PerfLatencyMain implements JLBHTask {
         context.close();
     }
 }
-

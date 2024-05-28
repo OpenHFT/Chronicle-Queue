@@ -52,7 +52,7 @@ public class ChunkCountTest extends QueueTestCommon {
                     pos = dc.wire().bytes().writePosition();
                     dc.wire().bytes().writeSkip(16000);
                 }
-                final long expected = builder.useSparseFiles() ? 1 : 1 + (pos >> 18);
+                final long expected = 1 + (pos >> 18);
 
                 assertEquals("i: " + i, expected, queue.chunkCount());
             }

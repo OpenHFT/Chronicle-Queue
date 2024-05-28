@@ -51,7 +51,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         ignoreException("Metadata file not found in readOnly mode");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
 
-        final Path path = Paths.get(OS.USER_DIR, TEST_QUEUE_FILE);
+        final Path path = Paths.get(TEST_QUEUE_FILE);
         final Path metadata = Paths.get(path.getParent().toString(), "metadata.cq4t");
         if (metadata.toFile().exists())
             Files.delete(metadata);
@@ -115,7 +115,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 "  readBufferMode: None,\n" +
                 "  wireType: BINARY_LIGHT,\n" +
                 "  path: " + tmpDir + ",\n" +
-                "  rollCycle: !net.openhft.chronicle.queue.RollCycles DAILY,\n" +
+                "  rollCycle: !net.openhft.chronicle.queue.rollcycles.LegacyRollCycles DAILY,\n" +
                 "  timeProvider: !net.openhft.chronicle.core.time.SystemTimeProvider INSTANCE,\n" +
                 "  rollTime: 17:02,\n" +
                 "  rollTimeZone: !java.time.ZoneRegion {\n" +
@@ -164,7 +164,8 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
 
         final File tmpDir = getTmpDir();
         final int firstSourceId = 1;
-        try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId).build()) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId).build()) {
+            assertNotNull(queue);
             // just create the queue
         }
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId + 1).build()) {
@@ -177,17 +178,19 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         assumeFalse(OS.isWindows());
 
         final File tmpDir = getTmpDir();
-        try (ChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir).build()) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).build()) {
+            assertNotNull(queue);
             // just create the queue
         }
 
-        try (SingleChronicleQueue ignored = SingleChronicleQueueBuilder.single(tmpDir)
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir)
                 .createAppenderConditionCreator(q -> {
                     fail("This should never be called");
                     return null;
                 })
                 .readOnly(true)
                 .build()) {
+            assertNotNull(queue);
             // This will throw if we attempt to create the createAppender condition
         }
     }

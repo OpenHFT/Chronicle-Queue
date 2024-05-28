@@ -46,6 +46,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
+@SuppressWarnings("this-escape")
 public class StoreTailerTest extends QueueTestCommon {
     private final Path dataDirectory = getTmpDir().toPath();
 
@@ -272,7 +273,6 @@ public class StoreTailerTest extends QueueTestCommon {
                 // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");
             }
-
         }
     }
 

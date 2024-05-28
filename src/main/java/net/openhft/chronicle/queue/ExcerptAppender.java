@@ -28,8 +28,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.</p>
- * <p><b>NOTE:</b> Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.</p>
+ * <p>The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
+ * <p><b>NOTE:</b> Appenders are NOT thread-safe, sharing the Appender between threads will lead to errors and unpredictable behaviour.
  */
 @SingleThreaded
 public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
@@ -40,7 +40,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @param bytes to write to excerpt.
      * @throws UnrecoverableTimeoutException if the operation times out.
      */
-    void writeBytes(@NotNull BytesStore bytes);
+    void writeBytes(@NotNull BytesStore<?,?> bytes);
 
     /**
      * Writes (i.e. appends) the provided {@code bytes} to the queue.
@@ -109,7 +109,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     @NotNull
     @Override
-    default <T> T methodWriter(@NotNull Class<T> tClass, Class... additional) {
+    default <T> T methodWriter(@NotNull Class<T> tClass, Class<?>... additional) {
         return queue().methodWriter(tClass, additional);
     }
 

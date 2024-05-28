@@ -37,6 +37,7 @@ import java.util.*;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
@@ -107,6 +108,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
                  final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
+                        assertNotNull(ignored);
                         Wire key = toWire(j);
                         long index = BinarySearch.search(binarySearchTailer, key, GAP_TOLERANT_COMPARATOR);
                         if (entriesWithValues.contains(j)) {

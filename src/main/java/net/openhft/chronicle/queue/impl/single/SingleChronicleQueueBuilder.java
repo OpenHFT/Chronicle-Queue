@@ -30,17 +30,13 @@ import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.Builder;
 import net.openhft.chronicle.core.util.ObjectUtils;
-import net.openhft.chronicle.core.util.ThrowingBiFunction;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
-import net.openhft.chronicle.threads.MediumEventLoop;
-import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.threads.TimeoutPauser;
-import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.threads.*;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,11 +60,12 @@ import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 
+@SuppressWarnings("deprecation")
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
     public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
 
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
-    private static final Constructor ENTERPRISE_QUEUE_CONSTRUCTOR;
+    private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
 
@@ -93,9 +90,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
-    @Deprecated(/* To be removed in 5.25 */)
-    private Boolean useSparseFiles;
-    private Long sparseCapacity;
     private File path;
     private RollCycle rollCycle;
     private Long epoch; // default is 1970-01-01 00:00:00.000 UTC
@@ -129,15 +123,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     // enterprise stuff
     private int deltaCheckpointInterval = -1;
-    private Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier;
-    private Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier;
+    private Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier;
+    private Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier;
     private Updater<Bytes<?>> messageInitializer;
     private Consumer<Bytes<?>> messageHeaderReader;
     private SecretKeySpec key;
 
     private int maxTailers;
-    // TODO: x.26 make this AsyncBufferCreator
-    private ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator;
+    private AsyncBufferCreator bufferBytesStoreCreator;
     private Long pretouchIntervalMillis;
     private LocalTime rollTime;
     private ZoneId rollTimeZone;
@@ -245,23 +238,25 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
         if (rollCyclePropertyParts.length > 0) {
             try {
-                Class rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
+                Class<?> rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
                 if (Enum.class.isAssignableFrom(rollCycleClass)) {
                     if (rollCyclePropertyParts.length < 2) {
                         Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                 "Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
                     } else {
-                        @SuppressWarnings("unchecked")
+                        @SuppressWarnings({"unchecked","rawtypes"})
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
+                        @SuppressWarnings("unchecked")
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
-                            return RollCycles.warnIfDeprecated((RollCycle) instance);
+                            return (RollCycle) instance;
                         } else {
                             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                     "Configured default rollcycle is not a subclass of RollCycle");
                         }
                     }
                 } else {
+                    @SuppressWarnings("unchecked")
                     Object instance = ObjectUtils.newInstance(rollCycleClass);
                     if (instance instanceof RollCycle) {
                         return (RollCycle) instance;
@@ -286,13 +281,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueue build() {
         preBuild();
-        if (Boolean.TRUE.equals(useSparseFiles) && sparseCapacity == null &&
-                (rollCycle == null || rollCycle.lengthInMillis() > 60_000)) {
-            RollCycle rc = rollCycle == null ? RollCycles.FAST_DAILY : rollCycle;
-            final long msgs = rc.maxMessagesPerCycle();
-            sparseCapacity = Math.min(512L << 30, Math.max(4L << 30, msgs * 128));
-            useSparseFiles = true;
-        }
 
         SingleChronicleQueue chronicleQueue;
 
@@ -546,29 +534,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return maxTailers;
     }
 
-    @Deprecated(/* To be removed in x.26 - use asyncBufferCreator */)
-    public SingleChronicleQueueBuilder bufferBytesStoreCreator(ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator) {
-        this.bufferBytesStoreCreator = bufferBytesStoreCreator;
-        return this;
-    }
-
-    /**
-     * Creator for BytesStore for async mode. Allows visibility of data to be controlled.
-     * See also EnterpriseSingleChronicleQueue.RB_BYTES_STORE_CREATOR_NATIVE etc.
-     * <p>
-     * If you are using more than one {@link ChronicleQueue} object to access the async'd queue then you
-     * will need to set this.
-     * <p>
-     * This is an enterprise feature.
-     *
-     * @return bufferBytesStoreCreator
-     */
-    @Deprecated(/* To be removed in x.26 - use asyncBufferCreator */)
-    @Nullable
-    public ThrowingBiFunction<Long, Integer, BytesStore, Exception> bufferBytesStoreCreator() {
-        return bufferBytesStoreCreator;
-    }
-
     public SingleChronicleQueueBuilder asyncBufferCreator(AsyncBufferCreator asyncBufferCreator) {
         this.bufferBytesStoreCreator = asyncBufferCreator;
         return this;
@@ -586,9 +551,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return asyncBufferCreator
      */
     public AsyncBufferCreator asyncBufferCreator() {
-        if (bufferBytesStoreCreator instanceof AsyncBufferCreator)
-            return (AsyncBufferCreator) bufferBytesStoreCreator;
-        return null;
+        return bufferBytesStoreCreator;
     }
 
     /**
@@ -669,34 +632,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.max(minSize, bs);
     }
 
-    @Deprecated(/* To be removed in 5.25 */)
-    public SingleChronicleQueueBuilder useSparseFiles(boolean useSparseFiles) {
-        if (useSparseFiles && OS.isLinux() && OS.is64Bit())
-            this.useSparseFiles = useSparseFiles;
-        if (!useSparseFiles)
-            this.useSparseFiles = useSparseFiles;
-        return this;
-    }
-
-    @Deprecated(/* To be removed in 5.25 */)
-    public SingleChronicleQueueBuilder sparseCapacity(long sparseCapacity) {
-        this.sparseCapacity = sparseCapacity;
-        return this;
-    }
-
-    public long sparseCapacity() {
-        long bs = sparseCapacity == null ? DEFAULT_SPARSE_CAPACITY : sparseCapacity;
-
-        // can add an index2index & an index in one go.
-        long minSize = Math.max(SMALL_BLOCK_SIZE, 32L * indexCount());
-        return Math.max(minSize, bs);
-    }
-
-    @Deprecated(/* To be removed in 5.25 */)
-    public boolean useSparseFiles() {
-        return OS.isLinux() && OS.is64Bit() && sparseCapacity != null;
-    }
-
     /**
      * THIS IS FOR TESTING ONLY.
      * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.
@@ -737,7 +672,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
         assert rollCycle != null;
-        this.rollCycle = RollCycles.warnIfDeprecated(rollCycle);
+        this.rollCycle = rollCycle;
         return this;
     }
 
@@ -786,20 +721,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * when set to {@code true}. uses a ring buffer to buffer appends, excerpts are written to the
-     * Chronicle Queue using a background thread. See also {@link #writeBufferMode()}
-     *
-     * @param isBuffered {@code true} if the append is buffered
-     * @return this
-     */
-    @NotNull
-    @Deprecated // use writeBufferMode(Asynchronous) instead
-    public SingleChronicleQueueBuilder buffered(boolean isBuffered) {
-        this.writeBufferMode = isBuffered ? BufferMode.Asynchronous : BufferMode.None;
-        return this;
-    }
-
-    /**
      * @return BufferMode to use for writes. Only None is available is the OSS
      */
     @NotNull
@@ -812,7 +733,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * When writeBufferMode is set to {@code Asynchronous}, uses a ring buffer to buffer appends, excerpts are written to the
      * Chronicle Queue using a background thread.
      * See also {@link #bufferCapacity()}
-     * See also {@link #bufferBytesStoreCreator()}
      * See also software.chronicle.enterprise.ring.EnterpriseRingBuffer
      *
      * @param writeBufferMode bufferMode for writing
@@ -834,7 +754,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * When readBufferMode is set to {@code Asynchronous}, reads from the ring buffer. This requires
      * that {@link #writeBufferMode()} is also set to {@code Asynchronous}.
      * See also {@link #bufferCapacity()}
-     * See also {@link #bufferBytesStoreCreator()}
      * See also software.chronicle.enterprise.ring.EnterpriseRingBuffer
      *
      * @param readBufferMode BufferMode for read
@@ -1055,17 +974,17 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return this;
     }
 
-    public Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier() {
+    public Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier() {
         return encodingSupplier;
     }
 
-    public Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier() {
+    public Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier() {
         return decodingSupplier;
     }
 
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable
-                                                       Supplier<BiConsumer<BytesStore, Bytes<?>>> encodingSupplier,
-                                                       @Nullable Supplier<BiConsumer<BytesStore, Bytes<?>>> decodingSupplier) {
+                                                       Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier,
+                                                       @Nullable Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
         this.encodingSupplier = encodingSupplier;
@@ -1190,7 +1109,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         @Override
         public TimingPauser get() {
-            return new TimeoutPauser(500_000);
+            return new YieldingPauser(500_000);
         }
     }
 }

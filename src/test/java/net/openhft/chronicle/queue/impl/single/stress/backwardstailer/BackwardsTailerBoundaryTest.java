@@ -101,6 +101,4 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
                 .rollCycle(rollCycle)
                 .build();
     }
-
-
 }

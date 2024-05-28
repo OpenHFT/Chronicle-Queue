@@ -84,8 +84,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         if (wire.bytes().readRemaining() > 0) {
             this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
         } else {
-            //noinspection unchecked
-            this.metadata = (T) Metadata.NoMeta.INSTANCE;
+            @SuppressWarnings("unchecked")
+            T instance = (T) Metadata.NoMeta.INSTANCE;
+            this.metadata = instance;
         }
 
         mappedWire = wireType.apply(mappedBytes);
@@ -164,12 +165,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         return mappedFile.file();
     }
 
-    @NotNull
-    @Override
-    public String dump() {
-        return dump(wireType);
-    }
-
     @Override
     public String dump(WireType wireType) {
         return dump(wireType, false);
@@ -185,14 +180,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         } finally {
             bytes.releaseLast();
         }
-    }
-
-    @NotNull
-    @Override
-    public String shortDump() {
-        throwExceptionIfClosed();
-
-        return dump(wireType, true);
     }
 
     @Override

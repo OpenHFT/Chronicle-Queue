@@ -21,8 +21,7 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.*;
 
 public class NamedTailerVersioningTest extends QueueTestCommon {
 
@@ -111,6 +110,8 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
+            assertNotNull(appender);
+            assertNotNull(tailer);
 
             LongValue indexVersion = queue.indexVersionForId("replicated:named_1");
             assertEquals(-1, indexVersion.getValue());
@@ -156,5 +157,4 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
-
 }

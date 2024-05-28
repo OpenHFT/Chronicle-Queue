@@ -60,7 +60,6 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
         } finally {
             msg.releaseLast();
         }
-
     }
 
     private void runTest(String id, Bytes<?> msg) throws IOException {

@@ -37,8 +37,6 @@ import static org.junit.Assert.assertTrue;
 
 public class QueueWriteDocumentContextTest extends QueueTestCommon {
 
-    private boolean useSparseFiles;
-
     static void writeThreeKeys(MarshallableOut wire) {
         try (DocumentContext dc0 = wire.acquireWritingDocument(false)) {
             for (int i = 0; i < 3; i++) {
@@ -136,9 +134,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                     "key: 1\n" +
                     "key: 2\n" +
                     "...\n" +
-                    (useSparseFiles
-                            ? "# 4294966880 bytes remaining\n"
-                            : "# 130644 bytes remaining\n"), cq.dump());
+                    "# 130644 bytes remaining\n", cq.dump());
         }
     }
 
@@ -219,9 +215,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                             "key: 1\n" +
                             "key: 2\n" +
                             "...\n" +
-                            (useSparseFiles
-                                    ? "# 4294966880 bytes remaining\n"
-                                    : "# 130644 bytes remaining\n"),
+                            "# 130644 bytes remaining\n",
                     cq.dump());
         }
     }
@@ -233,7 +227,6 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .blockSize(OS.SAFE_PAGE_SIZE);
         final SingleChronicleQueue queue = builder.build();
-        useSparseFiles = builder.useSparseFiles();
         return queue;
     }
 }

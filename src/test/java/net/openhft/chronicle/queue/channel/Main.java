@@ -2,13 +2,11 @@ package net.openhft.chronicle.queue.channel;
 
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.channel.ChannelHandler;
-import net.openhft.chronicle.wire.channel.ChronicleChannel;
-import net.openhft.chronicle.wire.channel.ChronicleChannelSupplier;
-import net.openhft.chronicle.wire.channel.ChronicleContext;
+import net.openhft.chronicle.wire.channel.*;
 
 import java.util.function.Function;
 
+@SuppressWarnings("deprecation")
 public class Main {
     public static void main(String[] args) {
         final String in = "in";

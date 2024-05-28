@@ -22,9 +22,9 @@ import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.threads.StackSampler;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.util.StackSampler;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -222,7 +222,7 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                 long next = System.nanoTime();
                 long interval = 1_000_000_000 / throughput;
                 Map<String, Integer> stackCount = new LinkedHashMap<>();
-                BytesStore bytes24 = BytesStore.nativeStore(24);
+                BytesStore<?, Void> bytes24 = BytesStore.nativeStore(24);
                 for (int i = -WARMUP; i < ITERATIONS; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {

@@ -32,6 +32,7 @@ import java.util.function.Function;
 public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     private final T metadata;
 
+    @SuppressWarnings("this-escape")
     public ReadonlyTableStore(T metadata) {
         this.metadata = metadata;
         singleThreadedCheckDisabled(true);
@@ -80,20 +81,8 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
         throw read_only;
     }
 
-    @NotNull
-    @Override
-    public String dump() {
-        return metadata.toString();
-    }
-
     @Override
     public String dump(WireType wireType) {
-        return metadata.toString();
-    }
-
-    @NotNull
-    @Override
-    public String shortDump() {
         return metadata.toString();
     }
 

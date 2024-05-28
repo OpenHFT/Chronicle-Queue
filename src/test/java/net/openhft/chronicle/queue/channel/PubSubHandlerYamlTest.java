@@ -3,14 +3,14 @@ package net.openhft.chronicle.queue.channel;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.wire.utils.YamlTester;
+import net.openhft.chronicle.wire.utils.*;
 import org.junit.Test;
 
 import static net.openhft.chronicle.queue.channel.PubSubHandlerTest.createTargetDir;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
-@SuppressWarnings("deprecated")
+@SuppressWarnings("deprecation")
 public class PubSubHandlerYamlTest extends QueueTestCommon {
     @Test
     public void yamlTest() {

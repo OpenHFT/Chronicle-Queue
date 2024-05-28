@@ -20,16 +20,17 @@ import java.util.function.Predicate;
 
 import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
 
+@SuppressWarnings("deprecation")
 public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
 
-    private static class NoOp extends SelfDescribingMarshallable implements Consumer {
+    private static class NoOp extends SelfDescribingMarshallable implements Consumer<ExcerptTailer> {
         @Override
-        public void accept(Object o) {
+        public void accept(ExcerptTailer o) {
             return;
         }
     }
 
-    public final static Consumer NO_OP = new NoOp();
+    public final static Consumer<ExcerptTailer> NO_OP = new NoOp();
 
     private String subscribe;
     private transient boolean closeWhenRunEnds = true;
@@ -123,6 +124,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
         return this;
     }
 
+    @SuppressWarnings("try")
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();
@@ -150,7 +152,7 @@ public class SubscribeHandler extends AbstractHandler<SubscribeHandler> {
     }
 
     @Override
-    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
+    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg<?> channelCfg) {
         return new SubscribeQueueChannel(channelCfg, this, newQueue(context, subscribe, syncMode, sourceId));
     }
 

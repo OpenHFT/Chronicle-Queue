@@ -35,5 +35,4 @@ public class BackwardsTailerToEndBoundaryJmhBenchmarkEndSpacingMinusOne {
     public void complete() {
         state.complete();
     }
-
 }

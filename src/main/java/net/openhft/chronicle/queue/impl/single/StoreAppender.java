@@ -34,8 +34,7 @@ import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
-import net.openhft.chronicle.queue.util.MicroTouched;
-import net.openhft.chronicle.queue.util.PretouchUtil;
+import net.openhft.chronicle.queue.util.*;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -52,22 +51,6 @@ import static net.openhft.chronicle.wire.Wires.*;
 
 class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
-
-    /**
-     * Determines behaviour when validating that the index passed to {@link #writeBytesInternal(long, BytesStore, IndexValidationMode)}
-     * is at or beyond the end of the queue.
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    protected enum IndexValidationMode {
-        /**
-         * We read the queue contents when validating
-         */
-        SAFE,
-        /**
-         * We trust the last index/position header in the store file when validating
-         */
-        UNSAFE
-    }
 
     /**
      * Keep track of where we've normalised EOFs to, so we don't re-do immutable, older cycles every time.
@@ -251,6 +234,7 @@ class StoreAppender extends AbstractCloseable
      * first create or have an appender that was created on this thread, and then use this appender to call the pretouch()
      */
     @Override
+    @SuppressWarnings("deprecation")
     public void pretouch() {
         throwExceptionIfClosed();
 
@@ -599,7 +583,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public void writeBytes(@NotNull final BytesStore bytes) {
+    public void writeBytes(@NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
@@ -630,7 +614,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     @Override
-    public void writeBytes(final long index, @NotNull final BytesStore bytes) {
+    public void writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
@@ -642,15 +626,6 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * @deprecated Use {@link #writeBytes(long, BytesStore)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    @Override
-    public void unsafeWriteBytes(final long index, @NotNull final BytesStore bytes) {
-        writeBytes(index, bytes);
-    }
-
-    /**
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
      * the queue file and cause data loss.
      *
@@ -658,45 +633,7 @@ class StoreAppender extends AbstractCloseable
      * @param bytes               The excerpt bytes
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes) {
-        writeBytesInternal(index, bytes, false);
-    }
-
-    /**
-     * @deprecated This method makes no sense when metadata=true, use {@link #writeBytesInternal(long, BytesStore)} instead
-     */
-    @Deprecated(/* To be removed in x.27 */)
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata, IndexValidationMode indexValidationMode) {
-        writeBytesInternal(index, bytes, metadata);
-    }
-
-    /**
-     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
-     * the queue file and cause data loss.
-     *
-     * @param index               Index to append at
-     * @param bytes               The excerpt bytes
-     * @param indexValidationMode How stringent to be when validating the append index
-     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
-     * @deprecated Use {@link #writeBytesInternal(long, BytesStore)} instead
-     */
-    @Deprecated(/* To be removed in x.26 */)
-    protected void writeBytesInternal(final long index, @NotNull BytesStore bytes, IndexValidationMode indexValidationMode) {
-        writeBytesInternal(index, bytes, false);
-    }
-
-    /**
-     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
-     * the queue file and cause data loss.
-     *
-     * @param index               Index to append at
-     * @param bytes               The excerpt bytes
-     * @param metadata            Whether to write the excerpt as metadata, this is legacy and should always be set to false
-     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
-     * @deprecated Use {@link #writeBytesInternal(long, BytesStore)} instead
-     */
-    @SuppressWarnings("DeprecatedIsStillUsed")  // will be collapsed into the caller when deprecated
-    protected void writeBytesInternal(final long index, @NotNull final BytesStore bytes, boolean metadata) {
+    protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
@@ -725,7 +662,7 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        writeBytesInternal(bytes, metadata);
+        writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
@@ -735,7 +672,7 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void writeBytesInternal(@NotNull final BytesStore bytes, boolean metadata) {
+    private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
@@ -893,14 +830,16 @@ class StoreAppender extends AbstractCloseable
         return store == null ? null : store.currentFile();
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void sync() {
         if (store == null || wire == null)
             return;
 
         final Bytes<?> bytes = wire.bytes();
-        if (bytes.bytesStore() instanceof MappedBytesStore) {
-            MappedBytesStore mbs = (MappedBytesStore) bytes.bytesStore();
+        BytesStore store = bytes.bytesStore();
+        if (store instanceof MappedBytesStore) {
+            MappedBytesStore mbs = (MappedBytesStore) store;
             mbs.syncUpTo(bytes.writePosition());
             queue.lastIndexMSynced(lastIndex);
         }
@@ -917,6 +856,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     private class Finalizer {
+        @SuppressWarnings({"deprecation", "removal"})
         @Override
         protected void finalize() throws Throwable {
             super.finalize();

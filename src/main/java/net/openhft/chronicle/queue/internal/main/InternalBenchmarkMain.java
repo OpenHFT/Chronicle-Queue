@@ -136,7 +136,7 @@ public class InternalBenchmarkMain {
                 System.out.println(sb);
             }
 
-            next += messageSize * 1e9 / (throughput * 1e6);
+            next += (long) (messageSize * 1e9 / (throughput * 1e6));
             long delay = next - System.nanoTime();
             if (delay > 0)
                 LockSupport.parkNanos(delay);

@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("deprecation")
 public class PubSubHandler extends AbstractHandler<PubSubHandler> {
     private final Map<String, Subscription> subscriptionMap = new LinkedHashMap<>();
     private final List<Subscription> prioritySubscriptions = new ArrayList<>();
@@ -35,6 +36,7 @@ public class PubSubHandler extends AbstractHandler<PubSubHandler> {
         } else {
             Thread tailerThread = new Thread(() -> {
                 try (AffinityLock lock = context.affinityLock()) {
+                    assert lock != null;
                     queueTailer(pauser, channel);
                 }
             }, "pubsub~tailers");
@@ -45,7 +47,7 @@ public class PubSubHandler extends AbstractHandler<PubSubHandler> {
         Thread.currentThread().setName("pubsub~reader");
         Map<String, Publication> publicationMap = new LinkedHashMap<>();
         try (AffinityLock lock = context.affinityLock()) {
-
+            assert lock != null;
             while (!channel.isClosed()) {
                 try (DocumentContext dc = channel.readingDocument()) {
                     pauser.unpause();
@@ -105,7 +107,7 @@ public class PubSubHandler extends AbstractHandler<PubSubHandler> {
     }
 
     @Override
-    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
+    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg<?> channelCfg) {
         throw new UnsupportedOperationException();
     }
 

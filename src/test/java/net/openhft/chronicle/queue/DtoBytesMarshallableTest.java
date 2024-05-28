@@ -94,7 +94,6 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
         StringBuilder name = new StringBuilder();
         int age;
 
-        @SuppressWarnings("unchecked")
         public void readMarshallable(BytesIn<?> bytes) {
             age = bytes.readInt();
             name.setLength(0);
@@ -111,7 +110,6 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
         StringBuilder name = new StringBuilder();
         int age;
 
-        @SuppressWarnings("unchecked")
         public void readMarshallable(BytesIn<?> bytes) {
             age = bytes.readInt();
             name.setLength(0);

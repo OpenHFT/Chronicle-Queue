@@ -44,7 +44,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
     private JLBH jlbh;
-    private BytesStore datumBytes;
+    private BytesStore<?, ?> datumBytes;
     private Bytes<?> datumWrite;
 
     static {
@@ -67,6 +67,7 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         new JLBH(lth).start();
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public void init(JLBH jlbh) {
         System.out.println("-Dpath=" + PATH);

@@ -58,13 +58,13 @@ import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquir
  * <p>{@link ChronicleQueue} (now in the specific sense) is the main interface for management and
  * can be seen as the "Collection class" of the <em>Chronicle</em> environment. You will reserve a
  * portion of memory and then put/fetch/update records using the {@link ChronicleQueue}
- * interface.</p>
+ * interface.
  * <p>{@link ExcerptCommon} is the main data container in a {@link ChronicleQueue}, each Chronicle
  * is composed of Excerpts. Putting data to a queue means starting a new Excerpt, writing data into
- * it and finishing the Excerpt at the upper.</p>
+ * it and finishing the Excerpt at the upper.
  * <p>While {@link ExcerptCommon} is a generic purpose container allowing for remote access, it also
  * has more specialized counterparts for sequential operations. See {@link ExcerptTailer} and {@link
- * ExcerptAppender}</p>
+ * ExcerptAppender}
  *
  * @author peter.lawrey
  */
@@ -346,7 +346,7 @@ public interface ChronicleQueue extends Closeable {
      * @throws NullPointerException if any of the provided parameters are {@code null}.
      */
     @NotNull
-    default <T> T methodWriter(@NotNull final Class<T> tClass, Class... additional) {
+    default <T> T methodWriter(@NotNull final Class<T> tClass, Class<?>... additional) {
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
         Stream.of(additional).forEach(builder::addInterface);
         return builder.build();

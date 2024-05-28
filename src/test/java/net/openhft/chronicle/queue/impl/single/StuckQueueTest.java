@@ -37,6 +37,7 @@ import java.nio.file.StandardCopyOption;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeNotNull;
 
 public class StuckQueueTest extends QueueTestCommon {
 
@@ -78,6 +79,7 @@ public class StuckQueueTest extends QueueTestCommon {
             // Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
 
             try (DocumentContext dc = tailer.readingDocument()) {
+                assumeNotNull(dc);
                 // Assert.assertTrue(!dc.isPresent());
                 // System.out.println(Long.toHexString(dc.index()));
             }
@@ -99,4 +101,3 @@ public class StuckQueueTest extends QueueTestCommon {
         }
     }
 }
-

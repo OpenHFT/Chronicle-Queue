@@ -21,16 +21,14 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.scoped.ScopedResource;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static net.openhft.chronicle.bytes.MethodReader.MESSAGE_HISTORY_METHOD_ID;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
+@SuppressWarnings("deprecation")
 public enum SCQTools {
     ; // none
 

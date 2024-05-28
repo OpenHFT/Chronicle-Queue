@@ -125,6 +125,5 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         public long maxMessagesPerCycle() {
             return 0;
         }
-
     }
 }

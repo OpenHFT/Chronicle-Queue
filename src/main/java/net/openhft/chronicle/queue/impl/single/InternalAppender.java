@@ -42,28 +42,6 @@ public interface InternalAppender extends ExcerptAppender {
      * @param bytes bytes the contents of the excerpt to write
      * @throws IllegalIndexException if the index specified is larger than the valid next indices of the queue
      */
-    void writeBytes(long index, BytesStore bytes);
+    void writeBytes(long index, BytesStore<?, ?> bytes);
 
-    /**
-     * Append an excerpt at the specified index, if the index is a valid next index for the queue.
-     * <p>
-     * If the index is:
-     * <dl>
-     *     <dt>Greater than the next valid indices for the queue</dt>
-     *     <dd>An {@link IllegalIndexException} is thrown</dd>
-     *
-     *     <td>Less than or equal to the last index in the queue</td>
-     *     <dd>The method returns without modifying the queue</dd>
-     * </dl>
-     * Note: This form of the method will do a faster, less reliable check to confirm the index specified is
-     * a valid next index for the state of the queue. This should only be used when we know that there have
-     * been no partial writes to the queue previously.
-     *
-     * @param index index the index to append at
-     * @param bytes bytes the contents of the excerpt to write
-     * @throws IllegalIndexException if the index specified is larger than the valid next indices of the queue
-     * @deprecated Use {@link #writeBytes(long, BytesStore)} instead
-     */
-    @Deprecated(/* For removal in x.26 */)
-    void unsafeWriteBytes(long index, BytesStore bytes);
 }

@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeNotNull;
 
 @RequiredForClient
 public class ReadWriteTest extends QueueTestCommon {
@@ -130,6 +131,7 @@ public class ReadWriteTest extends QueueTestCommon {
                     .binary(chroniclePath)
                     .testBlockSize()
                     .build()) {
+                assumeNotNull(out);
                 // Do nothing, just create
             }
         }).start();
@@ -167,6 +169,7 @@ public class ReadWriteTest extends QueueTestCommon {
                 .readOnly(true)
                 .build();
              final ExcerptAppender appender = out.createAppender()) {
+            assumeNotNull(appender);
             // Do nothing
         }
     }

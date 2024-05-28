@@ -37,14 +37,6 @@ public interface CommonStore extends Demarshallable, WriteMarshallable {
     @NotNull
     MappedBytes bytes();
 
-    @NotNull
-    @Deprecated(/* to be removed in x.26, use dump(WireType) */)
-    String dump();
-
     String dump(WireType wireType);
-
-    @NotNull
-    @Deprecated(/* to be removed in x.26, use dump(WireType) */)
-    String shortDump();
 
 }

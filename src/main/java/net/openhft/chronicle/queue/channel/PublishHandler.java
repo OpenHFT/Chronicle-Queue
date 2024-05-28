@@ -7,13 +7,11 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.channel.impl.PublishQueueChannel;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.channel.AbstractHandler;
-import net.openhft.chronicle.wire.channel.ChronicleChannel;
-import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
-import net.openhft.chronicle.wire.channel.ChronicleContext;
+import net.openhft.chronicle.wire.channel.*;
 
 import static net.openhft.chronicle.queue.channel.PipeHandler.newQueue;
 
+@SuppressWarnings("deprecation")
 public class PublishHandler extends AbstractHandler<PublishHandler> {
     private String publish;
     private SyncMode syncMode;
@@ -89,6 +87,7 @@ public class PublishHandler extends AbstractHandler<PublishHandler> {
         return this;
     }
 
+    @SuppressWarnings("try")
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
         Pauser pauser = Pauser.balanced();
@@ -100,7 +99,7 @@ public class PublishHandler extends AbstractHandler<PublishHandler> {
     }
 
     @Override
-    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg channelCfg) {
+    public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg<?> channelCfg) {
         return new PublishQueueChannel(channelCfg, this, newQueue(context, publish, syncMode, publishSourceId));
     }
 }

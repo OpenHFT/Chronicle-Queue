@@ -52,6 +52,7 @@ import java.util.stream.Collectors;
 import static java.lang.Thread.currentThread;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
@@ -184,7 +185,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         final List<Writer> writers = new ArrayList<>();
 
         if (READERS_READ_ONLY)
-            try (ChronicleQueue ignored = createQueue(file)) {
+            try (ChronicleQueue queue = createQueue(file)) {
+                assertNotNull(queue);
             }
 
         if (SHARED_WRITE_QUEUE)

@@ -44,12 +44,6 @@ public class MicroToucherTest extends QueueTestCommon {
     }
 
     @Test
-    public void touchPageSparse() {
-        assumeTrue(OS.isLinux());
-        touchPage(b -> b.useSparseFiles(true).rollCycle(HUGE_DAILY), 66561);
-    }
-
-    @Test
     public void touchPageTestBlockSize() {
         touchPage(b -> b.blockSize(64 << 20), 66561);
     }
@@ -60,11 +54,7 @@ public class MicroToucherTest extends QueueTestCommon {
         int pages = 0;
         final SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
         configure.accept(builder);
-        String queuePath = builder.path().getAbsolutePath();
-        if (PageUtil.isHugePage(queuePath)) {
-            // Set the sparse capacity to a sufficiently large multiple of the page size
-            builder.sparseCapacity(PageUtil.getPageSize(queuePath) * 200);
-        }
+
         try (ChronicleQueue q = builder.build();
              final StoreAppender appender = (StoreAppender) q.createAppender()) {
 

@@ -83,7 +83,6 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testRead2() throws ExecutionException, InterruptedException {
         finishedNormally = false;

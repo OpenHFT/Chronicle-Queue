@@ -202,18 +202,6 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5_000)
-    public void forceUnlockQuietlyWillUnlockWithNoWarningIfLockedByAnotherProcess() throws IOException, TimeoutException, InterruptedException {
-        try (final TableStoreWriteLock testLock = createTestLock()) {
-            final Process process = runLockingProcess(true);
-            waitForLockToBecomeLocked(testLock);
-            testLock.forceUnlockQuietly();
-            assertFalse(testLock.locked());
-            process.destroy();
-            process.waitFor();
-        }
-    }
-
     @Test(timeout = 15_000)
     public void lockPreventsConcurrentAcquisition() {
         AtomicBoolean lockIsAcquired = new AtomicBoolean(false);

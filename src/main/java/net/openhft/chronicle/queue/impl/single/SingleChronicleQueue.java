@@ -93,6 +93,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     final File path;
     final String fileAbsolutePath;
     // Uses this.closers as a lock. concurrent read, locking for write.
+    @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
     private final StoreSupplier storeSupplier;
     private final long epoch;
@@ -131,9 +132,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     private final int deltaCheckpointInterval;
-    @Deprecated
-    private final boolean useSparseFile;
-    private final long sparseCapacity;
     final AppenderListener appenderListener;
     protected int sourceId;
     private int cycleFileRenamed = -1;
@@ -165,8 +163,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             blockSize = builder.blockSize();
             // the maximum message size is 1L << 30 so greater overlapSize has no effect
             overlapSize = calcOverlapSize(blockSize);
-            useSparseFile = builder.useSparseFiles();
-            sparseCapacity = builder.sparseCapacity();
             eventLoop = builder.eventLoop();
             bufferCapacity = builder.bufferCapacity();
             onRingBufferStats = builder.onRingBufferStats();
@@ -381,7 +377,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         return;
                     }
                 }
-                try (ScopedResource<Bytes<?>> stlBytes = acquireBytesScoped()) {
+                try (ScopedResource<Bytes<Void>> stlBytes = acquireBytesScoped()) {
                     Bytes<?> bytes = stlBytes.get();
                     TextWire text = new TextWire(bytes);
                     while (true) {
@@ -501,6 +497,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return storeSupplier;
     }
 
+    @SuppressWarnings("deprecation")
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
@@ -722,7 +719,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void performClose() {
         synchronized (closers) {
@@ -750,6 +746,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             eventLoop.close();
     }
 
+    @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
@@ -882,9 +879,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @PackageLocal
     MappedFile mappedFile(File file) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
-        final MappedFile mappedFile = useSparseFile
-                ? MappedFile.ofSingle(file, sparseCapacity, readOnly)
-                : MappedFile.of(file, chunkSize, overlapSize, readOnly);
+        final MappedFile mappedFile = MappedFile.of(file, chunkSize, overlapSize, readOnly);
         mappedFile.syncMode(syncMode);
         return mappedFile;
     }
@@ -918,7 +913,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
     }
 
-    public TableStore metaStore() {
+    public TableStore<SCQMeta> metaStore() {
         return metaStore;
     }
 
@@ -933,7 +928,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
-        try (final ScopedResource<Bytes<?>> bytesTl = acquireBytesScoped()) {
+        try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
             if (longValue == null) {
@@ -959,9 +954,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return longValue.getVolatileValue();
     }
 
-    private BytesStore asBytes(CharSequence key, Bytes<?> bytes) {
+    @SuppressWarnings("unchecked")
+    private BytesStore<?,Void> asBytes(CharSequence key, Bytes<Void> bytes) {
         return key instanceof BytesStore
-                ? ((BytesStore) key)
+                ? ((BytesStore<?, Void>) key)
                 : bytes.append(key);
     }
 
@@ -987,7 +983,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             singleThreadedCheckDisabled(true);
         }
 
-        @SuppressWarnings("resource")
         @Override
         public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
             throwExceptionIfClosed();
@@ -1120,6 +1115,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return success ? CreateStrategy.CREATE : CreateStrategy.READ_ONLY;
         }
 
+        @SuppressWarnings("deprecation")
         private void createIndexThenUpdateHeader(AbstractWire wire, int cycle, SingleChronicleQueueStore wireStore) {
             // Should very carefully prepare all data structures before publishing initial header
             wire.usePadding(wireStore.dataVersion() > 0);

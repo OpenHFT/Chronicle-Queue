@@ -7,9 +7,8 @@ import java.io.StreamCorruptedException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
 /**
- * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext, boolean)}.
+ * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext)}.
  */
 class IndexingLastSequenceNumberTest extends IndexingTestCommon {
 
@@ -25,7 +24,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         Indexing indexing = indexing(queue);
         int linearScanByPositionCountStart = indexing.linearScanByPositionCount();
         assertEquals(0, linearScanByPositionCountStart);
-        long lastSequenceNumber = indexing.lastSequenceNumber(appender, true);
+        long lastSequenceNumber = indexing.lastSequenceNumber(appender);
         assertEquals(0, lastSequenceNumber);
         assertEquals(1, indexing.linearScanByPositionCount());
     }
@@ -36,7 +35,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         Indexing indexing = indexing(queue);
         int linearScanByPositionCountStart = indexing.linearScanByPositionCount();
         assertEquals(0, linearScanByPositionCountStart);
-        long lastSequenceNumber = indexing.lastSequenceNumber(appender, false);
+        long lastSequenceNumber = indexing.lastSequenceNumber(appender);
         assertEquals(0, lastSequenceNumber);
         assertEquals(1, indexing.linearScanByPositionCount());
     }
@@ -46,7 +45,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         appender.writeText("hello");
         appender.writeText("world");
         Indexing indexing = indexing(queue);
-        long lastSequenceNumber = indexing.lastSequenceNumber(appender, false);
+        long lastSequenceNumber = indexing.lastSequenceNumber(appender);
         assertEquals(1, lastSequenceNumber);
         assertEquals(1, indexing.linearScanByPositionCount());
     }
@@ -58,7 +57,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         appender.writeText("b");
         timeProvider.advanceMillis(1_001);
         appender.writeText("c");
-        long lastSequenceNumber = indexing(queue).lastSequenceNumber(appender, false);
+        long lastSequenceNumber = indexing(queue).lastSequenceNumber(appender);
         assertEquals(0, lastSequenceNumber);
     }
 
@@ -70,8 +69,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         timeProvider.advanceMillis(1_001);
         appender.writeText("c");
         appender.writeText("d");
-        long lastSequenceNumber = indexing(queue).lastSequenceNumber(appender, false);
+        long lastSequenceNumber = indexing(queue).lastSequenceNumber(appender);
         assertEquals(1, lastSequenceNumber);
     }
-
 }

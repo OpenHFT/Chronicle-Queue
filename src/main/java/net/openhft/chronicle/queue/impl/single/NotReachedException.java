@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 public class NotReachedException extends IllegalStateException {
+    private static final long serialVersionUID = 0L;
     public NotReachedException(final String s) {
         super(s);
     }

@@ -79,7 +79,6 @@ public class LastAcknowledgedTest extends QueueTestCommon {
         }
     }
 
-
     @Test
     public void testReadBeforeAcknowledgment() throws IOException {
 
@@ -89,7 +88,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
 
         try (ChronicleQueue queue = ChronicleQueue.single(tempDirectory.toFile().getAbsolutePath())) {
             LongValue lastAcknowledgedIndexReplicatedLongValue = Jvm.getValue(queue, "lastAcknowledgedIndexReplicated");
-            ExcerptAppender appender = queue.acquireAppender();
+            ExcerptAppender appender = queue.createAppender();
 
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertFalse(tailer.readAfterReplicaAcknowledged());
@@ -156,7 +155,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY).build()) {
             LongValue lastAcknowledgedIndexReplicatedLongValue = Jvm.getValue(queue, "lastAcknowledgedIndexReplicated");
-            ExcerptAppender appender = queue.acquireAppender();
+            ExcerptAppender appender = queue.createAppender();
             timeProvider.set(1);
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertFalse(tailer.readAfterReplicaAcknowledged());

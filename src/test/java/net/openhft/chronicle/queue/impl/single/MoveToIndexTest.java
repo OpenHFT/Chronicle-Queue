@@ -140,7 +140,6 @@ public final class MoveToIndexTest extends QueueTestCommon {
                 if (dc.wire().getValueIn().readByte() != versionByte)
                     throw new IllegalStateException("Illegal version bytes: " + dc.wire().bytes().readSkip(-1).toDebugString());
             }
-
         }
     }
 

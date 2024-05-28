@@ -109,6 +109,7 @@ public class TestBinarySearch extends QueueTestCommon {
                  final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
+                        assert ignored != null;
                         Wire key = toWire(j);
                         long index = BinarySearch.search(binarySearchTailer, key, comparator);
                         Assert.assertEquals(tailer.index(), index);
@@ -151,4 +152,3 @@ public class TestBinarySearch extends QueueTestCommon {
         }
     }
 }
-

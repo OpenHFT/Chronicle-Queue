@@ -24,10 +24,7 @@ import net.openhft.chronicle.bytes.MethodWriterBuilder;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.reader.MessageConsumer;
 import net.openhft.chronicle.queue.reader.QueueEntryReader;
-import net.openhft.chronicle.wire.MessageHistory;
-import net.openhft.chronicle.wire.TextWire;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.*;
 
 import java.nio.ByteBuffer;
 

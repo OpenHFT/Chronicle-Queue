@@ -67,7 +67,7 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
         threadPool.shutdown();
         assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
         assertFalse(failedToMoveToEnd.get());
-        Closeable.closeQuietly(queues);
+        Closeable.closeQuietly((Object[]) queues);
     }
 
     @Override

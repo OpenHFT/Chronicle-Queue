@@ -103,5 +103,4 @@ class IndexingToEndTest extends IndexingTestCommon {
             return lastIndexAppended + 1;
         }
     }
-
 }

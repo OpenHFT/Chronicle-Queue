@@ -7,21 +7,19 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.NoDocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.channel.AbstractHandler;
-import net.openhft.chronicle.wire.channel.ChannelHeader;
-import net.openhft.chronicle.wire.channel.ChronicleChannel;
-import net.openhft.chronicle.wire.channel.ChronicleChannelCfg;
+import net.openhft.chronicle.wire.channel.*;
 import net.openhft.chronicle.wire.converter.NanoTime;
 
+@SuppressWarnings("deprecation")
 public class SubscribeQueueChannel implements ChronicleChannel {
-    private final ChronicleChannelCfg channelCfg;
-    private final AbstractHandler pipeHandler;
+    private final ChronicleChannelCfg<?> channelCfg;
+    private final AbstractHandler<?> pipeHandler;
     private final ChannelHeader headerOut;
     private final ChronicleQueue subscribeQueue;
     private final ExcerptTailer tailer;
     private long lastTestMessage;
 
-    public SubscribeQueueChannel(ChronicleChannelCfg channelCfg, AbstractHandler pipeHandler, ChronicleQueue subscribeQueue) {
+    public SubscribeQueueChannel(ChronicleChannelCfg<?> channelCfg, AbstractHandler<?> pipeHandler, ChronicleQueue subscribeQueue) {
         this.channelCfg = channelCfg;
         this.pipeHandler = pipeHandler;
         this.headerOut = pipeHandler.responseHeader(null);
@@ -30,7 +28,7 @@ public class SubscribeQueueChannel implements ChronicleChannel {
     }
 
     @Override
-    public ChronicleChannelCfg channelCfg() {
+    public ChronicleChannelCfg<?> channelCfg() {
         return channelCfg;
     }
 

@@ -49,5 +49,4 @@ public class NamedTailerPreconditionTest extends QueueTestCommon {
     private void setQueueAsSink(SingleChronicleQueue queue) {
         queue.appendLock().lock();
     }
-
 }

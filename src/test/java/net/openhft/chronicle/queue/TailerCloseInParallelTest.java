@@ -37,8 +37,7 @@ import java.nio.file.Paths;
 import java.util.Random;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
@@ -96,17 +95,18 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
             Thread thread = new Thread(() -> {
                 tailer0.singleThreadedCheckReset();
-                for (int i=0; i < random.nextInt(10); i++) {
+                for (int i = 0; i < random.nextInt(10); i++) {
                     Jvm.pause(1);
-                    try(DocumentContext dc = tailer0.readingDocument()) {
-
+                    try (DocumentContext dc = tailer0.readingDocument()) {
+                        assertNotNull(dc);
                     }
                 }
                 Closeable.closeQuietly(tailer0);
             });
             thread.start();
 
-            UncheckedBytes<BytesStore> bytes = new UncheckedBytes<>(BytesStore.empty().bytesForRead());
+            Bytes<Object> underlyingBytes = BytesStore.empty().bytesForRead();
+            UncheckedBytes<BytesStore<?,?>> bytes = new UncheckedBytes<>(underlyingBytes);
             try (ExcerptAppender appender = chronicle.createAppender()) {
                 for (int i = 0; i < count; i++) {
                     long start = System.nanoTime();
@@ -176,4 +176,3 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         void readFrom(T t);
     }
 }
-

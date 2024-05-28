@@ -1182,6 +1182,7 @@ If you want to write to the below "doit" method
 public interface MyInterface {
     void doit(DTO dto);
 }
+
 public class DTO extends SelfDescribingMarshallable {
     private int age;
     private String name;

@@ -32,7 +32,7 @@ import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
-import net.openhft.chronicle.threads.TimeoutPauser;
+import net.openhft.chronicle.threads.YieldingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -72,6 +72,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
+@SuppressWarnings({"try", "serial", "deprecation"})
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends QueueTestCommon {
 
@@ -326,7 +327,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     new NamedThreadFactory("service1"));
             ScheduledExecutorService service2 = null;
             try {
-                Future f = service1.submit(() -> {
+                Future<?> f = service1.submit(() -> {
                     try (final ExcerptAppender appender = queue.createAppender()) {
 
                         try (final DocumentContext dc = appender.writingDocument()) {
@@ -440,7 +441,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assumeTrue(appender instanceof StoreAppender);
                 StoreAppender storeAppender = (StoreAppender) appender;
                 ((SingleChronicleQueue) queue).writeLock().lock();
-                storeAppender.writeBytesInternal(0, test, StoreAppender.IndexValidationMode.SAFE);
+                storeAppender.writeBytesInternal(0, test);
             }
         }
         assertEquals(expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet(), appenderListenerDump.toString());
@@ -1395,7 +1396,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     /**
      * test that if we make EPOC the current time, then the cycle is == 0
-     *
+     * <p>
      * @
      */
     @Test
@@ -3815,7 +3816,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             createAppenderLock.unlock();
 
             // Assert appender is acquired
-            TimeoutPauser pauser = new TimeoutPauser(0);
+            YieldingPauser pauser = new YieldingPauser(0);
             while (!gotAppender.get()) {
                 pauser.pause(1, TimeUnit.SECONDS);
             }
@@ -3840,7 +3841,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     private static class BytesWithIndex implements Closeable {
-        private BytesStore bytes;
+        private BytesStore<?, ?> bytes;
         private long index;
 
         public BytesWithIndex(Bytes<?> bytes, long index) {

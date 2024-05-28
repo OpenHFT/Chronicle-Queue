@@ -38,6 +38,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"rawtypes","unchecked"})
 public class SingleChroniclePerfMainTest extends QueueTestCommon {
     static final int count = 1_000_000;
     static final int size = 4 << 10;
@@ -824,4 +825,3 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         IFacadeSon getSonAt(int idx);
     }
 }
-

@@ -60,4 +60,3 @@ public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
         }
     }
 }
-

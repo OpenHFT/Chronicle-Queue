@@ -8,7 +8,7 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 
 public class RollCyclesDistinctnessTest extends QueueTestCommon{
-    
+
     @Test
     public void definedRollCycleFormatsAreDistinct() {
         Set<String> allPatterns = new HashSet<>();
