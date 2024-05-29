@@ -1,4 +1,5 @@
-FROM node AS base
+FROM node:alpine AS base
+RUN apk --update add git
 RUN npm install -g gitlab:antora/xref-validator
 
 FROM base AS docs
