@@ -30,6 +30,12 @@ public class ByteArrayJLBHBenchmark implements JLBHTask {
     static byte[] bytesArr3 = new byte[MSG_LENGTH];
     private JLBH jlbh;
 
+    static {
+        System.setProperty("disable.thread.safety", "true");
+        System.setProperty("jvm.resource.tracing", "false");
+        System.setProperty("check.thread.safety", "false");
+    }
+
     public static void main(String[] args) {
         int throughput = MSG_THROUGHPUT / MSG_LENGTH;
         int warmUp = Math.min(20 * throughput, 12_000);
