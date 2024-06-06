@@ -50,7 +50,6 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     static {
         System.setProperty("disable.thread.safety", "true");
         System.setProperty("jvm.resource.tracing", "false");
-        System.setProperty("check.thread.safety", "false");
     }
 
     public static void main(String[] args) {
