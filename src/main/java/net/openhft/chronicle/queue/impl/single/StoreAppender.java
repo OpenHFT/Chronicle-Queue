@@ -34,7 +34,8 @@ import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
-import net.openhft.chronicle.queue.util.*;
+import net.openhft.chronicle.queue.util.MicroTouched;
+import net.openhft.chronicle.queue.util.PretouchUtil;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -1084,6 +1085,8 @@ class StoreAppender extends AbstractCloseable
             if (buffered) {
                 throw new IndexNotAvailableException("Index is unavailable when double buffering");
             }
+            if (this.wire == null)
+                return Long.MIN_VALUE;
             if (this.wire.headerNumber() == Long.MIN_VALUE) {
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
