@@ -26,7 +26,7 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>5.26ea2</version>
+    <version>5.26ea3-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -668,7 +668,7 @@
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
         </developerConnection>
-        <tag>chronicle-queue-5.26ea2</tag>
+        <tag>develop</tag>
     </scm>
 
 </project>
