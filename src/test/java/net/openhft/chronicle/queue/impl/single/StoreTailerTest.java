@@ -586,4 +586,77 @@ public class StoreTailerTest extends QueueTestCommon {
             }
         }
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void cantMoveToStartDuringDocumentReading() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("Hello World");
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                assertTrue(dc.isPresent());
+                assertTrue(dc.isMetaData());
+                assertEquals("header", dc.wire().readEvent(String.class));
+                assertTrue(tailer.toString().contains("StoreTailer{"));
+                tailer.toStart();//forbidden
+            }
+        }
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void cantMoveToEndDuringDocumentReading() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("Hello World");
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                assertTrue(dc.isPresent());
+                assertTrue(dc.isMetaData());
+                assertEquals("header", dc.wire().readEvent(String.class));
+                assertTrue(tailer.toString().contains("StoreTailer{"));
+                tailer.toEnd();//forbidden
+            }
+        }
+    }
+
+    @Test
+    public void testStriding() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer()) {
+           tailer.striding(true);
+           assertTrue(tailer.striding());
+        }
+    }
+
+    @Test
+    public void testMoveToIndex() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("Hello World");
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
+                tailer.moveToIndex(tailer.index() + 1);
+            }
+        }
+    }
+
+    @Test
+    public void testExcerptsInCycle() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer()) {
+                tailer.excerptsInCycle(tailer.cycle());
+        }
+    }
+
 }
