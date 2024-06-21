@@ -919,7 +919,7 @@ class StoreTailer extends AbstractCloseable
             queue.refreshDirectoryListing();
             // due to a race condition, where the queue rolls as we are processing toEnd()
             // we may get a NotReachedException  ( see https://github.com/OpenHFT/Chronicle-Queue/issues/702 )
-            // hence are are just going to retry.
+            // hence are just going to retry.
             try {
                 return originalToEnd();
             } catch (Exception ex) {
