@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -26,6 +27,8 @@ public class WeeklyRollCycleTest {
             assertEquals(4, queue.cycle(new SetTimeProvider("1970/02/07T00:00:00")));
             assertEquals(4, queue.cycle(new SetTimeProvider("1970/02/07T23:59:59")));
             assertEquals(5, queue.cycle(new SetTimeProvider("1970/02/08T00:00:00")));
+        } finally {
+           IOTools.deleteDirWithFiles(tmpDir);
         }
     }
 }
