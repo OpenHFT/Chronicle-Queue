@@ -132,7 +132,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private int maxTailers;
     private AsyncBufferCreator bufferBytesStoreCreator;
     private Long pretouchIntervalMillis;
-    private boolean enablePretoucher = areEnterpriseFeaturesAvailable();
     private LocalTime rollTime;
     private ZoneId rollTimeZone;
     private QueueOffsetSpec queueOffsetSpec;
@@ -324,8 +323,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             result = onlyAvailableInEnterprise("Encryption");
         if (hasPretouchIntervalMillis())
             result = onlyAvailableInEnterprise("Out of process pretouching");
-        if (enablePretoucher)
-            result = onlyAvailableInEnterprise("In process pretouching");
 
         return result;
     }
@@ -562,14 +559,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
         this.pretouchIntervalMillis = pretouchIntervalMillis;
-        return this;
-    }
-
-    /**
-     * Enable in-process pretoucher (Queue Enterprise feature)
-     */
-    public SingleChronicleQueueBuilder enablePretoucher(final boolean enablePretoucher) {
-        this.enablePretoucher = enablePretoucher;
         return this;
     }
 
