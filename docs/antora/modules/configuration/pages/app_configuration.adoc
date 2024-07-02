@@ -40,6 +40,6 @@ NOTE: Some features are only available in Chronicle Queue Enterprise. Please ava
 | `boolean` | link:[`ringBufferReaderCanDrain`] | Enables Async Mode's reader processes to invoke the queue drainer. By default, only only writer processes are allowed to invoke the drainer. | `false` | Enterprise only
 | `boolean` | link:[`ringBufferForceCreateReader`] | Controls whether to force creating a reader (to recover from crash). | `false` | Enterprise only
 | `boolean` | link:[`ringBufferReopenReader`] | Controls if Async Mode readers are reset on close. If true, re-opening a reader puts you back at the same place, and your reader can block writers if the reader is not open | `false` | Enterprise only
-| `HandlerPriority` | link:[`drainerPriority`] | Priority for Async Mode's buffer drainer handler | `MEDIUM` | Enterprise only
+| `HandlerPriority` | link:[`drainerPriority`] | Priority for Async Mode's buffer drainer handler | `CONCURRENT` | Enterprise only
 | `int` | link:[`drainerTimeoutMS`] |  | 10,000 | Enterprise only
 |===

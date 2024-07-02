@@ -326,7 +326,7 @@ public class ChronicleReader implements Reader {
     }
 
     @Override
-    public ChronicleReader withArg(String arg) {
+    public ChronicleReader withArg(@NotNull String arg) {
         this.arg = arg;
         return this;
     }

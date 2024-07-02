@@ -91,7 +91,7 @@ NOTE: if you want multiple buffered queues to share the same drainer thread you 
 ```
     try (ChronicleQueue queue = SingleChronicleQueueBuilder
             .binary(path)
-            .bufferCapacity(1 << 20) // ring buffer base capacity
+            .bufferCapacity(1 << 20)
             .writeBufferMode(BufferMode.Asynchronous)
             .build()) {
         ExcerptAppender appender = queue.acquireAppender();

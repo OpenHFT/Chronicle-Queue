@@ -3,8 +3,6 @@ package net.openhft.chronicle.queue.channel;
 import net.openhft.chronicle.wire.utils.*;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
