@@ -23,7 +23,6 @@ import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
 
-@Deprecated(/* To be removed in x.27. Instead use ChronicleQueue#createPretoucher */)
 public interface PretoucherFactory {
     EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue);
 

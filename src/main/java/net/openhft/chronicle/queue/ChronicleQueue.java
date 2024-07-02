@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.util.PretouchUtil;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
@@ -489,20 +490,11 @@ public interface ChronicleQueue extends Closeable {
      * @return pretoucher
      */
     default Pretoucher createPretoucher() {
-        return new Pretoucher() {
-            @Override
-            public void execute() {
-                // no-op
-            }
-            @Override
-            public void close() {
-                // no-op
-            }
-        };
+        return PretouchUtil.createPretoucher(this);
     }
 
     default EventHandler createPretoucherEventHandler() {
-        return () -> false;
+        return PretouchUtil.createEventHandler(this);
     }
 
     /**

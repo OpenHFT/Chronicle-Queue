@@ -20,12 +20,12 @@ package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.core.util.ObjectUtils;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 
-@Deprecated(/* To be removed in x.27. Instead use ChronicleQueue#createPretoucher */)
 public final class PretouchUtil {
     private static final PretoucherFactory INSTANCE;
 
@@ -42,12 +42,12 @@ public final class PretouchUtil {
         INSTANCE = instance;
     }
 
-    public static EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
-        return INSTANCE.createEventHandler(queue);
+    public static EventHandler createEventHandler(@NotNull final ChronicleQueue queue) {
+        return INSTANCE.createEventHandler((SingleChronicleQueue) queue);
     }
 
-    public static Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
-        return queue.createPretoucher();
+    public static Pretoucher createPretoucher(@NotNull final ChronicleQueue queue) {
+        return INSTANCE.createPretoucher((SingleChronicleQueue) queue);
     }
 
     private static class PretouchFactoryEmpty implements PretoucherFactory {
