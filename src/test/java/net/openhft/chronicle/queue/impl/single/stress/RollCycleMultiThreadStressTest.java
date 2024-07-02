@@ -28,7 +28,6 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.main.DumpMain;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -569,7 +568,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     class PretoucherThread extends AbstractCloseable implements Callable<Throwable> {
 
         private final AtomicBoolean running;
-        private final SingleChronicleQueue queue;
+        private final ChronicleQueue queue;
         volatile Throwable exception;
 
         PretoucherThread(File path) {

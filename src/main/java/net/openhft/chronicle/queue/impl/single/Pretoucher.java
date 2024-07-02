@@ -19,12 +19,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.threads.InvalidEventHandlerException;
+import net.openhft.chronicle.queue.ChronicleQueue;
 
 import java.io.Closeable;
 
 /**
  * A class designed to be called from a long-lived thread.
- * To get an instance of a Pretoucher, call {@link net.openhft.chronicle.queue.util.PretouchUtil#createPretoucher(SingleChronicleQueue)}
+ * To get an instance of a Pretoucher, call {@link ChronicleQueue#createPretoucher()}
  * <p>
  * Upon invocation of the {@code execute()} method, this object will pre-touch pages in the supplied queue's underlying store file, attempting to keep
  * ahead of any appenders to the queue.
