@@ -472,8 +472,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         // we don't store which RollCycles enum was used and we try and match by format string, we
         // match the first RollCycles with the same format string, which may not
         // be the RollCycles it was written with
-        try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-            assertEquals(DEFAULT, ignored.rollCycle());
+        try (final ChronicleQueue reopen = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            assertEquals(DEFAULT, reopen.rollCycle());
         }
     }
 
@@ -481,7 +481,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     public void shouldOverrideDifferentEpoch() {
         expectException("Overriding roll epoch from existing metadata, was 10, overriding to 100");
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).epoch(100).build();
+        final int shouldBeEpoch = 100;
+        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).epoch(shouldBeEpoch).build();
              final ExcerptAppender appender = queue.createAppender()) {
             try (DocumentContext documentContext = appender.writingDocument()) {
                 documentContext.wire().write("somekey").text("somevalue");
@@ -489,7 +490,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
 
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).epoch(10).build()) {
-            assertEquals(100, ((SingleChronicleQueue) ignored).epoch());
+            assertEquals(shouldBeEpoch, ((SingleChronicleQueue) ignored).epoch());
         }
     }
 

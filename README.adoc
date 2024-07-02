@@ -1096,18 +1096,26 @@ Below is the command line interface used to configure `ChronicleReaderMain`:
 
 ----
 usage: ChronicleReaderMain
- -d <directory>       Directory containing chronicle queue files
- -e <exclude-regex>   Do not display records containing this regular
-                      expression
- -f                   Tail behaviour - wait for new records to arrive
- -h                   Print this help and exit
- -i <include-regex>   Display records containing this regular expression
- -l                   Squash each output message into a single line
- -m <max-history>     Show this many records from the end of the data set
- -n <from-index>      Start reading from this index (e.g. 0x123ABE)
- -r <interface>       Use when reading from a queue generated using a MethodWriter
- -s                   Display index
- -w <wire-type>       Control output i.e. JSON
+ -a <binary-arg>                            Argument to pass to binary search class
+ -b <binary-search>                         Use this class as a comparator to binary search
+ -cbl <content-based-limiter>               Specify a content-based limiter
+ -cblArg <content-based-limiter-argument>   Specify an argument for use by the content-based limiter
+ -d <directory>                             Directory containing chronicle queue files
+ -e <exclude-regex>                         Do not display records containing this regular expression
+ -f                                         Tail behaviour - wait for new records to arrive
+ -g                                         Show message history (when using method reader)
+ -h                                         Print this help and exit
+ -i <include-regex>                         Display records containing this regular expression
+ -k                                         Read the queue in reverse
+ -l                                         Squash each output message into a single line
+ -m <max-history>                           Show this many records from the end of the data set
+ -n <from-index>                            Start reading from this index (e.g. 0x123ABE)
+ -named <named>                             Named tailer ID
+ -r <as-method-reader>                      Use when reading from a queue generated using a MethodWriter
+ -s                                         Display index
+ -w <wire-type>                             Control output i.e. JSON
+ -x <max-results>                           Limit the number of results to output
+ -z                                         Print timestamps using the local timezone
 ----
 
 Just as with `DumpQueue` you need the classes in the example above present on the class path. This can again be achieved by manually adding them and then run:

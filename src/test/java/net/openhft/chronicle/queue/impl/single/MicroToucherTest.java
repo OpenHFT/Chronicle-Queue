@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
@@ -31,9 +30,7 @@ import org.junit.Test;
 
 import java.util.function.Consumer;
 
-import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.HUGE_DAILY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
 
 public class MicroToucherTest extends QueueTestCommon {
 

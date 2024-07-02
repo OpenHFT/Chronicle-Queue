@@ -232,7 +232,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
 
-            singleThreadedCheckDisabled(true);
+            singleThreadedCheckDisabled(true);////
         } catch (Throwable t) {
             close();
             throw Jvm.rethrow(t);
@@ -448,7 +448,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the Chronicle Queue using a background thread
+     * @return if we uses async mode to buffer the appends, the Excerpts are written to the Chronicle Queue using a background thread
      */
     public boolean buffered() {
         return this.isBuffered;
@@ -769,9 +769,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     @Override
     public long firstIndex() {
-        // TODO - as discussed, peter is going find another way to do this as this solution
-        // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
-
         int cycle = firstCycle();
         if (cycle == Integer.MAX_VALUE)
             return Long.MAX_VALUE;
