@@ -61,6 +61,7 @@ public class IndexingTestCommon extends QueueTestCommon {
     /**
      * @return indexing object for this queue that exposes common indexing operations.
      */
+    @Deprecated(/* Needs to be removed / refactored as part of this fix, it's returning a fresh SCQIndexing each time making it unreliable to measure the counts accurately */)
     public Indexing indexing(SingleChronicleQueue queue) {
         SingleChronicleQueueStore store = store(queue);
         return store.indexing;
