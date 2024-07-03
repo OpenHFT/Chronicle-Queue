@@ -23,7 +23,14 @@ class IndexingReadWritePositionTests extends IndexingTestCommon {
     }
 
     @Test
-    void writeOnlyUseCase() {
+    void writeOnce() {
+        appender.writeText("1");
+        Indexing indexing = indexing(); // Fetch the handle to SCQIndex *after* the first write otherwise store will be null
+        assertZeroScans(indexing);
+    }
+
+    @Test
+    void writeMultipleTimes() {
         appender.writeText("1");
         Indexing indexing = indexing(); // Fetch the handle to SCQIndex *after* the first write otherwise store will be null
         appender.writeText("2");
