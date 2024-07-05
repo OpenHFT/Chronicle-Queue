@@ -1095,18 +1095,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
         }
 
+        // This is not lock-safe at the moment.
         private void validateSequenceHeader(SingleChronicleQueueStore wireStore) {
             final Wire w = wireType.apply(wireStore.bytes());
             try {
                 w.usePadding(wireStore.dataVersion() > 0);
 
                 long writePosition = wireStore.writePosition();
-                w.bytes().readPositionUnlimited(writePosition);
+                // lastSequence could also return Sequence.NOT_FOUND_RETRY and needs to be dealt with.
                 long lastSequence = wireStore.indexing.sequence.getSequence(writePosition);
-                if (lastSequence != Sequence.NOT_FOUND) {
+                if (writePosition != 0 && lastSequence != Sequence.NOT_FOUND) {
+                    w.bytes().readPositionUnlimited(writePosition);
                     long foundSequence = wireStore.indexing.moveToEnd(w);
-                    if (lastSequence != foundSequence) {
-                        //Jvm.warn().on(SingleChronicleQueue.class, "Found sequence: " + foundSequence + " but expected: " + lastSequence);
+                    if (foundSequence != Sequence.NOT_FOUND && lastSequence != foundSequence-1) {
+                        Jvm.warn().on(SingleChronicleQueue.class, "Found sequence: " + (foundSequence-1) + " but expected: " + lastSequence);
                         // reset the sequence number.
                         wireStore.indexing.sequence.setSequence(writePosition, foundSequence);
                     }
