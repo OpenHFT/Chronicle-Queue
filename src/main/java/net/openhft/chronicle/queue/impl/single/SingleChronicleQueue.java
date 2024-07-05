@@ -79,6 +79,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
+    static boolean CHECK_SEQUENCE_NUMBER = Jvm.getBoolean("chronicle.queue.validateSequenceNumber", true);
 
     @NotNull
     protected final EventLoop eventLoop;
@@ -1075,15 +1076,43 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             if (line.contains(".cq4"))
                                 System.err.println(line);
                     }
-//                        System.err.println("wire.bytes.refCount="+wire.bytes().refCount());
-//                        System.err.println("wire.bytes.byteStore.refCount="+wire.bytes().bytesStore().refCount());
+
+                    // System.err.println("wire.bytes.refCount="+wire.bytes().refCount());
+                    // System.err.println("wire.bytes.byteStore.refCount="+wire.bytes().bytesStore().refCount());
                     throw e;
                 }
+
+                // Check if wireStore sequence number is correct
+                if (wireStore != null && CHECK_SEQUENCE_NUMBER) {
+                    validateSequenceHeader(wireStore);
+                }
+
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            }
+        }
+
+        private void validateSequenceHeader(SingleChronicleQueueStore wireStore) {
+            final Wire w = wireType.apply(wireStore.bytes());
+            try {
+                w.usePadding(wireStore.dataVersion() > 0);
+
+                long writePosition = wireStore.writePosition();
+                w.bytes().readPositionUnlimited(writePosition);
+                long lastSequence = wireStore.indexing.sequence.getSequence(writePosition);
+                if (lastSequence != Sequence.NOT_FOUND) {
+                    long foundSequence = wireStore.indexing.moveToEnd(w);
+                    if (lastSequence != foundSequence) {
+                        //Jvm.warn().on(SingleChronicleQueue.class, "Found sequence: " + foundSequence + " but expected: " + lastSequence);
+                        // reset the sequence number.
+                        wireStore.indexing.sequence.setSequence(writePosition, foundSequence);
+                    }
+                }
+            } finally {
+                w.bytes().release(INIT);
             }
         }
 

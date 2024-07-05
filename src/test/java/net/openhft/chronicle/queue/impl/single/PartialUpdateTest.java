@@ -64,9 +64,11 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @Before
     public void setUp() {
+        SingleChronicleQueue.CHECK_SEQUENCE_NUMBER = false;
         queuePath = IOTools.createTempDirectory("partialUpdate");
         setTimeProvider = new SetTimeProvider();
         queueCreator.createQueue(setTimeProvider, queuePath);
+        SingleChronicleQueue.CHECK_SEQUENCE_NUMBER = true;
     }
 
     @BeforeClass
