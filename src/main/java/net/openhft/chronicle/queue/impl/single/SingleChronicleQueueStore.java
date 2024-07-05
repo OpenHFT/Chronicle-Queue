@@ -89,6 +89,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
             this.dataVersion = version > 1 ? 0 : version;
 
+            // Validate the writePosition and sequence.
+            // TODO this.indexing.moveToEnd(wire);
+
             singleThreadedCheckDisabled(true);
             failed = false;
         } finally {

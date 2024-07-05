@@ -35,6 +35,8 @@ class IndexingReadWritePositionTests extends IndexingTestCommon {
         Indexing indexing = indexing(); // Fetch the handle to SCQIndex *after* the first write otherwise store will be null
         appender.writeText("2");
         appender.writeText("3");
+        appender.writeText("4");
+        appender.writeText("5");
         assertZeroScans(indexing);
     }
 

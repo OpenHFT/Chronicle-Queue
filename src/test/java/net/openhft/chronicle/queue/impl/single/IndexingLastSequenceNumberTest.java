@@ -26,7 +26,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         assertEquals(0, linearScanByPositionCountStart);
         long lastSequenceNumber = indexing.lastSequenceNumber(appender);
         assertEquals(0, lastSequenceNumber);
-        assertEquals(1, indexing.linearScanByPositionCount());
+        assertEquals(0, indexing.linearScanByPositionCount());
     }
 
     @Test
@@ -37,7 +37,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         assertEquals(0, linearScanByPositionCountStart);
         long lastSequenceNumber = indexing.lastSequenceNumber(appender);
         assertEquals(0, lastSequenceNumber);
-        assertEquals(1, indexing.linearScanByPositionCount());
+        assertEquals(0, indexing.linearScanByPositionCount());
     }
 
     @Test
@@ -47,7 +47,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         Indexing indexing = indexing(queue);
         long lastSequenceNumber = indexing.lastSequenceNumber(appender);
         assertEquals(1, lastSequenceNumber);
-        assertEquals(1, indexing.linearScanByPositionCount());
+        assertEquals(0, indexing.linearScanByPositionCount());
     }
 
     @Test

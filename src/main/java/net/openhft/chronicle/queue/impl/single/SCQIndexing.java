@@ -737,12 +737,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
                     break;
-                try {
-                    Wire wireForIndex = ec.wireForIndex();
-                    return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
-                } catch (EOFException e) {
-                    throw new UncheckedIOException(e);
-                }
+                return sequence;
             }
         }
 
