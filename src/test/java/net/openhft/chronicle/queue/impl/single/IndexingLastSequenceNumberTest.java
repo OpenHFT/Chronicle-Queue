@@ -13,12 +13,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class IndexingLastSequenceNumberTest extends IndexingTestCommon {
 
     @Test
+    @SuppressWarnings("deprecation")
     void checkIndexingSpacing() {
         appender.writeText("test");
         assertEquals(rollCycle().defaultIndexSpacing(), indexing(queue).indexSpacing());
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void singleCycleOneEntryApproximateLookup() throws StreamCorruptedException {
         appender.writeText("hello");
         Indexing indexing = indexing(queue);
@@ -30,6 +32,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void singleCycleOneEntryPreciseLookup() throws StreamCorruptedException {
         appender.writeText("hello");
         Indexing indexing = indexing(queue);
@@ -41,6 +44,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void singleCycleTwoEntries() throws StreamCorruptedException {
         appender.writeText("hello");
         appender.writeText("world");
@@ -51,6 +55,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void multipleCycleFilesFirstEntry() throws StreamCorruptedException {
         appender.writeText("a");
         timeProvider.advanceMillis(1_001);
@@ -62,6 +67,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void multipleCycleFilesSecondEntry() throws StreamCorruptedException {
         appender.writeText("a");
         timeProvider.advanceMillis(1_001);

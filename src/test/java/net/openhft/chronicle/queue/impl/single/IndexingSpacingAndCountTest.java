@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class IndexingSpacingAndCountTest extends IndexingTestCommon {
 
     @Test
+    @SuppressWarnings("deprecation")
     void firstEntryIndexed() {
         appender.writeText("hello");
         long lastIndexAppended = appender.lastIndexAppended();
@@ -18,6 +19,7 @@ class IndexingSpacingAndCountTest extends IndexingTestCommon {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void everyNthEntryIsIndexable() {
         appender.writeText("start");
         Indexing indexing = indexing(queue);
