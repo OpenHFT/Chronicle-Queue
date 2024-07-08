@@ -1020,7 +1020,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
 //                pauseUnderload();
 
-                if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
+                int currentCycle = rollCycle.current(time, epoch);
+                if (SHOULD_CHECK_CYCLE && cycle != currentCycle) {
                     Jvm.warn().on(getClass(), new Exception("Creating cycle which is not the current cycle"));
                 }
                 queuePathExists = true;
@@ -1066,6 +1067,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             mappedBytes.close();
                             throw t;
                         }
+
+                        // Check if wireStore sequence number is correct for the current cycle.
+                        if (!readOnly && wireStore != null && CHECK_SEQUENCE_NUMBER) {
+                            validateSequenceHeader(wireStore);
+                        }
+
                     }
                 } catch (InternalError e) {
                     long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
@@ -1082,11 +1089,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     throw e;
                 }
 
-                // Check if wireStore sequence number is correct
-                if (wireStore != null && CHECK_SEQUENCE_NUMBER) {
-                    validateSequenceHeader(wireStore);
-                }
-
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {
@@ -1100,17 +1102,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             final Wire w = wireType.apply(wireStore.bytes());
             try {
                 w.usePadding(wireStore.dataVersion() > 0);
-
                 long writePosition = wireStore.writePosition();
-                // lastSequence could also return Sequence.NOT_FOUND_RETRY and needs to be dealt with.
-                long lastSequence = wireStore.indexing.sequence.getSequence(writePosition);
-                if (writePosition != 0 && lastSequence != Sequence.NOT_FOUND) {
+                if (writePosition != 0 ) {
                     w.bytes().readPositionUnlimited(writePosition);
-                    long foundSequence = wireStore.indexing.moveToEnd(w);
-                    if (foundSequence != Sequence.NOT_FOUND && lastSequence != foundSequence-1) {
-                        Jvm.warn().on(SingleChronicleQueue.class, "Found sequence: " + (foundSequence-1) + " but expected: " + lastSequence);
-                        // reset the sequence number.
-                        wireStore.indexing.sequence.setSequence(writePosition, foundSequence);
+                    long lastFoundSequence = wireStore.indexing.moveToEnd(w);
+                    // -1 is not found. 0 is the first entry.
+                    if (lastFoundSequence > 0) {
+                        wireStore.indexing.sequence.validateSequence(lastFoundSequence-1, writePosition);
                     }
                 }
             } finally {

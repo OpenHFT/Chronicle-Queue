@@ -18,12 +18,12 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
-import net.openhft.chronicle.wire.Sequence;
 
-class RollCycleEncodeSequence implements Sequence {
+class RollCycleEncodeSequence implements StoreSequence {
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
     private final long sequenceMask;
@@ -64,7 +64,7 @@ class RollCycleEncodeSequence implements Sequence {
     public long getSequence(long forWritePosition) {
 
         if (writePositionAndSequence == null)
-            return Sequence.NOT_FOUND;
+            return StoreSequence.NOT_FOUND;
 
         // We only deal with the 2nd long in the TwoLongValue, and we use it to keep track of current position
         // and current sequence. We use the same encoding as index (cycle number is shifted left by cycleShift
@@ -75,7 +75,7 @@ class RollCycleEncodeSequence implements Sequence {
 
         final long sequenceValue = this.writePositionAndSequence.getVolatileValue2();
         if (sequenceValue == 0)
-            return Sequence.NOT_FOUND;
+            return StoreSequence.NOT_FOUND;
 
         long writePositionAsCycle = toLongValue(forWritePosition, 0);
         long lowerBitsOfWp = toLowerBitsWritePosition(writePositionAsCycle);
@@ -84,7 +84,9 @@ class RollCycleEncodeSequence implements Sequence {
         if (lowerBitsOfWp == toLowerBitsWritePosition)
             return toSequenceNumber(sequenceValue);
 
-        return Sequence.NOT_FOUND_RETRY;
+        // This should only occur if the writePosition is out of sync with the sequence.
+        // This can happen if the queue is not shutdown cleanly or under heavy writes, and you don't have a lock.
+        return StoreSequence.NOT_FOUND_RETRY;
     }
 
     private long toLongValue(long cycle, long sequenceNumber) {
@@ -93,6 +95,30 @@ class RollCycleEncodeSequence implements Sequence {
 
     public long toSequenceNumber(long index) {
         return index & sequenceMask;
+    }
+
+    /**
+     * Validate the sequence number for the given position. The foundSequence is the sequence number read
+     * from the end of the file.
+     *
+     * @param foundSequence the sequence number read from the end of the file
+     * @param position the position in the file
+     */
+    @Override
+    public void validateSequence(long foundSequence, long position) {
+        if (writePositionAndSequence == null)
+            return;
+
+        long sequenceValue = this.writePositionAndSequence.getVolatileValue2();
+        long sequence = toSequenceNumber(sequenceValue);
+
+        // If the sequence is less than foundSequence, then we're out of sync.
+        // Attempt to update via cas. If there's multiple writers, we ignore the update.
+        if (sequence < foundSequence) {
+            if (this.writePositionAndSequence.compareAndSwapValue2(sequenceValue, toLongValue(position, foundSequence))) {
+                Jvm.warn().on(getClass(), "Sequence number was out of sync. Updated sequence number from " + sequence + " to " + foundSequence);
+            }
+        }
     }
 
     private long toLowerBitsWritePosition(long index) {

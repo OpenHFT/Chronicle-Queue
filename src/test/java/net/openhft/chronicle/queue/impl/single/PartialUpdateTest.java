@@ -85,6 +85,9 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @Test
     public void testBackwardsToEndArrivesAtCorrectPosition() {
+        if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Sequence number was out of sync");
+        }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.direction(TailerDirection.BACKWARD).toEnd();
@@ -95,6 +98,9 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @Test
     public void testBackwardsToEndReportsCorrectIndex() {
+        if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Sequence number was out of sync");
+        }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.direction(TailerDirection.BACKWARD).toEnd();
@@ -105,6 +111,9 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @Test
     public void testForwardsToEndArrivesAtCorrectPosition() {
+        if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Sequence number was out of sync");
+        }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.toEnd();
@@ -115,6 +124,9 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @Test
     public void testForwardsToEndReportsCorrectIndex() {
+        if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Sequence number was out of sync");
+        }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.toEnd();
@@ -125,6 +137,9 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @Test
     public void testLastIndexIsCorrect() {
+        if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Sequence number was out of sync");
+        }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath)) {
             // Should report last index correctly
             assertEquals(LAST_INDEX, queue.lastIndex());

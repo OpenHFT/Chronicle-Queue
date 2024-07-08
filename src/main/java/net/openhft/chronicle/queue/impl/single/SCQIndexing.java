@@ -76,7 +76,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
 
     LongValue writePosition;
-    Sequence sequence;
+    StoreSequence sequence;
     // visible for testing
     int linearScanCount;
     int linearScanByPositionCount;
@@ -725,7 +725,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             throws StreamCorruptedException {
         throwExceptionIfClosed();
 
-        Sequence sequence1 = this.sequence;
+        StoreSequence sequence1 = this.sequence;
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
@@ -755,7 +755,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     public long moveToEnd(final Wire wire) {
-        Sequence sequence1 = this.sequence;
+        StoreSequence sequence1 = this.sequence;
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
