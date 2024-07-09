@@ -509,7 +509,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
     private long calculateInitialValue(long toPosition, long indexOfNext, long startAddress, Bytes<?> bytes, long lastAddress, long lastIndex) {
         if (lastAddress > 0 && toPosition == lastAddress
-                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
+                && lastIndex != StoreSequence.NOT_FOUND && lastIndex != StoreSequence.NOT_FOUND_RETRY) {
             bytes.readPositionUnlimited(toPosition);
             return lastIndex - 1;
         } else {
@@ -733,9 +733,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 if (address == 0)
                     return -1;
                 long sequence = sequence1.getSequence(address);
-                if (sequence == Sequence.NOT_FOUND_RETRY)
+                if (sequence == StoreSequence.NOT_FOUND_RETRY)
                     continue;
-                if (sequence == Sequence.NOT_FOUND)
+                if (sequence == StoreSequence.NOT_FOUND)
                     break;
                 return sequence;
             }
@@ -763,9 +763,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 if (endAddress == 0)
                     return -1;
                 long sequence = sequence1.getSequence(endAddress);
-                if (sequence == Sequence.NOT_FOUND_RETRY)
+                if (sequence == StoreSequence.NOT_FOUND_RETRY)
                     continue;
-                if (sequence == Sequence.NOT_FOUND)
+                if (sequence == StoreSequence.NOT_FOUND)
                     return -1;
 
                 Bytes<?> bytes = wire.bytes();

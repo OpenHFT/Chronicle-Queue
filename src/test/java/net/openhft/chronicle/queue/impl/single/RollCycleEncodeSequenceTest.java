@@ -22,7 +22,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryTwoLongReference;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.wire.Sequence;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -73,7 +73,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
         // a cast to int of this magic number was causing problems
         long forWritePosition = 0x8001cc54L;
         long sequence = rollCycleEncodeSequence.getSequence(forWritePosition);
-        assertEquals(Sequence.NOT_FOUND_RETRY, sequence);
+        assertEquals(StoreSequence.NOT_FOUND_RETRY, sequence);
     }
 
     @Test
