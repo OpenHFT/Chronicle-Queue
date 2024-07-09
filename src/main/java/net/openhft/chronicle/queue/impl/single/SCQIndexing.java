@@ -754,6 +754,66 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         return indexSpacing;
     }
 
+    public IndexMoveResult findLastDocument(final Wire wire) {
+        StoreSequence sequence1 = this.sequence;
+        if (sequence1 != null) {
+
+            for (int i = 0; i < 128; i++) {
+                long endAddress = writePosition.getVolatileValue(0);
+                if (endAddress == 0)
+                    return new IndexMoveResult(0, StoreSequence.NOT_FOUND);
+                long sequence = sequence1.getSequence(endAddress);
+                if (sequence == StoreSequence.NOT_FOUND_RETRY)
+                    // The endAddress is out of sync with the sequence header. Try again.
+                    continue;
+                if (sequence == StoreSequence.NOT_FOUND)
+                    return new IndexMoveResult(0, StoreSequence.NOT_FOUND);
+
+                Bytes<?> bytes = wire.bytes();
+
+                // endAddress should already be padded.
+                if (wire.usePadding())
+                    endAddress += BytesUtil.padOffset(endAddress);
+
+                bytes.readPosition(endAddress);
+
+                long nextAddress = endAddress;
+
+                // Don't count the first header.
+                int header = bytes.readVolatileInt(nextAddress);
+                if (header == 0 || Wires.isNotComplete(header)) {
+                    Jvm.warn().on(getClass(), "Unexpected endAddress=" + endAddress + ", header=" + Integer.toHexString(header) + ", sequence=" + sequence);
+                    return new IndexMoveResult(endAddress, sequence);
+                }
+
+                int len = Wires.lengthOf(header) + 4;
+                len += (int) BytesUtil.padOffset(len);
+
+                bytes.readSkip(len);
+                nextAddress += len;
+
+                for (; ; ) {
+                    header = bytes.readVolatileInt(nextAddress);
+                    if (header == 0 || Wires.isNotComplete(header)) {
+                        return new IndexMoveResult(endAddress, sequence);
+                    }
+
+                    len = Wires.lengthOf(header) + 4;
+                    len += (int) BytesUtil.padOffset(len);
+
+                    bytes.readSkip(len);
+                    nextAddress += len;
+
+                    if (Wires.isData(header)) {
+                        sequence += 1;
+                        endAddress = nextAddress;
+                    }
+                }
+            }
+        }
+        return new IndexMoveResult(0, StoreSequence.NOT_FOUND);
+    }
+
     public long moveToEnd(final Wire wire) {
         StoreSequence sequence1 = this.sequence;
         if (sequence1 != null) {

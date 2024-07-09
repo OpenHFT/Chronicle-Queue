@@ -1105,10 +1105,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 long writePosition = wireStore.writePosition();
                 if (writePosition != 0 ) {
                     w.bytes().readPositionUnlimited(writePosition);
-                    long lastFoundSequence = wireStore.indexing.moveToEnd(w);
+                    IndexMoveResult result = wireStore.indexing.findLastDocument(w);
+                    if (writePosition != result.writePosition()) {
+                        //Jvm.warn().on(getClass(), "writePosition=" + writePosition + ", result.writePosition=" + result.writePosition());
+                    }
                     // -1 is not found. 0 is the first entry.
-                    if (lastFoundSequence > 0) {
-                        wireStore.indexing.sequence.validateSequence(lastFoundSequence-1, writePosition);
+                    if (result.sequenceNumber() > 0) {
+                        wireStore.indexing.sequence.validateSequence(result.sequenceNumber(), writePosition);
                     }
                 }
             } finally {
