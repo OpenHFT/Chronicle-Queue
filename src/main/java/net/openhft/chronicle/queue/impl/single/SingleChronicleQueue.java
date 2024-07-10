@@ -1102,18 +1102,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             final Wire w = wireType.apply(wireStore.bytes());
             try {
                 w.usePadding(wireStore.dataVersion() > 0);
-                long writePosition = wireStore.writePosition();
-                if (writePosition != 0 ) {
-                    w.bytes().readPositionUnlimited(writePosition);
-                    IndexMoveResult result = wireStore.indexing.findLastDocument(w);
-                    if (writePosition != result.writePosition()) {
-                        //Jvm.warn().on(getClass(), "writePosition=" + writePosition + ", result.writePosition=" + result.writePosition());
-                    }
-                    // -1 is not found. 0 is the first entry.
-                    if (result.sequenceNumber() > 0) {
-                        wireStore.indexing.sequence.validateSequence(result.sequenceNumber(), writePosition);
-                    }
-                }
+                wireStore.validateHeader(w);
+            } catch (Throwable t) {
+                Jvm.error().on(getClass(), "Error validating sequence header", t);
             } finally {
                 w.bytes().release(INIT);
             }

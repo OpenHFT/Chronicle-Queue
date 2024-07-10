@@ -196,6 +196,58 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         }
     }
 
+    /**
+     * Validate the writePosition and the sequenceNumber are in sync for the file.
+     *
+     * @param wire the wire to validate
+     */
+    void validateHeader(Wire wire) {
+        // See if we can get a last known good location from the header.
+        WritePositionSequencePair headerStart = indexing.getWritePositionSequencePair();
+        if (headerStart.writePosition() == 0) {
+            // Start of file. Nothing to validate.
+            return;
+        }
+
+        if (headerStart.sequenceNumber() == StoreSequence.NOT_FOUND) {
+            // Nothing to validate. Sequence number is empty.
+            return;
+        }
+
+        if (headerStart.sequenceNumber() == StoreSequence.NOT_FOUND_RETRY) {
+            // The sequence number is out of sync. We can't validate the sequence number.
+            // Perform a linear scan to last known writePosition.
+            try {
+                long sequence = indexing.linearScanByPosition(wire, headerStart.writePosition(), 0,0, true);
+                indexing.sequence.validateSequence(sequence, headerStart.writePosition());
+                headerStart = new WritePositionSequencePair(headerStart.writePosition(), sequence);
+            } catch (EOFException e) {
+                Jvm.warn().on(getClass(), "EOFException while scanning for sequence number", e);
+            }
+        }
+
+        // From the last known good location, see if we can read forward.
+        wire.usePadding(dataVersion() > 0);
+        wire.bytes().readPositionUnlimited(headerStart.writePosition());
+        WritePositionSequencePair headerLast = indexing.findLastDocument(wire, headerStart);
+        if (headerLast.equals(headerStart)) {
+            // The sequence number is in sync.
+            return;
+        }
+
+        if (headerStart.writePosition() != headerLast.writePosition()) {
+            // The write position has moved. Try a cas to update.
+            if (this.writePosition.compareAndSwapValue(headerStart.writePosition(), headerLast.writePosition())) {
+                Jvm.warn().on(getClass(), "Write position was out of sync. Updated write position from " + headerStart.writePosition() + " to " + headerLast.writePosition());
+                if (headerLast.sequenceNumber() != StoreSequence.NOT_FOUND) {
+                    // The sequence number is out of sync. Update the sequence number.
+                    indexing.sequence.validateSequence(headerLast.sequenceNumber(), headerLast.writePosition());
+                }
+            }
+        }
+
+    }
+
     @Override
     public long writePosition() {
         return this.writePosition.getVolatileValue();

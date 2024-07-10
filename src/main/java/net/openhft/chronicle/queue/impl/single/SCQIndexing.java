@@ -754,64 +754,107 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         return indexSpacing;
     }
 
-    public IndexMoveResult findLastDocument(final Wire wire) {
+    /**
+     * Attempts to return the last written position and sequence number that are in-sync.
+     * Returns the last known writePosition and sequence number or NOT_FOUND if no sequence or
+     * unable to get a consistent sequence number after 128 attempts.
+     *
+     * @return the last written position and sequence number that are in-sync
+     */
+    public WritePositionSequencePair getWritePositionSequencePair() {
         StoreSequence sequence1 = this.sequence;
-        if (sequence1 != null) {
-
-            for (int i = 0; i < 128; i++) {
-                long endAddress = writePosition.getVolatileValue(0);
-                if (endAddress == 0)
-                    return new IndexMoveResult(0, StoreSequence.NOT_FOUND);
-                long sequence = sequence1.getSequence(endAddress);
-                if (sequence == StoreSequence.NOT_FOUND_RETRY)
-                    // The endAddress is out of sync with the sequence header. Try again.
-                    continue;
-                if (sequence == StoreSequence.NOT_FOUND)
-                    return new IndexMoveResult(0, StoreSequence.NOT_FOUND);
-
-                Bytes<?> bytes = wire.bytes();
-
-                // endAddress should already be padded.
-                if (wire.usePadding())
-                    endAddress += BytesUtil.padOffset(endAddress);
-
-                bytes.readPosition(endAddress);
-
-                long nextAddress = endAddress;
-
-                // Don't count the first header.
-                int header = bytes.readVolatileInt(nextAddress);
-                if (header == 0 || Wires.isNotComplete(header)) {
-                    Jvm.warn().on(getClass(), "Unexpected endAddress=" + endAddress + ", header=" + Integer.toHexString(header) + ", sequence=" + sequence);
-                    return new IndexMoveResult(endAddress, sequence);
-                }
-
-                int len = Wires.lengthOf(header) + 4;
-                len += (int) BytesUtil.padOffset(len);
-
-                bytes.readSkip(len);
-                nextAddress += len;
-
-                for (; ; ) {
-                    header = bytes.readVolatileInt(nextAddress);
-                    if (header == 0 || Wires.isNotComplete(header)) {
-                        return new IndexMoveResult(endAddress, sequence);
-                    }
-
-                    len = Wires.lengthOf(header) + 4;
-                    len += (int) BytesUtil.padOffset(len);
-
-                    bytes.readSkip(len);
-                    nextAddress += len;
-
-                    if (Wires.isData(header)) {
-                        sequence += 1;
-                        endAddress = nextAddress;
-                    }
-                }
-            }
+        if (sequence1 == null) {
+            return new WritePositionSequencePair(writePosition.getVolatileValue(), StoreSequence.NOT_FOUND);
         }
-        return new IndexMoveResult(0, StoreSequence.NOT_FOUND);
+
+        long endAddress = this.writePosition.getVolatileValue();
+        for (int i = 0; i < 128; i++) {
+            endAddress = writePosition.getVolatileValue(0);
+            if (endAddress == 0) {
+                // Nothing written yet, or getVolatileValue returned 0.
+                return new WritePositionSequencePair(endAddress, StoreSequence.NOT_FOUND);
+            }
+            long sequence = sequence1.getSequence(endAddress);
+            if (sequence == StoreSequence.NOT_FOUND_RETRY) {
+                // The endAddress is out of sync with the sequence header.
+                // This could potentially happen under heavy writes. Try again.
+                Jvm.pause(1);
+                continue;
+            }
+            if (sequence == StoreSequence.NOT_FOUND) {
+                // Only happens if there is no sequence stored.
+                return new WritePositionSequencePair(endAddress, StoreSequence.NOT_FOUND);
+            }
+
+            // The sequence number is in sync with the write position.
+            return new WritePositionSequencePair(endAddress, sequence);
+        }
+
+        // We've looped 128 times and the write position hasn't changed.
+        // It is very likely the sequence number is corrupted and out of sync.
+        return new WritePositionSequencePair(endAddress, StoreSequence.NOT_FOUND_RETRY);
+    }
+
+    /**
+     * Attempts to find the last document in the queue.
+     * Returns the address of the last document and the sequence number of the last document.
+     * If the last document is not found, returns 0 and NOT_FOUND.
+     *
+     * @param wire the wire to use
+     * @return the address of the last document and the sequence number of the last document
+     */
+    public WritePositionSequencePair findLastDocument(final Wire wire, WritePositionSequencePair startPosition) {
+        long endAddress = startPosition.writePosition();
+        boolean sequenceNotFound = startPosition.sequenceNumber() == StoreSequence.NOT_FOUND;
+        long sequence = startPosition.sequenceNumber() == StoreSequence.NOT_FOUND ? 0: startPosition.sequenceNumber();
+
+        if (endAddress == 0) {
+            return startPosition;
+        }
+
+        // Prepare to read. Padding should already be correct.
+        Bytes<?> bytes = wire.bytes();
+        if (wire.usePadding())
+            endAddress += BytesUtil.padOffset(endAddress);
+        bytes.readPosition(endAddress);
+
+        // Skip the first record and don't count it.
+        int header = bytes.readVolatileInt(endAddress);
+        int skip = readAndSkipData(bytes, header);
+        if (skip == 0 || !Wires.isData(header)) {
+            // The first record is not a data record. This should not happen.
+            Jvm.warn().on(getClass(), "The first record is not a data record. This should not happen.");
+            return startPosition;
+        }
+
+        long nextAddress = endAddress + skip;
+        for (; ; ) {
+            header = bytes.readVolatileInt(nextAddress);
+            skip = readAndSkipData(bytes, header);
+            if (skip == 0) {
+                return new WritePositionSequencePair(endAddress, sequenceNotFound ? StoreSequence.NOT_FOUND : sequence);
+            }
+
+            if (Wires.isData(header)) {
+                sequence += 1;
+            }
+
+            endAddress = nextAddress;
+            nextAddress += skip;
+        }
+    }
+
+    private int readAndSkipData(Bytes<?> bytes, int header) {
+
+        if (header == 0 || Wires.isNotComplete(header)) {
+            return 0;
+        }
+
+        int len = Wires.lengthOf(header) + 4;
+        len += (int) BytesUtil.padOffset(len);
+
+        bytes.readSkip(len);
+        return len;
     }
 
     public long moveToEnd(final Wire wire) {

@@ -86,6 +86,9 @@ public class PartialUpdateTest extends QueueTestCommon {
     @Test
     public void testBackwardsToEndArrivesAtCorrectPosition() {
         if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Write position was out of sync");
+            expectException("Sequence number was out of sync");
+        } else if (queueCreator == PartialQueueCreator.INCONSISTENT_WP_SEQ) {
             expectException("Sequence number was out of sync");
         }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -99,6 +102,9 @@ public class PartialUpdateTest extends QueueTestCommon {
     @Test
     public void testBackwardsToEndReportsCorrectIndex() {
         if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Write position was out of sync");
+            expectException("Sequence number was out of sync");
+        } else if (queueCreator == PartialQueueCreator.INCONSISTENT_WP_SEQ) {
             expectException("Sequence number was out of sync");
         }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -112,6 +118,9 @@ public class PartialUpdateTest extends QueueTestCommon {
     @Test
     public void testForwardsToEndArrivesAtCorrectPosition() {
         if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Write position was out of sync");
+            expectException("Sequence number was out of sync");
+        } else if (queueCreator == PartialQueueCreator.INCONSISTENT_WP_SEQ) {
             expectException("Sequence number was out of sync");
         }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -125,6 +134,9 @@ public class PartialUpdateTest extends QueueTestCommon {
     @Test
     public void testForwardsToEndReportsCorrectIndex() {
         if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Write position was out of sync");
+            expectException("Sequence number was out of sync");
+        } else if (queueCreator == PartialQueueCreator.INCONSISTENT_WP_SEQ) {
             expectException("Sequence number was out of sync");
         }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -138,6 +150,9 @@ public class PartialUpdateTest extends QueueTestCommon {
     @Test
     public void testLastIndexIsCorrect() {
         if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Write position was out of sync");
+            expectException("Sequence number was out of sync");
+        } else if (queueCreator == PartialQueueCreator.INCONSISTENT_WP_SEQ) {
             expectException("Sequence number was out of sync");
         }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath)) {
@@ -148,6 +163,12 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @Test
     public void testAppendReturnsCorrectLastAppendedIndex() {
+        if (queueCreator == PartialQueueCreator.CONSISTENT_BUT_STALE_WP_SEQ) {
+            expectException("Write position was out of sync");
+            expectException("Sequence number was out of sync");
+        } else if (queueCreator == PartialQueueCreator.INCONSISTENT_WP_SEQ) {
+            expectException("Sequence number was out of sync");
+        }
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptAppender appender = queue.createAppender()) {
             // Should report last index correctly
@@ -181,7 +202,7 @@ public class PartialUpdateTest extends QueueTestCommon {
                 printLastWritePositionAndSequence("after append last excerpt", tailer, secondRollCycle);
 
                 // simulate the last write being partial
-                forceUpdateWritePositionAndSequence(tailer, secondRollCycle, previousWritePosition, previousSequence);
+                forceUpdateWritePositionAndSequence(tailer, secondRollCycle, previousWritePosition, previousSequence, previousWritePosition);
                 printLastWritePositionAndSequence("after over-writing write position & seq", tailer, secondRollCycle);
             } catch (StreamCorruptedException e) {
                 throw new RuntimeException("Error reading last sequence number", e);
@@ -211,10 +232,12 @@ public class PartialUpdateTest extends QueueTestCommon {
                 printLastWritePositionAndSequence("before append last excerpt", tailer, secondRollCycle);
                 assertEquals(1, previousSequence);
                 appender.writeText("Six");
+                long lastWritePosition = secondRollCycle.writePosition();
                 printLastWritePositionAndSequence("after append last excerpt", tailer, secondRollCycle);
 
                 // simulate the last write being partial
-                forceUpdateWritePosition(secondRollCycle, previousWritePosition);
+                //forceUpdateWritePosition(secondRollCycle, previousWritePosition);
+                forceUpdateWritePositionAndSequence(tailer, secondRollCycle, lastWritePosition, previousSequence, previousWritePosition);
                 printLastWritePositionAndSequence("after over-writing write position", tailer, secondRollCycle);
             } catch (StreamCorruptedException e) {
                 throw new RuntimeException("Error reading last sequence number", e);
@@ -249,10 +272,10 @@ public class PartialUpdateTest extends QueueTestCommon {
         }
     }
 
-    private static void forceUpdateWritePositionAndSequence(StoreTailer storeTailer, SingleChronicleQueueStore store, long newWritePosition, long newSequence) {
+    private static void forceUpdateWritePositionAndSequence(StoreTailer storeTailer, SingleChronicleQueueStore store, long newWritePosition, long newSequence, long newSequenceWritePosition) {
         try {
             forceUpdateWritePosition(store, newWritePosition);
-            store.setPositionForSequenceNumber(storeTailer, newSequence, newWritePosition);
+            store.setPositionForSequenceNumber(storeTailer, newSequence, newSequenceWritePosition);
         } catch (StreamCorruptedException e) {
             throw new RuntimeException("Error setting position for sequence");
         }
