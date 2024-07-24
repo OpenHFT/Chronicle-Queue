@@ -150,7 +150,7 @@ index2index: [ #  <2>
   0, 0, 0, 0, 0,
 ]
 ----
-<1> `position` specifies the starting address of the data that follows, within the the queue (*.cq4) file.
+<1> `position` specifies the starting address of the data that follows, within the queue (*.cq4) file.
 <2> `index2Index` defines a pointer to the next lower level of index.
 <3> specifies the point to the next level index.
 
