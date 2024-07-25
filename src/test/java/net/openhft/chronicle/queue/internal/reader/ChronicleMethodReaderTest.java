@@ -187,10 +187,12 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
                 .forEach(msg -> assertThat(msg, containsString("goodbye")));
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleInclusionRegex() {
-        basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
+        basicReader()
+                .withInclusionRegex(".*bye.*")
+                .withInclusionRegex(".*o.*")
+                .execute();
 
         assertEquals(24, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
