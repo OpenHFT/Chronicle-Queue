@@ -700,7 +700,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             indexValues.setValueAt(index3, position);
             indexValues.setMaxUsed(index3 + 1L);
         } else {
-            assert posN == position;
+            indexValues.setValueAt(index3, position);
+            return;
+            //assert posN == position;
         }
         nextEntryToBeIndexed.setMaxValue(sequenceNumber + indexSpacing);
     }
