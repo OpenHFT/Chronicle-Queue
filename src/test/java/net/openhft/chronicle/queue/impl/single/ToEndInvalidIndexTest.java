@@ -6,12 +6,10 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.StreamCorruptedException;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -54,7 +52,8 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, path);
              ExcerptAppender appender = queue.createAppender();) {
 
-            Bytes bytes = Bytes.allocateElasticDirect();
+            Bytes<Void> bytes = Bytes.allocateElasticDirect();
+
             bytes.write("x");
             int count = queue.indexCount() * queue.indexSpacing() + 1;
             for (int x=0; x<count; x++) {
