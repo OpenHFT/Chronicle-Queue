@@ -69,12 +69,6 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
 
             // Mess up the first sub-index
             store.indexing.setPositionForSequenceNumber(storeAppender,sequenceNumber,0);
-
-            // Write a few more entries so closing the appender doesn't rewrite the index.
-            for (int x=0; x<10; x++) {
-                appender.writeBytes(bytes);
-            }
-
         }
     }
 
