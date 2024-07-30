@@ -301,16 +301,21 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         long startIndex = index & -indexSpacing;
         while (primaryOffset >= 0) {
             secondaryAddress = index2index.getValueAt(primaryOffset);
-            if (secondaryAddress != 0)
-                break;
+            if (secondaryAddress != 0) {
+                @NotNull final LongArrayValues array1 = arrayForAddress(wireForIndex, secondaryAddress);
+                ScanResult result = scanSecondaryIndexBackwards(ec, array1, startIndex, index);
+                if (result != null)
+                    return result;
+            }
             startIndex -= (long) indexCount * indexSpacing;
             primaryOffset--;
         }
 
-        if (secondaryAddress <= 0) {
-            return null;
-        }
-        @NotNull final LongArrayValues array1 = arrayForAddress(wireForIndex, secondaryAddress);
+        return null;
+    }
+
+
+    private ScanResult scanSecondaryIndexBackwards(@NotNull final ExcerptContext ec, LongArrayValues array1, long startIndex, long index) {
         long secondaryOffset = toAddress1(index);
 
         do {
@@ -700,7 +705,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             indexValues.setValueAt(index3, position);
             indexValues.setMaxUsed(index3 + 1L);
         } else {
-            assert posN == position;
+            indexValues.setValueAt(index3, position);
+            return;
         }
         nextEntryToBeIndexed.setMaxValue(sequenceNumber + indexSpacing);
     }
