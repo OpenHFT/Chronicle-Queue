@@ -773,6 +773,7 @@ class StoreTailer extends AbstractCloseable
         if (this.store != wireStore) {
             releaseStore();
             this.store = wireStore;
+            this.cycle = lastCycle;
             resetWires();
         }
         // give the position of the last entry and
