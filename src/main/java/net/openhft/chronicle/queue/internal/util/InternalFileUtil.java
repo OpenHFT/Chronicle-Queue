@@ -97,7 +97,7 @@ public final class InternalFileUtil {
 
         final Stream.Builder<File> builder = Stream.builder();
         try {
-            final Set<String> allOpenFiles = getAllOpenFiles();
+            final Map<String, String> allOpenFiles = getAllOpenFiles();
             for (File file : sortedInitialCandidates) {
                 // If one file is not closed, discard it and the rest in the sequence
                 if (state(file, allOpenFiles) != FileState.CLOSED) break;
@@ -150,16 +150,16 @@ public final class InternalFileUtil {
      * is returned.
      *
      * @param file         to check
-     * @param allOpenFiles The set of all open files retrieve from {@link #getAllOpenFiles()}
+     * @param allOpenFiles The map of all open files retrieve from {@link #getAllOpenFiles()}
      * @return FileState if the given {@code file } is used by any process
      * @throws UnsupportedOperationException if this operation is not
      *                                       supported for the current platform (e.g. Windows).
      */
-    public static FileState state(@NotNull File file, Set<String> allOpenFiles) {
+    public static FileState state(@NotNull File file, Map<String, String> allOpenFiles) {
         assertOsSupported();
         if (!file.exists()) return FileState.NON_EXISTENT;
         final String absolutePath = file.getAbsolutePath();
-        return allOpenFiles.contains(absolutePath)
+        return allOpenFiles.keySet().contains(absolutePath)
                 ? FileState.OPEN
                 : FileState.CLOSED;
     }
@@ -205,12 +205,13 @@ public final class InternalFileUtil {
     }
 
     /**
-     * Get the distinct files currently open by any process
+     * Get the distinct files currently open by any process, including the PID of the process holding
+     * the file open
      *
-     * @return a {@link Set} of the absolute paths to all the open files on the system
+     * @return a {@link Map} of the absolute paths to all the open files on the system, mapped to the PID hold the file open
      * @throws IOException if we can't get the open files
      */
-    public static Set<String> getAllOpenFiles() throws IOException {
+    public static Map<String, String> getAllOpenFiles() throws IOException {
         assertOsSupported();
         final ProcFdWalker visitor = new ProcFdWalker();
         Files.walkFileTree(Paths.get("/proc/"), Collections.emptySet(), 3, visitor);
@@ -219,14 +220,16 @@ public final class InternalFileUtil {
 
     private static class ProcFdWalker extends SimpleFileVisitor<Path> {
 
-        private final Set<String> openFiles = new HashSet<>();
+        private final static int PID_PATH_INDEX = 1; // where is the pid for process holding file open represented in path?
+        private final Map<String, String> openFiles = new HashMap<>();
 
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
             if (file.toAbsolutePath().toString().matches("/proc/\\d+/fd/\\d+")) {
                 try {
                     final String e = file.toRealPath().toAbsolutePath().toString();
-                    openFiles.add(e);
+                    final String pid = file.getName(PID_PATH_INDEX).toString(); // pid holding file open
+                    openFiles.put(e, pid);
                 } catch (NoSuchFileException | AccessDeniedException e) {
                     // Ignore, sometimes they disappear & we can't access all the files
                 } catch (IOException e) {

@@ -29,6 +29,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -37,6 +38,7 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
@@ -186,5 +188,25 @@ public class FileUtilTest extends QueueTestCommon {
     @NotNull
     protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
+    }
+
+    @Test
+    public void testOpenFilesWithPid() throws IOException {
+        assumeTrue(getAllOpenFilesIsSupportedOnOS());
+
+        // open file for writing, keeping file handle open
+        File temporaryFile = IOTools.createTempFile("testOpenFilesWithPid.txt");
+        FileWriter fstream = new FileWriter(temporaryFile);
+        BufferedWriter out = new BufferedWriter(fstream);
+        out.write("somedata");
+
+        Map<String, String> filesWithPid = FileUtil.getAllOpenFiles();
+        assertEquals(Integer.toString(Jvm.getProcessId()), filesWithPid.get(temporaryFile.getAbsolutePath()));
+
+        // close file
+        out.close();
+
+        filesWithPid = FileUtil.getAllOpenFiles();
+        assertFalse(filesWithPid.keySet().contains(temporaryFile.getAbsolutePath()));
     }
 }
