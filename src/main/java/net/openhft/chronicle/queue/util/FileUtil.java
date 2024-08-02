@@ -22,6 +22,8 @@ import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /**
@@ -72,6 +74,19 @@ public final class FileUtil {
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
         return InternalFileUtil.removableRollFileCandidates(baseDir);
+    }
+
+    /**
+     * Returns all files currently opened by any process, including the PID of the process holding the file open.
+     * <p>
+     * Method is only supported currently on Linux operating systems.
+     *
+     * @return a {@link Map} of the absolute paths to all the open files on the system, mapped to the PID holding the file open
+     * @throws UnsupportedOperationException if getAllOpenFiles is not supported by the operating system
+     * @throws IOException if an error occurs while traversing filesystem metadata for open files
+     */
+    public static Map<String, String> getAllOpenFiles() throws IOException {
+        return InternalFileUtil.getAllOpenFiles();
     }
 
     /**
