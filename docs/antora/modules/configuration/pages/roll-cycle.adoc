@@ -169,6 +169,7 @@ usage: ArchiveRollFilesMain -aa <archive-action> [-ad <archive-dir>] [-h] [-kc <
        -qn <queue-name> [-r <roll-cycles-to-keep>] [-vc <value-class>]
  -aa <archive-action>       Archiving action to perform (ARCHIVE or DELETE)
  -ad <archive-dir>          Directory to move files to if archiving
+ -dryrun                    Perform dry run of archiving actions that would occur without actual processing
  -h                         Print this help and exit
  -kc <key-class>            Name of key class (if queue being archived is backing a QBM)
  -m <min-archive-age>       Archive files older than this age. Can be specified as milliseconds since epoch or local datetime. Either this or -r must be provided.
@@ -190,6 +191,7 @@ usage: ArchiveRollFilesMain -aa <archive-action> [-ad <archive-dir>] [-h] [-kc <
 | -aa | Archive action being performed. Accepted values are `ARCHIVE` (move roll files to archive directory) or `DELETE` (delete eligible roll files permanently) | Y
 | -m | Minimum age for files to be eligible for archiving, specified as a local datetime in the format `yyyy-MM-dd'T'HH:mm:ss` (eg. `2024-05-23T23:55:01`). Compared against a roll file's last modified time. | If `-r` is not specified
 | -r | Number of roll cycles to retain. If this option is combined with `-m`, the minimum number of roll cycle files will be retained before considering files for archiving. | If `-m` is not specified
+| -dryrun | Output log of archiving actions that would occur, without any actual file processing | N
 |===
 
 ==== Queue-Backed-Map Support
