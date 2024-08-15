@@ -9,7 +9,7 @@ This chapter describes how Chronicle Queue is configured. Settings are preferabl
 
 [source, java]
 ----
-String basePath = OS.getTarget() + "/getting-started"
+String basePath = OS.getTarget() + "/getting-started";
 ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
     .rollCycle(RollCycle.HOURLY)
     .build();
@@ -32,8 +32,8 @@ NOTE: Some features are only available in Chronicle Queue Enterprise. Please ava
 | `Long` | xref:block-size.adoc[`blockSize`] | The size of a memory mapping chunk. Do not change this unless necessary |  | Yes
 | `BufferMode` | xref:buffer-modes.adoc[`writeBufferMode`] | | `None` | Only the default value `None`
 | `BufferMode` | xref:buffer-modes.adoc[`readBufferMode`] | | `BufferMode` | Only the default value `None`
-| `boolean` | xref:double-buffer.adoc[`doubleBuffer`] | Enables double-buffered writes on contention | `false` | Yes
-| `TimeProvider` | [`timeProvicer`] | The time provider used to evaluate the rolling timings | `SystemTimeProvider.INSTANCE` | Yes
+| `boolean` | [`doubleBuffer`] | Enables double-buffered writes on contention | `false` | Yes
+| `TimeProvider` | [`timeProvider`] | The time provider used to evaluate the rolling timings | `SystemTimeProvider.INSTANCE` | Yes
 | `int` | [`maxTailers`] | The number of tailers to preallocate when using Async Mode. Only set this when using `readBufferMode=Asynchronous` | 1 | Enterprise only
 | `long` | link:[`bufferCapacity`] | Sets the Async Mode buffer capacity in bytes | `false` | Enterprise only
 | `boolean` | link:[`enableRingBufferMonitoring`] | Enables Async Mode's monitoring capability | `false` | Enterprise only

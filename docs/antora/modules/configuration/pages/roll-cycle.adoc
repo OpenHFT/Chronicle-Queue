@@ -240,8 +240,8 @@ $  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.Arch
 At roll-time, a few unavoidable objects and memory mappings are created, and the old memory mappings are released. This activity can introduce slight jitter to your application. Chronicle aim's to keep this to a minimum, and control when it occurs. However, it is still recommended avoiding rolling at critical points in time to the extent possible.
 
 === Adapt to Down-Time
-In systems that are not always active, it is advised to schedule rolls during the down-time. However, for applications with a buzy feed and no down-time, Chronicle recommends using minutely rolling (a new queue is created every minute). This keep jitter to a minimum, as only one minute’s worth of data has to be unmapped on a queue-roll.
+In systems that are not always active, it is advised to schedule rolls during the down-time. However, for applications with a busy feed and no down-time, Chronicle recommends using minutely rolling (a new queue is created every minute). This keeps jitter to a minimum, as only one minute’s worth of data has to be unmapped on a queue-roll.
 
 === Avoid Large Files
-It is generally recommended limiting the size of queue files to around < 250GB as unmapping a large `.cq4` file has can cause unwanted jitter. Therefore, if possible, use a more regular roll-cycle to avoid any performance penalties associated with unmapping large files.
+It is generally recommended to limit the size of queue files to around < 250GB, as unmapping a large `.cq4` file can cause unwanted jitter. Therefore, if possible, use a more regular roll-cycle to avoid any performance penalties associated with unmapping large files.
 
