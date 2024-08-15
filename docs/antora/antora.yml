@@ -10,7 +10,7 @@ nav:
   - modules/configuration/nav.adoc
   - modules/queue-operations/nav.adoc
   - modules/performance/nav.adoc
-#  - modules/replication/nav.adoc
+  - modules/replication/nav.adoc
   - modules/async-mode/nav.adoc
   - modules/encryption/nav.adoc
   - modules/advanced/nav.adoc
