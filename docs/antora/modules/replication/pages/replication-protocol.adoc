@@ -1,5 +1,8 @@
-
-= Chronicle Queue Enterprise - TCP/IP Replication Protocol
+= Queue Replication - TCP/IP Replication Protocol
+keywords: queue, java, replication
+:reftext: Queue Replication
+:navtitle: Queue Replication
+:source-highlighter: highlight.js
 :toc:
 :toc-title: Contents
 :toclevels: 1
