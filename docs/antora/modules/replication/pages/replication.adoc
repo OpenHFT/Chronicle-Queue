@@ -14,7 +14,7 @@ image::chronicle-queue.png[500,450]
 
 === Replication protocol overview
 
-See link:replication-protocol.adoc[Replication Protocol Overview]
+See xref:replication-protocol.adoc[Replication Protocol Overview]
 
 === The mechanics of Chronicle Queue Replication
 
