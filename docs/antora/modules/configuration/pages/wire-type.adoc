@@ -13,8 +13,8 @@ For example:
 
 [source, java]
 ----
-SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
-    .wireType(RollCycles.DAILY)
+SingleChronicleQueue queue = ChronicleQueue.singleBuilder("wireTypeTest")
+    .wireType(WireType.BINARY)
     .build();
 ----
 

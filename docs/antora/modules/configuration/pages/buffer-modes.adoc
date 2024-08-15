@@ -5,9 +5,9 @@ author: Julia Gustafsson
 :navtitle: Buffer modes
 :source-highlighter: highlight.js
 
-These parameters define BufferMode for reads or writes that have the following options:
+BufferMode configuration options should be used in conjunction with Chronicle Queue Enterprise edition when using xref:async-mode:async_mode.adoc[Async Mode].
 
-* *readBufferMode, writeBufferMode*
+*readBufferMode, writeBufferMode*
 
 These parameters define BufferMode for reads or writes that have the following options:
 
@@ -17,6 +17,6 @@ These parameters define BufferMode for reads or writes that have the following o
 
 *-* `Asynchronous` - use a buffer when reading and/or writing.
 
-* *bufferCapacity*
+*bufferCapacity*
 
 Async mode buffer capacity in bytes when using `bufferMode: Asynchronous`
