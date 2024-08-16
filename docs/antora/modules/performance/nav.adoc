@@ -1,3 +1,4 @@
 * xref:performance.adoc[Performance Tuning]
-** xref:pretouching.adoc[Pre-Touching]
+** xref:performance-test-results.adoc[Performance Test Results]
+** xref:pretouching.adoc[Pre-Touching ★]
 ** xref:contended-writes.adoc[Contended Writes]

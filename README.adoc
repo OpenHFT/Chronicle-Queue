@@ -291,15 +291,15 @@ The open source documentation is extended by the following documents to describe
 These are:
 
 - Encryption of message queues and messages.
-For more information see <<docs/encryption.adoc#, Encryption>>.
+For more information see link:https://portal.chronicle.software/docs/queue/chronicle-queue/encryption/encryption.html[Encryption documentation].
 - TCP/IP (and optionally UDP) Replication between hosts to ensure real-time backup of all your queue data.
-For more information see <<docs/replication.adoc#, Replication>>, the queue replication protocol is covered in <<docs/queue-replication-message-protocol-overview.adoc#, TCP/IP Replication Protocol>>.
+For more information see the link:https://portal.chronicle.software/docs/queue/chronicle-queue/replication/replication.html[replication] documentation, the queue replication protocol is covered in link:https://portal.chronicle.software/docs/queue/chronicle-queue/replication/replication-protocol.html[Replication Protocol].
 - Timezone support for daily queue rollover scheduling.
-For more information see <<docs/timezone_rollover.adoc#, Timezone support>>.
+For more information see link:https://portal.chronicle.software/docs/queue/chronicle-queue/configuration/timezone_rollover.html[Timezone support].
 - Async mode support to give improved performance at high throughput on slower filesystems.
-For more information see <<docs/async_mode.adoc#,async mode>> and also <<docs/performance.adoc#,performance>>.
-- Pretoucher
-For improved outliers, see <<Pretoucher and its configuration>>
+For more information see link:https://portal.chronicle.software/docs/queue/chronicle-queue/async-mode/async_mode.html[async mode] and also link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/performance-test-results.html[performance].
+- Pre-toucher
+For improved outliers, see link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/pretouching.html[Pre-toucher and its configuration]
 
 In addition, you will be fully supported by our technical experts.
 
@@ -549,7 +549,7 @@ console output:
 ----
 The maximum number of messages that can be stored in a queue file depends on roll cycle. See  https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/FAQ.adoc[FAQ] for more information on this.
 
-In Chronicle Queue, the rollover time is based on UTC. The Timezone Rollover Enterprise feature extends Chronicle Queue's ability to specify the time and periodicity of queue rollovers, rather than UTC. For more information see link:docs/timezone_rollover.adoc[Timezone Queue Rollover].
+In Chronicle Queue, the rollover time is based on UTC. The Timezone Rollover Enterprise feature extends Chronicle Queue's ability to specify the time and periodicity of queue rollovers, rather than UTC. For more information see link:https://portal.chronicle.software/docs/queue/chronicle-queue/configuration/timezone_rollover.html[Timezone Queue Rollover].
 
 The Chronicle Queue `FileUtil` class provides useful methods for managing queue files. See link:docs/managing_roll_files_directly.adoc[Managing Roll Files Directly].
 
@@ -1755,7 +1755,7 @@ Notably, the 99.93% latency varied between 21 microseconds and 41 milliseconds, 
 
 https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
 
-<<docs/performance.adoc#,End-to-End latency plots for various message sizes>>
+link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/performance-test-results.html[End-to-End latency plots for various message sizes]
 
 === Chronicle Queue vs Kafka
 
@@ -1774,10 +1774,8 @@ For comparison see http://kafka.apache.org/documentation.html[Kafka Documentatio
 === Links
 
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some techniques utilised by Chronicle Queue
-* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/encryption.adoc[Encryption] - describes how to encrypt the contents of a Queue
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/FAQ.adoc[FAQ] - questions asked by customers
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
-* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/timezone_rollover.adoc[Timezone rollover] - describes how to configure file-rolling at a specific time in a given time-zone
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
 
 ==== Online support

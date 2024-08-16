@@ -1,2 +1,3 @@
 * xref:quick-start.adoc[Getting Started]
+** xref:use-cases.adoc[Use Cases]
 ** xref:glossary.adoc[Glossary]

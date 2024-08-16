@@ -1,23 +1,10 @@
 = Chronicle Queue Pre-toucher
-Neil Clifford
 
-:css-signature: demo
+[NOTE]
+====
+Contents moved to link:http://portal.chronicle.software[]
+====
 
-Chronicle Queue uses a pre-toucher mechanism to greatly improve write performance.
+Chronicle Queue pre-toucher is an enterprise feature that provides pre-touching of storage resources to significantly improve average write speed and reduce write speed variation. For more information on Chronicle Queue Pre-toucher please visit the link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/pretouching.html[].
 
-During the write process there is significant write-speed variation, as the process has to find new memory to write to. This can be mitigated by using the Chronicle `pretouch()` call to pre-allocate writeable memory. 
-
-The pre-toucher can be enabled with the Chronicle Queue Builder using:
-
-```
-<SingleChronicleQueueBuilder>.enablePreloader(<pretouchIntervalMillis>) ;
-```
-
-The graph below shows the comparative speeds between using, and not using, the pre-toucher.
-
-image::images/pretoucher_test.png[]
-
-NOTE: Normally, this would be run in a background thread, but for the purposes of the performance test shown above it was run in the same thread but not timed.
-
-'''
-<<../README.adoc#,Back to ReadMe>>
+<<../README.adoc#,Back to Chronicle Queue>>

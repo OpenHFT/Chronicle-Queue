@@ -1,11 +1,11 @@
-= Async Mode
-:toc:
-:toc-title: Contents
-:toclevels: 1
+= Chronicle Async Mode
 
-== Chronicle Async Mode
+[NOTE]
+====
+Contents moved to link:http://portal.chronicle.software[]
+====
 
-Chronicle Async Mode provides a high performance, multi-writer, multi-reader, buffered queue implementation
-which can be used in your application code.
+Chronicle Async Mode is an enterprise feature that provides a high performance, multi-writer, multi-reader, buffered queue implementation
+which can be used in your application code. For more information on Chronicle Async Mode please visit the link:https://portal.chronicle.software/docs/queue/chronicle-queue/async-mode/async_mode.html[].
 
-For more information on Chronicle Async Mode please visit the https://portal.chronicle.software/docs/queue/[Chronicle User Portal Queue Docs].
+<<../README.adoc#,Back to Chronicle Queue>>

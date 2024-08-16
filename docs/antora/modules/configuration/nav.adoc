@@ -1,5 +1,6 @@
 * xref:app_configuration.adoc[Configuration]
 ** xref:roll-cycle.adoc[Roll Cycle]
+** xref:timezone_rollover.adoc[Timezone Rollover ★]
 ** xref:wire-type.adoc[Wire Type]
 ** xref:block-size.adoc[Block Size]
 ** xref:index-count.adoc[Index Count]
