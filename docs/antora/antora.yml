@@ -5,7 +5,6 @@ version: ""
 nav:
   - modules/ROOT/nav.adoc
   - modules/introduction/nav.adoc
-  - modules/what-is-chronicle-queue/nav.adoc
   - modules/getting-started/nav.adoc
   - modules/configuration/nav.adoc
   - modules/queue-operations/nav.adoc

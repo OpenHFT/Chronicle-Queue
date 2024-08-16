@@ -1,1 +1,2 @@
 * xref:introduction.adoc[Introduction]
+** xref:introduction:what-is-chronicle-queue.adoc[What is Chronicle Queue?]
