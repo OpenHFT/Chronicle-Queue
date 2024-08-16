@@ -5,7 +5,7 @@ author: Julia Gustafsson
 :navtitle: Encryption
 :source-highlighter: highlight.js
 
-Chronicle Queue Enterprise introduces the ability to encrypt your message queues and the constituent messages.
+Chronicle Queue Enterprise includes the ability to encrypt your message queues and the constituent messages.
 
 [IMPORTANT]
 ====
