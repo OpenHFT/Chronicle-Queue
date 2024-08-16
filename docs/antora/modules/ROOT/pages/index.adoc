@@ -30,7 +30,7 @@ Chronicle has gathered all runnable code demonstrations on GitHub for easy acces
 NOTE: The documentation primarily covers usage of Chronicle Queue with Java. If you are interested in the C++ version please contact link:mailto:sales@chronicle.software[sales@chronicle.software].
 
 == Where to Begin
-If this is your first time getting to know Chronicle Queue, you may want to familiarize yourself with the overall capabilities of Queue by reading xref:what-is-chronicle-queue:what-is-chronicle-queue.adoc[What is Chronicle Queue?]. Thereafter, follow the xref:getting-started:quick-start.adoc[Quick-start Guide] to get set up in minutes. Then you are ready to explore the rest of the chapters that explores
+If this is your first time getting to know Chronicle Queue, you may want to familiarize yourself with the overall capabilities of Queue by reading xref:introduction:what-is-chronicle-queue.adoc[What is Chronicle Queue?]. Thereafter, follow the xref:getting-started:quick-start.adoc[Quick-start Guide] to get set up in minutes. Then you are ready to explore the rest of the chapters that explores
 
 In case you are not yet interested in integrating Queue in one of your projects, you may want to start out by running one of our demos. You find our demonstrations [here].
 
