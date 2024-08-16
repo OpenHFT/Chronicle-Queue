@@ -1,46 +1,10 @@
-= Timezone Queue Rollover (Enterprise Edition Feature)
+= Timezone Queue Rollover
 
-In Chronicle Queue, the time at which queues are rolled over is based on the UTC time; Chronicle Queue uses `System.currentTimeMillis()`.
+[NOTE]
+====
+Contents moved to link:http://portal.chronicle.software[]
+====
 
-The Timezone Rollover Enterprise feature extends Chronicle Queue's ability to specify the time and periodicity of queue rollovers, to take account of the user's location timezone, rather than UTC.
-
-NOTE: This feature is only relevant to daily rollovers where `RollCycle` is one of:
-- `SMALL_DAILY`
-- `DAILY`
-- `LARGE_DAILY`
-- `XLARGE_DAILY`
-- `HUGE_DAILY`
-
-== Syntax
-
-`rollTime` and `rollTimeZone` can be set on the `SingleChronicleQueueBuilder` using the below setters:
-```
-    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime);
-
-    public SingleChronicleQueueBuilder rollTimeZone(@NotNull final ZoneId rollTimeZone);
-
-    public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, @NotNull final ZoneId zoneId);
-```
-
-NOTE: `rollTime()` allows the rollover time of the cycle file to be controlled in both Chronicle Queue open-source and Chronicle QueueEnterprise Edition. +
-If this is used with in the open-source version, any `zoneId` other than `UTC` will be converted to `UTC`, and a warning message logged.
-
-== Examples
-
-The following code extract is an instruction to use `Europe/London` as time zone, and rolls over queues at midnight regardless of offset to UTC - periodic time zone changes e.g. in the transition from winter to/from summer will be respected.
-
-[source, java]
-----
-.rollTime(LocalTime.of(0, 0), ZoneId.of("Europe/London"))
-----
-
-The following code extract is an instruction to use `America/New_York` as time zone, and rolls over queues at midnight regardless of offset to UTC.
-
-[source, java]
-----
-.rollTime(LocalTime.of(17, 0), ZoneId.of("America/New_York"))
-----
-
-'''
+In Chronicle Queue, the time at which queues are rolled over is based on the UTC time; Chronicle Queue uses `System.currentTimeMillis()`. The Timezone Rollover Enterprise feature extends Chronicle Queue's ability to specify the time and periodicity of queue rollovers, to take account of the user's location timezone, rather than UTC. Further documentation available at link: https://portal.chronicle.software/docs/queue/chronicle-queue/configuration/timezone_rollover.html[]
 
 <<../README.adoc#,Back to Chronicle Queue>>
