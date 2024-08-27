@@ -36,6 +36,7 @@ import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.queue.util.*;
 import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.domestic.InternalWire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -597,7 +598,7 @@ class StoreAppender extends AbstractCloseable
 
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
-            assert ((AbstractWire) wire).isInsideHeader();
+            assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
             Bytes<?> wireBytes = wire.bytes();
             wireBytes.write(bytes);
@@ -611,6 +612,10 @@ class StoreAppender extends AbstractCloseable
         } finally {
             writeLock.unlock();
         }
+    }
+
+    private boolean isInsideHeader(Wire wire) {
+        return (wire instanceof AbstractWire) ? ((AbstractWire) wire).isInsideHeader() : true;
     }
 
     @Override
@@ -1068,7 +1073,7 @@ class StoreAppender extends AbstractCloseable
                         bytes.writeByte(i, (byte) 0);
                     long lastPosition = StoreAppender.this.lastPosition;
                     position0(lastPosition, lastPosition, bytes);
-                    ((AbstractWire) wire).forceNotInsideHeader();
+                    ((InternalWire)wire).forceNotInsideHeader();
                 } catch (BufferOverflowException | IllegalStateException e) {
                     if (bytes instanceof MappedBytes && ((MappedBytes) bytes).isClosed()) {
                         Jvm.warn().on(getClass(), "Unable to roll back excerpt as it is closed.");
@@ -1090,7 +1095,7 @@ class StoreAppender extends AbstractCloseable
                 try {
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
                     long headerNumber0 = wire.headerNumber();
-                    assert (((AbstractWire) this.wire).isInsideHeader());
+                    assert isInsideHeader(this.wire);
                     return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                 } catch (IOException e) {
                     throw new IORuntimeException(e);

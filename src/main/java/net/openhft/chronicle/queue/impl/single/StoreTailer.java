@@ -828,9 +828,12 @@ class StoreTailer extends AbstractCloseable
         return rollCycle.toIndex(lastCycle, sequenceNumber);
     }
 
-    private boolean headerNumberCheck(@NotNull final AbstractWire wire) {
+    private boolean headerNumberCheck(@NotNull final Wire wire) {
+        if (!(wire instanceof AbstractWire)) {
+            return true;
+        }
 
-        wire.headNumberCheck((actual, position) -> {
+        ((AbstractWire)wire).headNumberCheck((actual, position) -> {
             try {
                 final long expecting = store.sequenceForPosition(this, position, false);
                 if (actual == expecting)
@@ -860,14 +863,14 @@ class StoreTailer extends AbstractCloseable
 
         final Wire wire2 = wireType.apply(bytes);
         wire2.usePadding(s.dataVersion() > 0);
-        final AbstractWire wire = (AbstractWire) readAnywhere(wire2);
+        final Wire wire = readAnywhere(wire2);
         assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
 
         final Wire wireForIndexOld = wireForIndex;
         wireForIndex = readAnywhere(wireType.apply(s.bytes()));
-        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck((AbstractWire) wireForIndex);
+        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wireForIndex);
         assert wire != wireForIndexOld;
 
         if (wireForIndexOld != null) {
@@ -1465,11 +1468,11 @@ class StoreTailer extends AbstractCloseable
             return this.present = present;
         }
 
-        public void wire(@Nullable final AbstractWire wire) {
+        public void wire(@Nullable final Wire wire) {
             if (wire == this.wire)
                 return;
 
-            final AbstractWire oldWire = this.wire;
+            final Wire oldWire = this.wire;
             this.wire = wire;
 
             if (oldWire != null)
