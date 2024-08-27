@@ -1020,7 +1020,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     Jvm.warn().on(getClass(), new Exception("Creating cycle which is not the current cycle"));
                 }
                 queuePathExists = true;
-                AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
+                Wire wire = wireType.apply(mappedBytes);
                 wire.pauser(pauserSupplier.get());
                 wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
@@ -1113,7 +1113,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         }
 
         @SuppressWarnings("deprecation")
-        private void createIndexThenUpdateHeader(AbstractWire wire, int cycle, SingleChronicleQueueStore wireStore) {
+        private void createIndexThenUpdateHeader(Wire wire, int cycle, SingleChronicleQueueStore wireStore) {
             // Should very carefully prepare all data structures before publishing initial header
             wire.usePadding(wireStore.dataVersion() > 0);
             wire.padToCacheAlign();
