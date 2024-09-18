@@ -17,7 +17,9 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
@@ -30,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static net.openhft.chronicle.assertions.AssertUtil.SKIP_ASSERTIONS;
 import static net.openhft.chronicle.core.Jvm.warn;
 
 /**
@@ -39,7 +40,9 @@ import static net.openhft.chronicle.core.Jvm.warn;
  * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
  * for a timed-out lock to be overridden.
  */
-public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
+public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock, Closeable {
+    private static final String STORE_LOCK_THREAD = "chronicle.store.lock.thread";
+    private static final boolean storeLockThread = Jvm.getBoolean(STORE_LOCK_THREAD);
     public static final String APPEND_LOCK_KEY = "chronicle.append.lock";
     private static final String LOCK_KEY = "chronicle.write.lock";
     private final long timeout;
@@ -69,11 +72,11 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         TimingPauser tlPauser = pauser.get();
         try {
             currentLockValue = lock.getVolatileValue();
+
             while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
                 currentLockValue = lockGetCurrentLockValue(tlPauser);
             }
-
-            lockAssertPostConditions();
+            checkStoreLockThread();
 
             // success
         } catch (TimeoutException e) {
@@ -90,10 +93,11 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         return lock.getVolatileValue();
     }
 
-    private void lockAssertPostConditions() {
-        //noinspection ConstantConditions,AssertWithSideEffects
-        assert SKIP_ASSERTIONS ||
-                ((lockedByThread = Thread.currentThread()) != null && (lockedHere = new StackTrace()) != null);
+    private void checkStoreLockThread() {
+        if (storeLockThread) {
+            lockedByThread = Thread.currentThread();
+            lockedHere = new StackTrace();
+        }
     }
 
     private void handleTimeoutEx(long currentLockValue) {
@@ -123,9 +127,10 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
     @NotNull
     protected String getLockedBy(long value) {
+        String threadId = lockedByThread == null ? "unknown - " + STORE_LOCK_THREAD + " not set" : Long.toString(lockedByThread.getId());
         return value == Long.MIN_VALUE ? "unknown" :
-                value == PID ? "me"
-                        : Long.toString((int) value);
+                value == PID ? "current process (TID " + threadId + ")"
+                        : Long.toString((int) value) + " (TID " + threadId + ")";
     }
 
     private boolean checkNotAlreadyLocked() {
