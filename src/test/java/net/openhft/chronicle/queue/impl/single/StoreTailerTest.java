@@ -629,10 +629,57 @@ public class StoreTailerTest extends QueueTestCommon {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
-           tailer.striding(true);
-           assertTrue(tailer.striding());
+            tailer.striding(true);
+            assertTrue(tailer.striding());
         }
     }
+
+    @Test
+    public void testStridingReadForward() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+
+            for (int i = 1; i <= 10; i++) {
+                appender.writeText("Message " + i);
+            }
+
+            tailer.striding(true);
+
+            int stride = 256;
+            System.out.println("stride: " + stride);
+            for (int i = 1; i <= 10; i += stride) {
+                String expectedMessage = "Message " + i;
+                assertEquals(expectedMessage, tailer.readText());
+            }
+        }
+    }
+
+    @Test
+    public void testStridingReadBackward() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+
+            for (int i = 1; i <= 10; i++) {
+                appender.writeText("Message " + i);
+            }
+
+            tailer.striding(true);
+            tailer.direction(TailerDirection.BACKWARD).toEnd();
+
+            int stride = 256;
+            for (int i = 10; i >= 1; i -= stride) {
+                String expectedMessage = "Message " + i;
+                assertEquals(expectedMessage, tailer.readText());
+            }
+        }
+    }
+
 
     @Test
     public void testMoveToIndex() {
@@ -654,8 +701,83 @@ public class StoreTailerTest extends QueueTestCommon {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
+             ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
-                tailer.excerptsInCycle(tailer.cycle());
+
+            int cycle = queue.cycle();
+
+            assertEquals("No excerpts should be present initially", -1, tailer.excerptsInCycle(cycle));
+
+            appender.writeText("Message 1");
+            appender.writeText("Message 2");
+
+            assertEquals("Should have 2 excerpts in cycle", 2, tailer.excerptsInCycle(cycle));
+
+            int nonExistentCycle = cycle + 1;
+            assertEquals("Excerpts in non-existent cycle should be -1", -1, tailer.excerptsInCycle(nonExistentCycle));
+        }
+    }
+
+    @Test
+    public void testMoveToInvalidIndex() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer()) {
+            // Negative index
+            assertFalse("Should not move to a negative index", tailer.moveToIndex(-1));
+
+            // Index beyond the last index
+            assertFalse("Should not move to an index beyond the last index", tailer.moveToIndex(100));
+
+            // Index in a non-existent cycle
+            int nonExistentCycle = queue.rollCycle().toCycle(tailer.index()) + 10;
+            long nonExistentIndex = queue.rollCycle().toIndex(nonExistentCycle, 0);
+            assertFalse("Should not move to an index in a non-existent cycle", tailer.moveToIndex(nonExistentIndex));
+        }
+    }
+
+    @Test
+    public void testDirectionChange() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            appender.writeText("Message 1");
+            appender.writeText("Message 2");
+            appender.writeText("Message 3");
+
+            tailer.toEnd();
+
+            tailer.direction(TailerDirection.BACKWARD);
+            assertEquals("Message 3", tailer.readText());
+            assertEquals("Message 2", tailer.readText());
+            assertEquals("Message 1", tailer.readText());
+            assertNull("Should be null", tailer.readText());
+
+            tailer.direction(TailerDirection.FORWARD);
+            assertNull("Should be null", tailer.readText());
+            assertEquals("Message 1", tailer.readText());
+            assertEquals("Message 2", tailer.readText());
+            assertEquals("Message 3", tailer.readText());
+        }
+    }
+
+
+    @Test
+    public void testBehaviorOnEmptyQueue() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                .testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer()) {
+
+            assertNull("Should return null when reading from an empty queue", tailer.readText());
+
+            tailer.toStart();
+            tailer.toEnd();
+
+            assertNull("Should still return null after moving to end", tailer.readText());
         }
     }
 
