@@ -42,6 +42,7 @@ import static net.openhft.chronicle.core.Jvm.warn;
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock {
     public static final String APPEND_LOCK_KEY = "chronicle.append.lock";
     private static final String LOCK_KEY = "chronicle.write.lock";
+    private static final boolean RECORD_THREAD_LOCKER = Jvm.getBoolean("chronicle.thread.lock.troubleshoot");
     private final long timeout;
     private Thread lockedByThread = null;
     private StackTrace lockedHere;
@@ -91,7 +92,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     }
 
     private void lockAssertPostConditions() {
-        if (Jvm.isResourceTracing()) {
+        if (RECORD_THREAD_LOCKER) {
             lockedByThread = Thread.currentThread();
             lockedHere = new StackTrace();
         }
