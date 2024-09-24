@@ -29,21 +29,45 @@ import java.util.function.Consumer;
 
 import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
 
+/**
+ * The {@code InternalDummyMethodReaderQueueEntryHandler} is a dummy implementation of the {@link QueueEntryHandler} interface
+ * for processing method reader entries from a queue.
+ * <p>
+ * It converts binary wire entries into a specified wire type (e.g., text) and passes the result to the message handler.
+ * This implementation is particularly useful when you need to process queue entries as a text representation.
+ */
 public final class InternalDummyMethodReaderQueueEntryHandler implements QueueEntryHandler {
-    private final Bytes<?> textConversionTarget = Bytes.allocateElasticOnHeap();
-    private final WireType wireType;
+    private final Bytes<?> textConversionTarget = Bytes.allocateElasticOnHeap();  // Bytes object for storing the text representation
+    private final WireType wireType;  // The wire type for converting binary wire entries
 
+    /**
+     * Constructs an {@code InternalDummyMethodReaderQueueEntryHandler} with the specified {@link WireType}.
+     *
+     * @param wireType The wire type to be used for converting entries, must not be null
+     */
     public InternalDummyMethodReaderQueueEntryHandler(@NotNull WireType wireType) {
-        this.wireType = requireNonNull(wireType);
+        this.wireType = requireNonNull(wireType);  // Ensures that the wire type is not null
     }
 
+    /**
+     * Processes entries from the given {@link WireIn}, converting them to the specified wire type and passing
+     * the result to the provided {@code messageHandler}.
+     * <p>
+     * This method reads the binary wire entries, converts them to the target format, and passes the result to the
+     * message handler every two entries (i.e., after every second entry).
+     *
+     * @param wireIn        The wire input to process
+     * @param messageHandler The handler that processes the converted message
+     */
     @Override
     public void accept(final WireIn wireIn, final Consumer<String> messageHandler) {
         long elementCount = 0;
         while (wireIn.hasMore()) {
+            // Convert binary wire entries into the specified wire type and store in textConversionTarget
             new BinaryWire(wireIn.bytes()).copyOne(wireType.apply(textConversionTarget));
 
             elementCount++;
+            // Every two elements, pass the converted text to the message handler and clear the buffer
             if ((elementCount & 1) == 0) {
                 messageHandler.accept(textConversionTarget.toString());
                 textConversionTarget.clear();
@@ -51,8 +75,11 @@ public final class InternalDummyMethodReaderQueueEntryHandler implements QueueEn
         }
     }
 
+    /**
+     * Releases the resources used by this entry handler, particularly the {@code textConversionTarget} buffer.
+     */
     @Override
     public void close() {
-        textConversionTarget.releaseLast();
+        textConversionTarget.releaseLast();  // Release the memory used by the buffer
     }
 }

@@ -20,13 +20,17 @@ package net.openhft.chronicle.queue.main;
 
 import net.openhft.chronicle.queue.internal.main.InternalRemovableRollFileCandidatesMain;
 
+/**
+ * RemovableRollFileCandidatesMain is an entry point for producing a list of removable roll file candidates from a given directory.
+ * <p>This utility prints the absolute path of each removable file to the standard output, one file per row.</p>
+ */
 public final class RemovableRollFileCandidatesMain {
 
     /**
-     * Produces a list of removable roll file candidates and prints
-     * their absolute path to standard out row-by-row.
+     * The main method that generates and prints the list of removable roll file candidates.
+     * Delegates execution to {@link InternalRemovableRollFileCandidatesMain#main(String[])}.
      *
-     * @param args the directory. If no directory is given, "." is assumed
+     * @param args The directory path to search for removable roll files. If no directory is provided, the current directory ("." ) is assumed.
      */
     public static void main(String[] args) {
         InternalRemovableRollFileCandidatesMain.main(args);

@@ -28,22 +28,42 @@ import net.openhft.chronicle.wire.*;
 
 import java.nio.ByteBuffer;
 
+/**
+ * {@code MethodReaderQueueEntryReader} is a queue entry reader that processes method calls from a queue using a {@link MethodReader}.
+ * <p>
+ * It reads and decodes method calls from a queue using a {@link WireType}, and forwards them to a {@link MessageConsumer}.
+ * This class supports optional message history logging.
+ */
 public final class MethodReaderQueueEntryReader implements QueueEntryReader {
 
-    private final ExcerptTailer tailer;
-    private final MessageConsumer messageConsumer;
-    private final MethodReader methodReader;
-    private final Bytes<ByteBuffer> bytes;
+    private final ExcerptTailer tailer;  // The ExcerptTailer used to read from the queue
+    private final MessageConsumer messageConsumer;  // The message consumer that processes the read messages
+    private final MethodReader methodReader;  // The method reader that reads method calls from the queue
+    private final Bytes<ByteBuffer> bytes;  // A buffer for holding the serialized message
 
-    public MethodReaderQueueEntryReader(ExcerptTailer tailer, MessageConsumer messageConsumer, WireType wireType, Class<?> methodReaderInterface, boolean showMessageHistory) {
+    /**
+     * Constructs a {@code MethodReaderQueueEntryReader} with the provided tailer, message consumer, wire type, and method reader interface.
+     * Optionally logs message history if specified.
+     *
+     * @param tailer                The {@link ExcerptTailer} used to read entries from the queue
+     * @param messageConsumer       The {@link MessageConsumer} that handles the consumed messages
+     * @param wireType              The {@link WireType} used to serialize/deserialize the method calls
+     * @param methodReaderInterface The interface used to define the methods to be read from the queue
+     * @param showMessageHistory    Whether to include message history in the output
+     */
+    public MethodReaderQueueEntryReader(ExcerptTailer tailer, MessageConsumer messageConsumer, WireType wireType,
+                                        Class<?> methodReaderInterface, boolean showMessageHistory) {
         this.tailer = tailer;
         this.messageConsumer = messageConsumer;
-        bytes = Bytes.elasticHeapByteBuffer(256);
+        bytes = Bytes.elasticHeapByteBuffer(256);  // Allocate a buffer for holding serialized data
         Wire wire = wireType.apply(bytes);
         if (wire instanceof TextWire)
-            ((TextWire) wire).useTextDocuments();
+            ((TextWire) wire).useTextDocuments();  // Use text documents if it's a TextWire
+
+        // Build the MethodWriter from the provided method reader interface
         MethodWriterBuilder<?> mwb = wire.methodWriterBuilder(methodReaderInterface);
-        if (showMessageHistory)
+        if (showMessageHistory) {
+            // If message history is enabled, log message history details
             mwb.updateInterceptor((methodName, t) -> {
                 MessageHistory messageHistory = MessageHistory.get();
                 // this is an attempt to recognise that no MH was read and instead the method reader called reset(...) on it
@@ -51,16 +71,26 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
                     bytes.append(messageHistory + System.lineSeparator());
                 return true;
             });
+        }
+        // Initialize the method reader
         methodReader = tailer.methodReader(mwb.build());
     }
 
+    /**
+     * Reads and processes one method call from the queue.
+     * <p>
+     * If a method call is successfully read, it is passed to the {@link MessageConsumer} along with the last read index.
+     *
+     * @return {@code true} if a method call was read and processed, {@code false} otherwise
+     */
     @Override
     public boolean read() {
         if (!methodReader.readOne()) {
-            return false;
+            return false;  // No method call to read
         }
+        // Consume the read message and pass it to the message consumer
         messageConsumer.consume(tailer.lastReadIndex(), bytes.toString());
-        bytes.clear();
+        bytes.clear();  // Clear the buffer for the next message
         return true;
     }
 }

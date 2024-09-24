@@ -22,17 +22,24 @@ import net.openhft.chronicle.queue.ChronicleHistoryReaderMain;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Reads @see MessageHistory from a queue and outputs histograms for
+ * HistoryMain is an entry point for reading {@link net.openhft.chronicle.wire.MessageHistory} from a Chronicle Queue
+ * and outputting histograms related to message latencies.
+ * <p>
+ * The histograms provide insights into:
  * <ul>
- * <li>latencies for each component that has processed a message</li>
- * <li>latencies between each component that has processed a message</li>
+ *   <li>Latencies for each component that has processed a message</li>
+ *   <li>Latencies between each component that has processed a message</li>
  * </ul>
- *
- * @author Jerry Shea
- *
+ * </p>
  */
 public final class HistoryMain {
 
+    /**
+     * The main method that triggers the history reading process.
+     * Delegates execution to {@link ChronicleHistoryReaderMain#main(String[])}.
+     *
+     * @param args Command-line arguments
+     */
     public static void main(@NotNull String[] args) {
         ChronicleHistoryReaderMain.main(args);
     }

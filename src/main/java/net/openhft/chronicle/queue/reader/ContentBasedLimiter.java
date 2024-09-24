@@ -21,25 +21,25 @@ package net.openhft.chronicle.queue.reader;
 import net.openhft.chronicle.wire.DocumentContext;
 
 /**
- * Implement this to signal when to halt reading a queue based on the content
- * of a message.
+ * Interface for signaling when to halt reading from a queue based on the content of a message.
+ * <p>This can be used to limit processing within the {@link ChronicleReader} based on specific conditions found in the messages.</p>
  */
 public interface ContentBasedLimiter {
 
     /**
-     * Should the ChronicleReader stop processing messages?
+     * Determines whether the {@link ChronicleReader} should stop processing further messages.
+     * <p>This method examines the content of the next message and decides if reading should halt before processing it.</p>
      *
-     * @param documentContext The next message to be processed
-     * @return true to halt processing before processing the passed message, false otherwise
+     * @param documentContext The document context representing the next message to be processed
+     * @return {@code true} to halt processing, {@code false} to continue processing the message
      */
     boolean shouldHaltReading(DocumentContext documentContext);
 
     /**
-     * Passed to the limiter before processing begins, can be used to provide parameters to it
-     * <p>
-     * The limiter should make use of {@link Reader#limiterArg()} to convey parameters
+     * Configures the limiter with parameters before the reader begins processing.
+     * <p>This method allows the limiter to be customized using arguments provided via {@link Reader#limiterArg()}.</p>
      *
-     * @param reader The Reader about to be executed
+     * @param reader The reader that is about to be executed, providing context and parameters for the limiter
      */
     void configure(Reader reader);
 }

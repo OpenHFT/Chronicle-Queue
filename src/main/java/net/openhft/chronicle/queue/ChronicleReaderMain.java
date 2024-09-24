@@ -34,66 +34,118 @@ import java.util.function.Consumer;
 import static java.util.Arrays.stream;
 
 /**
- * Display records in a Chronicle in a text form.
+ * Main class for reading and displaying records from a Chronicle Queue in text form.
+ * Provides several command-line options to control behavior such as including/excluding records
+ * based on regex, following a live queue, or displaying records in various formats.
  */
 public class ChronicleReaderMain {
 
+    /**
+     * Entry point of the application. Initializes the {@link ChronicleReaderMain} instance and
+     * passes command-line arguments for execution.
+     *
+     * @param args Command-line arguments
+     */
     public static void main(@NotNull String[] args) {
         new ChronicleReaderMain().run(args);
     }
 
+    /**
+     * Adds an option to the provided {@link Options} object for command-line parsing.
+     *
+     * @param options     The options object to add the option to
+     * @param opt         The short name of the option
+     * @param argName     The name of the argument
+     * @param hasArg      Whether the option takes an argument
+     * @param description Description of the option
+     * @param isRequired  Whether the option is required
+     */
     public static void addOption(final Options options,
                                  final String opt,
                                  final String argName,
                                  final boolean hasArg,
                                  final String description,
                                  final boolean isRequired) {
-        final Option option = new Option(opt, hasArg, description);
+        final Option option = new Option(opt, hasArg, description); // Create option with argument
         option.setArgName(argName);
-        option.setRequired(isRequired);
-        options.addOption(option);
+        option.setRequired(isRequired); // Mark as required or not
+        options.addOption(option); // Add option to options object
     }
 
+    /**
+     * Runs the Chronicle Reader with the provided command-line arguments.
+     * Configures the {@link ChronicleReader} and executes the reader.
+     *
+     * @param args Command-line arguments
+     */
     protected void run(@NotNull String[] args) {
-        final Options options = options();
-        final CommandLine commandLine = parseCommandLine(args, options);
+        final Options options = options(); // Initialize command-line options
+        final CommandLine commandLine = parseCommandLine(args, options); // Parse command-line options
 
-        final ChronicleReader chronicleReader = chronicleReader();
+        final ChronicleReader chronicleReader = chronicleReader(); // Create ChronicleReader instance
 
-        configureReader(chronicleReader, commandLine);
+        configureReader(chronicleReader, commandLine); // Configure the reader based on options
 
-        chronicleReader.execute();
+        chronicleReader.execute(); // Execute the reader to display records
     }
 
+    /**
+     * Creates and returns a new instance of {@link ChronicleReader}.
+     *
+     * @return A new instance of {@link ChronicleReader}
+     */
     protected ChronicleReader chronicleReader() {
-        return new ChronicleReader();
+        return new ChronicleReader(); // Create and return ChronicleReader instance
     }
 
+    /**
+     * Parses the command-line arguments using Apache Commons CLI.
+     * If the help option is provided, prints the help message and exits.
+     *
+     * @param args    Command-line arguments
+     * @param options Command-line options available
+     * @return The parsed {@link CommandLine} object
+     */
     protected CommandLine parseCommandLine(final @NotNull String[] args, final Options options) {
-        final CommandLineParser parser = new DefaultParser();
+        final CommandLineParser parser = new DefaultParser(); // Command-line parser
         CommandLine commandLine = null;
         try {
-            commandLine = parser.parse(options, args);
+            commandLine = parser.parse(options, args); // Parse arguments
 
+            // Print help if 'h' option is provided
             if (commandLine.hasOption('h')) {
                 printHelpAndExit(options, 0);
             }
         } catch (ParseException e) {
+            // On parsing error, print help with an error message
             printHelpAndExit(options, 1, e.getMessage());
         }
 
         return commandLine;
     }
 
+    /**
+     * Prints help information and exits the application.
+     *
+     * @param options Command-line options
+     * @param status  Exit status code
+     */
     protected void printHelpAndExit(final Options options, int status) {
         printHelpAndExit(options, status, null);
     }
 
+    /**
+     * Prints help information along with an optional message and exits the application.
+     *
+     * @param options Command-line options
+     * @param status  Exit status code
+     * @param message Optional message to display before help
+     */
     protected void printHelpAndExit(final Options options, int status, String message) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
-                180,
+                180, // Line width for formatted help output
                 this.getClass().getSimpleName(),
                 message,
                 options,
@@ -102,18 +154,27 @@ public class ChronicleReaderMain {
                 null,
                 true
         );
-        writer.flush();
-        System.exit(status);
+        writer.flush(); // Ensure all help is printed
+        System.exit(status); // Exit with the provided status
     }
 
+    /**
+     * Configures the {@link ChronicleReader} based on the command-line options.
+     * Supports various options like regex filtering, tailing the queue, and more.
+     *
+     * @param chronicleReader The ChronicleReader instance to configure
+     * @param commandLine     Parsed command-line options
+     */
     protected void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
+        // Set up message sink; squash output to single line if 'l' option is provided
         final Consumer<String> messageSink = commandLine.hasOption('l') ?
                 s -> System.out.println(s.replaceAll("\n", "")) :
                 System.out::println;
-        chronicleReader.
-                withMessageSink(messageSink).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+        chronicleReader
+                .withMessageSink(messageSink) // Configure the message sink
+                .withBasePath(Paths.get(commandLine.getOptionValue('d'))); // Set base path for chronicle queue files
 
+        // Apply various optional configurations based on command-line options
         if (commandLine.hasOption('i')) {
             stream(commandLine.getOptionValues('i')).forEach(chronicleReader::withInclusionRegex);
         }
@@ -121,40 +182,40 @@ public class ChronicleReaderMain {
             stream(commandLine.getOptionValues('e')).forEach(chronicleReader::withExclusionRegex);
         }
         if (commandLine.hasOption('f')) {
-            chronicleReader.tail();
+            chronicleReader.tail(); // Enable tail mode if 'f' option is provided
         }
         if (commandLine.hasOption('m')) {
-            chronicleReader.historyRecords(Long.parseLong(commandLine.getOptionValue('m')));
+            chronicleReader.historyRecords(Long.parseLong(commandLine.getOptionValue('m'))); // Limit history records
         }
         if (commandLine.hasOption('n')) {
-            chronicleReader.withStartIndex(Long.decode(commandLine.getOptionValue('n')));
+            chronicleReader.withStartIndex(Long.decode(commandLine.getOptionValue('n'))); // Set start index
         }
         if (commandLine.hasOption('r')) {
             final String r = commandLine.getOptionValue('r');
-            chronicleReader.asMethodReader(r.equals("null") ? "" : r);
-            chronicleReader.showMessageHistory(commandLine.hasOption('g'));
+            chronicleReader.asMethodReader(r.equals("null") ? "" : r); // Configure as method reader
+            chronicleReader.showMessageHistory(commandLine.hasOption('g')); // Show message history if 'g' is present
         }
         if (commandLine.hasOption('w')) {
-            chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w')));
+            chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w'))); // Set wire type
         }
         if (commandLine.hasOption('s')) {
-            chronicleReader.suppressDisplayIndex();
+            chronicleReader.suppressDisplayIndex(); // Suppress index display if 's' is present
         }
         if (commandLine.hasOption('z')) {
             System.setProperty(AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY,
-                    ZoneId.systemDefault().toString());
+                    ZoneId.systemDefault().toString()); // Use local timezone if 'z' is present
         }
         if (commandLine.hasOption('a')) {
-            chronicleReader.withArg(commandLine.getOptionValue('a'));
+            chronicleReader.withArg(commandLine.getOptionValue('a')); // Pass argument to binary search if 'a' is present
         }
         if (commandLine.hasOption('b')) {
-            chronicleReader.withBinarySearch(commandLine.getOptionValue('b'));
+            chronicleReader.withBinarySearch(commandLine.getOptionValue('b')); // Configure binary search
         }
         if (commandLine.hasOption('k')) {
-            chronicleReader.inReverseOrder();
+            chronicleReader.inReverseOrder(); // Read the queue in reverse if 'k' is present
         }
         if (commandLine.hasOption('x')) {
-            chronicleReader.withMatchLimit(Long.parseLong(commandLine.getOptionValue('x')));
+            chronicleReader.withMatchLimit(Long.parseLong(commandLine.getOptionValue('x'))); // Limit match results
         }
         if (commandLine.hasOption("cbl")) {
             final String cbl = commandLine.getOptionValue("cbl");
@@ -171,17 +232,23 @@ public class ChronicleReaderMain {
             }
         }
         if (commandLine.hasOption("cblArg")) {
-            chronicleReader.withLimiterArg(commandLine.getOptionValue("cblArg"));
+            chronicleReader.withLimiterArg(commandLine.getOptionValue("cblArg")); // Set content-based limiter argument
         }
         if (commandLine.hasOption("named")) {
-            chronicleReader.withTailerId(commandLine.getOptionValue("named"));
+            chronicleReader.withTailerId(commandLine.getOptionValue("named")); // Set named tailer ID
         }
     }
 
+    /**
+     * Configures the available command-line options for the {@link ChronicleReaderMain}.
+     *
+     * @return A configured {@link Options} object with all available options
+     */
     @NotNull
     protected Options options() {
-        final Options options = new Options();
+        final Options options = new Options(); // Create new Options object
 
+        // Add various command-line options
         addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         addOption(options, "i", "include-regex", true, "Display records containing this regular expression", false);
         addOption(options, "e", "exclude-regex", true, "Do not display records containing this regular expression", false);
@@ -202,6 +269,7 @@ public class ChronicleReaderMain {
         addOption(options, "cbl", "content-based-limiter", true, "Specify a content-based limiter", false);
         addOption(options, "cblArg", "content-based-limiter-argument", true, "Specify an argument for use by the content-based limiter", false);
         addOption(options, "named", "named", true, "Named tailer ID", false);
-        return options;
+
+        return options; // Return configured options
     }
 }

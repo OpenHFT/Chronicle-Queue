@@ -24,21 +24,26 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * A MessageConsumer that only passes messages through that do or
- * do not match a list of patterns
+ * {@code PatternFilterMessageConsumer} is a {@link MessageConsumer} that filters messages based on a list of patterns.
+ * <p>
+ * It either passes messages that match all the patterns (or none, depending on configuration) to the next consumer
+ * in the chain, or filters them out if the pattern conditions are not met.
+ * <p>
+ * This class can be used for inclusion or exclusion filtering based on regular expressions.
  */
 public final class PatternFilterMessageConsumer implements MessageConsumer {
 
-    private final List<Pattern> patterns;
-    private final boolean shouldBePresent;
-    private final MessageConsumer nextMessageConsumer;
+    private final List<Pattern> patterns;  // List of patterns to match against
+    private final boolean shouldBePresent;  // True if the patterns should match, false if they should not
+    private final MessageConsumer nextMessageConsumer;  // The next consumer in the chain for filtered messages
 
     /**
-     * Constructor
+     * Constructs a {@code PatternFilterMessageConsumer} with the specified patterns, matching condition,
+     * and next consumer.
      *
      * @param patterns            The list of patterns to match against
-     * @param shouldBePresent     true if we require all the patterns to match, false if we require none of the patterns to match
-     * @param nextMessageConsumer The next message consumer in line, messages that pass the filter will be passed to it
+     * @param shouldBePresent     If {@code true}, all patterns must match; if {@code false}, none of the patterns should match
+     * @param nextMessageConsumer The next message consumer in the chain that receives messages passing the filter
      */
     public PatternFilterMessageConsumer(List<Pattern> patterns, boolean shouldBePresent, MessageConsumer nextMessageConsumer) {
         this.patterns = patterns;
@@ -46,13 +51,23 @@ public final class PatternFilterMessageConsumer implements MessageConsumer {
         this.nextMessageConsumer = nextMessageConsumer;
     }
 
+    /**
+     * Consumes a message by checking it against the list of patterns. If the message matches (or doesn't match,
+     * depending on {@code shouldBePresent}), it is passed to the next consumer.
+     *
+     * @param index   The index of the message
+     * @param message The message content
+     * @return {@code true} if the message was consumed by the next consumer, {@code false} otherwise
+     */
     @Override
     public boolean consume(long index, String message) {
         for (Pattern pattern : patterns) {
+            // Check if the message matches the pattern, based on the shouldBePresent flag
             if (shouldBePresent != pattern.matcher(message).find()) {
-                return false;
+                return false;  // If it doesn't meet the condition, filter out the message
             }
         }
+        // Pass the message to the next consumer if all patterns matched (or didn't, depending on the flag)
         return nextMessageConsumer.consume(index, message);
     }
 }
