@@ -18,10 +18,26 @@
 
 package net.openhft.chronicle.queue;
 
+/**
+ * Enum representing the different buffer modes that can be used within Chronicle Queue.
+ * Each mode has a specific use case and behavior depending on the configuration.
+ */
 public enum BufferMode {
-    None,    // The default
+    /**
+     * The default buffer mode.
+     * No additional buffering or special handling is applied.
+     */
+    None,    // Default mode, no buffering
 
-    Copy,    //  used in conjunction with encryption
+    /**
+     * Buffer mode used in conjunction with encryption.
+     * Data is copied into a buffer before being processed.
+     */
+    Copy,    // Used when encryption is enabled to handle buffered copies
 
-    Asynchronous   // used by chronicle-ring [ which is an enterprise product ]
+    /**
+     * Buffer mode used for asynchronous processing.
+     * This mode is specific to Chronicle Ring, an enterprise product.
+     */
+    Asynchronous   // Asynchronous buffering used by Chronicle Ring (enterprise feature)
 }

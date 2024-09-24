@@ -19,19 +19,24 @@
 package net.openhft.chronicle.queue.impl.table;
 
 /**
- * Determines the action to take if lock acquisition times out
+ * Enum representing the action to take when lock acquisition times out in a {@link TableStore}.
+ * It defines different strategies for handling lock acquisition failures.
  */
 public enum UnlockMode {
+
     /**
-     * force unlock and re-acquire
+     * Always force unlock and re-acquire the lock, regardless of the state of the locking process.
      */
     ALWAYS,
+
     /**
-     * throw exception
+     * Never force unlock. Instead, an exception will be thrown if lock acquisition times out.
      */
     NEVER,
+
     /**
-     * force unlock and re-acquire only if the locking process is dead, otherwise throw exception
+     * Force unlock and re-acquire the lock only if the process holding the lock is no longer alive.
+     * If the locking process is still running, an exception is thrown.
      */
     LOCKING_PROCESS_DEAD
 }

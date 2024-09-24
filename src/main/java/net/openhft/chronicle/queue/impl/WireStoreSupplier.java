@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.TailerDirection;
@@ -25,34 +26,62 @@ import org.jetbrains.annotations.Nullable;
 import java.text.ParseException;
 import java.util.NavigableSet;
 
+/**
+ * The {@code WireStoreSupplier} interface defines methods for acquiring and managing {@link SingleChronicleQueueStore}
+ * instances for a specific cycle. It also provides functionality to navigate between cycles and determine which
+ * stores can be reused.
+ */
 public interface WireStoreSupplier {
+
+    /**
+     * Enum defining the strategy for creating or initializing a store.
+     */
     enum CreateStrategy {
-        CREATE, // Always create file
-        REINITIALIZE_EXISTING, // Do not create new file but reinitialize file if header is not ready - for normalizeEOF
+        /** Always create a new file. */
+        CREATE,
+
+        /** Reinitialize existing file if the header is not ready, used for normalizing EOF. */
+        REINITIALIZE_EXISTING,
+
+        /** Open the file in read-only mode. */
         READ_ONLY
     }
 
+    /**
+     * Acquires a {@link SingleChronicleQueueStore} for the specified cycle, using the given creation strategy.
+     *
+     * @param cycle          the cycle number to acquire the store for
+     * @param createStrategy the strategy to use for creating or initializing the store
+     * @return the acquired store, or {@code null} if acquisition fails
+     */
     @Nullable
     SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy);
 
     /**
-     * the next available cycle, no cycle will be created by this method, typically used by a
-     * tailer.
+     * Determines the next available cycle, without creating new cycles.
+     * This method is typically used by a tailer to move to the next cycle.
      *
      * @param currentCycle the current cycle
-     * @param direction    the direction
-     * @return the next available cycle from the current cycle, or -1 if there is not a next cycle
+     * @param direction    the direction (FORWARD or BACKWARD)
+     * @return the next available cycle, or -1 if no next cycle exists
+     * @throws ParseException if parsing the cycle fails
      */
     int nextCycle(int currentCycle, TailerDirection direction) throws ParseException;
 
     /**
-     * the cycles between a range, inclusive
+     * Retrieves a set of cycle numbers within the specified range, inclusive of both the lower and upper cycles.
      *
-     * @param lowerCycle the lower cycle inclusive
-     * @param upperCycle the upper cycle inclusive
-     * @return the cycles between a range, inclusive
+     * @param lowerCycle the lower bound of the cycle range (inclusive)
+     * @param upperCycle the upper bound of the cycle range (inclusive)
+     * @return a {@link NavigableSet} containing the cycle numbers within the specified range
      */
     NavigableSet<Long> cycles(int lowerCycle, int upperCycle);
 
+    /**
+     * Checks if the specified store can be reused for another cycle.
+     *
+     * @param store the {@link SingleChronicleQueueStore} to check for reuse
+     * @return {@code true} if the store can be reused, {@code false} otherwise
+     */
     boolean canBeReused(@NotNull SingleChronicleQueueStore store);
 }

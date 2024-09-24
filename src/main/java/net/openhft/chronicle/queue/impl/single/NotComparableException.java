@@ -19,17 +19,27 @@
 package net.openhft.chronicle.queue.impl.single;
 
 /**
- * Thrown by a binary search comparator when the value we're searching on is not present in the current
- * entry.
- * <p>
- * The assumption is that this occurs rarely. If it does, it will significantly reduce the performance
- * of the binary search.
+ * {@code NotComparableException} is thrown by a binary search comparator when the value being searched for
+ * is not present in the current entry.
+ *
+ * <p>This exception is expected to be rare during a binary search operation. However, when it occurs,
+ * it can significantly reduce the performance of the binary search due to the need for additional comparisons
+ * or fallback logic.</p>
+ *
+ * <p>This exception is a singleton, with a single instance available via the {@link #INSTANCE} field.</p>
  */
 public final class NotComparableException extends RuntimeException {
     private static final long serialVersionUID = 0L;
 
+    /**
+     * Singleton instance of {@code NotComparableException}.
+     */
     public static final NotComparableException INSTANCE = new NotComparableException();
 
+    /**
+     * Private constructor to enforce singleton usage via {@link #INSTANCE}.
+     */
     private NotComparableException() {
+        // No additional initialization required
     }
 }

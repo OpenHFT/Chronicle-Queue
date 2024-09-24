@@ -1,25 +1,49 @@
+/*
+ * Copyright 2022 Higher Frequency Trading
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.rollcycles;
 
 import net.openhft.chronicle.queue.RollCycle;
 
 /**
- * These are largely used for testing and benchmarks to almost turn off indexing.
+ * Enum representing sparse roll cycles, primarily used for testing and benchmarking purposes.
+ * <p>These roll cycles are designed to minimize indexing, making them useful for scenarios where
+ * indexing is either unnecessary or should be kept minimal to reduce overhead.</p>
  */
 public enum SparseRollCycles implements RollCycle {
+
     /**
-     * 0x20000000 entries per day, indexing every 8th entry
+     * Roll cycle allowing up to 0x20000000 entries per day, indexing every 8th entry.
      */
     SMALL_DAILY(/*-----*/"yyyyMMdd'S'", 24 * 60 * 60 * 1000, 8 << 10, 8),
+
     /**
-     * 0x3ffffffff entries per hour with sparse indexing (every 1024th entry)
+     * Roll cycle allowing up to 0x3ffffffff entries per hour, with sparse indexing (every 1024th entry).
      */
     LARGE_HOURLY_SPARSE("yyyyMMdd-HH'LS'", 60 * 60 * 1000, 4 << 10, 1024),
+
     /**
-     * 0x3ffffffffff entries per hour with super-sparse indexing (every (2^20)th entry)
+     * Roll cycle allowing up to 0x3ffffffffff entries per hour, with super-sparse indexing (every (2^20)th entry).
      */
     LARGE_HOURLY_XSPARSE("yyyyMMdd-HH'LX'", 60 * 60 * 1000, 2 << 10, 1 << 20),
+
     /**
-     * 0xffffffffffff entries per day with super-sparse indexing (every (2^20)th entry)
+     * Roll cycle allowing up to 0xffffffffffff entries per day, with super-sparse indexing (every (2^20)th entry).
      */
     HUGE_DAILY_XSPARSE("yyyyMMdd'HX'", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20),
     ;
@@ -28,12 +52,25 @@ public enum SparseRollCycles implements RollCycle {
     private final int lengthInMillis;
     private final RollCycleArithmetic arithmetic;
 
+    /**
+     * Constructs a SparseRollCycle with the given parameters.
+     *
+     * @param format          The format string used for rolling files
+     * @param lengthInMillis  The duration of each cycle in milliseconds
+     * @param indexCount      The number of index entries
+     * @param indexSpacing    The spacing between indexed entries
+     */
     SparseRollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this.format = format;
         this.lengthInMillis = lengthInMillis;
         this.arithmetic = RollCycleArithmetic.of(indexCount, indexSpacing);
     }
 
+    /**
+     * Returns the maximum number of messages allowed per cycle.
+     *
+     * @return The maximum number of messages allowed per cycle
+     */
     public long maxMessagesPerCycle() {
         return arithmetic.maxMessagesPerCycle();
     }
@@ -49,7 +86,10 @@ public enum SparseRollCycles implements RollCycle {
     }
 
     /**
-     * @return this is the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
+     * Returns the default size of the index array.
+     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.</p>
+     *
+     * @return The default index count
      */
     @Override
     public int defaultIndexCount() {

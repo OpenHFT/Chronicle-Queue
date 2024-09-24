@@ -27,93 +27,73 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Utility methods for handling Files in connection with ChronicleQueue.
+ * Utility methods for handling files in connection with ChronicleQueue.
+ * <p>Provides functions for identifying removable files, checking open file states, and determining file suffixes.
  *
- * @author Per Minborg
- * @since 5.17.34
+ * <p><b>Note:</b> This utility class is final and cannot be instantiated.
  */
 public final class FileUtil {
 
+    // Private constructor to prevent instantiation
     private FileUtil() {}
 
     /**
-     * Returns a Stream of roll Queue files that are likely removable
-     * from the given {@code baseDir} without affecting any Queue
-     * process that is currently active in the given {@code baseDir} reading
-     * data sequentially.
+     * Returns a Stream of roll queue files that are likely removable from the given {@code baseDir}
+     * without affecting any queue process currently active in the {@code baseDir} and reading data sequentially.
      * <p>
-     * Files are returned in order of creation and can successively be removed
-     * in that order. If the removal of a particular file fails, then subsequent
-     * files must be untouched.
-     * <p>
-     * WARNING: This method is inherently un-deterministic as new Queue processes may
-     * join or leave at any time asynchronously. Thus, it is not recommended to store
-     * results produced by this method for longer periods.
-     * <p>
-     * Only sequential reading is supported because random access Tailers can read at
-     * any location at any time.
-     * <p>
-     * Here is an example of how unused files can be removed:
-     *
+     * Files are returned in order of creation and can be removed successively in that order. If removal of a particular
+     * file fails, subsequent files must be left untouched.
+     * <p><b>Warning:</b> This method is inherently non-deterministic, as new queue processes may join or leave at any time asynchronously.
+     * <p>Only sequential reading is supported, as random access tailers can read at any location at any time.
+     * <p>Example of how unused files can be removed:
      * <pre>{@code
-     *     for (File file : removableFileCandidates(baseDir).collect(Collectors.toList())) {
-     *         if (!file.delete()) {
-     *             break;
-     *         }
+     * for (File file : removableFileCandidates(baseDir).collect(Collectors.toList())) {
+     *     if (!file.delete()) {
+     *         break;
      *     }
+     * }
      * }</pre>
      *
-     * @param baseDir containing queue file removal candidates
-     * @return a Stream of roll Queue files that are likely removable
-     *         from the given {@code baseDir} without affecting any Queue
-     *         process that is currently active in the given {@code baseDir}
-     *         reading data sequentially
-     * @throws UnsupportedOperationException if this operation is not
-     *         supported for the current platform (e.g. Windows).
+     * @param baseDir The directory containing queue file removal candidates
+     * @return A Stream of roll queue files that are likely removable from the given {@code baseDir} without affecting any active queue process
+     * @throws UnsupportedOperationException If the operation is not supported on the current platform (e.g., Windows)
      */
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
-        return InternalFileUtil.removableRollFileCandidates(baseDir);
+        return InternalFileUtil.removableRollFileCandidates(baseDir); // Delegate to internal utility
     }
 
     /**
-     * Returns all files currently opened by any process, including the PID of the process holding the file open.
-     * <p>
-     * Method is only supported currently on Linux operating systems.
+     * Returns all files currently opened by any process, along with the PID of the process holding the file open.
+     * <p><b>Note:</b> This method is currently supported only on Linux operating systems.
      *
-     * @return a {@link Map} of the absolute paths to all the open files on the system, mapped to the PID holding the file open
-     * @throws UnsupportedOperationException if getAllOpenFiles is not supported by the operating system
-     * @throws IOException if an error occurs while traversing filesystem metadata for open files
+     * @return A {@link Map} of absolute paths to open files on the system, mapped to the PID of the process holding the file open
+     * @throws UnsupportedOperationException If the operation is not supported by the operating system
+     * @throws IOException If an error occurs while traversing filesystem metadata for open files
      */
     public static Map<String, String> getAllOpenFiles() throws IOException {
-        return InternalFileUtil.getAllOpenFiles();
+        return InternalFileUtil.getAllOpenFiles(); // Delegate to internal utility
     }
 
     /**
-     * Returns if the provided {@code file} has the Chronicle Queue file
-     * suffix. The current file suffix is ".cq4".
+     * Checks if the provided {@code file} has the Chronicle Queue file suffix (".cq4").
      *
-     * @param     file to check
-     * @return    if the provided {@code file} has the ChronicleQueue file
-     *            suffix
+     * @param file The file to check
+     * @return {@code true} if the file has the Chronicle Queue suffix, {@code false} otherwise
      */
     public static boolean hasQueueSuffix(@NotNull File file) {
-        return InternalFileUtil.hasQueueSuffix(file);
+        return InternalFileUtil.hasQueueSuffix(file); // Delegate to internal utility
     }
 
     /**
-     * Returns if the given {@code file } is used by any process (i.e.
-     * has the file open for reading or writing).
-     * <p>
-     * If the open state of the given {@code file} can not be determined, {@code true }
-     * is returned.
+     * Determines whether the given {@code file} is being used by any process (i.e., opened for reading or writing).
+     * <p>If the open state of the given {@code file} cannot be determined, {@code true} is returned by default.
      *
-     * @param    file to check
-     * @return   if the given {@code file } is used by any process
-     * @throws   UnsupportedOperationException if this operation is not
-     *           supported for the current platform (e.g. Windows).
+     * @param file The file to check
+     * @return {@code true} if the file is open by any process, or if its state cannot be determined
+     * @throws UnsupportedOperationException If the operation is not supported on the current platform (e.g., Windows)
      */
     public static FileState state(@NotNull File file) {
-        return InternalFileUtil.state(file);
+        return InternalFileUtil.state(file); // Delegate to internal utility
     }
 }

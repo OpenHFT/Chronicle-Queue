@@ -20,39 +20,56 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 
+/**
+ * A utility class for managing Chronicle Queue related system properties.
+ * This class defines constants for various system property keys and provides mechanisms
+ * for configuring aspects of Chronicle Queue behavior via system properties.
+ * <p>
+ * The class cannot be instantiated and only contains static fields and methods.
+ */
 public final class QueueSystemProperties {
 
+    // Private constructor to prevent instantiation of the utility class
     private QueueSystemProperties() {
     }
 
     /**
-     * Returns if Chronicle Queue shall assert certain index invariants on various
-     * occasions throughout the code. Setting this property to "", "yes" or "true"
-     * will enable this feature. Enabling the feature will slow down execution if
-     * assertions (-ea) are enabled.
+     * Indicates whether Chronicle Queue should assert certain index invariants at various points in the code.
      * <p>
-     * System Property key: "queue.check.index"
-     * Default unset value: false
+     * This system property can be used to enable index checking, which will slow down execution if assertions are enabled (-ea).
+     * The feature is enabled by setting the system property "queue.check.index" to one of the following values: "", "yes", or "true".
+     * <p>
+     * System Property key: "queue.check.index" <br>
+     * Default unset value: false <br>
      * Activation values  : "", "yes", or "true"
+     *
+     * @see Jvm#getBoolean(String) for more details on how boolean properties are evaluated.
      */
     public static boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     /**
-     * Name of a system property used to specify the default roll cycle.
+     * The system property key used to specify the default roll cycle for a Chronicle Queue.
      * <p>
-     * System Property key: "net.openhft.queue.builder.defaultRollCycle"
-     * Fallback if unset  : to {@link net.openhft.chronicle.queue.RollCycles#DEFAULT}
-     * Valid values       : Class name of an entity implementing RollCycle such as "net.openhft.chronicle.queue.harness.WeeklyRollCycle"
-     *                       or enum value in class:name format such as "net.openhft.chronicle.queue.RollCycles:HOURLY"
+     * This property allows configuration of a custom roll cycle by setting the property to either:
+     * <ul>
+     *   <li>The class name of an entity implementing {@link net.openhft.chronicle.queue.RollCycle}, e.g., "net.openhft.chronicle.queue.harness.WeeklyRollCycle".</li>
+     *   <li>An enum value in "class:name" format, e.g., "net.openhft.chronicle.queue.RollCycles:HOURLY".</li>
+     * </ul>
+     * <p>
+     * System Property key: "net.openhft.queue.builder.defaultRollCycle" <br>
+     * Fallback if unset: {@link net.openhft.chronicle.queue.RollCycles#DEFAULT}
      */
     public static final String DEFAULT_ROLL_CYCLE_PROPERTY = "net.openhft.queue.builder.defaultRollCycle";
 
     /**
-     * Name of a system property used to specify the default epoch offset property.
+     * The system property key used to specify the default epoch offset for Chronicle Queue timestamps.
      * <p>
-     * System Property key: "net.openhft.queue.builder.defaultEpoch"
-     * Default unset value: 0L
-     * Valid values       : Any long value
+     * This property can be set to any long value, representing the epoch offset in milliseconds.
+     * The default value is 0L if the property is not set.
+     * <p>
+     * System Property key: "net.openhft.queue.builder.defaultEpoch" <br>
+     * Default unset value: 0L <br>
+     * Valid values: Any long value
      */
     public static final String DEFAULT_EPOCH_PROPERTY = "net.openhft.queue.builder.defaultEpoch";
 

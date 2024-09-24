@@ -39,67 +39,119 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of the {@link HistoryReader} interface, providing functionality for reading and processing
+ * historical Chronicle Queue data with timing and histogram-based metrics.
+ * <p>
+ * This class allows the user to read messages from a Chronicle Queue and process them with the help of
+ * histograms and timing windows. Various options such as progress reporting, time unit settings, and
+ * histogram management are available for customization.
+ */
 public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
     public static final String SEPARATOR = "_";
-    protected Path basePath;
-    protected Consumer<String> messageSink;
-    protected boolean progress = false;
-    protected TimeUnit timeUnit = TimeUnit.NANOSECONDS;
-    protected boolean histosByMethod = false;
-    protected Map<String, Histogram> histos = new LinkedHashMap<>();
-    protected long ignore = 0;
-    protected long counter = 0;
-    protected long measurementWindowNanos = 0;
-    protected long firstTimeStampNanos = 0;
-    protected long lastWindowCount = 0;
-    protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
-    protected Long startIndex;
-    protected Supplier<Histogram> histoSupplier = () -> new Histogram(60, 4);
-    protected int lastHistosSize = 0;
-    protected ExcerptTailer tailer;
 
+    protected Path basePath; // The base directory path for the Chronicle Queue
+    protected Consumer<String> messageSink; // Sink for processed messages
+    protected boolean progress = false; // Flag indicating whether to display progress
+    protected TimeUnit timeUnit = TimeUnit.NANOSECONDS; // Time unit for measurements
+    protected boolean histosByMethod = false; // Flag for method-specific histograms
+    protected Map<String, Histogram> histos = new LinkedHashMap<>(); // Histograms for timing measurements
+    protected long ignore = 0; // Number of initial messages to ignore
+    protected long counter = 0; // Counter for processed messages
+    protected long measurementWindowNanos = 0; // Time window for histogram measurements in nanoseconds
+    protected long firstTimeStampNanos = 0; // Timestamp of the first message in nanoseconds
+    protected long lastWindowCount = 0; // Number of messages in the last measurement window
+    protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET; // Offset for summary output
+    protected Long startIndex; // Starting index for reading messages
+    protected Supplier<Histogram> histoSupplier = () -> new Histogram(60, 4); // Supplier for creating histograms
+    protected int lastHistosSize = 0; // The size of histograms processed
+    protected ExcerptTailer tailer; // Tailer for reading from the Chronicle Queue
+
+    // Static block to warn if resource tracing is enabled
     static {
         ToolsUtil.warnIfResourceTracing();
     }
 
+    /**
+     * Sets the message sink, which is a consumer to handle each processed message.
+     *
+     * @param messageSink The consumer to handle processed messages
+     * @return The current instance of {@link ChronicleHistoryReader}
+     */
     @Override
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
         return this;
     }
 
+    /**
+     * Sets the base path for the Chronicle Queue.
+     *
+     * @param path The path to the Chronicle Queue directory
+     * @return The current instance of {@link ChronicleHistoryReader}
+     */
     @Override
     public ChronicleHistoryReader withBasePath(final Path path) {
         this.basePath = path;
         return this;
     }
 
+    /**
+     * Enables or disables progress reporting.
+     *
+     * @param p True to enable progress reporting, false otherwise
+     * @return The current instance of {@link ChronicleHistoryReader}
+     */
     @Override
     public ChronicleHistoryReader withProgress(boolean p) {
         this.progress = p;
         return this;
     }
 
+    /**
+     * Sets the time unit for measurements.
+     *
+     * @param p The {@link TimeUnit} to be used for time-based measurements
+     * @return The current instance of {@link ChronicleHistoryReader}
+     */
     @Override
     public ChronicleHistoryReader withTimeUnit(TimeUnit p) {
         this.timeUnit = p;
         return this;
     }
 
+    /**
+     * Enables or disables method-specific histograms.
+     *
+     * @param b True to enable histograms by method, false otherwise
+     * @return The current instance of {@link ChronicleHistoryReader}
+     */
     @Override
     public ChronicleHistoryReader withHistosByMethod(boolean b) {
         this.histosByMethod = b;
         return this;
     }
 
+    /**
+     * Sets the number of messages to ignore at the start.
+     *
+     * @param ignore The number of messages to ignore
+     * @return The current instance of {@link ChronicleHistoryReader}
+     */
     @Override
     public ChronicleHistoryReader withIgnore(long ignore) {
         this.ignore = ignore;
         return this;
     }
 
+    /**
+     * Sets the measurement window size in the configured time unit.
+     *
+     * @param measurementWindow The size of the measurement window
+     * @return The current instance of {@link ChronicleHistoryReader}
+     */
     @Override
     public ChronicleHistoryReader withMeasurementWindow(long measurementWindow) {
         this.measurementWindowNanos = timeUnit.toNanos(measurementWindow);
@@ -124,7 +176,13 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         return this;
     }
 
-    // TODO: rename as queue is now cached
+    /**
+     * Creates and returns a new {@link ChronicleQueue} instance if the current tailer is null or closed.
+     * Otherwise, returns the current tailer's queue. This method throws an exception if the base path does not exist.
+     *
+     * @return A new or cached {@link ChronicleQueue} instance
+     * @throws IllegalArgumentException if the base path does not exist or if the start index could not be moved to
+     */
     @NotNull
     protected ChronicleQueue createQueue() {
         if (tailer != null && ! tailer.queue().isClosed()) {
@@ -144,6 +202,9 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         return queue;
     }
 
+    /**
+     * Executes the reading of the Chronicle Queue and outputs data if no measurement window is set.
+     */
     @Override
     public void execute() {
         readChronicle();
@@ -151,6 +212,12 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
             outputData();
     }
 
+    /**
+     * Reads messages from the Chronicle Queue, processing each one and updating histograms.
+     * Progress is reported if enabled, and histograms are returned after reading.
+     *
+     * @return A map of histograms representing message processing metrics
+     */
     @Override
     public Map<String, Histogram> readChronicle() {
         createQueue();
@@ -175,11 +242,20 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         return histos;
     }
 
+    /**
+     * Converts a method ID to its corresponding name.
+     *
+     * @param methodId The method ID
+     * @return The method name as a string
+     */
     @NotNull
     protected String methodIdToName(long methodId) {
         return Long.toString(methodId);
     }
 
+    /**
+     * Outputs the data, either as a summary or as percentile-based timings depending on the configuration.
+     */
     @Override
     public void outputData() {
         if (summaryOutputOffset != SUMMARY_OUTPUT_UNSET)
@@ -188,6 +264,9 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
             printPercentilesSummary();
     }
 
+    /**
+     * Prints a percentile-based summary of the histograms.
+     */
     private void printPercentilesSummary() {
         // we should also consider the case where >1 output messages are from 1 incoming
 
@@ -211,6 +290,9 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         messageSink.accept("worst:  " + percentiles(-1));
     }
 
+    /**
+     * Prints a summary of the histograms.
+     */
     private void printSummary() {
         if (histos.size() > lastHistosSize) {
             messageSink.accept("relative_ts," + String.join(",", histos.keySet()));
@@ -224,16 +306,34 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
                                 collect(Collectors.joining(",")));
     }
 
+    /**
+     * Calculates the value at a specified percentile offset.
+     *
+     * @param percentiles The array of percentile values
+     * @param offset      The percentile offset
+     * @return The value at the specified percentile
+     */
     private double offset(double[] percentiles, int offset) {
         return offset >= 0 ? percentiles[offset] : percentiles[percentiles.length + offset];
     }
 
+    /**
+     * Returns a formatted string representing the count of messages processed by each histogram.
+     *
+     * @return A string representing the message counts
+     */
     private String count() {
         final StringBuilder sb = new StringBuilder("        ");
         histos.forEach((id, histogram) -> sb.append(String.format("%12d ", histogram.totalCount())));
         return sb.toString();
     }
 
+    /**
+     * Returns a formatted string representing the percentile values for the histograms.
+     *
+     * @param index The index of the percentile to retrieve
+     * @return A string representing the percentile values
+     */
     private String percentiles(final int index) {
         final StringBuilder sb = new StringBuilder("        ");
         histos.forEach((id, histogram) -> {
@@ -250,6 +350,11 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         return sb.toString();
     }
 
+    /**
+     * Creates a {@link WireParselet} for processing Chronicle Queue messages.
+     *
+     * @return A new {@link WireParselet} instance
+     */
     protected WireParselet parselet() {
         return (methodName, v) -> {
             v.skipValue();
@@ -276,6 +381,12 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         };
     }
 
+    /**
+     * Processes a message and updates the histograms based on timing data.
+     *
+     * @param methodName The name of the method being processed
+     * @param history    The {@link MessageHistory} for the message
+     */
     protected void processMessage(CharSequence methodName, MessageHistory history) {
         CharSequence extraHistoId = histosByMethod ? (SEPARATOR + methodName) : "";
         long lastTime = 0;
@@ -308,20 +419,34 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         }
     }
 
+    /**
+     * Handles when a measurement window has passed, outputting the data and resetting histograms.
+     */
     protected void windowPassed() {
         outputData();
         resetHistos();
     }
 
+    /**
+     * Resets all histograms to their initial state.
+     */
     private void resetHistos() {
         histos.values().forEach(Histogram::reset);
     }
 
+    /**
+     * Creates a new {@link Histogram} instance using the configured supplier.
+     *
+     * @return A new {@link Histogram} instance
+     */
     @NotNull
     protected Histogram histogram() {
         return histoSupplier.get();
     }
 
+    /**
+     * Closes the tailer and the associated queue.
+     */
     @Override
     public void close() {
         if (tailer != null)

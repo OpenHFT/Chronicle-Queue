@@ -28,26 +28,34 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NavigableSet;
 
+/**
+ * The {@code BinarySearch} class provides functionality to perform a binary search
+ * across excerpts within a Chronicle Queue using {@link Wire} as the key and a {@link Comparator}
+ * for matching.
+ *
+ * This implementation relies on Chronicle Queue's encoded 64-bit indexes. While it works under current
+ * assumptions where the high bit of the index is not set, it may become unreliable if that changes in future.
+ */
 public enum BinarySearch {
     INSTANCE;
 
     /**
-     * returns the index or -1 if not found or the index if an exact match is found, an approximation in the form of -approximateIndex
-     * or -1 if there was no searching to be done.
-     * <p>
-     * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
-     * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
-     * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the
-     * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
-     * bit not being set ( in other words set to zero ).
+     * Performs a binary search using the provided key and comparator.
+     * It searches for an exact match and returns the index if found, or an approximate index in the form of {@code -approximateIndex}.
+     * Returns {@code -1} if no search is possible or no match is found.
+     *
+     * @param tailer The {@link ExcerptTailer} used to read from the queue.
+     * @param key    The {@link Wire} key used for comparison.
+     * @param c      The {@link Comparator} to compare entries.
+     * @return The index if an exact match is found, otherwise {@code -approximateIndex} or {@code -1} if no match is found.
      */
     public static long search(@NotNull ExcerptTailer tailer,
                               @NotNull Wire key,
                               @NotNull Comparator<Wire> c) {
         final long readPosition = key.bytes().readPosition();
         try {
-            final long start = tailer.toStart().index();
-            final long end = tailer.toEnd().index();
+            final long start = tailer.toStart().index(); // Find the start index
+            final long end = tailer.toEnd().index(); // Find the end index
 
             final RollCycle rollCycle = tailer.queue().rollCycle();
             final int startCycle = rollCycle.toCycle(start);
@@ -67,6 +75,15 @@ public enum BinarySearch {
         }
     }
 
+    /**
+     * Performs a linear search through the available cycles to find the one that may contain the key.
+     *
+     * @param cycles  The set of available cycles.
+     * @param key     The key to search for.
+     * @param c       The comparator for comparing keys.
+     * @param tailer  The tailer used for reading the queue.
+     * @return The found cycle or the previous cycle if no exact match was found.
+     */
     private static long findCycleLinearSearch(@NotNull NavigableSet<Long> cycles, Wire key,
                                               @NotNull Comparator<Wire> c,
                                               @NotNull ExcerptTailer tailer) {
@@ -75,6 +92,7 @@ public enum BinarySearch {
         final Iterator<Long> iterator = cycles.iterator();
         if (!iterator.hasNext())
             return -1;
+
         final RollCycle rollCycle = tailer.queue().rollCycle();
         long prevIndex = iterator.next();
 
@@ -115,14 +133,14 @@ public enum BinarySearch {
     }
 
     /**
-     * @return The index if an exact match is found, an approximation in the form of -approximateIndex
-     * or a negative number (- the approx index) if there was no searching to be done.
-     * <p>
-     * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
-     * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
-     * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the
-     * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
-     * bit not being set ( in other words set to zero ).
+     * Finds an entry within the cycle that matches the key using binary search.
+     *
+     * @param key         The key to search for.
+     * @param c           The comparator for comparing keys.
+     * @param cycle       The cycle to search within.
+     * @param tailer      The tailer used to navigate the queue.
+     * @param rollCycle   The roll cycle information for the queue.
+     * @return The index if an exact match is found, or {@code -approximateIndex} if not found.
      */
     public static long findWithinCycle(@NotNull Wire key,
                                        @NotNull Comparator<Wire> c,
@@ -137,7 +155,7 @@ public enum BinarySearch {
 
             // nothing to search
             if (highSeqNum < lowSeqNum)
-                return -1;
+                return -1; // Nothing to search
 
             long midIndex = 0;
 
@@ -177,7 +195,7 @@ public enum BinarySearch {
                 }
             }
 
-            return midIndex == 0 ? -1 : -midIndex;  // -approximateIndex
+            return midIndex == 0 ? -1 : -midIndex; // Return -approximateIndex if not exact match
         } finally {
             key.bytes().readPosition(readPosition);
         }

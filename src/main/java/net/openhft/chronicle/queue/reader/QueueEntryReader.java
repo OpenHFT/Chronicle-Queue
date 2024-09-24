@@ -18,12 +18,17 @@
 
 package net.openhft.chronicle.queue.reader;
 
+/**
+ * Interface for reading and processing entries from a queue.
+ * <p>Implementations of this interface are responsible for reading the next available entry
+ * from the queue and processing it as necessary.</p>
+ */
 public interface QueueEntryReader {
 
     /**
-     * Read/process the next entry from the queue
+     * Reads and processes the next entry from the queue.
      *
-     * @return true if there was an entry to read, false if we are at the end of the queue
+     * @return {@code true} if there was an entry to read and process, {@code false} if the end of the queue has been reached
      */
     boolean read();
 }

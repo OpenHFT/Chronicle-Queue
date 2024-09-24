@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -26,88 +27,116 @@ import org.jetbrains.annotations.Nullable;
 
 import java.text.ParseException;
 
+/**
+ * The {@code RollingChronicleQueue} interface extends the {@link ChronicleQueue} interface and provides
+ * additional methods for managing roll cycles, storing and retrieving data, and counting excerpts in a Chronicle Queue.
+ *
+ * <p>It defines the epoch offset, cycle management, and excerpt counting mechanisms, along with various queue
+ * parameters such as index count, spacing, and delta checkpoint intervals.</p>
+ */
 public interface RollingChronicleQueue extends ChronicleQueue {
 
+    /**
+     * Returns the epoch offset of the queue, which is the number of milliseconds since
+     * January 1, 1970, 00:00:00 GMT.
+     *
+     * @return the epoch offset in milliseconds.
+     */
     long epoch();
 
     /**
-     * @param cycle          the cycle
-     * @param epoch          an epoch offset as the number of milliseconds since January
-     *                       1, 1970, 00:00:00 GMT
-     * @param createIfAbsent create missing stores if true, or return null if missing
-     * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent
-     * is {@code false} and absent
+     * Retrieves the {@link SingleChronicleQueueStore} for a given cycle. Optionally, the store can be created
+     * if it doesn't exist.
+     *
+     * @param cycle          the cycle number to retrieve.
+     * @param epoch          the epoch offset in milliseconds since January 1, 1970, 00:00:00 GMT.
+     * @param createIfAbsent flag to indicate whether to create the store if it doesn't exist.
+     * @param oldStore       the previous store instance, if any.
+     * @return the {@code SingleChronicleQueueStore} for the given cycle, or {@code null} if the store doesn't exist and {@code createIfAbsent} is false.
      */
     @Nullable
     SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);
 
     /**
-     * @return the first cycle number found, or Integer.MAX_VALUE is none found.
+     * Finds and returns the first cycle number in the queue.
+     *
+     * @return the first cycle number, or {@code Integer.MAX_VALUE} if no cycles are found.
      */
     int firstCycle();
 
     /**
-     * @return the lastCycle available or Integer.MIN_VALUE if none is found.
+     * Finds and returns the last cycle number available in the queue.
+     *
+     * @return the last cycle number, or {@code Integer.MIN_VALUE} if no cycles are found.
      */
     int lastCycle();
 
     /**
-     * Counts the number of messages in this queue instance.
+     * Counts the total number of excerpts (messages) present in this queue instance.
      *
-     * @return the number of document excerpts
+     * @return the number of document excerpts in the queue.
      */
     long entryCount();
 
     /**
-     * the next available cycle, no cycle will be created by this method, this method is typically
-     * used by a tailer to jump to the next cycle when the cycles are not adjacent.
+     * Finds the next available cycle from the current cycle in the specified direction.
+     * This method does not create a new cycle if none is available.
      *
-     * @param currentCycle the current cycle
-     * @param direction    the direction
-     * @return the next available cycle from the current cycle, or -1 if there is no next cycle
+     * @param currentCycle the current cycle number.
+     * @param direction    the direction in which to search for the next cycle (forward or backward).
+     * @return the next available cycle, or {@code -1} if there is no next cycle.
+     * @throws ParseException if there is an error parsing the cycle data.
      */
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
 
     /**
-     * The number of excerpts between the indexes, {@code fromIndex} inclusive, {@code toIndex}
-     * exclusive.
-     * <p>
-     * When {@code fromIndex} and {@code toIndex} are in different cycles which are not adjacent, this
-     * operation can be expensive, as the index count for each intermediate cycle has to be found
-     * and calculated. As such, and in this situation, it's not recommended to call this method
-     * regularly in latency sensitive systems.
+     * Calculates the number of excerpts (messages) between two specified index positions.
      *
-     * @param fromIndex from index, the index provided must exist.  To improve performance no checking
-     *                  is carried out to validate if an excerpt exists at this index. ( inclusive )
-     * @param toIndex   to index, the index provided must exist. To improve performance no checking is
-     *                  carried out to validate if an excerpt exists at this index. ( exclusive )
-     * @return the number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
-     * exclusive.
-     * @throws java.lang.IllegalStateException if the cycle of {@code fromIndex} or {@code toIndex} can
-     *                                         not be ascertained
+     * <p>This operation can be expensive if the indexes are in different, non-adjacent cycles,
+     * as it may involve querying and calculating index counts for intermediate cycles.</p>
+     *
+     * @param fromIndex the starting index (inclusive). No validation is performed on this index.
+     * @param toIndex   the ending index (exclusive). No validation is performed on this index.
+     * @return the number of excerpts between the two indexes.
+     * @throws IllegalStateException if the cycle of either {@code fromIndex} or {@code toIndex} cannot be determined.
      */
     long countExcerpts(long fromIndex, long toIndex);
 
     /**
-     * @return the current cycle
+     * Returns the current cycle number.
+     *
+     * @return the current cycle number.
      */
     int cycle();
 
     /**
-     * @return the max size of each index and also the number number of index arrays. indexCount^2 is the maximum number of index queue entries.
+     * Retrieves the maximum size of each index array and the number of index arrays.
+     * The maximum number of index queue entries is determined by {@code indexCount}^2.
+     *
+     * @return the index count, representing the max size and number of index arrays.
      */
     int indexCount();
 
     /**
-     * @return the spacing between indexed entries. If 1 then every entry is indexed.
+     * Retrieves the spacing between indexed entries in the queue.
+     * If the spacing is 1, every entry is indexed.
+     *
+     * @return the spacing between indexed entries.
      */
     int indexSpacing();
 
+    /**
+     * Returns the {@link RollCycle} associated with this queue, which defines how the queue rolls over time.
+     *
+     * @return the roll cycle used by the queue.
+     */
     @NotNull
     RollCycle rollCycle();
 
     /**
-     * @return the checkpointInterval used by delta wire
+     * Returns the checkpoint interval used by delta wire. This defines how frequently checkpoints are created.
+     *
+     * @return the checkpoint interval for delta wire.
      */
     int deltaCheckpointInterval();
 }

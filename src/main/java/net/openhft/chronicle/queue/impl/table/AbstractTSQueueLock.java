@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.core.Jvm;
@@ -33,26 +34,56 @@ import static java.lang.String.format;
 import static net.openhft.chronicle.core.Jvm.getProcessId;
 
 /**
- * Implements a lock using {@link LongValue} and primitives such as CAS.
+ * Implements a lock using {@link LongValue} and primitives such as Compare-And-Swap (CAS).
  * <p>
- * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
- * for a timed-out lock to be overridden.
+ * The lock is associated with a specific table store and can be used to ensure exclusive access
+ * to resources. The locking mechanism allows for forced unlocking in case of a dead process,
+ * with an optional recovery feature based on the {@code queue.force.unlock.mode} system property.
+ * <p>
+ * WARNING: By default, the lock can be overridden if it times out, but this behavior can be controlled
+ * with the system property {@code queue.force.unlock.mode}.
  */
 @SuppressWarnings("this-escape")
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
+
+    // Message displayed when manual unlocking is suggested
     protected static final String UNLOCK_MAIN_MSG = ". You can manually unlock with net.openhft.chronicle.queue.main.UnlockMain";
+
+    // Message for forcibly unlocking the lock
     protected static final String UNLOCKING_FORCIBLY_MSG = ". Unlocking forcibly. Note that this feature is designed to recover " +
             "if another process died while holding a lock. If the other process is still alive, you may see queue corruption.";
+
+    // Process ID of the current process
     protected static final long PID = getProcessId();
+
+    // Represents an unlocked state
     public static final long UNLOCKED = 1L << 63;
+
+    // The mode for handling forced unlocking
     protected final UnlockMode forceUnlockOnTimeoutWhen;
 
+    // Lock associated with the table store
     protected final LongValue lock;
+
+    // Pauser to manage timing and retries
     protected final ThreadLocal<TimingPauser> pauser;
+
+    // The file path of the table store
     protected final File path;
+
+    // The table store this lock is associated with
     protected final TableStore<?> tableStore;
+
+    // A unique key representing this lock
     private final String lockKey;
 
+    /**
+     * Constructor for creating an AbstractTSQueueLock.
+     *
+     * @param lockKey        The unique key associated with this lock.
+     * @param tableStore     The table store this lock will manage.
+     * @param pauserSupplier A supplier for creating a {@link TimingPauser}.
+     */
     public AbstractTSQueueLock(final String lockKey, final TableStore<?> tableStore, final Supplier<TimingPauser> pauserSupplier) {
         this.tableStore = tableStore;
         this.lock = tableStore.doWithExclusiveLock(ts -> ts.acquireValueFor(lockKey));
@@ -72,12 +103,17 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         singleThreadedCheckDisabled(true);
     }
 
+    /**
+     * Performs cleanup and releases resources when the lock is closed.
+     */
     protected void performClose() {
         Closeable.closeQuietly(lock);
     }
 
     /**
-     * will only force unlock if you give it the correct pid
+     * Forces the lock to be unlocked, only if the current process owns the lock.
+     *
+     * @param value The value representing the current lock holder (process ID and thread).
      */
     protected void forceUnlock(long value) {
         boolean unlocked = lock.compareAndSwapValue(value, UNLOCKED);
@@ -89,9 +125,15 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 new StackTrace("Forced unlock"));
     }
 
+    /**
+     * Checks if the lock is held by the current process.
+     *
+     * @param notCurrentProcessConsumer A consumer that will be called if the lock is not held by the current process.
+     * @return {@code true} if the lock is held by the current process, {@code false} otherwise.
+     */
     public boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer) {
         final long pid = this.lock.getVolatileValue();
-        // mask off thread (if used)
+        // Mask off the thread part, if present
         int realPid = (int) pid;
         if (realPid == PID)
             return true;
@@ -100,16 +142,20 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     }
 
     /**
-     * forces an unlock only if the process that currently holds the table store lock is no-longer running
+     * Forces an unlock if the process that holds the lock is no longer running.
      *
-     * @return {@code true} if the lock was already unlocked, It will not release the lock if it is held by this process
-     * or the process that was holding the lock is no longer running (and we were able to unlock).
-     * Otherwise {@code false} is returned if the lock is held by this process or another live process.
+     * @return {@code true} if the lock was unlocked, otherwise {@code false}.
      */
     public boolean forceUnlockIfProcessIsDead() {
         return forceUnlockIfProcessIsDead(true);
     }
 
+    /**
+     * Forces an unlock if the process holding the lock is no longer alive.
+     *
+     * @param warn If {@code true}, log a warning message; otherwise, log a debug message.
+     * @return {@code true} if the lock was unlocked, otherwise {@code false}.
+     */
     protected boolean forceUnlockIfProcessIsDead(boolean warn) {
         long pid;
         for (; ; ) {
@@ -117,7 +163,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             if (pid == UNLOCKED)
                 return true;
 
-            // mask off thread (if used)
+            // Mask off thread (if used)
             int realPid = (int) pid;
             if (!Jvm.isProcessAlive(realPid)) {
                 final String message = format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
@@ -140,12 +186,19 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     }
 
     /**
-     * @return the pid that had the locked or the returns UNLOCKED if it is not locked
+     * Gets the process ID (PID) that currently holds the lock.
+     *
+     * @return The process ID holding the lock, or {@code UNLOCKED} if it is not locked.
      */
     public long lockedBy() {
         return lock.getVolatileValue();
     }
 
+    /**
+     * Provides a string representation of the lock, including the lock key and path.
+     *
+     * @return A string describing the lock.
+     */
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "{" +

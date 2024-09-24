@@ -1,3 +1,21 @@
+/*
+ * Copyright 2016-2022 chronicle.software
+ *
+ *       https://chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle.queue.channel;
 
 import net.openhft.affinity.AffinityLock;
@@ -21,28 +39,60 @@ import java.util.function.Predicate;
 
 import static net.openhft.chronicle.queue.channel.PublishHandler.copyFromChannelToQueue;
 
+/**
+ * The {@code PipeHandler} class facilitates creating a pipeline between two Chronicle Queues, handling the
+ * subscription and publishing mechanisms. It is responsible for subscribing to one queue and publishing
+ * to another, with optional filtering and synchronization modes.
+ */
 @SuppressWarnings("deprecation")
 public class PipeHandler extends AbstractHandler<PipeHandler> {
+
+    // Queue to publish messages to
     private String publish;
+
+    // Queue to subscribe messages from
     private String subscribe;
+
+    // Synchronization mode for the queues
     private SyncMode syncMode;
+
+    // Thread responsible for handling the tailer
     private transient Thread tailerThread;
 
+    // Optional filter predicate for the subscription
     private Predicate<Wire> filter = null;
 
+    // Source ID for the publish queue
     private int publishSourceId = 0;
 
+    // Source ID for the subscribe queue
     private int subscribeSourceId = 0;
+
+    // Consumer to control subscription index
     @SuppressWarnings("unchecked")
     private Consumer<ExcerptTailer> subscriptionIndexController = SubscribeHandler.NO_OP;
 
+    /**
+     * Default constructor for PipeHandler.
+     */
     public PipeHandler() {
     }
 
+    /**
+     * Helper method to create a new Chronicle Queue based on the provided context and settings.
+     *
+     * @param context     the Chronicle context
+     * @param queueName   the name of the queue
+     * @param syncMode    the synchronization mode for the queue
+     * @param sourceId    the source ID for the queue
+     * @return a new ChronicleQueue instance
+     */
     static ChronicleQueue newQueue(ChronicleContext context, String queueName, SyncMode syncMode, int sourceId) {
         final File path = context.toFile(queueName);
         return ChronicleQueue.singleBuilder(path).blockSize(OS.isSparseFileSupported() ? 512L << 30 : 64L << 20).sourceId(sourceId).syncMode(syncMode).build();
     }
+
+    // Getter and setter methods for publish
 
     public String publish() {
         return publish;
@@ -53,6 +103,8 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         return this;
     }
 
+    // Getter and setter methods for subscribe
+
     public String subscribe() {
         return subscribe;
     }
@@ -61,6 +113,8 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         this.subscribe = subscribe;
         return this;
     }
+
+    // Getter and setter methods for syncMode
 
     public SyncMode syncMode() {
         return syncMode;
@@ -71,6 +125,8 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         return this;
     }
 
+    // Getter and setter methods for filter
+
     public Predicate<Wire> filter() {
         return filter;
     }
@@ -79,6 +135,8 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         this.filter = filter;
         return this;
     }
+
+    // Getter and setter methods for publishSourceId
 
     public int publishSourceId() {
         return publishSourceId;
@@ -89,11 +147,19 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         return this;
     }
 
+    // Getter and setter methods for subscribeSourceId
+
     public PipeHandler subscribeSourceId(int subscribeSourceId) {
         this.subscribeSourceId = subscribeSourceId;
         return this;
     }
 
+    /**
+     * Runs the PipeHandler, establishing a pipeline between the subscribe and publish queues.
+     *
+     * @param context the Chronicle context
+     * @param channel the Chronicle channel used for communication
+     */
     @SuppressWarnings("try")
     @Override
     public void run(ChronicleContext context, ChronicleChannel channel) {
@@ -131,11 +197,19 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
         }
     }
 
+    /**
+     * Creates an internal Chronicle channel using the configuration provided.
+     *
+     * @param context    the Chronicle context
+     * @param channelCfg the channel configuration
+     * @return a new QueuesChannel instance
+     */
     @Override
     public ChronicleChannel asInternalChannel(ChronicleContext context, ChronicleChannelCfg<?> channelCfg) {
         return new QueuesChannel(channelCfg, this, newQueue(context, publish, syncMode, publishSourceId), newQueue(context, subscribe, syncMode, 0));
     }
 
+    // Event poller for handling events
     static class PHEventPoller extends SimpleCloseable implements EventPoller {
         private final ExcerptTailer tailer;
         private final Predicate<Wire> filter;
@@ -160,8 +234,10 @@ public class PipeHandler extends AbstractHandler<PipeHandler> {
     }
 
     /**
-     * @param subscriptionIndexController controls where the subscriptions will start to read from, by allowing the caller to
-     *                                    {@link net.openhft.chronicle.queue.ExcerptTailer#moveToIndex(long)} to control the first read location
+     * Sets a controller to manage the subscription index.
+     *
+     * @param subscriptionIndexController Consumer controlling the starting index for subscriptions
+     * @return the PipeHandler instance
      */
     public PipeHandler subscriptionIndexController(Consumer<ExcerptTailer> subscriptionIndexController) {
         this.subscriptionIndexController = subscriptionIndexController;
