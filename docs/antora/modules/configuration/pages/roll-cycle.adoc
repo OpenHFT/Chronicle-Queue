@@ -51,7 +51,7 @@ In this case, the persisted roll-cycle is `FAST_HOURLY`, and a new `SingleChroni
 == Controlling the Exact Roll Time
 Chronicle Queue is UTC time based and uses `System.currentTimeMillis()` to evaluate when it is time to roll the queue. Rolling occurs whenever a new time frame of the selected kind is started, meaning for minutely rolling a new queue is created when a new minute begins and daily rolls occurs at midnight UTC time.
 
-This behavior can be changed using Chronicle Queue’s attribute `epoch()`. Epoch refers to a milliseconds offset to the set time frame.In other words, if you set the epoch to be `epoch(1)` and use `RollCycles.DAILY` the queue will roll at 1 millisecond past midnight UTC time.Putting it together:
+This behavior can be changed using Chronicle Queue’s attribute `epoch()`. Epoch refers to a milliseconds offset to the set time frame. In other words, if you set the epoch to be `epoch(1)` and use `RollCycles.DAILY` the queue will roll at 1 millisecond past midnight UTC time. Putting it together:
 
 [source,java]
 ----
