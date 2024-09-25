@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -29,6 +30,9 @@ class MetadataDeletionTests extends QueueTestCommon {
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).build();
                  ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText("hello world");
+            } finally {
+                // Force release of resources to ensure that they are truly released by the time we clean up metadata
+                BackgroundResourceReleaser.releasePendingResources();
             }
 
             // Imagine that system has shut down, delete metadata
@@ -67,6 +71,9 @@ class MetadataDeletionTests extends QueueTestCommon {
                 appender.writeText("3");
                 setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
                 appender.writeText("4");
+            } finally {
+                // Force release of resources to ensure that they are truly released by the time we clean up metadata
+                BackgroundResourceReleaser.releasePendingResources();
             }
 
             // Imagine that system has shut down, delete metadata
