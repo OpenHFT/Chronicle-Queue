@@ -360,3 +360,13 @@ Lastly, there is a script for running the reader named `queue_reader.sh` which a
 $ ./bin/queue_reader.sh <options>
 ----
 
+=== Refreshing The Directory Listing For A Queue Using `RefreshMain`
+
+`RefreshMain` can be used to refresh the directory listing for a queue, contained within the tablestore file for the queue. Assuming a project pom file that includes the Chronicle-Queue artifact, you can refresh the directory listing for a queue with the following command:
+
+[source, shell script]
+---
+mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.RefreshMain" -Dexec.args="myqueue"
+---
+
+Where _myqueue_ is the directory containing your .cq4 files.
