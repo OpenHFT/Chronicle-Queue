@@ -86,7 +86,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * <p>
      * Usually, each cycle will have its own unique data file to store excerpts.
      *
-     * @return Returns the current cycle for this Tailer
+     * @return Returns the current cycle for this Tailer, or Integer.MIN_VALUE if no cycle has been loaded.
      */
     int cycle();
 
