@@ -1,0 +1,311 @@
+= Command Line Tools
+keywords: queue, java, command line,
+author: Kevin Powe
+:reftext: Command Line Tools
+:navtitle: Comamnd Line Tools
+:source-highlighter: highlight.js
+
+== Overview
+
+The following command line tools can be used to interact with Chronicle Queue.
+
+[cols="1,1"]
+|===
+
+| ★ <<_archiverollfiles,*ArchiveRollFiles*>>
+| Assists in management of roll cycle files
+
+| <<_chroniclehistoryreadermain,*ChronicleHistoryReaderMain*>>
+| Reads history from queue and outputs latency histograms
+
+| <<_chroniclereadermain,*ChronicleReaderMain*>>
+| Displays records from a queue in text form, supporting more complex operations
+
+| <<_chroniclewritermain,*ChronicleWriterMain*>>
+| Write contents of files provided to queue
+
+| <<_dumpmain,*DumpMain*>>
+| Performs simple text output of queue contents
+
+| <<_refreshmain,RefreshMain>>
+| Refreshes the directory listing for a queue
+
+| <<_unlockmain,*UnlockMain*>>
+| Manually force-unlocks a queue
+|===
+
+=== Using Command Line Tools
+
+Where noted, each command line tool can be invoked via a shell script. Command line tools can also be invoked using Maven, assuming a project POM file that includes the Chronicle Queue artifact. For example:
+
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -Dexec.args="myqueue"
+----
+
+In the above command invoking *DumpMain*,  _myqueue_ is the directory containing your .cq4 files.
+
+== ★ ArchiveRollFiles
+
+To facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the `ArchiveRollFiles` utility.
+
+**Invocation via Maven:**
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain" -Dexec.args="<archiving arguments>"
+----
+
+(requires a project POM file that includes the Chronicle-Queue-Enterprise artifact)
+
+Below is the command line interface used to configure `ArchiveRollFilesMain`:
+
+----
+usage: ArchiveRollFilesMain -aa <archive-action> [-ad <archive-dir>] [-h] [-kc <key-class>] [-m <min-archive-age>] [-qbme <qbm-entries>] [-qbmn <qbm-name>] -qc <queue-config-file>
+       -qn <queue-name> [-r <roll-cycles-to-keep>] [-vc <value-class>]
+ -aa <archive-action>       Archiving action to perform (ARCHIVE or DELETE)
+ -ad <archive-dir>          Directory to move files to if archiving
+ -dryrun                    Perform dry run of archiving actions that would occur without actual processing
+ -h                         Print this help and exit
+ -kc <key-class>            Name of key class (if queue being archived is backing a QBM)
+ -m <min-archive-age>       Archive files older than this age. Can be specified as milliseconds since epoch or local datetime. Either this or -r must be provided.
+ -qbme <qbm-entries>        Maximum number of entries in QBM (if queue being archived is backing a QBM)
+ -qbmn <qbm-name>           QBM name (if queue is backing a QBM)
+ -qc <queue-config-file>    QueueReplicationConfig file containing queue configuration
+ -qn <queue-name>           Name of queue as used in queue-config-file
+ -r <roll-cycles-to-keep>   Number of roll cycles to keep when archiving. Either this or -m must be provided.
+ -vc <value-class>          Name of value class (if queue being archived is backing a QBM)
+----
+
+==== Command-Line Parameters
+
+|===
+| Parameter | Detail | Required?
+
+| -qc | Full or relative path to file to load configuration from for queue being archived. | Y
+| -qn | Name of queue being archived, as it appears in file specified by -qc. eg. `'queue1'` | Y
+| -aa | Archive action being performed. Accepted values are `ARCHIVE` (move roll files to archive directory) or `DELETE` (delete eligible roll files permanently) | Y
+| -m | Minimum age for files to be eligible for archiving, specified as a local datetime in the format `yyyy-MM-dd'T'HH:mm:ss` (eg. `2024-05-23T23:55:01`). Compared against a roll file's last modified time. | If `-r` is not specified
+| -r | Number of roll cycles to retain. If this option is combined with `-m`, the minimum number of roll cycle files will be retained before considering files for archiving. | If `-m` is not specified
+| -dryrun | Output log of archiving actions that would occur, without any actual file processing | N
+|===
+
+==== Map Enterprise Support
+
+If the queue being archived is backing an Map Enterprise Map (Enterprise Map for ease of reading) `ArchiveRollFiles` can provide additional utility by writing a full snapshot of the map to the current roll cycle before archiving older roll cycle files, ensuring the Enterprise Map contents are safely preserved.
+
+When archiving a queue backing an Enterprise Map, the following parameters must be provided:
+
+|===
+| Parameter | Detail | Required?
+
+| -qbmn | Name of the `Map` | Y
+| -qbme | Maximum number of entries in the Map | Y
+| -kc | Fully qualified name of the Map key class | Y
+| -vc | Fully qualified name of the Map value class | Y
+
+|===
+
+==== Examples
+
+Invoking `ArchiveRollFiles` to delete all roll files older than the age specified for `queue1`.
+
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
+-Dexec.args="-qc config/queue-config.yaml -qn queue1 -m 2024-11-01T12:15:00 -aa DELETE"
+----
+
+Invoking `ArchiveRollFiles` to archive roll files older than the age specified for an Enterprise Map queue.
+[source, shell script]
+----
+$  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
+-Dexec.args="-qc /tmp/qbm-replication.yaml -qn queue1 -m 2024-05-23T23:55:01 -aa ARCHIVE
+-ad /mnt/share/queue-archive  --qbmn corr-map -qbme 10000 -kc java.lang.String -vc java.lang.Integer"
+----
+
+Invoking `ArchiveRollFiles` to archive all roll cycles except the last three for `queue1`.
+[source, shell script]
+----
+$  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
+-Dexec.args="-qc /tmp/qbm-replication.yaml -qn queue1 -r 3 -aa ARCHIVE -ad /mnt/share/queue-archive"
+----
+
+== ChronicleHistoryReaderMain
+
+`ChronicleHistoryReaderMain` reads the message history from a Chronicle queue and outputs histograms for latencies for each component that has processed a message, as well as latencies between each component that has processed a message.
+
+**Invocation via Maven:**
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleHistoryReaderMain" -Dexec.args="<reader arguments>"
+----
+
+**Invocation via shell script from the `Chronicle-Queue` root folder:**
+[source, shell script]
+----
+$ ./bin/history_reader.sh <options>
+----
+
+Below is the command line interface used to configure `ChronicleHistoryReaderMain`:
+
+----
+usage: ChronicleHistoryReaderMain
+ -d <directory>      Directory containing chronicle queue files
+ -h                  Print this help and exit
+ -i <ignore>         How many items to ignore from start
+ -m                  By method
+ -p                  Show progress
+ -t <time unit>      Time unit. Default nanos
+ -u <histo offset>   Summary output. Instead of histograms, will show one value only, in CSV format. Set this to 0 for 50th, 1 for 90th etc., -1 for worst
+ -w <window>         Window duration in time unit. Instead of one output at the end, will output every window period
+----
+
+== ChronicleReaderMain
+
+`ChronicleReaderMain` can be used to log the contents of a chronicle queue, and is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
+
+**Invocation via Maven:**
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain" -Dexec.args="<reader arguments>"
+----
+
+**Invocation via shell script from the `Chronicle-Queue` root folder:**
+[source, shell script]
+----
+$ ./bin/queue_reader.sh <options>
+----
+
+Below is the command line interface used to configure `ChronicleReaderMain`:
+
+----
+usage: ChronicleReaderMain
+ -d <directory>       Directory containing chronicle queue files
+ -e <exclude-regex>   Do not display records containing this regular
+                      expression
+ -f                   Tail behaviour - wait for new records to arrive
+ -h                   Print this help and exit
+ -i <include-regex>   Display records containing this regular expression
+ -l                   Squash each output message into a single line
+ -m <max-history>     Show this many records from the end of the data set
+ -n <from-index>      Start reading from this index (e.g. 0x123ABE)
+ -r <interface>       Use when reading from a queue generated using a MethodWriter
+ -s                   Display index
+ -w <wire-type>       Control output i.e. JSON
+----
+
+== ChronicleWriterMain
+
+`ChronicleWriterMain` can be used to write to a queue, using a method writer to write the contents of files provided.
+
+**Invocation via Maven:**
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleWriterMain" -Dexec.args="<writer arguments>"
+----
+
+**Invocation via shell script from the `Chronicle-Queue` root folder:**
+[source, shell script]
+----
+$ ./bin/queue_writer.sh <options>
+----
+
+Below is the command line interface used to configure `ChronicleWriterMain`:
+
+----
+usage: ChronicleWriterMain
+ -d <directory>   Directory containing chronicle queue to write to
+ -i <interface>   Interface to write via
+ -m <method>      Method name
+----
+
+== DumpMain
+
+`DumpMain` takes a single parameter indicating the path to dump text from. This path can either represent a single .cq4 queue file, or a directory containing queue files.
+
+NOTE: `DumpMain` is a tool intended for low-level debugging. In most situations, <<_chroniclereadermain>> will provide more suited functionality for viewing the contents of queue files.
+
+**Invocation via Maven:**
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -Dexec.args="myqueue"
+----
+
+**Invocation via shell script from the `Chronicle-Queue` root folder:**
+[source, shell script]
+----
+$ ./bin/dump_queue.sh 19700101-02.cq4
+----
+
+This will dump the `19700101-02.cq4` file out as text, as shown below:
+
+[source, yaml]
+----
+!!meta-data #binary
+header: !SCQStore {
+  wireType: !WireType BINARY,
+  writePosition: 0,
+  roll: !SCQSRoll {
+    length: !int 3600000,
+    format: yyyyMMdd-HH,
+    epoch: !int 3600000
+  },
+  indexing: !SCQSIndexing {
+    indexCount: !short 4096,
+    indexSpacing: 4,
+    index2Index: 0,
+    lastIndex: 0
+  },
+  lastAcknowledgedIndexReplicated: -1,
+  recovery: !TimedStoreRecovery {
+    timeStamp: 0
+  }
+}
+
+...
+# 4198044 bytes remaining
+----
+
+NOTE: The example above does not show any user data, because no user data was written to this example file.
+
+The following system properties can be used optionally to configure the behaviour of `DumpMain`:
+
+|===
+| Property | Effect
+
+| `file` | Indicates file to capture command output to
+| `skipTableStoreDump` | Skip dump of tablestore contents for queue if printing contents of queue directory
+| `dumpUnaligned` | If set to true, dump of queue contents is not aligned
+|===
+
+== RefreshMain
+
+`RefreshMain` can be used to refresh the directory listing for a queue, contained within the tablestore file for the queue. RefreshMain takes a single parameter indicating the directory containing queue files.
+
+**Invocation via Maven:**
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.RefreshMain" -Dexec.args="myqueue"
+----
+
+**Invocation via shell script from the `Chronicle-Queue` root folder:**
+[source, shell script]
+----
+$ ./bin/refresh_queue.sh myqueue
+----
+
+== UnlockMain
+
+`UnlockMain` can be used to forcibly unlock the a queue. UnlockMain takes a single parameter indicating the directory containing queue to unlock.
+
+**Invocation via Maven:**
+[source, shell script]
+----
+$ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.UnlockMain" -Dexec.args="myqueue"
+----
+
+**Invocation via shell script from the `Chronicle-Queue` root folder:**
+[source, shell script]
+----
+$ ./bin/unlock_queue.sh myqueue
+----
