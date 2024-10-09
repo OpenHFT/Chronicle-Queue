@@ -259,35 +259,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
-     * Returns a number of excerpts in a cycle. May use a fast path to return the cycle length cached in indexing,
-     * which is updated last during append operation so may be possible that a single entry is available for reading
-     * but not acknowledged by this method yet.
-     * <p>
-     * Calling this method may move ExcerptTailer to the specified cycle and release its store.
-     *
-     * @return the approximate number of excerpts in a cycle.
-     * @deprecated Use {@link #excerptsInCycle(int)} instead
-     */
-    @Deprecated(/* To be removed in x.27 */)
-    default long approximateExcerptsInCycle(int cycle) {
-        return excerptsInCycle(cycle);
-    }
-
-    /**
-     * Returns an exact number of excerpts in a cycle available for reading. This may be a computationally
-     * expensive operation.
-     * <p>
-     * Calling this method may move ExcerptTailer to the specified cycle and release its store.
-     *
-     * @return the exact number of excerpts in a cycle.
-     * @deprecated Use {@link #excerptsInCycle(int)} instead
-     */
-    @Deprecated(/* To be removed in x.27 */)
-    default long exactExcerptsInCycle(int cycle) {
-        return excerptsInCycle(cycle);
-    }
-
-    /**
      * Return the exact number of excerpts in a cycle available for reading.
      * <p>
      * Calling this method may move ExcerptTailer to the specified cycle and release its store.

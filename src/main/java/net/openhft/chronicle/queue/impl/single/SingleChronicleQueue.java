@@ -497,13 +497,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return storeSupplier;
     }
 
-    @SuppressWarnings("deprecation")
-    @NotNull
-    @Override
-    public ExcerptAppender acquireAppender() {
-        return ThreadLocalAppender.acquireThreadLocalAppender(this);
-    }
-
     @NotNull
     ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
         queue.throwExceptionIfClosed();
