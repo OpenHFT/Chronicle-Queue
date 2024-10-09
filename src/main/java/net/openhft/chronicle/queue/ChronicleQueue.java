@@ -190,27 +190,6 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread.
-     * <p>
-     * An Appender can be used to store new excerpts sequentially to the queue.
-     * <p>
-     * <b>
-     * An Appender is <em>NOT thread-safe</em> and, in addition to that, confined to be used <em>by the creating thread only.</em>.
-     * Sharing an Appender across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
-     * </b>
-     * <p>
-     * This method returns a {@link ThreadLocal} appender, so does not produce any garbage, hence it's safe to simply call
-     * this method every time an appender is needed.
-     *
-     * @return Returns a ExcerptAppender for this ChronicleQueue that is local to the current Thread
-     * @deprecated It is recommended to use {@link #createAppender()} instead or for a SingleChronicleQueue you can use the utility method
-     * net.openhft.chronicle.queue.impl.single.ThreadLocalAppender#acquireThreadLocalAppender(net.openhft.chronicle.queue.impl.single.SingleChronicleQueue) which gives you a thread local appender
-     */
-    @Deprecated(/* To be removed in x.27 */)
-    @NotNull
-    ExcerptAppender acquireAppender();
-
-    /**
      * Creates and returns a new ExcerptAppender for this ChronicleQueue
      * <p>
      * An Appender can be used to store new excerpts sequentially to the queue.
