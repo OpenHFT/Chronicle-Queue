@@ -73,7 +73,6 @@ public class StridingAQueueTest extends QueueTestCommon {
                 "  wireType: !WireType BINARY_LIGHT,\n" +
                 "  metadata: !SCQMeta {\n" +
                 "    roll: !SCQSRoll { length: !short 1000, format: yyyyMMdd-HHmmss'T4', epoch: 0 },\n" +
-                "    deltaCheckpointInterval: 64,\n" +
                 "    sourceId: 0\n" +
                 "  }\n" +
                 "}\n" +

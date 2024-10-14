@@ -105,9 +105,4 @@ public interface RollingChronicleQueue extends ChronicleQueue {
 
     @NotNull
     RollCycle rollCycle();
-
-    /**
-     * @return the checkpointInterval used by delta wire
-     */
-    int deltaCheckpointInterval();
 }

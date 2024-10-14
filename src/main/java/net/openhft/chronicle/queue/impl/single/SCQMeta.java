@@ -29,30 +29,23 @@ import java.util.Objects;
 public class SCQMeta implements Metadata {
     @NotNull
     private final SCQRoll roll;
-    private final int deltaCheckpointInterval;
     private int sourceId;
 
     @SuppressWarnings("unused")
     @UsedViaReflection
     SCQMeta(@NotNull WireIn wire) {
         this.roll = Objects.requireNonNull(wire.read(MetaDataField.roll).typedMarshallable());
-        this.deltaCheckpointInterval = wire.bytes().readRemaining() > 0 ? wire.read(MetaDataField.deltaCheckpointInterval).int32() : -1; // disabled.
         this.sourceId = wire.bytes().readRemaining() > 0 ? wire.read(MetaDataField.sourceId).int32() : 0;
     }
 
-    SCQMeta(@NotNull SCQRoll roll, int deltaCheckpointInterval, int sourceId) {
+    SCQMeta(@NotNull SCQRoll roll, int sourceId) {
         this.roll = roll;
-        this.deltaCheckpointInterval = deltaCheckpointInterval;
         this.sourceId = sourceId;
     }
 
     @NotNull
     public SCQRoll roll() {
         return roll;
-    }
-
-    public int deltaCheckpointInterval() {
-        return deltaCheckpointInterval;
     }
 
     public int sourceId() {
@@ -63,7 +56,6 @@ public class SCQMeta implements Metadata {
     public void writeMarshallable(@NotNull WireOut wire) {
         wire
                 .write(MetaDataField.roll).typedMarshallable(roll)
-                .write(MetaDataField.deltaCheckpointInterval).int32(this.deltaCheckpointInterval)
                 .write(MetaDataField.sourceId).int32(this.sourceId);
     }
 

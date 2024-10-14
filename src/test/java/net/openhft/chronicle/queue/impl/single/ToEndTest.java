@@ -47,7 +47,6 @@ public class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
     private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
-    private static List<File> pathsToDelete = new LinkedList<>();
     long lastCycle;
 
     @Test
@@ -319,36 +318,35 @@ public class ToEndTest extends QueueTestCommon {
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
                     "    roll: !SCQSRoll { length: !short 1000, format: yyyyMMdd-HHmmss'T4', epoch: 0 },\n" +
-                    "    deltaCheckpointInterval: 64,\n" +
                     "    sourceId: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 184, header: 0\n" +
+                    "# position: 160, header: 0\n" +
                     "--- !!data #binary\n" +
                     "listing.highestCycle: 5\n" +
-                    "# position: 224, header: 1\n" +
+                    "# position: 200, header: 1\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 5\n" +
-                    "# position: 264, header: 2\n" +
+                    "# position: 240, header: 2\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
-                    "# position: 296, header: 3\n" +
+                    "# position: 272, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 336, header: 4\n" +
+                    "# position: 312, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 376, header: 5\n" +
+                    "# position: 352, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 424, header: 6\n" +
+                    "# position: 400, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                    "# position: 480, header: 7\n" +
+                    "# position: 456, header: 7\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexMSynced: -1\n" +
                     "...\n" +
-                    "# 130540 bytes remaining\n" +
+                    "# 130564 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

@@ -131,7 +131,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final StoreFileListener storeFileListener;
     @NotNull
     private final RollCycle rollCycle;
-    private final int deltaCheckpointInterval;
     final AppenderListener appenderListener;
     protected int sourceId;
     private int cycleFileRenamed = -1;
@@ -214,7 +213,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 this.lastIndexMSynced = metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor("chronicle.lastIndexMSynced", -1L));
             }
 
-            this.deltaCheckpointInterval = builder.deltaCheckpointInterval();
             this.forceDirectoryListingRefreshIntervalMs = builder.forceDirectoryListingRefreshIntervalMs();
 
             sourceId = builder.sourceId();
@@ -444,9 +442,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return this.rollCycle;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public int deltaCheckpointInterval() {
-        return deltaCheckpointInterval;
+        return 64;
     }
 
     /**

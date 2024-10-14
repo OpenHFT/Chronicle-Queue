@@ -115,41 +115,41 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 
                 Assert.assertEquals(1, (int) es.submit(observer).get());
 
-                assertEquals("--- !!meta-data #binary\n" +
+                assertEquals("" +
+                                "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +
                                 "  metadata: !SCQMeta {\n" +
                                 "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
-                                "    deltaCheckpointInterval: 64,\n" +
                                 "    sourceId: 0\n" +
                                 "  }\n" +
                                 "}\n" +
-                                "# position: 180, header: 0\n" +
+                                "# position: 152, header: 0\n" +
                                 "--- !!data #binary\n" +
                                 "listing.highestCycle: 0\n" +
-                                "# position: 216, header: 1\n" +
+                                "# position: 192, header: 1\n" +
                                 "--- !!data #binary\n" +
                                 "listing.lowestCycle: 0\n" +
-                                "# position: 256, header: 2\n" +
+                                "# position: 232, header: 2\n" +
                                 "--- !!data #binary\n" +
                                 "listing.modCount: 5\n" +
-                                "# position: 288, header: 3\n" +
+                                "# position: 264, header: 3\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.write.lock: -9223372036854775808\n" +
-                                "# position: 328, header: 4\n" +
+                                "# position: 304, header: 4\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.append.lock: -9223372036854775808\n" +
-                                "# position: 368, header: 5\n" +
+                                "# position: 344, header: 5\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.lastIndexReplicated: -1\n" +
-                                "# position: 416, header: 6\n" +
+                                "# position: 392, header: 6\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                                "# position: 472, header: 7\n" +
+                                "# position: 448, header: 7\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.lastIndexMSynced: -1\n" +
                                 "...\n" +
-                                "# 130548 bytes remaining\n" +
+                                "# 130572 bytes remaining\n" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !SCQStore {\n" +
                                 "  writePosition: [\n" +
@@ -198,36 +198,35 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "  wireType: !WireType BINARY_LIGHT,\n" +
                                 "  metadata: !SCQMeta {\n" +
                                 "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
-                                "    deltaCheckpointInterval: 64,\n" +
                                 "    sourceId: 0\n" +
                                 "  }\n" +
                                 "}\n" +
-                                "# position: 180, header: 0\n" +
+                                "# position: 152, header: 0\n" +
                                 "--- !!data #binary\n" +
                                 "listing.highestCycle: 2\n" +
-                                "# position: 216, header: 1\n" +
+                                "# position: 192, header: 1\n" +
                                 "--- !!data #binary\n" +
                                 "listing.lowestCycle: 0\n" +
-                                "# position: 256, header: 2\n" +
+                                "# position: 232, header: 2\n" +
                                 "--- !!data #binary\n" +
                                 "listing.modCount: 8\n" +
-                                "# position: 288, header: 3\n" +
+                                "# position: 264, header: 3\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.write.lock: -9223372036854775808\n" +
-                                "# position: 328, header: 4\n" +
+                                "# position: 304, header: 4\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.append.lock: -9223372036854775808\n" +
-                                "# position: 368, header: 5\n" +
+                                "# position: 344, header: 5\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.lastIndexReplicated: -1\n" +
-                                "# position: 416, header: 6\n" +
+                                "# position: 392, header: 6\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                                "# position: 472, header: 7\n" +
+                                "# position: 448, header: 7\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.lastIndexMSynced: -1\n" +
                                 "...\n" +
-                                "# 130548 bytes remaining\n" +
+                                "# 130572 bytes remaining\n" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !SCQStore {\n" +
                                 "  writePosition: [\n" +

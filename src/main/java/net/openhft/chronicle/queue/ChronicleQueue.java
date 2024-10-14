@@ -381,6 +381,7 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return the Delta Checkpoint Interval for this ChronicleQueue
      */
+    @Deprecated(/* to be removed in x.29 */)
     int deltaCheckpointInterval();
 
     /**
