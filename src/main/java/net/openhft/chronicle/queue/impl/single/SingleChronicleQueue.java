@@ -440,9 +440,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return this.rollCycle;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public int deltaCheckpointInterval() {
-        return -1;
+        return 64;
     }
 
     /**

@@ -56,7 +56,6 @@ public class SCQMeta implements Metadata {
     public void writeMarshallable(@NotNull WireOut wire) {
         wire
                 .write(MetaDataField.roll).typedMarshallable(roll)
-                .write(MetaDataField.deltaCheckpointInterval).int32(-1)
                 .write(MetaDataField.sourceId).int32(this.sourceId);
     }
 
