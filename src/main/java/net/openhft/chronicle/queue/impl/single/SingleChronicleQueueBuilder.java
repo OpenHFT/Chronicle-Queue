@@ -315,8 +315,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             result = onlyAvailableInEnterprise("Buffering");
         if (rollTimeZone != null && !rollTimeZone.getId().equals("UTC") && !rollTimeZone.getId().equals("Z"))
             result = onlyAvailableInEnterprise("Non-UTC roll time zone");
-        if (wireType == WireType.DELTA_BINARY)
-            result = onlyAvailableInEnterprise("Wire type " + wireType.name());
         if (encodingSupplier != null)
             result = onlyAvailableInEnterprise("Encoding");
         if (key != null)
@@ -649,8 +647,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     @NotNull
     public SingleChronicleQueueBuilder wireType(@NotNull WireType wireType) {
-        if (wireType == WireType.DELTA_BINARY)
-            deltaCheckpointInterval(64);
         this.wireType = wireType;
         return this;
     }
@@ -725,8 +721,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public BufferMode writeBufferMode() {
-        return wireType() == WireType.DELTA_BINARY ? BufferMode.None : (writeBufferMode == null)
-                ? BufferMode.None : writeBufferMode;
+        return writeBufferMode == null ? BufferMode.None : writeBufferMode;
     }
 
     /**
