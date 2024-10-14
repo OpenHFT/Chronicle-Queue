@@ -858,7 +858,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             --- !!not-ready-meta-data! #binary
             ...
              */
-            assumeFalse(wireType == WireType.DEFAULT_ZERO_BINARY);
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null).toStart();
             for (int i = 0; i < 6; i++) {
                 final int n = i;
