@@ -1104,7 +1104,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return success ? CreateStrategy.CREATE : CreateStrategy.READ_ONLY;
         }
 
-        @SuppressWarnings("deprecation")
         private void createIndexThenUpdateHeader(Wire wire, int cycle, SingleChronicleQueueStore wireStore) {
             // Should very carefully prepare all data structures before publishing initial header
             wire.usePadding(wireStore.dataVersion() > 0);

@@ -18,7 +18,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.SingleThreaded;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableIn;
 import net.openhft.chronicle.wire.ReadMarshallable;
@@ -186,19 +185,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     TailerDirection direction();
 
     /**
-     * Winds this ExcerptTailer to after the last entry which wrote an entry to the queue.
-     *
-     * @param queue which was written to.
-     * @return this ExcerptTailer
-     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
-     * @throws NullPointerException if the provided {@code queue} is {@code null}
-     */
-    @NotNull
-    default ExcerptTailer afterLastWritten(ChronicleQueue queue) {
-        return afterWrittenMessageAtIndex(queue, Long.MIN_VALUE);
-    }
-
-    /**
      * Sets the Read After Replica Acknowledged property of this Tailer to the
      * provided {@code readAfterReplicaAcknowledged}.
      * <p>
@@ -278,21 +264,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      */
     @NotNull
     TailerState state();
-
-    /**
-     * Winds this ExcerptTailer to the specified {@code index} of the provided {@code queue} and reads the history message,
-     * then moves {@code this} tailer to the message index in the history message.
-     *
-     * @param queue The queue which was written to, and may contain a history message at the specified {@code index}.
-     *              Must not be null.
-     * @param index The index to read the history message in the {@code queue}.
-     * @return This ExcerptTailer instance.
-     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
-     * @throws NullPointerException if the provided {@code queue} is null.
-     */
-    default @NotNull ExcerptTailer afterWrittenMessageAtIndex(@NotNull ChronicleQueue queue, long index) {
-        throw new UnsupportedOperationException("todo");
-    }
 
     interface AcknowledgedIndexReplicatedCheck {
         /**
