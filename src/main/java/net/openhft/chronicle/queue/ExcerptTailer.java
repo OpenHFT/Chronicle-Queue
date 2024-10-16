@@ -192,7 +192,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return this ExcerptTailer
      * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
      * @throws NullPointerException if the provided {@code queue} is {@code null}
+     * @deprecated to be removed in x.27. Use CQE TailerUtil
      */
+    @Deprecated(/* to be removed in x.27. Use CQE TailerUtil */)
     @NotNull
     default ExcerptTailer afterLastWritten(ChronicleQueue queue) {
         return afterWrittenMessageAtIndex(queue, Long.MIN_VALUE);
@@ -318,7 +320,9 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @return This ExcerptTailer instance.
      * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
      * @throws NullPointerException if the provided {@code queue} is null.
+     * @deprecated to be removed in x.27. Use CQE TailerUtil
      */
+    @Deprecated(/* to be removed in x.27. Use CQE TailerUtil */)
     default @NotNull ExcerptTailer afterWrittenMessageAtIndex(@NotNull ChronicleQueue queue, long index) {
         throw new UnsupportedOperationException("todo");
     }
