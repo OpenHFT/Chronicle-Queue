@@ -125,7 +125,6 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
                 "Lock was held by " + lockedBy;
     }
 
-    @SuppressWarnings("deprecation")
     @NotNull
     protected String getLockedBy(long value) {
         String threadId = lockedByThread == null ? "unknown - " + STORE_LOCK_THREAD + " not set" : Long.toString(lockedByThread.getId());

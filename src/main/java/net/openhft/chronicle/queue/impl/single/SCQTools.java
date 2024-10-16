@@ -28,7 +28,6 @@ import org.jetbrains.annotations.Nullable;
 import static net.openhft.chronicle.bytes.MethodReader.MESSAGE_HISTORY_METHOD_ID;
 import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
 
-@SuppressWarnings("deprecation")
 public enum SCQTools {
     ; // none
 
