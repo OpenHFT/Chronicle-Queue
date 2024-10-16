@@ -108,6 +108,7 @@ public class StoreTailerTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
         try (ChronicleQueue firstInputQueue =
@@ -152,6 +153,7 @@ public class StoreTailerTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void checkAfterWrittenMessageAtIndexMovesToTheCorrectIndex() {
 
