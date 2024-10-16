@@ -54,7 +54,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     private final MappedFile mappedFile;
     private final int dataVersion;
-    @SuppressWarnings("deprecation")
     @NotNull
     private final transient Sequence sequence;
 

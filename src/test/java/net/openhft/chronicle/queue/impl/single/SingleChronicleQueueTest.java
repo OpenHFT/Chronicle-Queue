@@ -51,7 +51,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -72,7 +71,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-@SuppressWarnings({"try", "serial", "deprecation"})
+@SuppressWarnings({"try", "serial"})
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends QueueTestCommon {
 
@@ -516,95 +515,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     private long toSeq(final ChronicleQueue q, final long index) {
         return q.rollCycle().toSequenceNumber(index);
-    }
-
-    @Ignore("TODO FIX, appears to have side effects so can't be run without forking")
-    @Test
-    public void testLastWritten() throws InterruptedException {
-        // TODO FIX
-        // AbstractCloseable.disableCloseableTracing();
-
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor(
-                new NamedThreadFactory("test"));
-
-        File outDir = getTmpDir();
-        File inDir = getTmpDir();
-        try {
-            final SetTimeProvider tp = new SetTimeProvider();
-            try (ChronicleQueue outQueue = builder(outDir, wireType).rollCycle(TEST_SECONDLY).sourceId(1).timeProvider(tp).build();
-                 final ExcerptAppender outQueueAppender = outQueue.createAppender()) {
-                try (ChronicleQueue inQueue = builder(inDir, wireType).rollCycle(TEST_SECONDLY).sourceId(2).timeProvider(tp).build();
-                     final ExcerptAppender inQueueAppender = inQueue.createAppender()) {
-
-                    // write some initial data to the inqueue
-                    final SCQMsg msg = inQueueAppender.methodWriterBuilder(SCQMsg.class).get();
-
-                    msg.msg("somedata-0");
-                    assertEquals(1, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
-
-                    tp.advanceMillis(1000);
-
-                    // write data into the inQueue
-                    msg.msg("somedata-1");
-                    assertEquals(2, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
-
-                    // read a message on the in queue and write it to the out queue
-                    {
-                        SCQMsg out = outQueueAppender.methodWriterBuilder(SCQMsg.class).get();
-                        MethodReader methodReader = inQueue.createTailer(named ? "named" : null).methodReader((SCQMsg) out::msg);
-
-                        // reads the somedata-0
-                        methodReader.readOne();
-
-                        // reads the somedata-1
-                        methodReader.readOne();
-
-                        assertFalse(methodReader.readOne());
-
-                        tp.advanceMillis(1000);
-                        assertFalse(methodReader.readOne());
-                    }
-
-                    assertEquals("trying to read should not create a file", 2, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
-
-                    // write data into the inQueue
-                    msg.msg("somedata-2");
-                    assertEquals(3, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
-
-                    // advance 2 cycles - we will end up with a missing file
-                    tp.advanceMillis(2000);
-
-                    msg.msg("somedata-3");
-                    msg.msg("somedata-4");
-                    assertEquals("Should be a missing cycle file", 4, inDir.listFiles(file -> file.getName().endsWith("cq4")).length);
-
-                    AtomicReference<String> actualValue = new AtomicReference<>();
-
-                    // check that we are able to pick up from where we left off, in other words the next read should be somedata-2
-                    {
-                        ExcerptTailer excerptTailer = inQueue.createTailer(named ? "named" : null).afterLastWritten(outQueue);
-                        MethodReader methodReader = excerptTailer.methodReader((SCQMsg) actualValue::set);
-
-                        methodReader.readOne();
-                        assertEquals("somedata-2", actualValue.get());
-
-                        methodReader.readOne();
-                        assertEquals("somedata-3", actualValue.get());
-
-                        methodReader.readOne();
-                        assertEquals("somedata-4", actualValue.get());
-
-                        assertFalse(methodReader.readOne());
-                    }
-                }
-            }
-        } finally {
-            executorService.shutdown();
-            executorService.awaitTermination(1, TimeUnit.SECONDS);
-            executorService.shutdownNow();
-            IOTools.deleteDirWithFiles(inDir);
-            IOTools.deleteDirWithFiles(outDir);
-        }
     }
 
     @Test
@@ -2089,13 +1999,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "...\n";
 
         throw new IllegalStateException("unknown type " + wireType);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void dontPassQueueToReader() {
-        try (ChronicleQueue queue = binary(getTmpDir()).build()) {
-            queue.createTailer(named ? "named" : null).afterLastWritten(queue).methodReader();
-        }
     }
 
     @Test

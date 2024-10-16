@@ -27,7 +27,9 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.ExecutorServiceUtil;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,7 +43,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -105,149 +106,6 @@ public class StoreTailerTest extends QueueTestCommon {
                 }
                 tailer.sync();
             }
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test
-    public void shouldConsiderSourceIdWhenDeterminingLastWrittenIndex() {
-        try (ChronicleQueue firstInputQueue =
-                     createQueue(dataDirectory, TEST_DAILY, 1, "firstInputQueue");
-             // different RollCycle means that indicies are not identical to firstInputQueue
-             ChronicleQueue secondInputQueue =
-                     createQueue(dataDirectory, TEST_SECONDLY, 2, "secondInputQueue");
-             ChronicleQueue outputQueue =
-                     createQueue(dataDirectory, TEST_DAILY, 0, "outputQueue")) {
-
-            final OnEvents firstWriter = firstInputQueue
-                    .methodWriterBuilder(OnEvents.class)
-                    .get();
-            final HelloWorld secondWriter = secondInputQueue
-                    .methodWriterBuilder(HelloWorld.class)
-                    .get();
-
-            // generate some data in the input queues
-            firstWriter.onEvent("one");
-            firstWriter.onEvent("two");
-
-            secondWriter.hello("thirteen");
-            secondWriter.hello("thirtyOne");
-
-            final OnEvents eventSink = outputQueue
-                    .methodWriterBuilder(OnEvents.class).get();
-
-            final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
-            final MethodReader firstMethodReader = firstInputQueue.createTailer().methodReader(outputWriter);
-            final MethodReader secondMethodReader = secondInputQueue.createTailer().methodReader(outputWriter);
-
-            // replay events from the inputs into the output queue
-            assertTrue(firstMethodReader.readOne());
-            assertTrue(firstMethodReader.readOne());
-            assertFalse(firstMethodReader.readOne());
-            assertTrue(secondMethodReader.readOne());
-            assertTrue(secondMethodReader.readOne());
-            assertFalse(secondMethodReader.readOne());
-
-            // ensures that tailer is not moved to index from the incorrect source
-            secondInputQueue.createTailer().afterLastWritten(outputQueue);
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test
-    public void checkAfterWrittenMessageAtIndexMovesToTheCorrectIndex() {
-
-        // Create three ChronicleQueues, one for input and two for output
-        try (ChronicleQueue firstInputQueue =
-                     createQueue(dataDirectory, TEST_DAILY, 1, "firstInputQueue");
-             // different RollCycle means that indices are not identical to firstInputQueue
-             ChronicleQueue secondInputQueue =
-                     createQueue(dataDirectory, TEST_DAILY, 2, "secondInputQueue");
-             ChronicleQueue outputQueue =
-                     createQueue(dataDirectory, TEST_DAILY, 3, "outputQueue")) {
-
-            // Create two MethodWriters for writing data to the input queues
-            final OnEvents firstWriter = firstInputQueue
-                    .methodWriterBuilder(OnEvents.class)
-                    .get();
-            final HelloWorld secondWriter = secondInputQueue
-                    .methodWriterBuilder(HelloWorld.class)
-                    .get();
-
-            // Generate some data in the input queues
-            firstWriter.onEvent("one");
-            firstWriter.onEvent("two");
-
-            secondWriter.hello("thirteen");
-            secondWriter.hello("thirtyOne");
-
-            // Create a MethodWriter for writing data to the output queue
-            final OnEvents eventSink = outputQueue
-                    .methodWriterBuilder(OnEvents.class).get();
-
-            // Reset the MessageHistory
-            MessageHistory.get().reset();
-
-            final CapturingStringEvents outputWriter = new CapturingStringEvents(eventSink);
-
-            // Create two ExcerptTailers for reading data from the input queues
-            ExcerptTailer tailer1 = firstInputQueue.createTailer();
-            long index1 = tailer1.index();
-            final MethodReader firstMethodReader = tailer1.methodReader(outputWriter);
-
-            ExcerptTailer tailer2 = secondInputQueue.createTailer();
-            long index2 = tailer2.index();
-            final MethodReader secondMethodReader = tailer2.methodReader(outputWriter);
-
-            // Replay events from the inputs into the output queue
-            assertTrue(firstMethodReader.readOne());
-            assertTrue(secondMethodReader.readOne());
-
-            // Add source and timing information to the MessageHistory for the first and second inputs
-            VanillaMessageHistory mh = (VanillaMessageHistory) MessageHistory.get();
-            mh.addSource(1, index1);
-            mh.addTiming(System.nanoTime());
-
-            mh.addSource(2, index2);
-            mh.addTiming(System.nanoTime());
-
-            // Write an event to the output queue
-            outputWriter.onEvent("out1");
-
-            // Get the index of the last message appended to the output queue
-            // NOTE: Requires thread local appender that is used within the methodWriter
-            ExcerptAppender appender = ThreadLocalAppender.acquireThreadLocalAppender(outputQueue);
-            long index = appender.lastIndexAppended();
-            // Get the current indices of the tailers for the input queues
-            index1 = tailer1.index();
-            index2 = tailer2.index();
-
-            // Read the next events from the input queues
-            assertTrue(firstMethodReader.readOne());
-            assertTrue(secondMethodReader.readOne());
-
-            // Reset the MessageHistory and add source and timing information for the next event
-            mh.reset();
-            mh.addSource(1, index1);
-            mh.addTiming(System.nanoTime());
-
-            mh.addSource(2, index2);
-            mh.addTiming(System.nanoTime());
-
-            // Write another event to the output queue
-            outputWriter.onEvent("out2");
-
-            // Reset the MessageHistory
-            mh.reset();
-
-            // ensures that tailer is not moved to index from the incorrect source
-            tailer1.afterWrittenMessageAtIndex(outputQueue, index);
-            Assert.assertEquals(index1, tailer1.index());
-
-            // ensures that tailer is not moved to index from the incorrect source
-            tailer2.afterWrittenMessageAtIndex(outputQueue, index);
-            Assert.assertEquals(index2, tailer2.index());
-
         }
     }
 

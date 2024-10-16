@@ -60,7 +60,6 @@ class RollCycleEncodeSequence implements Sequence {
      * @param forWritePosition the last write position, expected to be the end of queue
      * @return NOT_FOUND_RETRY if the sequence for this write position can not be found, or NOT_FOUND if sequenceValue==null or the sequence for this {@code writePosition}
      */
-    @SuppressWarnings("deprecation")
     public long getSequence(long forWritePosition) {
 
         if (writePositionAndSequence == null)

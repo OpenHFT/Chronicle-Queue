@@ -60,7 +60,6 @@ import static java.util.Objects.requireNonNull;
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 
-@SuppressWarnings("deprecation")
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
     public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
 
