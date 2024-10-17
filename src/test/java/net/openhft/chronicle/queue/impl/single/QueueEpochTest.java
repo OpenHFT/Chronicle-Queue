@@ -19,6 +19,9 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -30,7 +33,9 @@ import org.junit.Test;
 import java.io.File;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
@@ -101,6 +106,26 @@ public final class QueueEpochTest extends QueueTestCommon {
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_AFTER_ROLL_TIME + ONE_DAY));
 
             assertEquals(2, fileListener.numberOfRollEvents());
+        }
+    }
+
+    @Test
+    public void testQueueFilenameWithRolltime() {
+        TimeProvider timeProvider = new SetTimeProvider(Instant.parse("2024-10-17T06:00:00Z"));
+        File tmpDir = getTmpDir();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder()
+                .timeProvider(timeProvider)
+                .rollTime(LocalTime.of(21, 0), ZoneId.of("UTC"))
+                .path(tmpDir).build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("Hello World");
+
+            for (File file : Objects.requireNonNull(tmpDir.listFiles())) {
+                System.out.println(file);
+            }
+
+        } finally {
+            IOTools.deleteDirWithFiles(tmpDir.getAbsolutePath());
         }
     }
 
