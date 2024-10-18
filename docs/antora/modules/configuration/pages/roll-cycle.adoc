@@ -61,17 +61,20 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
     .build();
 ----
 
-The current time can also be used as the roll time by providing `System.currentTimeMillis()`.
+IMPORTANT: We do not recommend changing the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
 
-[source, java]
+For daily roll-cycles where the `RollCycle` is one of: `SMALL_DAILY`, `DAILY`, `LARGE_DAILY`, `XLARGE_DAILY`, `HUGE_DAILY` a more convenient way to control the exact roll time is with `rollTime()`
+
+For example, to roll daily at 21:15 UTC:
+[source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
     .rollCycle(RollCycles.DAILY)
-    .epoch(System.currentTimeMillis())
+    .rollTime(LocalTime.of(21, 15), ZoneOffset.UTC)
     .build();
 ----
 
-IMPORTANT: We do not recommend changing the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
+In the open-source version of Chronicle-Queue, any `ZoneId` other than `UTC` will be converted to `UTC` and a warning message logged. In the open-source version, this will not take into account periodic time zone changes such as for daylight saving time.
 
 == Available Roll-Cycles [[available_roll_cycles]]
 As described earlier, the roll-cycle determines how often a new queue is created. However, each roll-cycle also leverages queues with a varying message capacity. This results in different roll-cycles having a maximum capacity in terms of throughput.
