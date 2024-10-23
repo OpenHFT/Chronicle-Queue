@@ -362,6 +362,8 @@ class StoreAppender extends AbstractCloseable
      */
     private boolean resetPosition() {
         long originalHeaderNumber = wire.headerNumber();
+        long INVALID_HEADER_NUMBER = -1;
+
         try {
             if (store == null || wire == null)
                 return false;
@@ -374,7 +376,8 @@ class StoreAppender extends AbstractCloseable
             final long lastSequenceNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
-            assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), positionOfHeader);
+            assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != INVALID_HEADER_NUMBER ||
+                    checkIndex(wire.headerNumber(), positionOfHeader);
 
             bytes.writeLimit(bytes.capacity());
 
@@ -424,7 +427,9 @@ class StoreAppender extends AbstractCloseable
             return context;
         }
 
-        if (queue.doubleBuffer && writeLock.locked() && !metaData) {
+        boolean shouldPrepareDoubleBuffer = queue.doubleBuffer && writeLock.locked() && !metaData;
+
+        if (shouldPrepareDoubleBuffer) {
             prepareDoubleBuffer();
         } else {
             writeLock.lock();
