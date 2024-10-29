@@ -11,15 +11,6 @@ import static org.junit.Assert.assertEquals;
 @SuppressWarnings("deprecation")
 public final class TestUtil {
 
-    public static void allowCommentsOutOfOrder(YamlTester yamlTester) {
-
-        final String e = commentsFirst(yamlTester.expected());
-        final String a = commentsFirst(yamlTester.actual());
-        if (!e.equals(a))
-            assertEquals(
-                    yamlTester.expected(), yamlTester.actual());
-    }
-
     static String commentsFirst(String s) {
         return Stream.of(s.split("\\n"))
                 .filter(l -> !l.equals("---"))
