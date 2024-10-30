@@ -17,6 +17,7 @@ import java.io.Writer;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("deprecation")
 public class ChronicleQueueTest {
 
     @Test
