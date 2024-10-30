@@ -69,7 +69,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.single(PATH_NAME)) {  // Use a test path
             String path = queue.fileAbsolutePath();
             assertNotNull(path);
-            assertTrue(path.endsWith(PATH_NAME));  // Adjust based on actual path structure
+            assertTrue(path.replace('\\', '/').endsWith(PATH_NAME));  // Adjust based on actual path structure
         }
     }
 
