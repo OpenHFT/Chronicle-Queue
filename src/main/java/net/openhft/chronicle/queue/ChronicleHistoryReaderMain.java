@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
+import net.openhft.chronicle.wire.MessageHistory;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +28,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The main class for reading {@link net.openhft.chronicle.queue.MessageHistory} from a Chronicle queue
+ * The main class for reading {@link MessageHistory} from a Chronicle queue
  * and generating histograms for:
  * <ul>
  *     <li>Latencies for each component that has processed a message</li>
