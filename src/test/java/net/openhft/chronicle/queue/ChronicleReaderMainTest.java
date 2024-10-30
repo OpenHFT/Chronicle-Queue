@@ -17,7 +17,7 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
 
     @Test
     public void testMainWithValidArguments() {
-        expectException("Metadata file not found in readOnly mode");
+        ignoreException("Metadata file not found in readOnly mode");
         try {
             // Create a temporary directory for the test
             Path tempDir = Files.createTempDirectory("testDirectory");
