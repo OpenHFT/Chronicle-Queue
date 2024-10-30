@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Unit tests for ExcerptAppender interface implementations.
  */
-public class ExcerptAppenderTest {
+public class ExcerptAppenderTest extends QueueTestCommon {
 
     class ExcerptAppenderImpl implements ExcerptAppender {
 

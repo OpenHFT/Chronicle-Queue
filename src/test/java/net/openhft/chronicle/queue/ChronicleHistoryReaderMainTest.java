@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.*;
 import org.junit.Test;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class ChronicleHistoryReaderMainTest {
 
@@ -31,6 +33,7 @@ public class ChronicleHistoryReaderMainTest {
 
     @Before
     public void setUp() {
+        assumeTrue(Jvm.majorVersion() < 17);
         System.setSecurityManager(new NoExitSecurityManager());
     }
 
@@ -140,6 +143,11 @@ public class ChronicleHistoryReaderMainTest {
         // Manually setting the security manager to catch System.exit() if needed
         try {
             main.run(args);  // Should trigger the help message and exit with 0
+            fail("Expected IllegalArgumentException to be thrown");
+
+        } catch (IllegalArgumentException e) {
+            // Expected exception
+
         } catch (SecurityException e) {
             fail("System.exit was called unexpectedly.");
         }

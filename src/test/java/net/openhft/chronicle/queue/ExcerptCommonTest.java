@@ -1,13 +1,19 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
 import java.io.File;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Unit tests for ExcerptCommon interface implementations.
  */
-public class ExcerptCommonTest {
+public class ExcerptCommonTest extends QueueTestCommon {
+
+    public static final String TEST_QUEUE = OS.getTarget() + "/testQueue";
 
     class ExcerptCommonImpl implements ExcerptCommon<ExcerptCommonImpl> {
         private final int sourceId;
@@ -63,34 +69,38 @@ public class ExcerptCommonTest {
 
     @Test
     public void testSourceId() {
-        ChronicleQueue queue = ChronicleQueue.single("testQueue");
-        ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
-        assertEquals(123, excerpt.sourceId());
+        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+            ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
+            assertEquals(123, excerpt.sourceId());
+        }
     }
 
     @Test
     public void testQueue() {
-        ChronicleQueue queue = ChronicleQueue.single("testQueue");
-        ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
-        assertEquals(queue, excerpt.queue());
+        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+            ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
+            assertEquals(queue, excerpt.queue());
+        }
     }
 
     @Test
     public void testCurrentFile() {
         File file = new File("testfile.txt");
-        ChronicleQueue queue = ChronicleQueue.single("testQueue");
-        ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, file);
-        assertEquals(file, excerpt.currentFile());
+        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+            ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, file);
+            assertEquals(file, excerpt.currentFile());
 
-        ExcerptCommonImpl excerptWithNullFile = new ExcerptCommonImpl(123, queue, null);
-        assertNull(excerptWithNullFile.currentFile());
+            ExcerptCommonImpl excerptWithNullFile = new ExcerptCommonImpl(123, queue, null);
+            assertNull(excerptWithNullFile.currentFile());
+        }
     }
 
     @Test
     public void testSync() {
-        ChronicleQueue queue = ChronicleQueue.single("testQueue");
-        ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
-        excerpt.sync(); // Would test actual sync if implemented
-        // No assertion needed for this default method
+        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+            ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
+            excerpt.sync(); // Would test actual sync if implemented
+            // No assertion needed for this default method
+        }
     }
 }

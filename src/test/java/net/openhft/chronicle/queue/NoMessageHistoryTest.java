@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class NoMessageHistoryTest {
+public class NoMessageHistoryTest extends QueueTestCommon {
 
     @Test
     public void testSingletonInstance() {
