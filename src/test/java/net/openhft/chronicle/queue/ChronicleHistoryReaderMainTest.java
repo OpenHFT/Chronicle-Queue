@@ -7,8 +7,6 @@ import org.junit.Test;
 import org.junit.After;
 import org.junit.Before;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.security.Permission;
 import java.util.concurrent.TimeUnit;
