@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
-@SuppressWarnings("deprecation")
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReaderMainTest {
 
     private static class NoExitSecurityManager extends SecurityManager {
