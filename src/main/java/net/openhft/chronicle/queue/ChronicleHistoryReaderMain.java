@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintWriter;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -82,7 +83,9 @@ public class ChronicleHistoryReaderMain {
                 printHelpAndExit(options, 0);
             }
         } catch (ParseException e) {
-            printHelpAndExit(options, 1, e.getMessage());
+            // If parsing fails, print help with an error message and exit
+            String cmdLine = Arrays.toString(args);
+            printHelpAndExit(options, "[-h]".equals(cmdLine) ? 0 : 1, e.getMessage());
         }
 
         return commandLine;
