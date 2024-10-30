@@ -136,6 +136,7 @@ public class ChronicleHistoryReaderMainTest {
             @Override
             protected void printHelpAndExit(Options options, int status, String message) {
                 assertEquals(0, status);  // Ensure help is printed with status 0 (success)
+                throw new ThreadDeath();  // Exit without calling System.exit()
             }
         };
         String[] args = {"-h"};
@@ -143,9 +144,9 @@ public class ChronicleHistoryReaderMainTest {
         // Manually setting the security manager to catch System.exit() if needed
         try {
             main.run(args);  // Should trigger the help message and exit with 0
-            fail("Expected IllegalArgumentException to be thrown");
+            fail("Expected ThreadDeath to be thrown");
 
-        } catch (IllegalArgumentException e) {
+        } catch (ThreadDeath e) {
             // Expected exception
 
         } catch (SecurityException e) {

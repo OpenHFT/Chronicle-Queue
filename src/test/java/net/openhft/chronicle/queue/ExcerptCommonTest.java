@@ -13,7 +13,7 @@ import static org.junit.Assert.assertNull;
  */
 public class ExcerptCommonTest extends QueueTestCommon {
 
-    public static final String TEST_QUEUE = OS.getTarget() + "/testQueue";
+    static final String TEST_QUEUE = OS.getTarget() + "/ExcerptCommonTest";
 
     class ExcerptCommonImpl implements ExcerptCommon<ExcerptCommonImpl> {
         private final int sourceId;

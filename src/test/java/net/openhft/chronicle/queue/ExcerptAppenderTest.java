@@ -2,18 +2,25 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
+import org.junit.AfterClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
 import java.nio.charset.StandardCharsets;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Unit tests for ExcerptAppender interface implementations.
  */
 public class ExcerptAppenderTest extends QueueTestCommon {
+
+    static final String TEST_QUEUE = OS.getTarget() + "/ExcerptAppenderTest";
 
     class ExcerptAppenderImpl implements ExcerptAppender {
 
@@ -49,7 +56,7 @@ public class ExcerptAppenderTest extends QueueTestCommon {
 
         @Override
         public ChronicleQueue queue() {
-            return ChronicleQueue.single("testQueue");
+            return ChronicleQueue.single(TEST_QUEUE);
         }
 
         @Override
@@ -81,6 +88,11 @@ public class ExcerptAppenderTest extends QueueTestCommon {
         public DocumentContext acquireWritingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             return null;
         }
+    }
+
+    @AfterClass
+    public static void cleanup() {
+        IOTools.deleteDirWithFiles(TEST_QUEUE);
     }
 
     @Test
