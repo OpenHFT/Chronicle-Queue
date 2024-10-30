@@ -218,16 +218,17 @@ public class PipeHandlerTest extends QueueTestCommon {
     @Test(timeout = 20000)
     public void testsSubscriptionIndexController() {
         String url = "tcp://:0";
-        IOTools.deleteDirWithFiles("target/fromIndex");
+        String name = OS.getTarget()+"/fromIndex";
+        IOTools.deleteDirWithFiles(name);
 
         /**
          * Creates a new {@link ChronicleContext} with the specified URL and names the context "target/fromIndex".
          * The context is buffered if the 'buffered' flag is set.
          */
-        try (ChronicleContext context = ChronicleContext.newContext(url).name("target/fromIndex").buffered(buffered);
+        long blockSize = OS.isSparseFileSupported() ? 512L << 30 : 64L << 20;
+        try (ChronicleContext context = ChronicleContext.newContext(url).name(name).buffered(buffered);
              ChronicleQueue cq =
-                     ChronicleQueue.singleBuilder(context.toFile("test-q")).blockSize(OS.isSparseFileSupported() ?
-                             512L << 30 : 64L << 20).sourceId(1).build();) {
+                     ChronicleQueue.singleBuilder(context.toFile("test-q")).blockSize(blockSize).sourceId(1).build();) {
 
             Says says = cq.methodWriter(Says.class);
             says.say("1 Hi one");
@@ -246,6 +247,7 @@ public class PipeHandlerTest extends QueueTestCommon {
                 assertEquals("[say[3 Hi three]]", q.toString());
             }
         }
+        IOTools.deleteDirWithFiles(name);
     }
 
     private static PipeHandler createPipeHandler() {

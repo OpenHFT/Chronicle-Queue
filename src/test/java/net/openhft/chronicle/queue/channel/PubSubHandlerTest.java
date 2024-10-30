@@ -7,7 +7,9 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.channel.*;
+import net.openhft.chronicle.wire.channel.ChronicleChannel;
+import net.openhft.chronicle.wire.channel.ChronicleContext;
+import net.openhft.chronicle.wire.channel.ChronicleGatewayMain;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -96,6 +98,7 @@ public class PubSubHandlerTest extends QueueTestCommon {
         } catch (UnsupportedOperationException uos) {
             assumeFalse(url.startsWith("internal"));
         }
+        IOTools.deleteDirWithFiles(tmpDir);
     }
 
     interface PubSubSays extends PubSub {

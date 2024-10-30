@@ -34,6 +34,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
+@SuppressWarnings("deprecation")
 public class LastAppendedTest extends QueueTestCommon {
 
     public static final RollCycle ROLL_CYCLE = TEST4_SECONDLY;

@@ -5,13 +5,14 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.StreamCorruptedException;
 import java.nio.file.Path;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class ToEndInvalidIndexTest extends QueueTestCommon {
 
@@ -27,6 +28,10 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
         createQueueWithZeroFirstSubIndexValue(setTimeProvider, queuePath);
     }
 
+    @After
+    public void tearDown() {
+        IOTools.deleteDirWithFiles(queuePath.toFile());
+    }
 
     @Test
     public void testBackwardsToEndReportsCorrectIndex() {

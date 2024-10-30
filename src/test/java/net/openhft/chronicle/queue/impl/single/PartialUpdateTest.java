@@ -6,10 +6,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -67,6 +64,11 @@ public class PartialUpdateTest extends QueueTestCommon {
         queuePath = IOTools.createTempDirectory("partialUpdate");
         setTimeProvider = new SetTimeProvider();
         queueCreator.createQueue(setTimeProvider, queuePath);
+    }
+
+    @After
+    public void tearDown() {
+        IOTools.deleteDirWithFiles(queuePath.toFile());
     }
 
     @BeforeClass

@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.method;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -25,7 +26,8 @@ public class BrokenChainTest extends QueueTestCommon {
 
     @Test
     public void brokenChainQueue() {
-        try (ChronicleQueue queue = ChronicleQueue.single(OS.getTarget() + "/brokernChain-" + System.nanoTime());
+        String tmpName = OS.getTarget() + "/brokenChain-" + System.nanoTime();
+        try (ChronicleQueue queue = ChronicleQueue.single(tmpName);
              // using createAppender() doesn't work as the chained methods uses acquireAppender()
              ExcerptAppender appender = ThreadLocalAppender.acquireThreadLocalAppender(queue);
              ExcerptTailer tailer = queue.createTailer()) {
@@ -71,5 +73,6 @@ public class BrokenChainTest extends QueueTestCommon {
             assertFalse(reader.readOne());
             assertEquals("[pre: pre-C, msg: msg-C]", list.toString());
         }
+        IOTools.deleteDirWithFiles(tmpName);
     }
 }

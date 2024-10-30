@@ -87,6 +87,9 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         copySourceToDestination(numCopiers, concurrent, sourceDir, destinationDir);
 
         assertQueueContentsAreTheSame(sourceDir, destinationDir);
+
+        IOTools.deleteDirWithFiles(sourceDir.toFile());
+        IOTools.deleteDirWithFiles(destinationDir.toFile());
     }
 
     private void copySourceToDestination(int numCopiers, boolean concurrent, Path sourceDir, Path destinationDir) throws InterruptedException {

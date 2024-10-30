@@ -106,6 +106,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
+        finishedNormally = false;
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
 
             GcControls.requestGcCycle();
@@ -136,6 +137,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         }
 
         Assert.assertTrue(queueFilesAreAllClosed());
+        finishedNormally = true;
     }
 
     @Test

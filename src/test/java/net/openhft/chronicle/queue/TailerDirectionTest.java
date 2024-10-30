@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -142,6 +143,7 @@ public class TailerDirectionTest extends QueueTestCommon {
             assertEquals("[Forward 2] Wrong message 1", testMessage(1), readNextEntry(tailer));
             assertEquals("[Forward 2] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
         }
+        IOTools.deleteDirWithFiles(basePath);
     }
 
     @Test
@@ -164,6 +166,7 @@ public class TailerDirectionTest extends QueueTestCommon {
             DocumentContext document = tailer.readingDocument();
             assertFalse(document.isPresent());
         }
+        IOTools.deleteDirWithFiles(path);
     }
 
     @Test
@@ -206,6 +209,7 @@ public class TailerDirectionTest extends QueueTestCommon {
                 }
             }
         }
+        IOTools.deleteDirWithFiles(basePath);
     }
 
     @Test(timeout = 10_000)
@@ -254,5 +258,6 @@ public class TailerDirectionTest extends QueueTestCommon {
                 }
             }
         }
+        IOTools.deleteDirWithFiles(basePath);
     }
 }

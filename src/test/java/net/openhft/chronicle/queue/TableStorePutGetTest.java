@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -132,6 +133,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                 assertEquals(j, l);
             }
         }
+        IOTools.deleteDirWithFiles(tempDir);
     }
 
     /**

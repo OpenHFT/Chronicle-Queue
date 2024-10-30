@@ -84,6 +84,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
             Assert.assertEquals(iter, acount.get());
             Assert.assertEquals(iter, qcount.get());
         }
+        IOTools.deleteDirWithFiles(dir);
     }
 
     @Test
@@ -108,6 +109,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
                 tailer.readText();
             }
         }
+        IOTools.deleteDirWithFiles(dir);
     }
 
     @Test
@@ -152,5 +154,6 @@ public class AcquireReleaseTest extends QueueTestCommon {
         assertEquals(2, acount.get());
 
         assertEquals(2, qcount.get());
+        IOTools.deleteDirWithFiles(dir);
     }
 }

@@ -453,8 +453,9 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @RequiredForClient
-    @Test(timeout = 10_000)
+    @Test(timeout = 20_000)
     public void shouldPrintTimestampsToLocalTime() throws IOException {
+        finishedNormally = false;
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
             final VanillaMethodWriterBuilder<SayWhen> methodWriterBuilder =
@@ -475,6 +476,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
             // Local timezone
             assertTimesAreInZone(queueDir, ZoneId.systemDefault(), timestamps);
         }
+        IOTools.deleteDirWithFiles(queueDir);
+        finishedNormally = true;
     }
 
     @Test

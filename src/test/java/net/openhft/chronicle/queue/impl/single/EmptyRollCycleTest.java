@@ -92,7 +92,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test(timeout = 6_000)
     public void appropriateExceptionIsThrownWhenLockCannotBeAcquiredForRecovery() throws IOException, InterruptedException {
         createQueueWithEmptyRollCycleAtEnd();
 

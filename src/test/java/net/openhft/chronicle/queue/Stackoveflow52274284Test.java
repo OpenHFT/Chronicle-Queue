@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.junit.Test;
@@ -76,5 +77,6 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
                 }
             }
         }
+        IOTools.deleteDirWithFiles(path);
     }
 }

@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Threads;
@@ -86,6 +87,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
         }
 
         Threads.shutdown(es);
+        IOTools.deleteDirWithFiles(path);
     }
 
     private Void append() {

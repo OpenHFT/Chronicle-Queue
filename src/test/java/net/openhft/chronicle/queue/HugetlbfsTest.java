@@ -12,7 +12,7 @@ import static net.openhft.chronicle.queue.util.HugetlbfsTestUtil.isHugetlbfsAvai
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
-public class HugetlbfsTest {
+public class HugetlbfsTest extends QueueTestCommon {
 
     @Rule
     public TestName testName = new TestName();

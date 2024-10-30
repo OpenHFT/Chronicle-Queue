@@ -28,6 +28,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import java.io.File;
@@ -42,6 +43,12 @@ import static org.junit.Assume.assumeFalse;
 
 public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
+    static final String BASE_PATH = OS.getTarget() + "/singleChronicleQueueBuilderTest";
+
+    @AfterClass
+    public static void afterClass() {
+        IOTools.deleteDirWithFiles(BASE_PATH, 2);
+    }
 
     @Test
     public void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
@@ -132,7 +139,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
 
     @Test
     public void testWriteMarshallableBinary() {
-        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single("test").rollCycle(HOURLY);
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(BASE_PATH).rollCycle(HOURLY);
 
         builder.build().close();
         try (final ScopedResource<Wire> wireTl = Wires.acquireBinaryWireScoped()) {
@@ -148,7 +155,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
 
     @Test
     public void testWriteMarshallable() {
-        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single("test").rollCycle(HOURLY);
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(BASE_PATH).rollCycle(HOURLY);
 
         builder.build().close();
         String val = Marshallable.$toString(builder);

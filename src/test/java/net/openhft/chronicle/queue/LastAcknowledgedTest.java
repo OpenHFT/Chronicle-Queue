@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.core.values.LongValue;
@@ -77,6 +78,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 assertEquals(lastIndexAppended, tailer2.index());
             }
         }
+        IOTools.deleteDirWithFiles(name);
     }
 
     @Test

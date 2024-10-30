@@ -132,7 +132,7 @@ public class QueueTestCommon {
     public void checkSpaceUsed() {
         long spaceLeft = new File(OS.getTarget()).getFreeSpace();
         if (freeSpace - spaceLeft > 1 << 30) {
-            fail("Used more than 1 GB of disk space in " + OS.getTarget() + " during the test, was " + (freeSpace - spaceLeft) / 1_000_000 / 1e3 + " GB");
+            fail("Used more than 1 GB of disk space in " + OS.getTarget() + " during the test, was " + (freeSpace - spaceLeft) / (1 << 30) / 1e3 + " GiB");
         }
 
     }

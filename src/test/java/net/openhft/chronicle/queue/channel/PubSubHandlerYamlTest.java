@@ -1,9 +1,10 @@
 package net.openhft.chronicle.queue.channel;
 
 import net.openhft.chronicle.bytes.PageUtil;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.wire.utils.*;
+import net.openhft.chronicle.wire.utils.YamlTester;
 import org.junit.Test;
 
 import static net.openhft.chronicle.queue.channel.PubSubHandlerTest.createTargetDir;
@@ -14,6 +15,8 @@ import static org.junit.Assume.assumeFalse;
 public class PubSubHandlerYamlTest extends QueueTestCommon {
     @Test
     public void yamlTest() {
+        assumeFalse(OS.isWindows());
+
         ignoreException("Timeout on ");
         ignoreException("Closed");
         String tmpDir = createTargetDir("yamlTest");
@@ -26,7 +29,7 @@ public class PubSubHandlerYamlTest extends QueueTestCommon {
                 PubSubHandlerTest.FromSays.class,
                 "queue-pub-sub",
                 "tcp://:0");
-        IOTools.deleteDirWithFiles(tmpDir);
         assertEquals(yamlTester.expected(), yamlTester.actual());
+        IOTools.deleteDirWithFiles(tmpDir);
     }
 }

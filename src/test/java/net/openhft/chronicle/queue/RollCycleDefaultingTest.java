@@ -18,11 +18,14 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
@@ -31,6 +34,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class RollCycleDefaultingTest extends QueueTestCommon {
+
+    static final String BASE_PATH = OS.getTarget() + "/rollCycleDefaultingTest";
+
     @Test
     public void alias() {
         assertEquals(RollCycles.class, ObjectUtils.implementationToUse(RollCycle.class));
@@ -41,12 +47,17 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         System.clearProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
     }
 
+    @AfterClass
+    public static void afterClass() {
+        IOTools.deleteDirWithFiles(BASE_PATH, 2);
+    }
+
     @Test
     public void correctConfigGetsLoaded() {
         String aClass = HOURLY.getClass().getName();
         String configuredCycle = aClass + ":HOURLY";
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
-        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
         assertEquals(HOURLY, builder.rollCycle());
     }
 
@@ -54,7 +65,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     public void customDefinitionGetsLoaded() {
         String configuredCycle = MyRollcycle.class.getName();
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
-        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
 
         assertTrue(builder.rollCycle() instanceof MyRollcycle);
     }
@@ -64,7 +75,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         expectException("Default roll cycle class: foobarblah was not found");
         String configuredCycle = "foobarblah";
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
-        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
         assertEquals(RollCycles.DEFAULT, builder.rollCycle());
 
     }
@@ -74,7 +85,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         expectException("Configured default rollcycle is not a subclass of RollCycle");
         String configuredCycle = String.class.getName();
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
-        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary("test");
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
         assertEquals(RollCycles.DEFAULT, builder.rollCycle());
     }
 
