@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
@@ -55,10 +56,12 @@ public class TableDirectoryListingTest extends QueueTestCommon {
                 binary(tableFile, Metadata.NoMeta.INSTANCE).build();
         tablestoreReadOnly = SingleTableBuilder.
                 binary(tableFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
+        SystemTimeProvider time = SystemTimeProvider.INSTANCE;
         listing = new TableDirectoryListing(tablestore,
                 testDirectory.toPath(),
-                f -> Integer.parseInt(f.split("\\.")[0]));
-        listingReadOnly = new TableDirectoryListingReadOnly(tablestore);
+                f -> Integer.parseInt(f.split("\\.")[0]),
+                time);
+        listingReadOnly = new TableDirectoryListingReadOnly(tablestore, time);
         listing.init();
         listingReadOnly.init();
         tempFile = File.createTempFile("foo", "bar");

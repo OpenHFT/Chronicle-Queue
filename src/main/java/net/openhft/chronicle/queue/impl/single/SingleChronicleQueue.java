@@ -190,9 +190,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             appenderListener = builder.appenderListener();
 
             if (metaStore.readOnly()) {
-                this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction());
+                this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
             } else {
-                this.directoryListing = readOnly ? new TableDirectoryListingReadOnly(metaStore) : new TableDirectoryListing(metaStore, path.toPath(), fileNameToCycleFunction());
+                this.directoryListing = readOnly
+                        ? new TableDirectoryListingReadOnly(metaStore, time)
+                        : new TableDirectoryListing(metaStore, path.toPath(), fileNameToCycleFunction(), time);
                 directoryListing.init();
             }
 
@@ -558,8 +560,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public ExcerptTailer createTailer(String id) {
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this);
-        final StoreTailer storeTailer = new StoreTailer(this, pool, indexUpdater);
+
+        // refresh the listing before creating the tailer
         directoryListing.refresh(true);
+
+        // create the tailer based on up-to-date information.
+        final StoreTailer storeTailer = new StoreTailer(this, pool, indexUpdater);
         storeTailer.singleThreadedCheckReset();
         return storeTailer;
     }
@@ -821,12 +827,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private void setFirstAndLastCycle() {
-        long now = System.currentTimeMillis();
+        long now = time.currentTimeMillis();
         if (now <= directoryListing.lastRefreshTimeMS()) {
             return;
         }
 
-        boolean force = now - directoryListing.lastRefreshTimeMS() > forceDirectoryListingRefreshIntervalMs;
+        boolean force = now - directoryListing.lastRefreshTimeMS() >= forceDirectoryListingRefreshIntervalMs;
         directoryListing.refresh(force);
     }
 
