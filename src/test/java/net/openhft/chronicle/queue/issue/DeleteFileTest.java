@@ -20,11 +20,13 @@ public class DeleteFileTest {
     @Test
     public void testMain() {
         final long[] clock = {1730366325_000L};
+        final long delay = 1_000L;
         try {
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary("queue")
                     .timeProvider(() -> clock[0])
                     .testBlockSize()
                     .rollCycle(TestRollCycles.TEST4_SECONDLY)
+                    .forceDirectoryListingRefreshIntervalMs(delay)
                     .build();
                  ExcerptAppender appender = queue.createAppender();
                  ExcerptTailer tailerF0 = queue.createTailer();
@@ -40,6 +42,8 @@ public class DeleteFileTest {
                 clock[0] += queue.rollCycle().lengthInMillis();
                 appender.writeText("2");
 
+//                System.out.println(queue.dump());
+
 //                queue.refreshDirectoryListing();
 
                 // can't delete while in use on windows, so have to close.
@@ -53,10 +57,13 @@ public class DeleteFileTest {
                 if (!OS.isLinux())
                     tailer0 = queue.createTailer();
 
-                String two0 = tailer0.readText();
+                // before this delay, the tailer is still using the cached directory listing.
+                clock[0] += delay;
 
                 // a tailer created at the start but not used until after the file was deleted.
                 String twoA = tailerA.readText();
+
+                String two0 = tailer0.readText();
 
                 // a tailer created after the file was deleted.
                 String twoB;
@@ -70,7 +77,7 @@ public class DeleteFileTest {
                     twoC = tailer.readText();
                 }
 
-                assertEquals("2 2 2 2", two0 + " " + twoA + " " + twoB + " " + twoC);
+                assertEquals("2 2 2 2", twoA + " " + two0 + " " + twoB + " " + twoC);
             }
         } finally {
             BackgroundResourceReleaser.releasePendingResources();

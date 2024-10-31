@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,8 +27,9 @@ import java.io.File;
 
 class TableDirectoryListingReadOnly extends TableDirectoryListing {
 
-    TableDirectoryListingReadOnly(final @NotNull TableStore<?> tableStore) {
-        super(tableStore, null, null);
+    TableDirectoryListingReadOnly(final @NotNull TableStore<?> tableStore,
+                                  final TimeProvider time) {
+        super(tableStore, null, null, time);
     }
 
     @Override
