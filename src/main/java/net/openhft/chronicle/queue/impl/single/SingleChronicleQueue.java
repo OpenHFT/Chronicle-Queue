@@ -555,8 +555,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public ExcerptTailer createTailer(String id) {
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this);
-        final StoreTailer storeTailer = new StoreTailer(this, pool, indexUpdater);
+
+        // refresh the listing before creating the tailer
         directoryListing.refresh(true);
+
+        // create the tailer based on up-to-date information.
+        final StoreTailer storeTailer = new StoreTailer(this, pool, indexUpdater);
         storeTailer.singleThreadedCheckReset();
         return storeTailer;
     }

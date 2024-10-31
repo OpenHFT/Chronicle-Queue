@@ -194,9 +194,12 @@ class StoreTailer extends AbstractCloseable
     public String toString() {
         final long index = index();
         return "StoreTailer{" +
-                "index sequence=" + queue.rollCycle().toSequenceNumber(index) +
-                ", index cycle=" + queue.rollCycle().toCycle(index) +
-                ", store=" + store + ", queue=" + queue + '}';
+                "index sequence=" + (index == Long.MIN_VALUE ? "unset" : queue.rollCycle().toSequenceNumber(index)) +
+                ", index cycle=" + (index == Long.MIN_VALUE ? "unset" : queue.rollCycle().toCycle(index)) +
+                ", state=" + state +
+                ", closed=" + (isClosed() ? "true" : isClosing() ? "closing" : "false") +
+                ", store=" + store +
+                ", queue=" + queue + '}';
     }
 
     @NotNull
@@ -833,7 +836,7 @@ class StoreTailer extends AbstractCloseable
             return true;
         }
 
-        ((AbstractWire)wire).headNumberCheck((actual, position) -> {
+        ((AbstractWire) wire).headNumberCheck((actual, position) -> {
             try {
                 final long expecting = store.sequenceForPosition(this, position, false);
                 if (actual == expecting)
@@ -1481,6 +1484,11 @@ class StoreTailer extends AbstractCloseable
 
         public void metaData(boolean metaData) {
             this.metaData = metaData;
+        }
+
+        @Override
+        public String toString() {
+            return wire == null ? "unset" : super.toString();
         }
     }
 }
