@@ -74,12 +74,15 @@ public class NormaliseEOFsTest extends QueueTestCommon {
                 excerptAppender.normaliseEOFs();
             }
             final Pattern logPattern = Pattern.compile("Normalising from cycle (\\d+)");
-            // Note a defensive copy of exceptionMap is used as this code has yielded concurrent modification exceptions leading to flakiness under load
-            final List<Integer> startIndices = new LinkedHashMap<>(exceptionMap).keySet().stream()
-                    .map(exceptionKey -> logPattern.matcher(exceptionKey.message))
-                    .filter(Matcher::matches)
-                    .map(matcher -> Integer.parseInt(matcher.group(1)))
-                    .collect(Collectors.toList());
+            // Note: lock the exceptionMap to avoid a concurrent modification exceptions leading to flakiness under load
+            final List<Integer> startIndices;
+            synchronized (exceptionMap) {
+                startIndices = exceptionMap.keySet().stream()
+                        .map(exceptionKey -> logPattern.matcher(exceptionKey.message))
+                        .filter(Matcher::matches)
+                        .map(matcher -> Integer.parseInt(matcher.group(1)))
+                        .collect(Collectors.toList());
+            }
 
             // There is at least 5 calls to normaliseEOF and the start index increases each time
             assertTrue(startIndices.size() >= 5);
