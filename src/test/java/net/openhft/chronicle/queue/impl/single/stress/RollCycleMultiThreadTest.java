@@ -210,7 +210,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "listing.lowestCycle: 0\n" +
                                 "# position: 256, header: 2\n" +
                                 "--- !!data #binary\n" +
-                                "listing.modCount: 7\n" +
+                                "listing.modCount: 8\n" +
                                 "# position: 288, header: 3\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.write.lock: -9223372036854775808\n" +

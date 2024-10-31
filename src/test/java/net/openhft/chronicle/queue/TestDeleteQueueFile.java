@@ -210,7 +210,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             assertEquals(toHexString(firstCycle.firstIndex), toHexString(queue.firstIndex()));
 
             // wait for cache to expire
-            Jvm.pause(260);
+            ((SetTimeProvider) queue.time()).advanceMillis(260);
 
             // using correct value
             assertEquals(toHexString(secondCycle.firstIndex), toHexString(queue.firstIndex()));
@@ -306,12 +306,12 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private void progressivelyTruncateOldRollCycles(QueueWithCycleDetails queueWithCycleDetails) {
         try {
             int deletedUpTo = 0;
-            int numberOfCycles = queueWithCycleDetails.rollCycles.size();
+            // int numberOfCycles = queueWithCycleDetails.rollCycles.size();
             while (!queueWithCycleDetails.rollCycles.isEmpty()) {
                 Jvm.startup().on(TestDeleteQueueFile.class, "Deleting from " + deletedUpTo + " to " + (deletedUpTo + CYCLES_TO_DELETE_PER_ITERATION));
                 for (int i = 0; i < CYCLES_TO_DELETE_PER_ITERATION; i++) {
                     final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(0);
-                    Jvm.startup().on(TestDeleteQueueFile.class, "Deleting " + rollCycleDetails.filename + " (" + deletedUpTo + "/" + numberOfCycles + "), firstIndex=" + toHexString(rollCycleDetails.firstIndex) + ", lastIndex=" + toHexString(rollCycleDetails.lastIndex));
+                    // Jvm.startup().on(TestDeleteQueueFile.class, "Deleting " + rollCycleDetails.filename + " (" + deletedUpTo + "/" + numberOfCycles + "), firstIndex=" + toHexString(rollCycleDetails.firstIndex) + ", lastIndex=" + toHexString(rollCycleDetails.lastIndex));
                     Files.delete(Paths.get(rollCycleDetails.filename));
                     deletedUpTo++;
                 }
@@ -554,7 +554,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
 
         // There should be 3 acquired files, for roll cycles 1, 2, 3
-        Assert.assertEquals(numberOfCycles, rollCycleDetails.size());
+        assertEquals(numberOfCycles, rollCycleDetails.size());
 
         // now let's create one tailer which will read all content
         try (ExcerptTailer excerptTailer = queue.createTailer()) {
