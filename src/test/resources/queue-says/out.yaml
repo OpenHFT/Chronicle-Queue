@@ -1,9 +1,0 @@
----
-# first message
----
-say: Hello World
-...
----
-# second message
-say: "Bye, now"
-...
