@@ -20,8 +20,10 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,6 +56,15 @@ public class ReadWriteTest extends QueueTestCommon {
                 dc.wire().bytes().writeUtf8(STR2);
             }
         }
+    }
+
+    /**
+     * Some flakiness with this test in build server due to background resources not released, we will revisit shortly
+     * to deliver proper fix.
+     */
+    @After
+    public void forceCleanupToDeFlakeTests() {
+        BackgroundResourceReleaser.releasePendingResources();
     }
 
     @Override
