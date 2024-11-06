@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.SimpleCloseable;
+import net.openhft.chronicle.core.time.TimeProvider;
 
 import java.io.File;
 import java.util.function.ToIntFunction;
@@ -28,14 +29,17 @@ import static net.openhft.chronicle.queue.impl.single.TableDirectoryListing.*;
 final class FileSystemDirectoryListing extends SimpleCloseable implements DirectoryListing {
     private final File queueDir;
     private final ToIntFunction<String> fileNameToCycleFunction;
+    private final TimeProvider time;
     private int minCreatedCycle = Integer.MAX_VALUE;
     private int maxCreatedCycle = Integer.MIN_VALUE;
     private long lastRefreshTimeMS;
 
     FileSystemDirectoryListing(final File queueDir,
-                               final ToIntFunction<String> fileNameToCycleFunction) {
+                               final ToIntFunction<String> fileNameToCycleFunction,
+                               final TimeProvider time) {
         this.queueDir = queueDir;
         this.fileNameToCycleFunction = fileNameToCycleFunction;
+        this.time = time;
     }
 
     @Override
@@ -45,7 +49,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
 
     @Override
     public void refresh(boolean force) {
-        lastRefreshTimeMS = System.currentTimeMillis();
+        lastRefreshTimeMS = time.currentTimeMillis();
 
         final String[] fileNamesList = queueDir.list();
         String minFilename = INITIAL_MIN_FILENAME;

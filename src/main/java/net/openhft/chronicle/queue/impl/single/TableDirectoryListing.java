@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.wire.WireType;
@@ -42,6 +43,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private final TableStore<?> tableStore;
     private final Path queuePath;
     private final ToIntFunction<String> fileNameToCycleFunction;
+    private final TimeProvider time;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue modCount;
@@ -50,10 +52,12 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     TableDirectoryListing(
             final @NotNull TableStore<?> tableStore,
             final Path queuePath,
-            final ToIntFunction<String> fileNameToCycleFunction) {
+            final ToIntFunction<String> fileNameToCycleFunction,
+            final TimeProvider time) {
         this.tableStore = tableStore;
         this.queuePath = queuePath;
         this.fileNameToCycleFunction = fileNameToCycleFunction;
+        this.time = time;
 
         checkReadOnly(tableStore);
         singleThreadedCheckDisabled(true);
@@ -92,7 +96,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             return;
         }
 
-        lastRefreshTimeMS = System.currentTimeMillis();
+        lastRefreshTimeMS = time.currentTimeMillis();
 
         final long currentMin0 = minCycleValue.getVolatileValue();
         final long currentMax0 = maxCycleValue.getVolatileValue();
