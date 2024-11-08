@@ -40,6 +40,8 @@ import static java.util.Arrays.stream;
  */
 public class ChronicleReaderMain {
 
+    private static final int HELP_OUTPUT_LINE_WIDTH = 180;
+
     /**
      * Entry point of the application. Initializes the {@link ChronicleReaderMain} instance and
      * passes command-line arguments for execution.
@@ -145,7 +147,7 @@ public class ChronicleReaderMain {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
-                180, // Line width for formatted help output
+                HELP_OUTPUT_LINE_WIDTH,
                 this.getClass().getSimpleName(),
                 message,
                 options,

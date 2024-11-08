@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class ChronicleHistoryReaderMain {
 
+    private static final int HELP_OUTPUT_LINE_WIDTH = 180;
+
     /**
      * Entry point of the application.
      * Initializes the {@link ChronicleHistoryReaderMain} and passes command-line arguments.
@@ -146,7 +148,7 @@ public class ChronicleHistoryReaderMain {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
-                180, // Line width for formatting help output
+                HELP_OUTPUT_LINE_WIDTH,
                 this.getClass().getSimpleName(),
                 message,
                 options,
