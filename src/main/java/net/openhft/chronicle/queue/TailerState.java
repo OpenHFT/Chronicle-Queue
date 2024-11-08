@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue;
 
 /**
@@ -30,10 +29,10 @@ package net.openhft.chronicle.queue;
  * </ul>
  */
 public enum TailerState {
-    END_OF_CYCLE,          // Tailer has reached the end of the current cycle
-    FOUND_IN_CYCLE,        // An entry was found in the current cycle
-    BEYOND_START_OF_CYCLE, // Tailer has moved beyond the start of the cycle
-    CYCLE_NOT_FOUND,       // The requested cycle could not be found
-    NOT_REACHED_IN_CYCLE,  // Tailer has not yet reached an entry in the cycle
-    UNINITIALISED          // Tailer has not been initialized yet
+    END_OF_CYCLE,
+    FOUND_IN_CYCLE,
+    BEYOND_START_OF_CYCLE,
+    CYCLE_NOT_FOUND,
+    NOT_REACHED_IN_CYCLE,
+    UNINITIALISED
 }

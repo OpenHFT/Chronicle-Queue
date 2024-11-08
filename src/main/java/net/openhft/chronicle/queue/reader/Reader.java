@@ -26,9 +26,10 @@ import java.util.function.Consumer;
 
 /**
  * The Reader interface provides methods for reading messages from a Chronicle Queue.
- * <p>It allows for extensive customization of the reading process through various configuration methods,
+ * <p>
+ * It allows for extensive customization of the reading process through various configuration methods,
  * including setting the base path, inclusion/exclusion filters, content-based limiters, and method reader interfaces.
- * A new Reader can be created using the {@link #create()} method.</p>
+ * A new Reader can be created using the {@link #create()} method.
  */
 public interface Reader {
 
@@ -60,7 +61,7 @@ public interface Reader {
 
     /**
      * Adds an inclusion regex for filtering messages.
-     * <p>Messages that match the inclusion regex will be processed.</p>
+     * <p>Messages that match the inclusion regex will be processed.
      *
      * @param regex The inclusion regex.
      * @return The current instance of {@link Reader}
@@ -69,7 +70,7 @@ public interface Reader {
 
     /**
      * Adds an exclusion regex for filtering messages.
-     * <p>Messages that match the exclusion regex will be filtered out.</p>
+     * <p>Messages that match the exclusion regex will be filtered out.
      *
      * @param regex The exclusion regex.
      * @return The current instance of {@link Reader}
@@ -133,7 +134,7 @@ public interface Reader {
 
     /**
      * Sets the method reader interface for this Reader.
-     * <p>If the provided interface name is empty, a dummy method reader will be created.</p>
+     * <p>If the provided interface name is empty, a dummy method reader will be created.
      *
      * @param methodReaderInterface The fully qualified class name of the method reader interface.
      * @return The current instance of {@link Reader}

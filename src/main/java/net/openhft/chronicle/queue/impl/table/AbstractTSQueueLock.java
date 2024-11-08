@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.core.Jvm;
@@ -45,36 +44,17 @@ import static net.openhft.chronicle.core.Jvm.getProcessId;
  */
 @SuppressWarnings("this-escape")
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
-
-    // Message displayed when manual unlocking is suggested
     protected static final String UNLOCK_MAIN_MSG = ". You can manually unlock with net.openhft.chronicle.queue.main.UnlockMain";
-
-    // Message for forcibly unlocking the lock
     protected static final String UNLOCKING_FORCIBLY_MSG = ". Unlocking forcibly. Note that this feature is designed to recover " +
             "if another process died while holding a lock. If the other process is still alive, you may see queue corruption.";
-
-    // Process ID of the current process
     protected static final long PID = getProcessId();
-
-    // Represents an unlocked state
     public static final long UNLOCKED = 1L << 63;
-
-    // The mode for handling forced unlocking
     protected final UnlockMode forceUnlockOnTimeoutWhen;
 
-    // Lock associated with the table store
     protected final LongValue lock;
-
-    // Pauser to manage timing and retries
     protected final ThreadLocal<TimingPauser> pauser;
-
-    // The file path of the table store
     protected final File path;
-
-    // The table store this lock is associated with
     protected final TableStore<?> tableStore;
-
-    // A unique key representing this lock
     private final String lockKey;
 
     /**
@@ -142,9 +122,11 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     }
 
     /**
-     * Forces an unlock if the process that holds the lock is no longer running.
+     * forces an unlock only if the process that currently holds the table store lock is no-longer running
      *
-     * @return {@code true} if the lock was unlocked, otherwise {@code false}.
+     * @return {@code true} if the lock was already unlocked, It will not release the lock if it is held by this process
+     * or the process that was holding the lock is no longer running (and we were able to unlock).
+     * Otherwise {@code false} is returned if the lock is held by this process or another live process.
      */
     public boolean forceUnlockIfProcessIsDead() {
         return forceUnlockIfProcessIsDead(true);
@@ -163,7 +145,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
             if (pid == UNLOCKED)
                 return true;
 
-            // Mask off thread (if used)
+            // mask off thread (if used)
             int realPid = (int) pid;
             if (!Jvm.isProcessAlive(realPid)) {
                 final String message = format("Forced unlocking `%s` in lock file:%s, as this was locked by: %d which is now dead",
@@ -175,8 +157,9 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 }
                 if (lock.compareAndSwapValue(pid, UNLOCKED))
                     return true;
-            } else
+            } else {
                 break;
+            }
         }
         if (Jvm.isDebugEnabled(this.getClass()))
             // don't make this a WARN as this method should only unlock if process is dead or current process.

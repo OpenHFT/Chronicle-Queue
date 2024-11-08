@@ -30,25 +30,28 @@ import java.util.function.Function;
  * and support for concurrent access across multiple threads and processes.
  *
  * <p>The table store maintains mappings of keys to {@link LongValue}s and provides mechanisms for atomic updates,
- * acquiring exclusive file-system locks, and iterating over keys.</p>
+ * acquiring exclusive file-system locks, and iterating over keys.
  *
  * @param <T> The type of metadata associated with the table store, extending {@link Metadata}.
  */
 public interface TableStore<T extends Metadata> extends CommonStore, ManagedCloseable {
 
     /**
-     * Acquires a {@link LongValue} mapped to the underlying file, providing atomic operations on the value shared
+     * Acquire {@link LongValue} mapped to underlying file, providing atomic operations on the value that is shared
      * across threads and/or JVMs.
-     *
-     * <p>This method may lead to concurrent threads or processes acquiring {@link LongValue}s pointing to different
-     * fields in the underlying file. To ensure exclusive access and prevent data corruption, it is recommended to wrap
-     * this call within {@link #doWithExclusiveLock(Function)}.</p>
-     *
-     * <p>If the value is not found, a new {@link LongValue} is created with {@link Long#MIN_VALUE} as the default.
-     * To specify another default value, use {@link #acquireValueFor(CharSequence, long)}.</p>
+     * Note: The implementation of this method is not required to guarantee that if the value does not exist in the file,
+     * it will create one and only one value in the file in case of concurrent access. On the contrary, it's possible
+     * that different threads or processes acquire {@link LongValue}s pointing to different fields in the underlying
+     * file. To prevent this, it is advised to use {@link #doWithExclusiveLock(Function)} to wrap calls to this method,
+     * which will ensure exclusive access to file while initially acquiring values.
+     * Additionally, if this call is not guarded with {@link #doWithExclusiveLock(Function)} it may potentially overwrite
+     * incomplete records done by other instances leading to data corruption.
+     * <p>
+     * If the value isn't found, it is created with {@link Long#MIN_VALUE } value by default. To specify other default
+     * value, use {@link #acquireValueFor(CharSequence, long)}
      *
      * @param key the key of the value
-     * @return {@link LongValue} object pointing to a particular location in the mapped file
+     * @return {@link LongValue} object pointing to particular location in mapped underlying file
      */
     default LongValue acquireValueFor(CharSequence key) {
         return acquireValueFor(key, Long.MIN_VALUE);
@@ -73,14 +76,15 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
     <A> void forEachKey(A accumulator, TableStoreIterator<A> tsIterator);
 
     /**
-     * Acquires an exclusive file-system level lock on the underlying file to prevent concurrent access from multiple processes.
+     * Acquires file-system level lock on the underlying file, to prevent concurrent access from multiple processes.
+     * It is recommended to use this when acquiring your values for the first time, otherwise it is possible to get
+     * unpredictable results in case of multiple processes/threads trying to acquire values for the same key.
+     * In addition, it allows to batch multiple {@link #acquireValueFor(CharSequence)} calls, to atomically acquire
+     * multiple values.
      *
-     * <p>This ensures that all operations within the provided code block are executed atomically, providing thread/process safety.
-     * It is recommended to use this when acquiring values for the first time to avoid unpredictable results due to concurrent access.</p>
-     *
-     * @param code code block to execute using the locked table store
-     * @param <R>  result type of the code block
-     * @return result of the code block execution
+     * @param code code block to execute using locked table store
+     * @param <R>  result type
+     * @return result of code block execution
      */
     <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code);
 

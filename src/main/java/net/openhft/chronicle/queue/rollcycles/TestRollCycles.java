@@ -24,42 +24,35 @@ import net.openhft.chronicle.queue.RollCycle;
  * Enum representing various test roll cycles, designed to reduce the size of a queue dump
  * when performing small tests.
  * <p>These roll cycles are intended for testing purposes only and are not suited for production use
- * due to their limited capacity and reduced indexing granularity.</p>
+ * due to their limited capacity and reduced indexing granularity.
  */
 public enum TestRollCycles implements RollCycle {
-
     /**
-     * Roll cycle allowing up to 0xffffffff entries per second. Only suitable for testing.
+     * 0xffffffff entries - Only good for testing
      */
     TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, MAX_INDEX_COUNT, 4),
-
     /**
-     * Roll cycle allowing up to 0x1000 entries per second. Only suitable for testing.
+     * 0x1000 entries - Only good for testing
      */
     TEST4_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T4'", 1000, 32, 4),
-
     /**
-     * Roll cycle allowing up to 0x400 entries per hour. Only suitable for testing.
+     * 0x400 entries per hour - Only good for testing
      */
     TEST_HOURLY(/*-----*/"yyyyMMdd-HH'T'", 60 * 60 * 1000, 16, 4),
-
     /**
-     * Roll cycle allowing up to 0x40 entries per day. Only suitable for testing.
+     * 0x40 entries per day - Only good for testing
      */
     TEST_DAILY(/*------*/"yyyyMMdd'T1'", 24 * 60 * 60 * 1000, 8, 1),
-
     /**
-     * Roll cycle allowing up to 0x200 entries per day. Only suitable for testing.
+     * 0x200 entries per day - Only good for testing
      */
     TEST2_DAILY(/*-----*/"yyyyMMdd'T2'", 24 * 60 * 60 * 1000, 16, 2),
-
     /**
-     * Roll cycle allowing up to 0x1000 entries per day. Only suitable for testing.
+     * 0x1000 entries per day - Only good for testing
      */
     TEST4_DAILY(/*-----*/"yyyyMMdd'T4'", 24 * 60 * 60 * 1000, 32, 4),
-
     /**
-     * Roll cycle allowing up to 0x20000 entries per day. Only suitable for testing.
+     * 0x20000 entries per day - Only good for testing
      */
     TEST8_DAILY(/*-----*/"yyyyMMdd'T8'", 24 * 60 * 60 * 1000, 128, 8),
     ;
@@ -103,7 +96,7 @@ public enum TestRollCycles implements RollCycle {
 
     /**
      * Returns the default size of the index array.
-     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.</p>
+     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.
      *
      * @return The default index count
      */

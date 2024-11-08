@@ -62,7 +62,6 @@ import static net.openhft.chronicle.queue.impl.StoreFileListener.NO_OP;
 public class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
-    // Configuration fields for filtering, queue direction, and message processing
     private final List<Pattern> inclusionRegex = new ArrayList<>();
     private final List<Pattern> exclusionRegex = new ArrayList<>();
     private final Pauser pauser = Pauser.millis(1, 100);
@@ -88,12 +87,10 @@ public class ChronicleReader implements Reader {
     private String limiterArg;
     private String tailerId = null;
 
-    // Warn if resource tracing is enabled at initialization
     static {
         ToolsUtil.warnIfResourceTracing();
     }
 
-    // Checks if a given configuration value has been set
     private static boolean isSet(final long configValue) {
         return configValue != UNSET_VALUE;
     }
@@ -110,7 +107,6 @@ public class ChronicleReader implements Reader {
         boolean isFirstIteration = true;
         boolean retryLastOperation;
         boolean queueHasBeenModified;
-
         do {
             try (final ChronicleQueue queue = createQueue();
                  final ExcerptTailer tailer = queue.createTailer(tailerId);
@@ -192,7 +188,7 @@ public class ChronicleReader implements Reader {
 
     /**
      * Validates the arguments for the {@link ChronicleReader}.
-     * <p>Throws an {@link IllegalArgumentException} if a named tailer is used with a read-only queue.</p>
+     * <p>Throws an {@link IllegalArgumentException} if a named tailer is used with a read-only queue.
      */
     private void validateArgs() {
         if (tailerId != null && readOnly)
@@ -201,11 +197,12 @@ public class ChronicleReader implements Reader {
 
     /**
      * Configures the content-based limiter if specified.
-     * <p>This method ensures that the content-based limiter is properly initialized before queue processing.</p>
+     * <p>This method ensures that the content-based limiter is properly initialized before queue processing.
      */
     private void configureContentBasedLimiter() {
-        if (contentBasedLimiter != null)
-            contentBasedLimiter.configure(this); // Configure limiter with the current reader instance
+        if (contentBasedLimiter != null) {
+            contentBasedLimiter.configure(this);
+        }
     }
 
     /**
@@ -216,22 +213,22 @@ public class ChronicleReader implements Reader {
      */
     private boolean shouldHaltReadingDueToContentBasedLimit(ExcerptTailer tailer) {
         if (contentBasedLimiter == null) {
-            return false; // No limiter configured, so no need to halt
+            return false;
         }
-        long originalIndex = tailer.index(); // Store current tailer index
+        long originalIndex = tailer.index();
         try (final DocumentContext documentContext = tailer.readingDocument()) {
             if (documentContext.isPresent()) {
-                return contentBasedLimiter.shouldHaltReading(documentContext); // Delegate to limiter
+                return contentBasedLimiter.shouldHaltReading(documentContext);
             }
             return false;
         } finally {
-            tailer.moveToIndex(originalIndex); // Reset tailer index after reading
+            tailer.moveToIndex(originalIndex);
         }
     }
 
     /**
      * Creates a {@link QueueEntryReader} for processing entries in the queue.
-     * <p>This method chooses between a vanilla reader, a plugin-based reader, or a method reader based on the configuration.</p>
+     * <p>This method chooses between a vanilla reader, a plugin-based reader, or a method reader based on the configuration.
      *
      * @param tailer           The {@link ExcerptTailer} for reading queue entries
      * @param messageConsumer  The {@link MessageConsumer} for processing queue entries
@@ -255,11 +252,13 @@ public class ChronicleReader implements Reader {
      * @return The head of the chain of message consumers
      */
     private MessageConsumer createMessageConsumers() {
-        MessageConsumer tail = this::writeToSink; // Initialize consumer that writes to the message sink
-        if (!exclusionRegex.isEmpty())
-            tail = new PatternFilterMessageConsumer(exclusionRegex, false, tail); // Add exclusion filters
-        if (!inclusionRegex.isEmpty())
-            tail = new PatternFilterMessageConsumer(inclusionRegex, true, tail); // Add inclusion filters
+        MessageConsumer tail = this::writeToSink;
+        if (!exclusionRegex.isEmpty()) {
+            tail = new PatternFilterMessageConsumer(exclusionRegex, false, tail);
+        }
+        if (!inclusionRegex.isEmpty()) {
+            tail = new PatternFilterMessageConsumer(inclusionRegex, true, tail);
+        }
         return tail;
     }
 
@@ -272,9 +271,9 @@ public class ChronicleReader implements Reader {
      */
     private boolean writeToSink(long index, String text) {
         if (displayIndex)
-            messageSink.accept("0x" + Long.toHexString(index) + ": "); // Display entry index
+            messageSink.accept("0x" + Long.toHexString(index) + ": ");
         if (!text.isEmpty())
-            messageSink.accept(text); // Display entry text
+            messageSink.accept(text);
         return true;
     }
 
@@ -398,18 +397,18 @@ public class ChronicleReader implements Reader {
 
     /**
      * Sets the method reader interface for reading queue entries.
-     * <p>If the provided interface name is empty, it uses a dummy handler; otherwise, it loads the class specified by the methodReaderInterface parameter.</p>
+     * <p>If the provided interface name is empty, it uses a dummy handler; otherwise, it loads the class specified by the methodReaderInterface parameter.
      *
      * @param methodReaderInterface The fully qualified class name of the method reader interface
      * @return The current instance of {@link ChronicleReader}
      */
     public ChronicleReader asMethodReader(@NotNull String methodReaderInterface) {
         if (methodReaderInterface.isEmpty()) {
-            entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType); // Use dummy handler if no interface is specified
+            entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType);
         } else try {
-            this.methodReaderInterface = Class.forName(methodReaderInterface); // Dynamically load the class for the interface
+            this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {
-            throw Jvm.rethrow(e); // Handle class loading errors
+            throw Jvm.rethrow(e);
         }
         return this;
     }
@@ -428,7 +427,7 @@ public class ChronicleReader implements Reader {
 
     /**
      * Configures a binary search comparator for the reader.
-     * <p>This method dynamically loads a binary search class and allows it to configure itself by passing the current {@link ChronicleReader} instance.</p>
+     * <p>This method dynamically loads a binary search class and allows it to configure itself by passing the current {@link ChronicleReader} instance.
      *
      * @param binarySearchClass The fully qualified class name of the binary search comparator
      * @return The current instance of {@link ChronicleReader}
@@ -436,11 +435,12 @@ public class ChronicleReader implements Reader {
     @Override
     public ChronicleReader withBinarySearch(@NotNull String binarySearchClass) {
         try {
-            Class<?> clazz = Class.forName(binarySearchClass); // Dynamically load the binary search class
-            this.binarySearch = (BinarySearchComparator) clazz.getDeclaredConstructor().newInstance(); // Create an instance of the comparator
-            this.binarySearch.accept(this); // Allow the comparator to configure itself with this reader
+            Class<?> clazz = Class.forName(binarySearchClass);
+            this.binarySearch = (BinarySearchComparator) clazz.getDeclaredConstructor().newInstance();
+            // allow binary search to configure itself
+            this.binarySearch.accept(this);
         } catch (Exception e) {
-            throw Jvm.rethrow(e); // Handle any exception during class loading or instantiation
+            throw Jvm.rethrow(e);
         }
         return this;
     }
@@ -572,8 +572,8 @@ public class ChronicleReader implements Reader {
      * @return {@code true} if the queue has been modified, {@code false} otherwise
      */
     private boolean queueHasBeenModifiedSinceLastCheck(final long lastObservedTailIndex, ExcerptTailer tailer) {
-        long currentTailIndex = indexOfEnd(tailer); // Get the current end index of the queue
-        return currentTailIndex > lastObservedTailIndex; // Check if the queue has been modified
+        long currentTailIndex = indexOfEnd(tailer);
+        return currentTailIndex > lastObservedTailIndex;
     }
 
     /**
@@ -585,20 +585,21 @@ public class ChronicleReader implements Reader {
      */
     private void moveToSpecifiedPosition(final ChronicleQueue ic, final ExcerptTailer tailer, final boolean isFirstIteration) {
         if (isFirstIteration) {
-            // Set the reading direction (forward or backward)
+
+            // Set the direction, if we're reading backwards, start at the end by default
             tailer.direction(tailerDirection);
             if (tailerDirection == BACKWARD) {
-                tailer.toEnd(); // Move to the end if reading in reverse order
+                tailer.toEnd();
             }
 
             if (isSet(startIndex)) {
-                tryMoveToIndex(ic, tailer); // Move to the specified start index
+                tryMoveToIndex(ic, tailer);
             } else if (binarySearch != null) {
-                seekBinarySearch(tailer); // Use binary search to find the starting point
+                seekBinarySearch(tailer);
             }
 
             if (tailerDirection == FORWARD) {
-                moveTailerToEnd(tailer); // Move the tailer to the end if reading forward
+                moveTailerToEnd(tailer);
             }
         }
     }
@@ -606,16 +607,16 @@ public class ChronicleReader implements Reader {
     /**
      * Moves the {@link ExcerptTailer} to the end of the queue.
      * <p>If {@code maxHistoryRecords} is set, it moves the tailer to a specific number of entries from the end.
-     * Otherwise, if tailing is enabled, it simply moves the tailer to the end.</p>
+     * Otherwise, if tailing is enabled, it simply moves the tailer to the end.
      *
      * @param tailer The {@link ExcerptTailer} to move
      */
     private void moveTailerToEnd(ExcerptTailer tailer) {
         if (isSet(maxHistoryRecords)) {
-            tailer.toEnd(); // Move to the end of the queue
-            moveToIndexNFromTheEnd(tailer, maxHistoryRecords); // Move to a specific number of entries from the end
+            tailer.toEnd();
+            moveToIndexNFromTheEnd(tailer, maxHistoryRecords);
         } else if (tailInputSource) {
-            tailer.toEnd(); // Move to the end if tailing input source
+            tailer.toEnd();
         }
     }
 
@@ -639,10 +640,10 @@ public class ChronicleReader implements Reader {
         boolean firstTime = true;
         while (!tailer.moveToIndex(startIndex)) {
             if (firstTime) {
-                messageSink.accept("Waiting for startIndex " + Long.toHexString(startIndex)); // Notify if waiting
+                messageSink.accept("Waiting for startIndex " + Long.toHexString(startIndex));
                 firstTime = false;
             }
-            Jvm.pause(100); // Pause before retrying
+            Jvm.pause(100);
         }
     }
 
@@ -652,19 +653,18 @@ public class ChronicleReader implements Reader {
      * @param tailer The {@link ExcerptTailer} to move
      */
     private void seekBinarySearch(ExcerptTailer tailer) {
-        TailerDirection originalDirection = tailer.direction(); // Store the original direction
+        TailerDirection originalDirection = tailer.direction();
         tailer.direction(FORWARD);
-        final Wire key = binarySearch.wireKey(); // Get the search key
-        long rv = BinarySearch.search(tailer, key, binarySearch); // Perform binary search
-
+        final Wire key = binarySearch.wireKey();
+        long rv = BinarySearch.search(tailer, key, binarySearch);
         if (rv == -1) {
-            tailer.toStart(); // Move to the start if no match found
+            tailer.toStart();
         } else if (rv < 0) {
-            scanToFirstEntryFollowingMatch(tailer, key, -rv); // Find the first entry following the match
+            scanToFirstEntryFollowingMatch(tailer, key, -rv);
         } else {
-            scanToFirstMatchingEntry(tailer, key, rv); // Find the first matching entry
+            scanToFirstMatchingEntry(tailer, key, rv);
         }
-        tailer.direction(originalDirection); // Restore original direction
+        tailer.direction(originalDirection);
     }
 
     /**
@@ -676,16 +676,15 @@ public class ChronicleReader implements Reader {
      */
     private void scanToFirstMatchingEntry(ExcerptTailer tailer, Wire key, long matchingIndex) {
         long indexToMoveTo = matchingIndex;
-        tailer.direction(tailerDirection == FORWARD ? BACKWARD : FORWARD); // Switch direction to find the first match
+        tailer.direction(tailerDirection == FORWARD ? BACKWARD : FORWARD);
         tailer.moveToIndex(indexToMoveTo);
-
         while (true) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (!dc.isPresent())
                     break;
                 try {
                     if (binarySearch.compare(dc.wire(), key) == 0)
-                        indexToMoveTo = dc.index(); // Keep moving to the first matching index
+                        indexToMoveTo = dc.index();
                     else
                         break;
                 } catch (NotComparableException e) {
@@ -693,7 +692,7 @@ public class ChronicleReader implements Reader {
                 }
             }
         }
-        tailer.moveToIndex(indexToMoveTo); // Move to the first matching index
+        tailer.moveToIndex(indexToMoveTo);
     }
 
     /**
@@ -706,9 +705,8 @@ public class ChronicleReader implements Reader {
      */
     private void scanToFirstEntryFollowingMatch(ExcerptTailer tailer, Wire key, long indexAdjacentMatch) {
         long indexToMoveTo = -1;
-        tailer.direction(tailerDirection); // Set the tailer direction
+        tailer.direction(tailerDirection);
         tailer.moveToIndex(indexAdjacentMatch);
-
         while (true) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (!dc.isPresent())
@@ -716,7 +714,7 @@ public class ChronicleReader implements Reader {
                 try {
                     if ((tailer.direction() == TailerDirection.FORWARD && binarySearch.compare(dc.wire(), key) >= 0)
                             || (tailer.direction() == BACKWARD && binarySearch.compare(dc.wire(), key) <= 0)) {
-                        indexToMoveTo = dc.index(); // Move to the entry following the match
+                        indexToMoveTo = dc.index();
                         break;
                     }
                 } catch (NotComparableException e) {
@@ -725,7 +723,7 @@ public class ChronicleReader implements Reader {
             }
         }
         if (indexToMoveTo >= 0) {
-            tailer.moveToIndex(indexToMoveTo); // Move to the found index
+            tailer.moveToIndex(indexToMoveTo);
         }
     }
 
@@ -736,7 +734,7 @@ public class ChronicleReader implements Reader {
      * @param numberOfEntriesFromEnd The number of entries from the end to move to
      */
     private void moveToIndexNFromTheEnd(ExcerptTailer tailer, long numberOfEntriesFromEnd) {
-        tailer.direction(TailerDirection.BACKWARD).toEnd(); // Start from the end and move backwards
+        tailer.direction(TailerDirection.BACKWARD).toEnd();
         for (int i = 0; i < numberOfEntriesFromEnd - 1; i++) {
             try (final DocumentContext documentContext = tailer.readingDocument()) {
                 if (!documentContext.isPresent()) {
@@ -744,7 +742,7 @@ public class ChronicleReader implements Reader {
                 }
             }
         }
-        tailer.direction(FORWARD); // Reset to forward direction
+        tailer.direction(FORWARD);
     }
 
     /**
@@ -754,7 +752,7 @@ public class ChronicleReader implements Reader {
      * @return The index of the last entry
      */
     private long indexOfEnd(ExcerptTailer excerptTailer) {
-        return excerptTailer.toEnd().index(); // Get the end index of the queue
+        return excerptTailer.toEnd().index();
     }
 
     /**
@@ -770,8 +768,8 @@ public class ChronicleReader implements Reader {
         }
         return SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
-                .readOnly(readOnly) // Configure read-only mode if applicable
-                .storeFileListener(NO_OP) // Set a no-op store file listener
+                .readOnly(readOnly)
+                .storeFileListener(NO_OP)
                 .build();
     }
 
@@ -779,6 +777,6 @@ public class ChronicleReader implements Reader {
      * Stops the reader, halting any further processing of the queue.
      */
     public void stop() {
-        running = false; // Set running to false to stop processing
+        running = false;
     }
 }

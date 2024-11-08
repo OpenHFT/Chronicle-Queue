@@ -34,7 +34,6 @@ public class ChronicleWriterMain {
      * @throws Exception if an error occurs during execution
      */
     public static void main(@NotNull String[] args) throws Exception {
-        // Delegate the task to the internal ChronicleWriterMain to handle the actual writing process
         new net.openhft.chronicle.queue.internal.writer.ChronicleWriterMain().run(args);
     }
 }

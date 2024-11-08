@@ -50,7 +50,6 @@ public final class InternalFileUtil {
     private static final Comparator<File> EARLIEST_FIRST = comparing(File::getName);
 
     private InternalFileUtil() {
-        // Utility class, no instances.
     }
 
     /**

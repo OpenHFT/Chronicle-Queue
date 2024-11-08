@@ -34,8 +34,8 @@ import java.util.function.Function;
  */
 public abstract class AbstractTailerPollingQueueEntryReader implements QueueEntryReader {
 
-    private final ExcerptTailer tailer;  // The ExcerptTailer used to read from the queue
-    private final Function<ExcerptTailer, DocumentContext> pollMethod;  // Function for polling queue entries
+    private final ExcerptTailer tailer;
+    private final Function<ExcerptTailer, DocumentContext> pollMethod;
 
     /**
      * Constructs an {@code AbstractTailerPollingQueueEntryReader} with the given tailer and polling method.
@@ -59,10 +59,10 @@ public abstract class AbstractTailerPollingQueueEntryReader implements QueueEntr
     public final boolean read() {
         try (DocumentContext dc = pollMethod.apply(tailer)) {
             if (!dc.isPresent()) {
-                return false;  // No entry to read
+                return false;
             }
-            doRead(dc);  // Delegate entry processing to the subclass
-            return true;  // Entry was successfully read and processed
+            doRead(dc);
+            return true;
         }
     }
 

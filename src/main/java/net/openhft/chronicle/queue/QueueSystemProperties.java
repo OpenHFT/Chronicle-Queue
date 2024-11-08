@@ -29,7 +29,6 @@ import net.openhft.chronicle.core.Jvm;
  */
 public final class QueueSystemProperties {
 
-    // Private constructor to prevent instantiation of the utility class
     private QueueSystemProperties() {
     }
 

@@ -59,12 +59,12 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
         final long timeoutMillis = System.currentTimeMillis() + 500;
         while (true) {
             try {
-                initLongValues(); // Initialize LongValues safely
+                initLongValues();
                 break;
             } catch (Exception e) {
                 if (System.currentTimeMillis() > timeoutMillis)
-                    throw e;  // Timeout exceeded, rethrow exception
-                Jvm.pause(1);  // Pause for a short time before retrying
+                    throw e;
+                Jvm.pause(1);
             }
         }
     }
@@ -87,7 +87,7 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
      */
     @Override
     public void onFileCreated(final File file, final int cycle) {
-        onRoll(cycle);  // Call onRoll, but since onRoll is a no-op, it does nothing
+        onRoll(cycle);
     }
 
     /**

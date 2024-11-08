@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
@@ -56,7 +55,7 @@ public class SCQMeta implements Metadata {
     @UsedViaReflection
     SCQMeta(@NotNull WireIn wire) {
         this.roll = Objects.requireNonNull(wire.read(MetaDataField.roll).typedMarshallable());
-        this.deltaCheckpointInterval = wire.bytes().readRemaining() > 0 ? wire.read(MetaDataField.deltaCheckpointInterval).int32() : -1; // Disabled if no data
+        this.deltaCheckpointInterval = wire.bytes().readRemaining() > 0 ? wire.read(MetaDataField.deltaCheckpointInterval).int32() : -1; // disabled.
         this.sourceId = wire.bytes().readRemaining() > 0 ? wire.read(MetaDataField.sourceId).int32() : 0;
     }
 

@@ -22,7 +22,7 @@ package net.openhft.chronicle.queue.impl.single;
  * {@code NotReachedException} is thrown when an expected condition or state is not reached during the operation of a system or process.
  *
  * <p>This exception typically indicates that some required milestone or checkpoint in a process was not achieved, potentially due to
- * a failure or an unexpected state.</p>
+ * a failure or an unexpected state.
  */
 public class NotReachedException extends IllegalStateException {
     private static final long serialVersionUID = 0L;

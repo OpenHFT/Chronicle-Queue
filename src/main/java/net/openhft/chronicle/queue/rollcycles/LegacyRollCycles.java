@@ -23,22 +23,19 @@ import net.openhft.chronicle.queue.RollCycle;
 /**
  * Enum representing legacy roll cycles, kept for historical reasons.
  * <p>These roll cycles were used in older versions of Chronicle Queue and retain their original
- * configurations for backward compatibility.</p>
+ * configurations for backward compatibility.
  */
 public enum LegacyRollCycles implements RollCycle {
-
     /**
-     * Roll cycle allowing up to 0x4000000 entries per minute, indexing every 16th entry.
+     * 0x4000000 entries per minute, indexing every 16th entry
      */
     MINUTELY(/*--------*/"yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16),
     /**
-     * Roll cycle allowing up to 0x10000000 entries per hour, indexing every 16th entry.
-     * <p>Maintained as 4K index count and 16 index spacing for historical reasons.</p>
+     * 0x10000000 entries per hour, indexing every 16th entry, leave as 4K and 16 for historical reasons.
      */
     HOURLY(/*----------*/"yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16),
     /**
-     * Roll cycle allowing up to 0xffffffff entries per day, indexing every 64th entry.
-     * <p>Maintained as 8K index count and 64 index spacing for historical reasons.</p>
+     * 0xffffffff entries per day, indexing every 64th entry, leave as 8K and 64 for historical reasons.
      */
     DAILY(/*-----------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64),
     ;
@@ -82,7 +79,7 @@ public enum LegacyRollCycles implements RollCycle {
 
     /**
      * Returns the default size of the index array.
-     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.</p>
+     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.
      *
      * @return The default index count
      */

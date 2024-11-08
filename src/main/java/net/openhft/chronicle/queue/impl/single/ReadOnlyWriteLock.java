@@ -54,7 +54,6 @@ public class ReadOnlyWriteLock implements WriteLock {
      */
     @Override
     public void close() {
-        // No operation needed for a read-only lock.
     }
 
     /**

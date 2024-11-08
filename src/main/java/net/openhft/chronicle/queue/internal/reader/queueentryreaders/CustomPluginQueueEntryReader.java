@@ -35,8 +35,8 @@ import java.util.function.Function;
  */
 public final class CustomPluginQueueEntryReader extends AbstractTailerPollingQueueEntryReader {
 
-    private final ChronicleReaderPlugin plugin;  // The custom plugin for processing queue entries
-    private final MessageConsumer consumer;  // The message consumer that handles the processed messages
+    private final ChronicleReaderPlugin plugin;
+    private final MessageConsumer consumer;
 
     /**
      * Constructs a {@code CustomPluginQueueEntryReader} with the specified {@link ExcerptTailer},
@@ -63,7 +63,6 @@ public final class CustomPluginQueueEntryReader extends AbstractTailerPollingQue
      */
     @Override
     protected void doRead(DocumentContext documentContext) {
-        // Delegate the document processing to the plugin, passing the result to the message consumer
         plugin.onReadDocument(documentContext, value -> consumer.consume(documentContext.index(), value));
     }
 }

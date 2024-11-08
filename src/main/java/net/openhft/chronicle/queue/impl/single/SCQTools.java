@@ -101,7 +101,6 @@ public enum SCQTools {
      */
     @Nullable
     private static MessageHistory readHistoryFromWire(@NotNull final Wire wire, final MessageHistory history) {
-        // Read the history value from the wire
         final ValueIn historyValue = readHistoryValue(wire);
         if (historyValue == null)
             return null;
@@ -120,16 +119,12 @@ public enum SCQTools {
      */
     @Nullable
     private static ValueIn readHistoryValue(@NotNull final Wire wire) {
-        // Use ScopedResource to handle a reusable StringBuilder
         try (final ScopedResource<StringBuilder> stlSb = StoreTailer.SBP.get()) {
             StringBuilder sb = stlSb.get();
-
-            // Read into the StringBuilder and verify the history key
             ValueIn valueIn = wire.read(sb);
 
             if (!MethodReader.HISTORY.contentEquals(sb))
                 return null;
-
             return valueIn;
         }
     }

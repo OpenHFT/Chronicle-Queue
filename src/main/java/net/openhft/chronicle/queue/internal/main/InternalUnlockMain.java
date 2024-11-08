@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -36,8 +35,6 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
  * The class requires a queue directory as input and operates on the queue metadata file located within that directory.
  */
 public final class InternalUnlockMain {
-
-    // Adds aliases for the SingleChronicleQueueBuilder to support configuration shortcuts
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
@@ -60,31 +57,24 @@ public final class InternalUnlockMain {
      */
     private static void unlock(@NotNull String dir) {
         File path = new File(dir);
-
-        // Validate that the provided path is a directory
         if (!path.isDirectory()) {
             System.err.println("Path argument must be a queue directory");
             System.exit(1);
         }
 
-        // Path to the metadata file
         File storeFilePath = new File(path, QUEUE_METADATA_FILE);
 
-        // Check if the metadata file exists
         if (!storeFilePath.exists()) {
             System.err.println("Metadata file not found, nothing to unlock");
             System.exit(1);
         }
 
-        // Load the table store from the metadata file in read-write mode
-        final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE)
-                                                      .readOnly(false)
-                                                      .build();
+        final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
 
-        // Force unlock the appender lock
+        // appender lock
         (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L, TableStoreWriteLock.APPEND_LOCK_KEY)).forceUnlock();
 
-        // Force unlock the main write lock
+        // write lock
         (new TableStoreWriteLock(store, BusyTimedPauser::new, 0L)).forceUnlock();
 
         System.out.println("Done");

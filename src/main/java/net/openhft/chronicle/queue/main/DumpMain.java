@@ -27,7 +27,7 @@ import java.io.PrintStream;
 
 /**
  * DumpMain is an entry point for dumping the contents of a Chronicle Queue file.
- * <p>This class uses several system properties to configure the dumping process:</p>
+ * <p>This class uses several system properties to configure the dumping process:
  * <ul>
  *   <li><b>file</b>: Specifies the file to be dumped</li>
  *   <li><b>skipTableStoreDump</b>: Set to true to skip dumping the TableStore</li>
@@ -60,7 +60,7 @@ public final class DumpMain {
 
     /**
      * Dumps the contents of a Chronicle Queue file to the specified {@link PrintStream}.
-     * <p>This method provides more fine-grained control over the output, including setting an upper limit for the dump.</p>
+     * <p>This method provides more fine-grained control over the output, including setting an upper limit for the dump.
      *
      * @param path       The Chronicle Queue file to be dumped
      * @param out        The {@link PrintStream} to which the dump will be written

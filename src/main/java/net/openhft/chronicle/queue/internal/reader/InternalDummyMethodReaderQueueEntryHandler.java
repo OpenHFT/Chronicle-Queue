@@ -37,8 +37,8 @@ import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
  * This implementation is particularly useful when you need to process queue entries as a text representation.
  */
 public final class InternalDummyMethodReaderQueueEntryHandler implements QueueEntryHandler {
-    private final Bytes<?> textConversionTarget = Bytes.allocateElasticOnHeap();  // Bytes object for storing the text representation
-    private final WireType wireType;  // The wire type for converting binary wire entries
+    private final Bytes<?> textConversionTarget = Bytes.allocateElasticOnHeap();
+    private final WireType wireType;
 
     /**
      * Constructs an {@code InternalDummyMethodReaderQueueEntryHandler} with the specified {@link WireType}.
@@ -46,7 +46,7 @@ public final class InternalDummyMethodReaderQueueEntryHandler implements QueueEn
      * @param wireType The wire type to be used for converting entries, must not be null
      */
     public InternalDummyMethodReaderQueueEntryHandler(@NotNull WireType wireType) {
-        this.wireType = requireNonNull(wireType);  // Ensures that the wire type is not null
+        this.wireType = requireNonNull(wireType);
     }
 
     /**
@@ -80,6 +80,6 @@ public final class InternalDummyMethodReaderQueueEntryHandler implements QueueEn
      */
     @Override
     public void close() {
-        textConversionTarget.releaseLast();  // Release the memory used by the buffer
+        textConversionTarget.releaseLast();
     }
 }

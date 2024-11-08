@@ -35,7 +35,7 @@ public class IndexUpdaterFactory {
             // Note this nullness is not ideal and needs to be tackled in a future refactor of StoreTailer
             return null;
         } else if (tailerName.startsWith(SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX)) {
-            // Replicated named tailers use a versioned index updater
+            // Replicated named tailers use an additional version field updated on each index mutation
             return new VersionedIndexUpdater(
                     tailerName,
                     queue,
@@ -43,7 +43,7 @@ public class IndexUpdaterFactory {
                     queue.indexVersionForId(tailerName)
             );
         } else {
-            // Non-replicated named tailers use a standard index updater
+            // Normal named tailers use a simple unversioned scheme
             return new StandardIndexUpdater(queue.indexForId(tailerName));
         }
     }

@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 /**
  * Handles the processing of queue entries, converting them to text or other forms for consumption.
  * <p>Implements the {@link BiConsumer} interface to consume a {@link WireIn} object, which represents the serialized data,
- * and a {@link Consumer} that processes the resulting string.</p>
+ * and a {@link Consumer} that processes the resulting string.
  */
 public interface QueueEntryHandler extends BiConsumer<WireIn, Consumer<String>>, AutoCloseable {
 
@@ -41,7 +41,7 @@ public interface QueueEntryHandler extends BiConsumer<WireIn, Consumer<String>>,
 
     /**
      * Creates a {@link QueueEntryHandler} that converts messages to text based on the provided {@link WireType}.
-     * <p>This is useful when reading queues written in different formats such as binary, JSON, or text.</p>
+     * <p>This is useful when reading queues written in different formats such as binary, JSON, or text.
      *
      * @param wireType The {@link WireType} used to interpret the data
      * @return A {@link QueueEntryHandler} that converts messages to text

@@ -40,20 +40,14 @@ import java.util.concurrent.atomic.AtomicLong;
  * for both operations. The benchmark runs for a defined duration, and results are printed at the end.
  */
 public final class InternalPingPongMain {
-
-    // Runtime duration in seconds, default is 30 seconds if not specified via system properties
-    static int runtime = Integer.getInteger("runtime", 30);
-    // Base directory path for the queue files, defaults to system temporary directory if not set
+    static int runtime = Integer.getInteger("runtime", 30); // seconds
     static String basePath = System.getProperty("path", OS.TMP);
-    // Atomic variables to track write timestamps and counts
     static AtomicLong writeTime = new AtomicLong();
     static AtomicInteger writeCount = new AtomicInteger();
     static AtomicInteger readCount = new AtomicInteger();
-    // Atomic flag to indicate whether the benchmark is still running
     static AtomicBoolean running = new AtomicBoolean(true);
 
     static {
-        // Enable JVM safepoint tracking for latency measurement accuracy
         System.setProperty("jvm.safepoint.enabled", "true");
     }
 
@@ -78,9 +72,8 @@ public final class InternalPingPongMain {
      */
     static void pingPong(int size) {
         String path = InternalPingPongMain.basePath + "/test-q-" + Time.uniqueId();
-        Histogram readDelay = new Histogram();  // Histogram for read delays
-        Histogram readDelay2 = new Histogram();  // Another histogram for additional read latency analysis
-
+        Histogram readDelay = new Histogram();
+        Histogram readDelay2 = new Histogram();
         try (ChronicleQueue queue = createQueue(path)) {
 
             // Thread responsible for reading from the queue
@@ -90,52 +83,48 @@ public final class InternalPingPongMain {
                     // Wait until there's a message to read
                     while (readCount.get() == writeCount.get()) ;
 
-                    long wakeTime = System.nanoTime();  // Record the time we started reading
+                    long wakeTime = System.nanoTime();
                     while (running.get()) {
                         try (DocumentContext dc = tailer.readingDocument(true)) {
                             if (!dc.isPresent())
-                                continue;  // Skip if there's no document present
+                                continue;
                         }
                         break;
                     }
                     // Measure the time between when the write happened and the read started
                     final long delay = wakeTime - writeTime.get();
                     final long time = System.nanoTime() - wakeTime;
-                    readDelay2.sample(time);  // Record the time it took to read the message
-                    readDelay.sample(delay);  // Record the delay before the read started
+                    readDelay2.sample(time);
+                    readDelay.sample(delay);
                     if (time + delay > 20_000)
                         System.out.println("td " + delay + " + " + time);
-
-                    if (readCount.get() == 100000) {  // Reset histograms after a certain number of reads
+                    if (readCount.get() == 100000) {
                         System.out.println("reset");
                         readDelay.reset();
                         readDelay2.reset();
                     }
-                    readCount.incrementAndGet();  // Increment the read count
+                    readCount.incrementAndGet();
                 }
             });
-            reader.setDaemon(true);  // Mark the reader thread as a daemon
-            reader.start();  // Start the reader thread
-            Jvm.pause(100);  // Pause to allow the reader to start up
+            reader.setDaemon(true);
+            reader.start();
+            Jvm.pause(100);
 
             // Calculate the finish time based on the runtime property
             final long finish = System.currentTimeMillis() + runtime * 1000L;
-            final ExcerptAppender appender = queue.createAppender();  // Create an appender to write to the queue
-
-            // Write messages to the queue until the runtime limit is reached
+            final ExcerptAppender appender = queue.createAppender();
             while (System.currentTimeMillis() < finish) {
-                if (readCount.get() < writeCount.get()) {  // Wait for the reader to catch up if necessary
+                if (readCount.get() < writeCount.get()) {
                     Thread.yield();
                     continue;
                 }
                 try (DocumentContext dc = appender.writingDocument(false)) {
-                    dc.wire().bytes().writeSkip(size);  // Write a message of the specified size
+                    dc.wire().bytes().writeSkip(size);
                 }
-                writeCount.incrementAndGet();  // Increment the write count
-                writeTime.set(System.nanoTime());  // Record the time the write occurred
+                writeCount.incrementAndGet();
+                writeTime.set(System.nanoTime());
             }
-            running.set(false);  // Stop the benchmark
-
+            running.set(false);
         }
 
         // Output the histograms for the read delays
@@ -154,6 +143,6 @@ public final class InternalPingPongMain {
      */
     @NotNull
     private static ChronicleQueue createQueue(String path) {
-        return ChronicleQueue.single(path);  // Create a single ChronicleQueue instance at the given path
+        return ChronicleQueue.single(path);
     }
 }

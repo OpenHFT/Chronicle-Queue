@@ -22,11 +22,10 @@ import net.openhft.chronicle.core.Jvm;
 
 /**
  * Utility class for tools-related functions, such as resource tracing warnings.
- * <p>This class is final and cannot be instantiated.</p>
+ * <p>This class is final and cannot be instantiated.
  */
 public final class ToolsUtil {
 
-    // Private constructor to prevent instantiation
     private ToolsUtil() {
     }
 
@@ -37,8 +36,8 @@ public final class ToolsUtil {
      * properly set up in certain tool environments (e.g., when running shell scripts like {@code queue_reader.sh}).
      */
     public static void warnIfResourceTracing() {
-        // Print a warning to System.err if resource tracing is enabled
+        // System.err (*not* logger as slf4j may not be set up e.g. when running queue_reader.sh)
         if (Jvm.isResourceTracing())
-            System.err.println("Resource tracing is turned on - this will eventually cause an OutOfMemoryError (OOME)");
+            System.err.println("Resource tracing is turned on - this will eventually die with OOME");
     }
 }

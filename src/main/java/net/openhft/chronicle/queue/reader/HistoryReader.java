@@ -33,7 +33,7 @@ import java.util.function.Supplier;
  * and collect latency histograms from the queue entries over time.
  * <p>This interface provides methods for configuring the reader, managing message sinks,
  * and accumulating histograms for performance analysis. It supports flexible options such as
- * setting the base path, start index, measurement windows, and other performance metrics.</p>
+ * setting the base path, start index, measurement windows, and other performance metrics.
  */
 public interface HistoryReader {
 
@@ -136,10 +136,11 @@ public interface HistoryReader {
     void outputData();
 
     /**
-     * Creates and returns a new history reader that will use the queue located at the path
-     * provided later via {@link #withBasePath}.
+     * Creates and returns a new history reader that will use
+     * the queue located at {@link #withBasePath } provided later.
      *
-     * @return A new instance of {@link HistoryReader}
+     * @return a new history reader that will use
+     * the queue located at {@link #withBasePath } provided later
      */
     static HistoryReader create() {
         return new ChronicleHistoryReader();

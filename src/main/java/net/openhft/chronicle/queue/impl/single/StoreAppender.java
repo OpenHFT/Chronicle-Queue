@@ -63,32 +63,32 @@ class StoreAppender extends AbstractCloseable
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
     @NotNull
-    private final SingleChronicleQueue queue; // The associated queue
+    private final SingleChronicleQueue queue;
     @NotNull
-    private final WriteLock writeLock; // The lock for writes
-    private final WriteLock appendLock; // Lock for appends
+    private final WriteLock writeLock;
+    private final WriteLock appendLock;
 
     @NotNull
-    private final StoreAppenderContext context; // The context used for appending
-    private final WireStorePool storePool; // Pool for managing wire stores
-    private final boolean checkInterrupts; // Flag to check for interrupts during append
+    private final StoreAppenderContext context;
+    private final WireStorePool storePool;
+    private final boolean checkInterrupts;
     @UsedViaReflection
-    private final Finalizer finalizer; // Used for cleanup if resource tracing is enabled
+    private final Finalizer finalizer;
     @Nullable
-    SingleChronicleQueueStore store; // Current store in use
-    long lastPosition; // The last known position
-    private int cycle = Integer.MIN_VALUE; // The current cycle
+    SingleChronicleQueueStore store;
+    long lastPosition;
+    private int cycle = Integer.MIN_VALUE;
     @Nullable
-    private Wire wire; // The wire for reading/writing data
+    private Wire wire;
     @Nullable
-    private Wire wireForIndex; // Wire used for indexing operations
-    private long positionOfHeader = 0; // Position of the current header
-    private long lastIndex = Long.MIN_VALUE; // The last index written
+    private Wire wireForIndex;
+    private long positionOfHeader = 0;
+    private long lastIndex = Long.MIN_VALUE;
     @Nullable
-    private Pretoucher pretoucher = null; // Optional pretoucher for optimizing IO
-    private MicroToucher microtoucher = null; // Optional microtoucher for small data optimization
-    private Wire bufferWire = null; // Buffer wire used for double-buffered writes
-    private int count = 0; // Internal counter for tracking appends
+    private Pretoucher pretoucher = null;
+    private MicroToucher microtoucher = null;
+    private Wire bufferWire = null;
+    private int count = 0;
 
     /**
      * Constructor for StoreAppender. Initializes the appender by finding the first open cycle
@@ -110,9 +110,9 @@ class StoreAppender extends AbstractCloseable
         this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
 
         try {
-            int lastExistingCycle = queue.lastCycle(); // Get the last cycle in the queue
-            int firstCycle = queue.firstCycle(); // Get the first cycle in the queue
-            long start = System.nanoTime(); // Start time for performance tracking
+            int lastExistingCycle = queue.lastCycle();
+            int firstCycle = queue.firstCycle();
+            long start = System.nanoTime();
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
@@ -122,7 +122,7 @@ class StoreAppender extends AbstractCloseable
                     for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
                         if (cycleHasEOF()) {
-                            // Normalize EOFs for older cycles
+                            // Make sure all older cycles have EOF marker
                             if (eofCycle > firstCycle)
                                 normaliseEOFs0(eofCycle - 1);
 
@@ -133,22 +133,22 @@ class StoreAppender extends AbstractCloseable
                         }
                     }
                     if (wire != null)
-                        resetPosition(); // Reset position after processing cycles
+                        resetPosition();
                 }
             } finally {
                 writeLock.unlock();
-                long tookMillis = (System.nanoTime() - start) / 1_000_000; // Measure time taken
+                long tookMillis = (System.nanoTime() - start) / 1_000_000;
                 if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && cycle != lastExistingCycle))
                     Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + cycle);
             }
         } catch (RuntimeException ex) {
-            // If an exception occurs during initialization, close the appender and rethrow the exception
+            // Perhaps initialization code needs to be moved away from constructor
             close();
 
             throw ex;
         }
 
-        // Add the appender as a close listener for the queue
+        // always put references to "this" last.
         queue.addCloseListener(this);
     }
 
@@ -159,16 +159,15 @@ class StoreAppender extends AbstractCloseable
      */
     private boolean cycleHasEOF() {
         if (wire != null) {
-            assert this.queue.writeLock().locked(); // Ensure the write lock is held
-            assert this.store != null; // Ensure the store is not null
+            assert this.queue.writeLock().locked();
+            assert this.store != null;
 
-            // Try reserving bytes for this operation
             if (wire.bytes().tryReserve(this)) {
                 try {
-                    // Check if the wire contains an EOF marker
-                    return WireOut.EndOfWire.PRESENT == wire.endOfWire(false, timeoutMS(), TimeUnit.MILLISECONDS, store.writePosition());
+                    return WireOut.EndOfWire.PRESENT ==
+                            wire.endOfWire(false, timeoutMS(), TimeUnit.MILLISECONDS, store.writePosition());
                 } finally {
-                    wire.bytes().release(this); // Release the reserved bytes
+                    wire.bytes().release(this);
                 }
             }
         }
@@ -183,7 +182,7 @@ class StoreAppender extends AbstractCloseable
      */
     private static void releaseBytesFor(Wire w) {
         if (w != null) {
-            w.bytes().release(INIT); // Release the bytes associated with the wire
+            w.bytes().release(INIT);
         }
     }
 
@@ -192,7 +191,7 @@ class StoreAppender extends AbstractCloseable
      * assumes that the process holding the lock is not the current process.
      */
     private void checkAppendLock() {
-        checkAppendLock(false); // Default behavior is to not allow the current process to bypass the lock
+        checkAppendLock(false);
     }
 
     /**
@@ -215,18 +214,16 @@ class StoreAppender extends AbstractCloseable
         // Perform lock check only when the append lock is an instance of AbstractTSQueueLock
         if (appendLock instanceof AbstractTSQueueLock) {
             final AbstractTSQueueLock appendLock = (AbstractTSQueueLock) this.appendLock;
-            final long lockedBy = appendLock.lockedBy(); // Identify which process holds the lock
-
+            final long lockedBy = appendLock.lockedBy();
             if (lockedBy == AbstractTSQueueLock.UNLOCKED)
-                return; // No lock is held
-
-            boolean myPID = lockedBy == Jvm.getProcessId(); // Check if the lock is held by this process
+                return;
+            boolean myPID = lockedBy == Jvm.getProcessId();
             if (allowMyProcess && myPID)
-                return; // Allow appending if the current process is allowed
-
+                return;
             throw new IllegalStateException("locked: unable to append because a lock is being held by pid=" + (myPID ? "me" : lockedBy) + ", file=" + queue.file());
-        } else
+        } else {
             throw new IllegalStateException("locked: unable to append, file=" + queue.file());
+        }
     }
 
     /**
@@ -236,12 +233,12 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public void writeBytes(@NotNull final WriteBytesMarshallable marshallable) {
-        throwExceptionIfClosed(); // Ensure the appender is not closed
+        throwExceptionIfClosed();
 
-        try (DocumentContext dc = writingDocument()) { // Start writing a new document
+        try (DocumentContext dc = writingDocument()) {
             Bytes<?> bytes = dc.wire().bytes();
-            long wp = bytes.writePosition(); // Save the current write position
-            marshallable.writeMarshallable(bytes); // Write the marshallable content
+            long wp = bytes.writePosition();
+            marshallable.writeMarshallable(bytes);
 
             // Rollback if no data was written
             if (wp == bytes.writePosition())
@@ -254,21 +251,20 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     protected void performClose() {
-        releaseBytesFor(wireForIndex); // Release wire for indexing
-        releaseBytesFor(wire); // Release primary wire
-        releaseBytesFor(bufferWire); // Release buffer wire used for double-buffering
+        releaseBytesFor(wireForIndex);
+        releaseBytesFor(wire);
+        releaseBytesFor(bufferWire);
 
         if (pretoucher != null)
-            pretoucher.close(); // Close the pretoucher if it exists
+            pretoucher.close();
 
         if (store != null) {
-            storePool.closeStore(store); // Close the store through the pool
+            storePool.closeStore(store);
             store = null;
         }
 
-        storePool.close(); // Close the store pool
+        storePool.close();
 
-        // Reset resources to null
         pretoucher = null;
         wireForIndex = null;
         wire = null;
@@ -282,13 +278,14 @@ class StoreAppender extends AbstractCloseable
     @Override
     @SuppressWarnings("deprecation")
     public void pretouch() {
-        throwExceptionIfClosed(); // Ensure the appender is not closed
+        throwExceptionIfClosed();
 
         try {
             if (pretoucher == null)
-                pretoucher = queue.createPretoucher(); // Create a pretoucher if it doesn't exist
+                pretoucher = queue.createPretoucher();
 
-            pretoucher.execute(); // Execute the pretouch operation
+            pretoucher.execute();
+
         } catch (Throwable e) {
             Jvm.warn().on(getClass(), e);
             throw Jvm.rethrow(e);
@@ -302,12 +299,12 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public boolean microTouch() {
-        throwExceptionIfClosed(); // Ensure the appender is not closed
+        throwExceptionIfClosed();
 
         if (microtoucher == null)
-            microtoucher = new MicroToucher(this); // Create a new MicroToucher if it doesn't exist
+            microtoucher = new MicroToucher(this);
 
-        return microtoucher.execute(); // Execute the micro-touch operation
+        return microtoucher.execute();
     }
 
     /**
@@ -320,9 +317,9 @@ class StoreAppender extends AbstractCloseable
             throw new ClosedIllegalStateException(getClass().getName() + " closed for " + Thread.currentThread().getName(), closedHere);
 
         if (microtoucher == null)
-            microtoucher = new MicroToucher(this); // Create a new MicroToucher if it doesn't exist
+            microtoucher = new MicroToucher(this);
 
-        microtoucher.bgExecute(); // Execute the background micro-touch
+        microtoucher.bgExecute();
     }
 
     /**
@@ -375,7 +372,7 @@ class StoreAppender extends AbstractCloseable
      */
     void setCycle(int cycle) {
         if (cycle != this.cycle)
-            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE); // Set a new cycle with creation strategy
+            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
     }
 
     /**
@@ -386,10 +383,10 @@ class StoreAppender extends AbstractCloseable
      * @param createStrategy The strategy used to create a new store.
      */
     private void setCycle2(final int cycle, final WireStoreSupplier.CreateStrategy createStrategy) {
-        queue.throwExceptionIfClosed(); // Ensure the queue is not closed
+        queue.throwExceptionIfClosed();
         if (cycle < 0)
             throw new IllegalArgumentException("You can not have a cycle that starts " +
-                    "before Epoch. cycle=" + cycle); // Ensure the cycle is valid
+                    "before Epoch. cycle=" + cycle);
 
         SingleChronicleQueue queue = this.queue;
 
@@ -415,9 +412,9 @@ class StoreAppender extends AbstractCloseable
             return;
 
         wire.parent(this);
-        wire.pauser(queue.pauserSupplier.get()); // Set the pauser for the wire
-        resetPosition(); // Reset the wire position
-        queue.onRoll(cycle); // Notify the queue of the cycle change
+        wire.pauser(queue.pauserSupplier.get());
+        resetPosition();
+        queue.onRoll(cycle);
     }
 
     /**
@@ -427,18 +424,18 @@ class StoreAppender extends AbstractCloseable
      * @param queue The ChronicleQueue instance to reset wires for.
      */
     private void resetWires(@NotNull final ChronicleQueue queue) {
-        WireType wireType = queue.wireType(); // Get the wire type for the queue
+        WireType wireType = queue.wireType();
         {
             Wire oldw = this.wire;
-            this.wire = store == null ? null : createWire(wireType); // Create a new wire
+            this.wire = store == null ? null : createWire(wireType);
             assert wire != oldw || wire == null;
-            releaseBytesFor(oldw); // Release the old wire's resources
+            releaseBytesFor(oldw);
         }
         {
             Wire old = this.wireForIndex;
-            this.wireForIndex = store == null ? null : createWire(wireType); // Create a new wire for indexing
+            this.wireForIndex = store == null ? null : createWire(wireType);
             assert wireForIndex != old || wireForIndex == null;
-            releaseBytesFor(old); // Release the old wire's resources
+            releaseBytesFor(old);
         }
     }
 
@@ -450,8 +447,8 @@ class StoreAppender extends AbstractCloseable
      * @return The created Wire object.
      */
     private Wire createWire(@NotNull final WireType wireType) {
-        final Wire w = wireType.apply(store.bytes()); // Create a wire based on the store bytes
-        w.usePadding(store.dataVersion() > 0); // Use padding if data version > 0
+        final Wire w = wireType.apply(store.bytes());
+        w.usePadding(store.dataVersion() > 0);
         return w;
     }
 
@@ -469,26 +466,25 @@ class StoreAppender extends AbstractCloseable
         try {
             if (store == null || wire == null)
                 return false;
-
-            long position = store.writePosition(); // Get the write position from the store
-            position(position, position); // Set the position in the wire
+            long position = store.writePosition();
+            position(position, position);
 
             Bytes<?> bytes = wire.bytes();
-            assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes); // Check if the header position is valid
+            assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
-            final long lastSequenceNumber = store.lastSequenceNumber(this); // Get the last sequence number from the store
-            wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1); // Update the header number
+            final long lastSequenceNumber = store.lastSequenceNumber(this);
+            wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
             assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != INVALID_HEADER_NUMBER ||
                     checkIndex(wire.headerNumber(), positionOfHeader);
 
-            bytes.writeLimit(bytes.capacity()); // Set the write limit to the capacity of the bytes
+            bytes.writeLimit(bytes.capacity());
 
             assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
-            return originalHeaderNumber != wire.headerNumber(); // Return whether the header number changed
+            return originalHeaderNumber != wire.headerNumber();
 
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
-            throw new AssertionError(e); // Handle buffer overflow or corruption errors
+            throw new AssertionError(e);
         }
     }
 
@@ -500,9 +496,9 @@ class StoreAppender extends AbstractCloseable
      */
     private boolean checkPositionOfHeader(final Bytes<?> bytes) {
         if (positionOfHeader == 0) {
-            return true; // If the position of the header is not set, it's valid by default
+            return true;
         }
-        int header = bytes.readVolatileInt(positionOfHeader); // Read the header at the position
+        int header = bytes.readVolatileInt(positionOfHeader);
         // Check if the header is ready or incomplete
         return isReadyData(header) || isReadyMetaData(header) || isNotComplete(header);
     }
@@ -556,18 +552,18 @@ class StoreAppender extends AbstractCloseable
         if (shouldPrepareDoubleBuffer) {
             prepareDoubleBuffer();
         } else {
-            writeLock.lock(); // Acquire the write lock
+            writeLock.lock();
 
             try {
                 int cycle = queue.cycle();
                 if (wire == null)
-                    setWireIfNull(cycle); // Set the wire for the current cycle if null
+                    setWireIfNull(cycle);
 
                 if (this.cycle != cycle)
-                    rollCycleTo(cycle); // Roll over to a new cycle if needed
+                    rollCycleTo(cycle);
 
                 long safeLength = queue.overlapSize();
-                resetPosition(); // Reset the position to the correct point in the wire
+                resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
                 // sets the writeLimit based on the safeLength
@@ -577,7 +573,7 @@ class StoreAppender extends AbstractCloseable
                 wire.bytes().readPosition(wire.bytes().writePosition());
             } catch (RuntimeException e) {
                 writeLock.unlock();
-                throw e; // Ensure lock is released even if an error occurs
+                throw e;
             }
         }
 
@@ -593,10 +589,10 @@ class StoreAppender extends AbstractCloseable
         context.rollbackOnClose = false;
         context.buffered = true;
         if (bufferWire == null) {
-            Bytes<?> bufferBytes = Bytes.allocateElasticOnHeap(); // Allocate buffer memory
-            bufferWire = queue().wireType().apply(bufferBytes); // Apply the wire type to the buffer
+            Bytes<?> bufferBytes = Bytes.allocateElasticOnHeap();
+            bufferWire = queue().wireType().apply(bufferBytes);
         }
-        context.wire = bufferWire; // Set the wire to the buffer wire
+        context.wire = bufferWire;
         context.metaData(false);
     }
 
@@ -621,11 +617,11 @@ class StoreAppender extends AbstractCloseable
      * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
      */
     public void normaliseEOFs() {
-        long start = System.nanoTime(); // Track the time taken for normalization
+        long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            normaliseEOFs0(cycle); // Perform EOF normalization for the current cycle
+            normaliseEOFs0(cycle);
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -658,7 +654,7 @@ class StoreAppender extends AbstractCloseable
             if (wire != null) {
                 assert queue.writeLock().locked();
                 store.writeEOF(wire, timeoutMS());
-                normalisedEOFsTo.setMaxValue(eofCycle); // Update the normalised EOF value
+                normalisedEOFsTo.setMaxValue(eofCycle);
             }
         }
     }
@@ -670,8 +666,9 @@ class StoreAppender extends AbstractCloseable
      * @param cycle the cycle for which the wire should be set
      */
     private void setWireIfNull(final int cycle) {
-        normaliseEOFs0(cycle); // Normalize EOFs for earlier cycles
-        setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE); // Set the wire for the specified cycle
+        normaliseEOFs0(cycle);
+
+        setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
     }
 
     /**
@@ -699,8 +696,7 @@ class StoreAppender extends AbstractCloseable
         assert header != NOT_INITIALIZED;
         lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
-
-        return wire.enterHeader(safeLength); // Write the header and return the new position
+        return wire.enterHeader(safeLength);
     }
 
     /**
@@ -712,12 +708,12 @@ class StoreAppender extends AbstractCloseable
      */
     private void openContext(final boolean metaData, final long safeLength) {
         assert wire != null;
-        this.positionOfHeader = writeHeader(wire, safeLength); // Set header and write position
-        context.isClosed = false; // Mark context as open
-        context.rollbackOnClose = false; // Disable rollback on close
-        context.buffered = false; // Mark context as unbuffered
-        context.wire = wire; // Use the current wire for this context
-        context.metaData(metaData); // Set metadata flag
+        this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
+        context.isClosed = false;
+        context.rollbackOnClose = false;
+        context.buffered = false;
+        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+        context.metaData(metaData);
     }
 
     /**
@@ -736,7 +732,6 @@ class StoreAppender extends AbstractCloseable
             long seq2 = store.sequenceForPosition(this, pos, true);
 
             if (seq1 != seq2) {
-                // Generate an error message when the sequence numbers don't match
                 String message = "~~~~~~~~~~~~~~ " +
                         "thread: " + Thread.currentThread().getName() +
                         " pos: " + pos +
@@ -747,7 +742,7 @@ class StoreAppender extends AbstractCloseable
             }
         } catch (Exception e) {
             // TODO FIX
-            Jvm.warn().on(getClass(), e); // Log a warning and rethrow the exception
+            Jvm.warn().on(getClass(), e);
             throw Jvm.rethrow(e);
         }
         return true;
@@ -771,33 +766,32 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public void writeBytes(@NotNull final BytesStore<?, ?> bytes) {
-        throwExceptionIfClosed(); // Check if the appender is closed
-        checkAppendLock(); // Ensure append lock is acquired
-        writeLock.lock(); // Lock for writing
-
+        throwExceptionIfClosed();
+        checkAppendLock();
+        writeLock.lock();
         try {
             int cycle = queue.cycle();
             if (wire == null)
-                setWireIfNull(cycle); // Set wire if it doesn't exist
+                setWireIfNull(cycle);
 
             if (this.cycle != cycle)
-                rollCycleTo(cycle); // Roll to the next cycle if needed
+                rollCycleTo(cycle);
 
-            this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // Write the header
+            this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
-            assert isInsideHeader(wire); // Ensure we are inside the correct header
-            beforeAppend(wire, wire.headerNumber() + 1); // Prepare for appending
+            assert isInsideHeader(wire);
+            beforeAppend(wire, wire.headerNumber() + 1);
             Bytes<?> wireBytes = wire.bytes();
-            wireBytes.write(bytes); // Write the provided bytes to the wire
-            wire.updateHeader(positionOfHeader, false, 0); // Update the header
-            lastIndex(wire.headerNumber()); // Store the last written index
+            wireBytes.write(bytes);
+            wire.updateHeader(positionOfHeader, false, 0);
+            lastIndex(wire.headerNumber());
             lastPosition = positionOfHeader;
-            store.writePosition(positionOfHeader); // Update the store's write position
-            writeIndexForPosition(lastIndex, positionOfHeader); // Write index for the position
+            store.writePosition(positionOfHeader);
+            writeIndexForPosition(lastIndex, positionOfHeader);
         } catch (StreamCorruptedException e) {
-            throw new AssertionError(e); // Handle corruption
+            throw new AssertionError(e);
         } finally {
-            writeLock.unlock(); // Release the write lock
+            writeLock.unlock();
         }
     }
 
@@ -821,40 +815,38 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public void writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) {
-        throwExceptionIfClosed(); // Check if the appender is closed
-        checkAppendLock(); // Ensure append lock is acquired
-        writeLock.lock(); // Lock for writing
-
+        throwExceptionIfClosed();
+        checkAppendLock();
+        writeLock.lock();
         try {
-            writeBytesInternal(index, bytes); // Write bytes internally
+            writeBytesInternal(index, bytes);
         } finally {
-            writeLock.unlock(); // Release the write lock
+            writeLock.unlock();
         }
     }
 
     /**
-     * Internal method to write bytes without acquiring the write lock. This method assumes
-     * the write lock is acquired externally. Never use this method without locking as it
-     * can corrupt the queue file and cause data loss.
+     * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
+     * the queue file and cause data loss.
      *
-     * @param index the index to append at
-     * @param bytes the bytes to append
-     * @throws IndexOutOfBoundsException if the specified index is not after the end of the queue
+     * @param index               Index to append at
+     * @param bytes               The excerpt bytes
+     * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
-        checkAppendLock(true); // Check append lock for internal use
+        checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
 
         if (wire == null)
-            setWireIfNull(cycle); // Set wire if null
+            setWireIfNull(cycle);
 
         /// if the header number has changed then we will have roll
         if (this.cycle != cycle)
-            rollCycleTo(cycle, this.cycle > cycle); // Roll cycle if necessary
+            rollCycleTo(cycle, this.cycle > cycle);
 
         // in case our cached headerNumber is incorrect.
-        resetPosition(); // Reset wire position if the header number changed
+        resetPosition();
 
         long headerNumber = wire.headerNumber();
 
@@ -880,48 +872,32 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    /**
-     * Internal method for writing bytes to the queue without acquiring the write lock. Assumes
-     * the write lock is already held by the caller. This method opens the context and writes
-     * the provided {@link BytesStore} to the current wire.
-     *
-     * @param bytes    the data to be written
-     * @param metadata flag indicating if the data is metadata
-     */
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
-        assert writeLock.locked(); // Ensure the write lock is held
-
+        assert writeLock.locked();
         try {
-            int safeLength = (int) queue.overlapSize(); // Calculate safe length for writing
-            assert count == 0 : "count=" + count; // Ensure the count is zero before writing
-            openContext(metadata, safeLength); // Open the context for writing
+            int safeLength = (int) queue.overlapSize();
+            assert count == 0 : "count=" + count;
+            openContext(metadata, safeLength);
 
             try {
-                final Bytes<?> bytes0 = context.wire().bytes(); // Get the bytes from the wire
-                bytes0.readPosition(bytes0.writePosition()); // Move the read position to the write position
-                bytes0.write(bytes); // Write the provided bytes to the wire
+                final Bytes<?> bytes0 = context.wire().bytes();
+                bytes0.readPosition(bytes0.writePosition());
+                bytes0.write(bytes);
             } finally {
-                context.close(false); // Close the context after writing
-                count = 0; // Reset the count
+                context.close(false);
+                count = 0;
             }
         } finally {
-            context.isClosed = true; // Ensure the context is marked as closed
+            context.isClosed = true;
         }
     }
 
-    /**
-     * Sets the position and validates that the position is within the correct range for the
-     * queue's write position. If the position exceeds the allowable range, an exception is thrown.
-     *
-     * @param position        the new position to set
-     * @param startOfMessage  the start of the message within the queue
-     */
     private void position(final long position, final long startOfMessage) {
-        // Ensure the position doesn't jump too far ahead
+        // did the position jump too far forward.
         if (position > store.writePosition() + queue.blockSize())
             throw new IllegalArgumentException("pos: " + position + ", store.writePosition()=" +
                     store.writePosition() + " queue.blockSize()=" + queue.blockSize());
-        position0(position, startOfMessage, wire.bytes()); // Set the position
+        position0(position, startOfMessage, wire.bytes());
     }
 
     /**
@@ -942,10 +918,10 @@ class StoreAppender extends AbstractCloseable
         try {
             long sequenceNumber = store.sequenceForPosition(this, lastPosition, true);
             long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
-            lastIndex(index); // Update the last index
+            lastIndex(index);
             return index;
         } catch (Exception e) {
-            throw Jvm.rethrow(e); // Rethrow exceptions that occur
+            throw Jvm.rethrow(e);
         }
     }
 
@@ -958,12 +934,12 @@ class StoreAppender extends AbstractCloseable
     @Override
     public int cycle() {
         if (cycle == Integer.MIN_VALUE) {
-            int cycle = this.queue.lastCycle(); // Get the last cycle from the queue
+            int cycle = this.queue.lastCycle();
             if (cycle < 0)
-                cycle = queue.cycle(); // If no last cycle, use the current cycle
+                cycle = queue.cycle();
             return cycle;
         }
-        return cycle; // Return the current cycle
+        return cycle;
     }
 
     /**
@@ -978,16 +954,11 @@ class StoreAppender extends AbstractCloseable
 
     }
 
-    /**
-     * Method to handle operations before appending data to the wire. This method can be overridden
-     * in subclasses such as delta wire implementations to add additional behavior before an append.
-     *
-     * @param wire  the wire to append data to
-     * @param index the index of the data to append
+    /*
+     * overridden in delta wire
      */
     @SuppressWarnings("unused")
     void beforeAppend(final Wire wire, final long index) {
-        // Overridden in subclasses, e.g., delta wire
     }
 
     /**
@@ -996,10 +967,8 @@ class StoreAppender extends AbstractCloseable
      *
      * @param toCycle the target cycle to roll to
      */
-    // throws UnrecoverableTimeoutException
-
     private void rollCycleTo(final int toCycle) {
-        rollCycleTo(toCycle, this.cycle > toCycle); // Roll the cycle with suppression of EOF if required
+        rollCycleTo(toCycle, this.cycle > toCycle);
     }
 
     /**
@@ -1010,23 +979,24 @@ class StoreAppender extends AbstractCloseable
      * @param suppressEOF flag to suppress writing EOF markers
      */
     private void rollCycleTo(final int cycle, boolean suppressEOF) {
-        // If the cycle is the same, something went wrong
+
+        // only a valid check if the wire was set.
         if (this.cycle == cycle)
             throw new AssertionError();
 
         if (!suppressEOF) {
-            assert queue.writeLock().locked(); // Ensure write lock is held
-            store.writeEOF(wire, timeoutMS()); // Write EOF marker to the wire
+            assert queue.writeLock().locked();
+            store.writeEOF(wire, timeoutMS());
         }
 
-        int lastExistingCycle = queue.lastCycle(); // Get the last cycle
+        int lastExistingCycle = queue.lastCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
         if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
-            setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY); // Set the cycle to the last existing cycle
-            rollCycleTo(cycle); // Continue rolling to the target cycle
+            setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
+            rollCycleTo(cycle);
         } else {
-            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE); // Set cycle to the target cycle
+            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
         }
     }
 
@@ -1039,8 +1009,8 @@ class StoreAppender extends AbstractCloseable
      * @throws StreamCorruptedException if the index is corrupted
      */
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
-        long sequenceNumber = queue.rollCycle().toSequenceNumber(index); // Convert index to sequence number
-        store.setPositionForSequenceNumber(this, sequenceNumber, position); // Set position for the sequence number
+        long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
+        store.setPositionForSequenceNumber(this, sequenceNumber, position);
     }
 
     /**
@@ -1053,7 +1023,6 @@ class StoreAppender extends AbstractCloseable
      */
     boolean checkIndex(final long index, final long position) {
         try {
-            // Get the expected sequence numbers
             final long seq1 = queue.rollCycle().toSequenceNumber(index + 1) - 1;
             final long seq2 = store.sequenceForPosition(this, position, true);
 
@@ -1107,9 +1076,9 @@ class StoreAppender extends AbstractCloseable
      * @param bytes           the {@link Bytes} instance associated with the current wire
      */
     void position0(final long position, final long startOfMessage, Bytes<?> bytes) {
-        this.positionOfHeader = position; // Set the header position
-        bytes.writeLimit(bytes.capacity()); // Set the write limit to the capacity
-        bytes.writePosition(startOfMessage); // Set the write position to the start of the message
+        this.positionOfHeader = position;
+        bytes.writeLimit(bytes.capacity());
+        bytes.writePosition(startOfMessage);
     }
 
     /**
@@ -1135,12 +1104,12 @@ class StoreAppender extends AbstractCloseable
         if (store == null || wire == null)
             return;
 
-        final Bytes<?> bytes = wire.bytes(); // Get the current wire bytes
+        final Bytes<?> bytes = wire.bytes();
         BytesStore store = bytes.bytesStore();
         if (store instanceof MappedBytesStore) {
             MappedBytesStore mbs = (MappedBytesStore) store;
-            mbs.syncUpTo(bytes.writePosition()); // Sync the data up to the current write position
-            queue.lastIndexMSynced(lastIndex); // Update the last synced index
+            mbs.syncUpTo(bytes.writePosition());
+            queue.lastIndexMSynced(lastIndex);
         }
     }
 
@@ -1171,8 +1140,8 @@ class StoreAppender extends AbstractCloseable
         @Override
         protected void finalize() throws Throwable {
             super.finalize();
-            context.rollbackOnClose(); // Roll back the context if necessary
-            warnAndCloseIfNotClosed(); // Warn and close resources if not already closed
+            context.rollbackOnClose();
+            warnAndCloseIfNotClosed();
         }
     }
 
@@ -1182,15 +1151,15 @@ class StoreAppender extends AbstractCloseable
      */
     final class StoreAppenderContext implements WriteDocumentContext {
 
-        boolean isClosed = true; // Flag indicating if the context is closed
-        private boolean metaData = false; // Flag indicating if the data is metadata
-        private boolean rollbackOnClose = false; // Flag indicating if rollback should occur on close
-        private boolean buffered = false; // Flag indicating if the data is buffered
+        boolean isClosed = true;
+        private boolean metaData = false;
+        private boolean rollbackOnClose = false;
+        private boolean buffered = false;
         @Nullable
-        private Wire wire; // The wire associated with this context
-        private boolean alreadyClosedFound; // Flag to track if the context was already closed
-        private StackTrace closedHere; // Stack trace for debugging closures
-        private boolean chainedElement; // Flag indicating if the context is part of a chain
+        private Wire wire;
+        private boolean alreadyClosedFound;
+        private StackTrace closedHere;
+        private boolean chainedElement;
 
         /**
          * Checks if the context is empty by examining the read remaining bytes of the wire.
@@ -1198,8 +1167,8 @@ class StoreAppender extends AbstractCloseable
          * @return true if the context is empty, false otherwise
          */
         public boolean isEmpty() {
-            Bytes<?> bytes = wire().bytes(); // Get the bytes from the wire
-            return bytes.readRemaining() == 0; // Check if there are no remaining bytes
+            Bytes<?> bytes = wire().bytes();
+            return bytes.readRemaining() == 0;
         }
 
         /**
@@ -1261,7 +1230,7 @@ class StoreAppender extends AbstractCloseable
          */
         @Override
         public void rollbackOnClose() {
-            this.rollbackOnClose = true; // Set rollback on close
+            this.rollbackOnClose = true;
         }
 
         /**
@@ -1269,7 +1238,7 @@ class StoreAppender extends AbstractCloseable
          */
         @Override
         public void close() {
-            close(true); // Close the context and commit changes by default
+            close(true);
         }
 
         /**
@@ -1280,35 +1249,33 @@ class StoreAppender extends AbstractCloseable
          * @param unlock true if the {@link StoreAppender#writeLock} should be unlocked.
          */
         public void close(boolean unlock) {
-            // Check if closing conditions are met
             if (!closePreconditionsAreSatisfied()) return;
 
             try {
-                handleInterrupts();  // Handle any thread interruptions
-                if (handleRollbackOnClose()) return;  // Rollback if necessary
+                handleInterrupts();
+                if (handleRollbackOnClose()) return;
 
                 if (wire == StoreAppender.this.wire) {
-                    // Update the header and index if using the same wire
                     updateHeaderAndIndex();
                 } else if (wire != null) {
                     // If buffered, write from the buffer and clear it
                     if (buffered) {
                         writeBytes(wire.bytes());
-                        unlock = false; // Buffer handled, so no need to unlock
+                        unlock = false;
                         wire.clear();
                     } else {
                         // Write bytes normally if no buffering is involved
                         writeBytesInternal(wire.bytes(), metaData);
-                        wire = StoreAppender.this.wire; // Reset wire
+                        wire = StoreAppender.this.wire;
                     }
                 }
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();  // Restore interrupt flag
-                throw new InterruptedRuntimeException(e);  // Rethrow the exception
+                Thread.currentThread().interrupt();
+                throw new InterruptedRuntimeException(e);
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
-                throw new IllegalStateException(e);  // Handle potential exceptions
+                throw new IllegalStateException(e);
             } finally {
-                closeCleanup(unlock);  // Cleanup after closing
+                closeCleanup(unlock);
             }
         }
 
@@ -1320,7 +1287,7 @@ class StoreAppender extends AbstractCloseable
          */
         private boolean handleRollbackOnClose() {
             if (rollbackOnClose) {
-                doRollback();  // Perform rollback if needed
+                doRollback();
                 return true;
             }
             return false;
@@ -1337,7 +1304,6 @@ class StoreAppender extends AbstractCloseable
             if (chainedElement)  // Don't close if part of a chain
                 return false;
             if (isClosed) {
-                // Log a warning if already closed
                 Jvm.warn().on(getClass(), "Already Closed, close was called twice.", new StackTrace("Second close", closedHere));
                 alreadyClosedFound = true;
                 return false;
@@ -1347,7 +1313,7 @@ class StoreAppender extends AbstractCloseable
                 return false;
 
             if (alreadyClosedFound) {
-                closedHere = new StackTrace("Closed here");  // Capture stack trace if already closed
+                closedHere = new StackTrace("Closed here");
             }
             return true;
         }
@@ -1376,23 +1342,22 @@ class StoreAppender extends AbstractCloseable
             if (store == null) throw new NullPointerException("Store must not be null");
 
             try {
-                // Update the header at the current position
                 wire.updateHeader(positionOfHeader, metaData, 0);
             } catch (IllegalStateException e) {
-                if (queue.isClosed())  // If the queue is closed, stop further processing
+                if (queue.isClosed())
                     return;
                 throw e;
             }
 
-            lastPosition = positionOfHeader;  // Store the last known position
+            lastPosition = positionOfHeader;
 
             if (!metaData) {
-                lastIndex(wire.headerNumber());  // Set the last index
-                store.writePosition(positionOfHeader);  // Write the position to the store
+                lastIndex(wire.headerNumber());
+                store.writePosition(positionOfHeader);
                 if (lastIndex != Long.MIN_VALUE) {
-                    writeIndexForPosition(lastIndex, positionOfHeader);  // Update index with the position
+                    writeIndexForPosition(lastIndex, positionOfHeader);
                     if (queue.appenderListener != null) {
-                        callAppenderListener();  // Notify listeners if applicable
+                        callAppenderListener();
                     }
                 }
             }
@@ -1406,14 +1371,14 @@ class StoreAppender extends AbstractCloseable
          */
         private void closeCleanup(boolean unlock) {
             if (wire == null) throw new NullPointerException("Wire must not be null");
-            Bytes<?> bytes = wire.bytes();  // Retrieve the bytes associated with the wire
-            bytes.writePositionForHeader(true);  // Set the write position
-            isClosed = true;  // Mark the context as closed
+            Bytes<?> bytes = wire.bytes();
+            bytes.writePositionForHeader(true);
+            isClosed = true;
             if (unlock) {
                 try {
-                    writeLock.unlock();  // Unlock the write lock if necessary
+                    writeLock.unlock();
                 } catch (Exception ex) {
-                    Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);  // Log any issues during unlocking
+                    Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
                 }
             }
         }
@@ -1424,10 +1389,10 @@ class StoreAppender extends AbstractCloseable
          */
         private void callAppenderListener() {
             final Bytes<?> bytes = wire.bytes();
-            long rp = bytes.readPosition();  // Save the current read position
-            long wp = bytes.writePosition();  // Save the current write position
+            long rp = bytes.readPosition();
+            long wp = bytes.writePosition();
             try {
-                queue.appenderListener.onExcerpt(wire, lastIndex);  // Invoke the listener with the current excerpt
+                queue.appenderListener.onExcerpt(wire, lastIndex);
             } finally {
                 // Restore the original read and write positions
                 bytes.readPosition(rp);
@@ -1450,13 +1415,13 @@ class StoreAppender extends AbstractCloseable
                 final Bytes<?> bytes = wire.bytes();
                 try {
                     for (long i = positionOfHeader; i <= bytes.writePosition(); i++)
-                        bytes.writeByte(i, (byte) 0);  // Overwrite each byte with zero
+                        bytes.writeByte(i, (byte) 0);
                     long lastPosition = StoreAppender.this.lastPosition;
-                    position0(lastPosition, lastPosition, bytes);  // Reset the position
-                    ((InternalWire)wire).forceNotInsideHeader();  // Ensure the wire is not inside a header
+                    position0(lastPosition, lastPosition, bytes);
+                    ((InternalWire)wire).forceNotInsideHeader();
                 } catch (BufferOverflowException | IllegalStateException e) {
                     if (bytes instanceof MappedBytes && ((MappedBytes) bytes).isClosed()) {
-                        Jvm.warn().on(getClass(), "Unable to roll back excerpt as it is closed.");  // Log a warning if the buffer is closed
+                        Jvm.warn().on(getClass(), "Unable to roll back excerpt as it is closed.");
                         return;
                     }
                     throw e;
@@ -1483,7 +1448,7 @@ class StoreAppender extends AbstractCloseable
                     wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(StoreAppender.this)));
                     long headerNumber0 = wire.headerNumber();
                     assert isInsideHeader(this.wire);
-                    return isMetaData() ? headerNumber0 : headerNumber0 + 1;  // Adjust for metadata
+                    return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                 } catch (IOException e) {
                     throw new IORuntimeException(e);
                 }

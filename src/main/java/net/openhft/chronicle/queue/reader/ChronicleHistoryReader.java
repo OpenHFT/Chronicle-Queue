@@ -51,25 +51,23 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;
     public static final String SEPARATOR = "_";
+    protected Path basePath;
+    protected Consumer<String> messageSink;
+    protected boolean progress = false;
+    protected TimeUnit timeUnit = TimeUnit.NANOSECONDS;
+    protected boolean histosByMethod = false;
+    protected Map<String, Histogram> histos = new LinkedHashMap<>();
+    protected long ignore = 0;
+    protected long counter = 0;
+    protected long measurementWindowNanos = 0;
+    protected long firstTimeStampNanos = 0;
+    protected long lastWindowCount = 0;
+    protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
+    protected Long startIndex;
+    protected Supplier<Histogram> histoSupplier = () -> new Histogram(60, 4);
+    protected int lastHistosSize = 0;
+    protected ExcerptTailer tailer;
 
-    protected Path basePath; // The base directory path for the Chronicle Queue
-    protected Consumer<String> messageSink; // Sink for processed messages
-    protected boolean progress = false; // Flag indicating whether to display progress
-    protected TimeUnit timeUnit = TimeUnit.NANOSECONDS; // Time unit for measurements
-    protected boolean histosByMethod = false; // Flag for method-specific histograms
-    protected Map<String, Histogram> histos = new LinkedHashMap<>(); // Histograms for timing measurements
-    protected long ignore = 0; // Number of initial messages to ignore
-    protected long counter = 0; // Counter for processed messages
-    protected long measurementWindowNanos = 0; // Time window for histogram measurements in nanoseconds
-    protected long firstTimeStampNanos = 0; // Timestamp of the first message in nanoseconds
-    protected long lastWindowCount = 0; // Number of messages in the last measurement window
-    protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET; // Offset for summary output
-    protected Long startIndex; // Starting index for reading messages
-    protected Supplier<Histogram> histoSupplier = () -> new Histogram(60, 4); // Supplier for creating histograms
-    protected int lastHistosSize = 0; // The size of histograms processed
-    protected ExcerptTailer tailer; // Tailer for reading from the Chronicle Queue
-
-    // Static block to warn if resource tracing is enabled
     static {
         ToolsUtil.warnIfResourceTracing();
     }

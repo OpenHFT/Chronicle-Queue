@@ -30,6 +30,9 @@ import org.jetbrains.annotations.NotNull;
  *   <li>Latencies for each component that has processed a message</li>
  *   <li>Latencies between each component that has processed a message</li>
  * </ul>
+ *
+ * @author Jerry Shea
+ *
  */
 public final class HistoryMain {
 

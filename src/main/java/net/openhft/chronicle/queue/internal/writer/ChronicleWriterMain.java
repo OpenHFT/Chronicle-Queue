@@ -51,7 +51,7 @@ public class ChronicleWriterMain {
 
     /**
      * Parses the command-line arguments using Apache Commons CLI.
-     * <p>If there are issues with parsing or required arguments are missing, it prints help and exits the program.</p>
+     * <p>If there are issues with parsing or required arguments are missing, it prints help and exits the program.
      *
      * @param args    Command-line arguments
      * @param options The defined options for command-line parsing
@@ -108,15 +108,15 @@ public class ChronicleWriterMain {
      * @param commandLine  The parsed command-line options
      */
     private void configure(final ChronicleWriter writer, final CommandLine commandLine) {
-        writer.withBasePath(Paths.get(commandLine.getOptionValue('d'))); // Set the base path for the Chronicle Queue
-        writer.withMethodName(commandLine.getOptionValue('m')); // Set the method name for writing
+        writer.withBasePath(Paths.get(commandLine.getOptionValue('d')));
+        writer.withMethodName(commandLine.getOptionValue('m'));
 
         if (commandLine.hasOption('i')) {
             final String r = commandLine.getOptionValue('i');
-            writer.asMethodWriter(r.equals("null") ? null : r); // Set the interface for method writer if provided
+            writer.asMethodWriter(r.equals("null") ? null : r);
         }
 
-        writer.withFiles(commandLine.getArgList()); // Set the files to be written to the queue
+        writer.withFiles(commandLine.getArgList());
     }
 
     /**
@@ -128,9 +128,9 @@ public class ChronicleWriterMain {
     private Options options() {
         final Options options = new Options();
 
-        addOption(options, "m", "method", true, "Method name", true); // Required method name
-        addOption(options, "d", "directory", true, "Directory containing chronicle queue to write to", true); // Required queue directory
-        addOption(options, "i", "interface", true, "Interface to write via", false); // Optional interface for method writer
+        addOption(options, "m", "method", true, "Method name", true);
+        addOption(options, "d", "directory", true, "Directory containing chronicle queue to write to", true);
+        addOption(options, "i", "interface", true, "Interface to write via", false);
         return options;
     }
 }

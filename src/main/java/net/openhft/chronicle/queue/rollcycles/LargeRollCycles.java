@@ -23,24 +23,23 @@ import net.openhft.chronicle.queue.RollCycle;
 /**
  * Enum representing large roll cycles, designed to minimize file rolls but resulting in very large files.
  * <p>These roll cycles are typically used in scenarios where fewer rollovers are preferred, but the file sizes
- * can grow quite large and may exceed typical limits.</p>
+ * can grow quite large and may exceed typical limits.
  */
 public enum LargeRollCycles implements RollCycle {
-
     /**
-     * Roll cycle allowing up to 0xffffffff entries per hour, indexing every 64th entry.
+     * 0xffffffff entries per hour, indexing every 64th entry
      */
     LARGE_HOURLY(/*----*/"yyyyMMdd-HH'L'", 60 * 60 * 1000, 8 << 10, 64),
     /**
-     * Roll cycle allowing up to 0x1fffffffff entries per day, indexing every 128th entry.
+     * 0x1fffffffff entries per day, indexing every 128th entry
      */
     LARGE_DAILY(/*-----*/"yyyyMMdd'L'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 128),
     /**
-     * Roll cycle allowing up to 0x3ffffffffff entries per day, indexing every 256th entry.
+     * 0x3ffffffffff entries per day, indexing every 256th entry
      */
     XLARGE_DAILY(/*----*/"yyyyMMdd'X'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 256),
     /**
-     * Roll cycle allowing up to 0xffffffffffff entries per day, with sparse indexing (every 1024th entry).
+     * 0xffffffffffff entries per day with sparse indexing (every 1024th entry)
      */
     HUGE_DAILY(/*------*/"yyyyMMdd'H'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 1024),
     ;
@@ -84,7 +83,7 @@ public enum LargeRollCycles implements RollCycle {
 
     /**
      * Returns the default size of the index array.
-     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.</p>
+     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.
      *
      * @return The default index count
      */

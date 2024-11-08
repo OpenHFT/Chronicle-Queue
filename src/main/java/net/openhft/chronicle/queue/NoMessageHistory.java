@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.*;
@@ -42,7 +41,7 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public int timings() {
-        return 0; // No timings recorded
+        return 0;
     }
 
     /**
@@ -53,7 +52,7 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public long timing(int n) {
-        return -1; // No timing information available
+        return -1;
     }
 
     /**
@@ -74,7 +73,7 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public int sourceId(int n) {
-        return -1; // No source ID available
+        return -1;
     }
 
     /**
@@ -85,7 +84,7 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public boolean sourceIdsEndsWith(int[] sourceIds) {
-        return false; // No source IDs to compare
+        return false;
     }
 
     /**
@@ -96,7 +95,7 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public long sourceIndex(int n) {
-        return -1; // No source index available
+        return -1;
     }
 
     /**
@@ -108,14 +107,14 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public void reset(int sourceId, long sourceIndex) {
-        // No-op: no history is stored, so reset is ignored
+        // ignored
     }
 
     /**
      * Resets the message history. This implementation performs no action as no history is stored.
      */
     public void reset() {
-        // No-op: nothing to reset
+        // no-op
     }
 
     /**
@@ -125,7 +124,7 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public int lastSourceId() {
-        return -1; // No last source ID available
+        return -1;
     }
 
     /**
@@ -135,7 +134,7 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public long lastSourceIndex() {
-        return -1; // No last source index available
+        return -1;
     }
 
     /**
@@ -145,6 +144,6 @@ public enum NoMessageHistory implements MessageHistory {
      */
     @Override
     public boolean isDirty() {
-        return false; // No history modifications to track
+        return false;
     }
 }

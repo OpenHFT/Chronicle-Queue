@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -51,8 +50,8 @@ public interface RollCycle {
      * <p>
      * Examples of cycle lengths:
      * <ul>
-     *     <li>60,000 ms (1 minute) for MINUTELY</li>
-     *     <li>86,400,000 ms (1 day) for DAILY</li>
+     *     <li>60 * 1,000 = 60,000 (MINUTELY)</li>
+     *     <li>24 * 60 * 60 * 1,000 = 86,400,000 (DAILY)</li>
      * </ul>
      *
      * @return the length in milliseconds for the roll cycle

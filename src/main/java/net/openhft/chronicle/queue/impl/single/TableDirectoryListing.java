@@ -96,7 +96,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         throwExceptionIfClosedInSetter();
 
         tableStore.doWithExclusiveLock(ts -> {
-            initLongValues();  // Initialize the LongValue fields
+            initLongValues();
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);

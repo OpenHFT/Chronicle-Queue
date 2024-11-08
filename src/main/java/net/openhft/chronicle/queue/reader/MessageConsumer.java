@@ -19,9 +19,9 @@
 package net.openhft.chronicle.queue.reader;
 
 /**
- * Represents a message consumer in a chain-of-responsibility pattern.
- * <p>Message consumers can filter or transform input messages as they are passed through the chain.
- * The final destination of the message is the sink, which is the last consumer in the pipeline.</p>
+ * Message consumers make a chain-of-responsibility pattern, they
+ * can filter or transform the input. The sink will be the final
+ * consumer in the pipeline.
  */
 public interface MessageConsumer {
 

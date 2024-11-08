@@ -23,7 +23,6 @@ package net.openhft.chronicle.queue.util;
  * <p>Provides methods to perform tiny operations either on the current thread or in a background thread to improve performance consistency.
  */
 public interface MicroTouched {
-
     /**
      * Performs a tiny operation to improve jitter in the current thread.
      * <p>This method should be called in contexts where reducing jitter or improving performance consistency is desired.

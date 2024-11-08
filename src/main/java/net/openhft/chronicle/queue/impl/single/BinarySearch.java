@@ -43,6 +43,12 @@ public enum BinarySearch {
      * Performs a binary search using the provided key and comparator.
      * It searches for an exact match and returns the index if found, or an approximate index in the form of {@code -approximateIndex}.
      * Returns {@code -1} if no search is possible or no match is found.
+     * <p>
+     * Warning : This implementation is unreliable as index are an encoded 64bits, where we could use all the bits including the
+     * high bit which is used for the sign. At the moment  it will work as its unlikely to reach a point where we store
+     * enough messages in the chronicle queue to use the high bit, having said this its possible in the future the
+     * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
+     * bit not being set ( in other words set to zero ).
      *
      * @param tailer The {@link ExcerptTailer} used to read from the queue.
      * @param key    The {@link Wire} key used for comparison.
@@ -54,8 +60,8 @@ public enum BinarySearch {
                               @NotNull Comparator<Wire> c) {
         final long readPosition = key.bytes().readPosition();
         try {
-            final long start = tailer.toStart().index(); // Find the start index
-            final long end = tailer.toEnd().index(); // Find the end index
+            final long start = tailer.toStart().index();
+            final long end = tailer.toEnd().index();
 
             final RollCycle rollCycle = tailer.queue().rollCycle();
             final int startCycle = rollCycle.toCycle(start);
@@ -92,7 +98,6 @@ public enum BinarySearch {
         final Iterator<Long> iterator = cycles.iterator();
         if (!iterator.hasNext())
             return -1;
-
         final RollCycle rollCycle = tailer.queue().rollCycle();
         long prevIndex = iterator.next();
 
@@ -155,7 +160,7 @@ public enum BinarySearch {
 
             // nothing to search
             if (highSeqNum < lowSeqNum)
-                return -1; // Nothing to search
+                return -1;
 
             long midIndex = 0;
 

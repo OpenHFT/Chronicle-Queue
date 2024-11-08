@@ -38,15 +38,12 @@ import static java.lang.System.err;
  * The dump includes detailed binary structure of the files in a human-readable format.
  */
 public class InternalDumpMain {
-
-    // File system properties for dumping files
     private static final String FILE = System.getProperty("file");
     private static final boolean SKIP_TABLE_STORE = Jvm.getBoolean("skipTableStoreDump");
     private static final boolean UNALIGNED = Jvm.getBoolean("dumpUnaligned");
     private static final int LENGTH = ", 0".length();
 
     static {
-        // Register aliases for SingleChronicleQueueBuilder
         SingleChronicleQueueBuilder.addAliases();
     }
 
@@ -57,7 +54,7 @@ public class InternalDumpMain {
      * @throws FileNotFoundException if the provided file path is invalid
      */
     public static void main(String[] args) throws FileNotFoundException {
-        dump(args[0]);  // Dump the contents of the provided path
+        dump(args[0]);
     }
 
     /**
@@ -69,10 +66,9 @@ public class InternalDumpMain {
      */
     public static void dump(@NotNull String path) throws FileNotFoundException {
         File path2 = new File(path);
-        // PrintStream to the specified file, or stdout if no file specified
         PrintStream out = FILE == null ? System.out : new PrintStream(FILE);
         long upperLimit = Long.MAX_VALUE;
-        dump(path2, out, upperLimit);  // Dump the file with an upper limit
+        dump(path2, out, upperLimit);
     }
 
     /**
@@ -96,14 +92,14 @@ public class InternalDumpMain {
                 System.exit(1);
             }
 
-            Arrays.sort(files);  // Sort the files by name
+            Arrays.sort(files);
             for (File file : files) {
                 out.println("## " + file);
-                dumpFile(file, out, upperLimit);  // Dump each file
+                dumpFile(file, out, upperLimit);
             }
 
         } else if (path.getName().endsWith(SingleChronicleQueue.SUFFIX) || path.getName().endsWith(SingleTableStore.SUFFIX)) {
-            dumpFile(path, out, upperLimit);  // Dump a single file
+            dumpFile(path, out, upperLimit);
         }
     }
 
@@ -116,14 +112,14 @@ public class InternalDumpMain {
      * @param upperLimit Maximum number of bytes to dump
      */
     private static void dumpFile(@NotNull File file, @NotNull PrintStream out, long upperLimit) {
-        Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();  // Temporary buffer for reading file contents
+        Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
         try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows())) {
-            bytes.readLimit(bytes.realCapacity());  // Set the read limit to the file's actual capacity
-            StringBuilder sb = new StringBuilder();  // StringBuilder to hold the dumped output
-            WireDumper dumper = WireDumper.of(bytes, !UNALIGNED);  // Create a WireDumper for reading the file
+            bytes.readLimit(bytes.realCapacity());
+            StringBuilder sb = new StringBuilder();
+            WireDumper dumper = WireDumper.of(bytes, !UNALIGNED);
             while (bytes.readRemaining() >= 4) {
-                sb.setLength(0);  // Clear the StringBuilder
-                boolean last = dumper.dumpOne(sb, buffer);  // Dump one entry into the StringBuilder
+                sb.setLength(0);
+                boolean last = dumper.dumpOne(sb, buffer);
                 if (sb.indexOf("\nindex2index:") != -1 || sb.indexOf("\nindex:") != -1) {
                     // Truncate trailing zeros for readability
                     if (sb.indexOf(", 0\n]\n") == sb.length() - 6) {
@@ -134,9 +130,9 @@ public class InternalDumpMain {
                     }
                 }
 
-                out.println(sb);  // Print the dumped entry
+                out.println(sb);
 
-                if (last)  // Stop if it was the last entry
+                if (last)
                     break;
                 if (bytes.readPosition() > upperLimit) {
                     out.println("# limit reached.");
@@ -144,9 +140,9 @@ public class InternalDumpMain {
                 }
             }
         } catch (IOException ioe) {
-            err.println("Failed to read " + file + " " + ioe);  // Handle I/O exceptions
+            err.println("Failed to read " + file + " " + ioe);
         } finally {
-            buffer.releaseLast();  // Release the buffer
+            buffer.releaseLast();
         }
     }
 
@@ -161,7 +157,7 @@ public class InternalDumpMain {
         int i = str.length() - 3;
         do {
             i -= LENGTH;
-            CharSequence charSequence = str.subSequence(i, i + 3);  // Check if the sequence is ", 0"
+            CharSequence charSequence = str.subSequence(i, i + 3);
             if (!", 0".contentEquals(charSequence))
                 return i + LENGTH;
         } while (i > 3);

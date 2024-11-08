@@ -62,7 +62,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
     private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
 
-    // Fields to hold indexing information and parameters
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
     private final int indexCountBits;
@@ -180,11 +179,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         // convert to an offset
         return mask & siftedIndex;
     }
-
-/*    @Override
-    protected boolean performCloseInBackground() {
-        return true;
-    }*/
 
     /**
      * Closes this indexing instance, releasing resources.
@@ -318,9 +312,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     /**
-     * Moves the wire to the position of the specified {@code index}.
-     * This method attempts to move to the index by using the index structures. If that fails,
-     * it resorts to a linear scan from the start.
+     * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so the index2index tells chronicle where ( in other words
+     * the addressForRead of where ) the root first level targetIndex is stored. The indexing works like a tree, but only 2 levels deep, the root of
+     * the tree is at index2index ( this first level targetIndex is 1MB in size and there is only one of them, it only holds the addresses of the
+     * second level indexes, there will be many second level indexes ( created on demand ), each is about 1MB in size  (this second level targetIndex
+     * only stores the position of every 64th excerpt (depending on RollCycle)), so from every 64th excerpt a linear scan occurs.
      *
      * @param ec The excerpt context used for reading the index.
      * @param index The index to move to.
@@ -429,8 +425,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     /**
-     * Performs a linear scan from a known index and address to the specified {@code toIndex}. This method is
-     * typically used when the exact position is unknown or when traversing gaps in the index.
+     * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code fromKnownIndex} at  {@code knownAddress} <p> note meta
+     * data is skipped and does not count to the indexes
      *
      * @param wire           The wire used to read the data.
      * @param toIndex        The target index to reach.
@@ -464,11 +460,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @param desc           A description of the scan operation.
      */
     private void printLinearScanTime(long toIndex, long fromKnownIndex, long start, String desc) {
-        // Still warming up?
+        // still warming up?
         if (toIndex <= 1)
             return;
 
-        // Took too long to scan?
+        // took too long to scan?
         long end = System.nanoTime();
         if (end < start + LINEAR_SCAN_WARN_THRESHOLD_NS)
             return;
@@ -489,7 +485,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         StackTrace st = null;
         if (Jvm.isDebugEnabled(getClass())) {
             int time = Jvm.isArm() ? 20_000_000 : 250_000;
-            // Ignore the time for the first message
+            // ignore the time for the first message
             if (toIndex > 0 && end > start + time)
                 st = new StackTrace("This is a profile stack trace, not an ERROR");
         }
@@ -517,7 +513,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.linearScanCount++;
         @NotNull final Bytes<?> bytes = wire.bytes();
 
-        // Optimized if the `toIndex` is the last sequence
+        // optimized if the `toIndex` is the last sequence
         long lastAddress = writePosition.getVolatileValue();
         long lastIndex = this.sequence.getSequence(lastAddress);
         if (toIndex == lastIndex) {
@@ -544,7 +540,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     continue;
                 }
             } catch (EOFException fallback) {
-                // Reached the end of the file
+                // reached the end of the file.
                 if (i == toIndex) {
                     return ScanResult.END_OF_FILE;
                 }

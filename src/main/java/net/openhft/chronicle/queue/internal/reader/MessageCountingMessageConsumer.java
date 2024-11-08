@@ -27,9 +27,9 @@ import net.openhft.chronicle.queue.reader.MessageConsumer;
  * This class is useful for scenarios where processing should stop after a certain number of messages have been consumed.
  */
 public final class MessageCountingMessageConsumer implements MessageConsumer {
-    private final long matchLimit;  // The maximum number of messages to consume before stopping
-    private final MessageConsumer wrappedConsumer;  // The underlying message consumer to which messages are passed
-    private long matches = 0;  // Counter for how many messages have been consumed
+    private final long matchLimit;
+    private final MessageConsumer wrappedConsumer;
+    private long matches = 0;
 
     /**
      * Constructs a {@code MessageCountingMessageConsumer} with the specified match limit and wrapped consumer.
@@ -65,6 +65,6 @@ public final class MessageCountingMessageConsumer implements MessageConsumer {
      * @return {@code true} if the number of consumed messages equals or exceeds the match limit, {@code false} otherwise
      */
     public boolean matchLimitReached() {
-        return matchLimit > 0 && matches >= matchLimit;  // Return true if match limit is reached
+        return matchLimit > 0 && matches >= matchLimit;
     }
 }

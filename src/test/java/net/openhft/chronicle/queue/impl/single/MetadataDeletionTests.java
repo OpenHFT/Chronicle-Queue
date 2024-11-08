@@ -37,7 +37,7 @@ class MetadataDeletionTests extends QueueTestCommon {
 
             // Imagine that system has shut down, delete metadata
             boolean delete = new File(queuePath, "metadata.cq4t").delete();
-              assertTrue(delete, "metadata file should be deleted");
+            assertTrue(delete, "metadata file should be deleted");
 
             // Verify it has really been deleted
             assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should not exist");

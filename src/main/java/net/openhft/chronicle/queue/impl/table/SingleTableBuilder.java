@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
@@ -126,7 +125,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             // to allocate the first byte store and that will cause lock overlap
             bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
-            if (readOnly)
+            if (readOnly) {
                 return SingleTableStore.doWithSharedLock(file, v -> {
                     try {
                         return readTableStore(wire);
@@ -134,7 +133,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                         throw Jvm.rethrow(ex);
                     }
                 }, () -> null);
-            else {
+            } else {
                 MappedBytes finalBytes = bytes;
                 return SingleTableStore.doWithExclusiveLock(file, v -> {
                     try {

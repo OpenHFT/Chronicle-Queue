@@ -37,8 +37,8 @@ import static net.openhft.chronicle.core.util.ObjectUtils.requireNonNull;
  * This handler can be used to transform queue entries into a human-readable format such as JSON or YAML.
  */
 public final class InternalMessageToTextQueueEntryHandler implements QueueEntryHandler {
-    private final Bytes<?> textConversionTarget = Bytes.allocateElasticOnHeap();  // Buffer for storing converted text
-    private final WireType wireType;  // The wire type for text conversion
+    private final Bytes<?> textConversionTarget = Bytes.allocateElasticOnHeap();
+    private final WireType wireType;
 
     /**
      * Constructs an {@code InternalMessageToTextQueueEntryHandler} with the specified {@link WireType}.
@@ -46,7 +46,7 @@ public final class InternalMessageToTextQueueEntryHandler implements QueueEntryH
      * @param wireType The wire type used for converting binary data, must not be null
      */
     public InternalMessageToTextQueueEntryHandler(WireType wireType) {
-        this.wireType = requireNonNull(wireType);  // Ensures the wire type is not null
+        this.wireType = requireNonNull(wireType);
     }
 
     /**
@@ -71,9 +71,8 @@ public final class InternalMessageToTextQueueEntryHandler implements QueueEntryH
      */
     @Override
     public void accept(final WireIn wireIn, final Consumer<String> messageHandler) {
-        final Bytes<?> serialisedMessage = wireIn.bytes();  // Retrieve the serialized message bytes
-        final byte dataFormatIndicator = serialisedMessage.readByte(serialisedMessage.readPosition());  // Check the format
-
+        final Bytes<?> serialisedMessage = wireIn.bytes();
+        final byte dataFormatIndicator = serialisedMessage.readByte(serialisedMessage.readPosition());
         String text;
 
         if (isBinaryFormat(dataFormatIndicator)) {
@@ -87,7 +86,7 @@ public final class InternalMessageToTextQueueEntryHandler implements QueueEntryH
             text = serialisedMessage.toString();
         }
 
-        messageHandler.accept(text);  // Pass the converted or raw text to the message handler
+        messageHandler.accept(text);
     }
 
     /**
@@ -95,6 +94,6 @@ public final class InternalMessageToTextQueueEntryHandler implements QueueEntryH
      */
     @Override
     public void close() {
-        textConversionTarget.releaseLast();  // Release the memory used by the buffer
+        textConversionTarget.releaseLast();
     }
 }

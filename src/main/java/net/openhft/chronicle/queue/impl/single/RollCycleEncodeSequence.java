@@ -28,14 +28,8 @@ import net.openhft.chronicle.wire.Sequence;
  * It is responsible for encoding the sequence and position, and handling sequence retrieval.
  */
 class RollCycleEncodeSequence implements Sequence {
-
-    // Holds both the write position and sequence value
     private final TwoLongValue writePositionAndSequence;
-
-    // Determines the shift required based on cycle and spacing
     private final int cycleShift;
-
-    // The mask used to extract the sequence from the encoded value
     private final long sequenceMask;
 
     /**
@@ -80,8 +74,12 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     /**
-     * Retrieves the sequence for a given write position, assuming the write position
-     * is at the end of the queue. This method is not suitable for looking up random sequences.
+     * gets the sequence for a writePosition
+     * <p>
+     * This method will only return a valid sequence number of the write position if the write position is the
+     * last write position in the queue. YOU CAN NOT USE THIS METHOD TO LOOK UP RANDOM SEQUENCES FOR ANY WRITE POSITION.
+     * NOT_FOUND_RETRY will be return if a sequence number can not be found  ( so can retry )
+     * or NOT_FOUND when you should not retry
      *
      * @param forWritePosition The write position, expected to be the end of the queue.
      * @return The sequence number or {@link Sequence#NOT_FOUND_RETRY} if the sequence is not found.

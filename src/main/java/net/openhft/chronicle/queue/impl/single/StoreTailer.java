@@ -58,8 +58,6 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
  */
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
-
-    // Constants and resource pools for internal operations
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
     static final ScopedResourcePool<StringBuilder> SBP = StringBuilderPool.createThreadLocal(1);
     static final EOFException EOF_EXCEPTION = new EOFException();
@@ -70,10 +68,8 @@ class StoreTailer extends AbstractCloseable
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
     private final Finalizer finalizer;
-
-    // Variables to keep track of index and state of the tailer
-    long index; // Index of the next read
-    long lastReadIndex; // Index of the last read message
+    long index; // index of the next read.
+    long lastReadIndex; // index of the last read message
     @Nullable
     SingleChronicleQueueStore store;
     private int cycle;
@@ -125,7 +121,7 @@ class StoreTailer extends AbstractCloseable
                 close();
         }
 
-        // Always add a close listener for this tailer instance to the queue.
+        // always put references to "this" last.
         queue.addCloseListener(this);
     }
 
@@ -174,7 +170,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     @NotNull
     public DocumentContext readingDocument() {
-        // Create an initial document without consuming a message
+        // trying to create an initial document without a direction should not consume a message
         final long index = index();
         if (direction == NONE && (index == indexAtCreation || index == 0) && !readingDocumentFound) {
             return INSTANCE;
@@ -199,10 +195,8 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public Wire wire() {
-        // Ensure the tailer is not closed before accessing the wire
         throwExceptionIfClosed();
 
-        // Returns the private wire associated with the tailer
         return privateWire();
     }
 
@@ -218,22 +212,18 @@ class StoreTailer extends AbstractCloseable
 
     @Override
     public Wire wireForIndex() {
-        // Ensure the tailer is not closed before accessing the wire for index
         throwExceptionIfClosed();
 
-        // Returns the wire used for indexing operations
         return wireForIndex;
     }
 
     @Override
     public long timeoutMS() {
-        // Retrieves the timeout in milliseconds from the queue
         return queue.timeoutMS;
     }
 
     @Override
     public int sourceId() {
-        // Returns the source ID for this tailer, which identifies the origin of the queue
         return queue.sourceId;
     }
 
@@ -267,8 +257,7 @@ class StoreTailer extends AbstractCloseable
     @Override
     public DocumentContext readingDocument(final boolean includeMetaData) {
         DocumentContext documentContext = readingDocument0(includeMetaData);
-
-        // Verifies that the wire does not have excessive remaining data
+        // this check was added after a strange behaviour seen by one client. It should be impossible.
         if (documentContext.wire() != null)
             if (documentContext.wire().bytes().readRemaining() >= 1 << 30)
                 throw new AssertionError("readRemaining " + documentContext.wire().bytes().readRemaining());
@@ -632,7 +621,6 @@ class StoreTailer extends AbstractCloseable
         return true;
     }
 
-    // Interface to check if the last sequence acknowledged by replication matches the current index
     private AcknowledgedIndexReplicatedCheck acknowledgedIndexReplicatedCheck
             = (index, lastSequenceAck) -> index == lastSequenceAck;
 
@@ -698,7 +686,6 @@ class StoreTailer extends AbstractCloseable
      * @param bytes The byte buffer representing the current wire's data
      */
     private void inACycleFound(@NotNull final Bytes<?> bytes) {
-        // Close the read limit and set the wire's read position and limit accordingly
         context.closeReadLimit(bytes.capacity());
         privateWire().readAndSetLength(bytes.readPosition());
         final long end = bytes.readLimit();
@@ -762,7 +749,6 @@ class StoreTailer extends AbstractCloseable
                 throw new IllegalStateException(e);
             }
 
-        // Log resource tracing information if necessary
         if (Jvm.isResourceTracing()) {
             final int nextIndexCycle = queue.rollCycle().toCycle(nextIndex);
             if (nextIndex != Long.MIN_VALUE && nextIndexCycle - 1 != cycle) {
@@ -841,7 +827,6 @@ class StoreTailer extends AbstractCloseable
     public boolean moveToIndex(final long index) {
         throwExceptionIfClosed();
 
-        // Reuse the last move to index if possible
         if (moveToState.canReuseLastIndexMove(index, state, direction, queue, privateWire())) {
             return setAddress(true);
         } else if (moveToState.indexIsCloseToAndAheadOfLastIndexMove(index, state, direction, queue)) {
@@ -943,9 +928,9 @@ class StoreTailer extends AbstractCloseable
         switch (scanResult) {
             case FOUND:
                 Wire privateWire = privateWire();
-                if (privateWire == null)
+                if (privateWire == null) {
                     state = END_OF_CYCLE;
-                else {
+                } else {
                     state = FOUND_IN_CYCLE;
                     moveToState.onSuccessfulLookup(index, direction, privateWire.bytes().readPosition());
                 }
@@ -1359,7 +1344,8 @@ class StoreTailer extends AbstractCloseable
                         case NOT_REACHED:
                             throw new NotReachedException("NOT_REACHED after FOUND");
                         case FOUND:
-                            continue; // Continue loop as the end moved
+                            // the end moved!!
+                            continue;
                         case NOT_FOUND:
                             state = FOUND_IN_CYCLE;
                             break LoopForward;
@@ -1672,13 +1658,15 @@ class StoreTailer extends AbstractCloseable
     }
 
     /**
-     * Moves the tailer to a specific index where a message was written in another queue.
-     * This method is used to follow the message trail across multiple queues.
+     * Winds this ExcerptTailer to the specified {@code index} of the provided {@code queue} and reads the history message,
+     * then moves {@code this} tailer to the message index in the history message.
      *
-     * @param queue The source queue where the message was written.
-     * @param index The index of the written message.
-     * @return This ExcerptTailer instance, positioned at the message index from the other queue.
-     * @throws IORuntimeException If the tailer cannot move to the message's index in the history.
+     * @param queue The queue which was written to, and may contain a history message at the specified {@code index}.
+     *              Must not be null.
+     * @param index The index to read the history message in the {@code queue}.
+     * @return This ExcerptTailer instance.
+     * @throws IORuntimeException   if the provided {@code queue} couldn't be wound to the last index.
+     * @throws NullPointerException if the provided {@code queue} is null.
      */
     @Deprecated(/* to be removed in x.27 */)
     @NotNull
@@ -1688,11 +1676,11 @@ class StoreTailer extends AbstractCloseable
         // check if the tailer is closed
         throwExceptionIfClosed();
 
-        // Ensure that the provided queue is different from the current tailer's queue
+        // check if the provided queue is the same as the queue being read by this tailer
         if (queue == this.queue)
             throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
 
-        // Create a backward tailer for the provided queue and move it to the specified index
+        // create a tailer for the specified queue, set it to read backward from the specified index
         try (@NotNull final ExcerptTailer tailer = queue.createTailer().direction(BACKWARD)) {
 
             // move the tailer to the specified index, or to the end if index is Long.MIN_VALUE
@@ -1701,7 +1689,7 @@ class StoreTailer extends AbstractCloseable
             else
                 tailer.moveToIndex(index);
 
-            // Initialize a new message history to find the target message
+            // create a message history instance to read the history message
             @NotNull final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
 
             // loop until a message from the expected source is found
@@ -1713,7 +1701,7 @@ class StoreTailer extends AbstractCloseable
                         return this;
                     }
 
-                    // Read the history of the message and check if it matches the source ID
+                    // read the message history from the document
                     final MessageHistory veh = SCQTools.readHistory(context, messageHistory);
                     if (veh == null)
                         continue;
@@ -1725,7 +1713,7 @@ class StoreTailer extends AbstractCloseable
                     if (veh.sourceId(i) != this.sourceId())
                         continue;
 
-                    // Move this tailer to the index recorded in the history message
+                    // move this tailer to the specified index in the history message
                     final long sourceIndex = veh.sourceIndex(i);
                     if (!moveToIndexInternal(sourceIndex)) {
                         // throw an exception if this tailer couldn't move to the specified index in the history message
@@ -1735,7 +1723,7 @@ class StoreTailer extends AbstractCloseable
                         throw new IORuntimeException(errorMessage + extraInfo(tailer, messageHistory));
                     }
 
-                    // Ensure that a valid document is present at the target index
+                    // check if a document is present at the expected index, if not, throw an exception
                     try (DocumentContext content = readingDocument()) {
                         if (!content.isPresent()) {
                             final String errorMessage = String.format(
@@ -1776,11 +1764,7 @@ class StoreTailer extends AbstractCloseable
         this.cycle = cycle;
     }
 
-    /**
-     * Returns the number of times the index has been moved, used for testing purposes.
-     *
-     * @return The count of index moves.
-     */
+    // visible for testing
     int getIndexMoveCount() {
         return moveToState.indexMoveCount;
     }
@@ -1819,7 +1803,6 @@ class StoreTailer extends AbstractCloseable
         if (store == null)
             return;
 
-        // Get the current wire's byte store
         final Bytes<?> bytes = privateWire().bytes();
         BytesStore store = bytes.bytesStore();
 
@@ -1836,10 +1819,10 @@ class StoreTailer extends AbstractCloseable
      * This is used to optimize subsequent index moves by reusing state information.
      */
     static final class MoveToState {
-        private long lastMovedToIndex = Long.MIN_VALUE;  // Tracks the last index moved to
-        private TailerDirection directionAtLastMoveTo = TailerDirection.NONE; // Tracks the direction of the last move
-        private long readPositionAtLastMove = Long.MIN_VALUE;  // Tracks the read position at the last move
-        private int indexMoveCount = 0;  // Tracks the number of index moves made
+        private long lastMovedToIndex = Long.MIN_VALUE;
+        private TailerDirection directionAtLastMoveTo = TailerDirection.NONE;
+        private long readPositionAtLastMove = Long.MIN_VALUE;
+        private int indexMoveCount = 0;
 
         /**
          * Updates the state after successfully looking up an index.

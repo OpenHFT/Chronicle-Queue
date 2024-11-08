@@ -36,10 +36,10 @@ import java.util.function.Function;
  */
 public final class VanillaQueueEntryReader implements QueueEntryReader {
 
-    private final ExcerptTailer tailer;  // The ExcerptTailer used to read entries from the queue
-    private final Function<ExcerptTailer, DocumentContext> pollMethod;  // A function for polling the tailer
-    private final QueueEntryHandler messageConverter;  // Converts the queue entry into a consumable message
-    private final MessageConsumer messageConsumer;  // The consumer that processes the converted messages
+    private final ExcerptTailer tailer;
+    private final Function<ExcerptTailer, DocumentContext> pollMethod;
+    private final QueueEntryHandler messageConverter;
+    private final MessageConsumer messageConsumer;
 
     /**
      * Constructs a {@code VanillaQueueEntryReader} with the given tailer, polling method, message converter, and message consumer.
@@ -68,10 +68,9 @@ public final class VanillaQueueEntryReader implements QueueEntryReader {
     public boolean read() {
         try (DocumentContext dc = pollMethod.apply(tailer)) {
             if (!dc.isPresent()) {
-                return false;  // No entry available to read
+                return false;
             }
 
-            // Convert the wire format into a consumable message and pass it to the consumer
             messageConverter.accept(dc.wire(), val -> messageConsumer.consume(dc.index(), val));
             return true;
         }

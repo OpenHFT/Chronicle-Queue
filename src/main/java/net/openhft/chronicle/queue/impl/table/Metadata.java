@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.wire.Demarshallable;
@@ -39,7 +38,6 @@ public interface Metadata extends Demarshallable, WriteMarshallable {
      * @param <T> The type of metadata.
      */
     default <T extends Metadata> void overrideFrom(T metadata) {
-        // Default implementation does nothing.
     }
 
     /**
@@ -56,7 +54,6 @@ public interface Metadata extends Demarshallable, WriteMarshallable {
          * No-arg constructor for {@code NoMeta}.
          */
         NoMeta() {
-            // No operation.
         }
 
         /**
@@ -67,7 +64,6 @@ public interface Metadata extends Demarshallable, WriteMarshallable {
          */
         @SuppressWarnings("unused")
         NoMeta(@NotNull WireIn in) {
-            // No operation.
         }
 
         /**
@@ -77,7 +73,6 @@ public interface Metadata extends Demarshallable, WriteMarshallable {
          */
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            // No operation, no data to write.
         }
     }
 }

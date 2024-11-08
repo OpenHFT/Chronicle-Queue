@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -32,7 +31,7 @@ import java.text.ParseException;
  * additional methods for managing roll cycles, storing and retrieving data, and counting excerpts in a Chronicle Queue.
  *
  * <p>It defines the epoch offset, cycle management, and excerpt counting mechanisms, along with various queue
- * parameters such as index count, spacing, and delta checkpoint intervals.</p>
+ * parameters such as index count, spacing, and delta checkpoint intervals.
  */
 public interface RollingChronicleQueue extends ChronicleQueue {
 
@@ -90,10 +89,16 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
 
     /**
-     * Calculates the number of excerpts (messages) between two specified index positions.
+     * The number of excerpts between the indexes, {@code fromIndex} inclusive, {@code toIndex}
+     * exclusive.
+     * <p>
+     * When {@code fromIndex} and {@code toIndex} are in different cycles which are not adjacent, this
+     * operation can be expensive, as the index count for each intermediate cycle has to be found
+     * and calculated. As such, and in this situation, it's not recommended to call this method
+     * regularly in latency sensitive systems.
      *
      * <p>This operation can be expensive if the indexes are in different, non-adjacent cycles,
-     * as it may involve querying and calculating index counts for intermediate cycles.</p>
+     * as it may involve querying and calculating index counts for intermediate cycles.
      *
      * @param fromIndex the starting index (inclusive). No validation is performed on this index.
      * @param toIndex   the ending index (exclusive). No validation is performed on this index.

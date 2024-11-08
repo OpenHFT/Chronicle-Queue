@@ -23,7 +23,6 @@ package net.openhft.chronicle.queue.impl.table;
  * It defines different strategies for handling lock acquisition failures.
  */
 public enum UnlockMode {
-
     /**
      * Always force unlock and re-acquire the lock, regardless of the state of the locking process.
      */

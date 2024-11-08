@@ -14,6 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package net.openhft.chronicle.queue.impl;
@@ -26,14 +27,12 @@ import java.io.File;
  * opened or closed, such as managing resources or triggering background processes.
  *
  * <p>The interface provides a default method for determining if the listener is active, and methods for handling
- * file acquisition and release events. It also defines a {@code NO_OP} listener that performs no actions.</p>
+ * file acquisition and release events. It also defines a {@code NO_OP} listener that performs no actions.
  *
- * <p>Listeners implementing this interface may be notified asynchronously when files are acquired or released.</p>
+ * <p>Listeners implementing this interface may be notified asynchronously when files are acquired or released.
  */
 @FunctionalInterface
 public interface StoreFileListener {
-
-    // A no-operation listener that performs no actions on file events.
     StoreFileListener NO_OP = StoreFileListeners.NO_OP;
 
     /**
@@ -49,20 +48,20 @@ public interface StoreFileListener {
      * Called when a file is acquired.
      *
      * <p>This method is called asynchronously when a store file is acquired for use, allowing for any
-     * necessary handling of the file acquisition event. By default, this method does nothing.</p>
+     * necessary handling of the file acquisition event. By default, this method does nothing.
      *
      * @param cycle the cycle associated with the acquired file.
      * @param file the {@link File} object representing the acquired file.
      */
     default void onAcquired(int cycle, File file) {
-        // Default implementation does nothing
+
     }
 
     /**
      * Called when a file is released.
      *
      * <p>This method is called asynchronously when a store file is released, allowing for any
-     * necessary handling of the file release event.</p>
+     * necessary handling of the file release event.
      *
      * @param cycle the cycle associated with the released file.
      * @param file the {@link File} object representing the released file.

@@ -23,27 +23,23 @@ import net.openhft.chronicle.queue.RollCycle;
 /**
  * Enum representing sparse roll cycles, primarily used for testing and benchmarking purposes.
  * <p>These roll cycles are designed to minimize indexing, making them useful for scenarios where
- * indexing is either unnecessary or should be kept minimal to reduce overhead.</p>
+ * indexing is either unnecessary or should be kept minimal to reduce overhead.
  */
 public enum SparseRollCycles implements RollCycle {
-
     /**
-     * Roll cycle allowing up to 0x20000000 entries per day, indexing every 8th entry.
+     * 0x20000000 entries per day, indexing every 8th entry
      */
     SMALL_DAILY(/*-----*/"yyyyMMdd'S'", 24 * 60 * 60 * 1000, 8 << 10, 8),
-
     /**
-     * Roll cycle allowing up to 0x3ffffffff entries per hour, with sparse indexing (every 1024th entry).
+     * 0x3ffffffff entries per hour with sparse indexing (every 1024th entry)
      */
     LARGE_HOURLY_SPARSE("yyyyMMdd-HH'LS'", 60 * 60 * 1000, 4 << 10, 1024),
-
     /**
-     * Roll cycle allowing up to 0x3ffffffffff entries per hour, with super-sparse indexing (every (2^20)th entry).
+     * 0x3ffffffffff entries per hour with super-sparse indexing (every (2^20)th entry)
      */
     LARGE_HOURLY_XSPARSE("yyyyMMdd-HH'LX'", 60 * 60 * 1000, 2 << 10, 1 << 20),
-
     /**
-     * Roll cycle allowing up to 0xffffffffffff entries per day, with super-sparse indexing (every (2^20)th entry).
+     * 0xffffffffffff entries per day with super-sparse indexing (every (2^20)th entry)
      */
     HUGE_DAILY_XSPARSE("yyyyMMdd'HX'", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20),
     ;
@@ -87,7 +83,7 @@ public enum SparseRollCycles implements RollCycle {
 
     /**
      * Returns the default size of the index array.
-     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.</p>
+     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.
      *
      * @return The default index count
      */

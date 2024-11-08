@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
@@ -34,7 +33,6 @@ import java.util.NavigableSet;
  * interaction with {@link StoreFileListener} to notify when a store is acquired or released.
  */
 public class WireStorePool extends SimpleCloseable {
-
     @NotNull
     private final WireStoreSupplier supplier;
     private final StoreFileListener storeFileListener;
@@ -72,7 +70,7 @@ public class WireStorePool extends SimpleCloseable {
             SingleChronicleQueueStore oldStore) {
         throwExceptionIfClosed();
 
-        // Reuse cycle store when applicable
+        // reuse cycle store when applicable
         if (oldStore != null && oldStore.cycle() == cycle && !oldStore.isClosed())
             return oldStore;
 

@@ -43,6 +43,6 @@ public enum DefaultCycleCalculator implements CycleCalculator {
      */
     @Override
     public int currentCycle(final RollCycle rollCycle, final TimeProvider timeProvider, final long offsetMillis) {
-        return rollCycle.current(timeProvider, offsetMillis); // Delegate the cycle calculation to RollCycle
+        return rollCycle.current(timeProvider, offsetMillis);
     }
 }

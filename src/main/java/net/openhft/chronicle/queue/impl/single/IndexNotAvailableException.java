@@ -27,8 +27,6 @@ package net.openhft.chronicle.queue.impl.single;
  * does not allow the requested index operation to be completed.
  */
 public class IndexNotAvailableException extends IllegalStateException {
-
-    // Serial version ID for ensuring compatibility during serialization.
     private static final long serialVersionUID = 0L;
 
     /**

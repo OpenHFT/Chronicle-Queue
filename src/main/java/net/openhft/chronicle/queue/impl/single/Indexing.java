@@ -61,10 +61,11 @@ public interface Indexing {
     boolean indexable(long index);
 
     /**
-     * Retrieves the sequence number of the last entry present in the cycle.
+     * Get the sequence number of the last entry present in the cycle.
      * <p>
-     * <b>Note:</b> If not holding a write lock, this value may be stale due to concurrent writers.
-     * If holding the write lock, it is guaranteed to be accurate.
+     * Note: If you're not holding the write lock when you call this and there are concurrent writers,
+     * the value may be stale by the time it's returned. If you're holding the write lock it is guaranteed
+     * to be accurate.
      *
      * @param ex An {@link ExcerptContext} used to scan the roll cycle if necessary.
      * @return the sequence number of the last excerpt in the cycle.

@@ -36,10 +36,10 @@ import java.nio.ByteBuffer;
  */
 public final class MethodReaderQueueEntryReader implements QueueEntryReader {
 
-    private final ExcerptTailer tailer;  // The ExcerptTailer used to read from the queue
-    private final MessageConsumer messageConsumer;  // The message consumer that processes the read messages
-    private final MethodReader methodReader;  // The method reader that reads method calls from the queue
-    private final Bytes<ByteBuffer> bytes;  // A buffer for holding the serialized message
+    private final ExcerptTailer tailer;
+    private final MessageConsumer messageConsumer;
+    private final MethodReader methodReader;
+    private final Bytes<ByteBuffer> bytes;
 
     /**
      * Constructs a {@code MethodReaderQueueEntryReader} with the provided tailer, message consumer, wire type, and method reader interface.
@@ -55,15 +55,12 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
                                         Class<?> methodReaderInterface, boolean showMessageHistory) {
         this.tailer = tailer;
         this.messageConsumer = messageConsumer;
-        bytes = Bytes.elasticHeapByteBuffer(256);  // Allocate a buffer for holding serialized data
+        bytes = Bytes.elasticHeapByteBuffer(256);
         Wire wire = wireType.apply(bytes);
         if (wire instanceof TextWire)
-            ((TextWire) wire).useTextDocuments();  // Use text documents if it's a TextWire
-
-        // Build the MethodWriter from the provided method reader interface
+            ((TextWire) wire).useTextDocuments();
         MethodWriterBuilder<?> mwb = wire.methodWriterBuilder(methodReaderInterface);
-        if (showMessageHistory) {
-            // If message history is enabled, log message history details
+        if (showMessageHistory)
             mwb.updateInterceptor((methodName, t) -> {
                 MessageHistory messageHistory = MessageHistory.get();
                 // this is an attempt to recognise that no MH was read and instead the method reader called reset(...) on it
@@ -71,8 +68,6 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
                     bytes.append(messageHistory + System.lineSeparator());
                 return true;
             });
-        }
-        // Initialize the method reader
         methodReader = tailer.methodReader(mwb.build());
     }
 
@@ -86,11 +81,10 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
     @Override
     public boolean read() {
         if (!methodReader.readOne()) {
-            return false;  // No method call to read
+            return false;
         }
-        // Consume the read message and pass it to the message consumer
         messageConsumer.consume(tailer.lastReadIndex(), bytes.toString());
-        bytes.clear();  // Clear the buffer for the next message
+        bytes.clear();
         return true;
     }
 }

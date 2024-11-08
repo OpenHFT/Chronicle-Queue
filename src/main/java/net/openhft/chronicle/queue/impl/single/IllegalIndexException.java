@@ -28,7 +28,7 @@ import static java.lang.String.format;
  * including the provided index and the last valid index in the queue.
  */
 public class IllegalIndexException extends IllegalArgumentException {
-    private static final long serialVersionUID = 0L; // Unique ID for serialization
+    private static final long serialVersionUID = 0L;
 
     /**
      * Constructs an {@code IllegalIndexException} with a formatted message indicating

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
@@ -68,25 +67,17 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
  * customized settings.
  *
  * <p>This class uses the builder pattern to allow flexible configuration and
- * creation of {@link SingleChronicleQueue} instances.</p>
+ * creation of {@link SingleChronicleQueue} instances.
  */
 @SuppressWarnings("deprecation")
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
+    public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
 
-    // Constants for block size and capacity
-    public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize();
-    public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30; // 512 GB
-
-    // Enterprise queue constructor for special use cases (if available)
+    public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
-
-    // Factory for creating wire stores
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
-
-    // Supplier for timing pauser
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
 
-    // Static initializer for registering class aliases and initializing the enterprise constructor
     static {
         // Registering class aliases for serialization/deserialization
         CLASS_ALIASES.addAlias(WireType.class);
@@ -95,25 +86,19 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
 
-        // Try to initialize the enterprise queue constructor (if available)
         Constructor<?> co;
         try {
             co = ((Class<?>) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
-            Jvm.setAccessible(co); // Make the constructor accessible
+            Jvm.setAccessible(co);
         } catch (Exception e) {
             co = null;
         }
         ENTERPRISE_QUEUE_CONSTRUCTOR = co;
     }
 
-    // Buffer modes for reading and writing
     private BufferMode writeBufferMode = BufferMode.None;
     private BufferMode readBufferMode = BufferMode.None;
-
-    // Wire type for serialization (default is BINARY_LIGHT)
     private WireType wireType = WireType.BINARY_LIGHT;
-
-    // Optional configuration values
     private Long blockSize;
     private File path;
     private RollCycle rollCycle;
@@ -130,31 +115,20 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private int drainerTimeoutMS = -1;
 
     @Nullable
-    private EventLoop eventLoop; // Event loop for background tasks
-
-    // Consumer for ring buffer stats (default does not log any stats)
+    private EventLoop eventLoop;
+    /**
+     * by default does not log any stats of the ring buffer
+     */
     private Consumer<BytesRingBufferStats> onRingBufferStats;
-
-    // Time provider for the queue (default is system time)
     private TimeProvider timeProvider;
-
-    // Pauser supplier for timing operations
     private Supplier<TimingPauser> pauserSupplier;
-
-    // Timeout in milliseconds (default is 10 seconds)
-    private Long timeoutMS;
-
-    // Source ID for the queue
+    private Long timeoutMS; // 10 seconds.
     private Integer sourceId;
-
-    // Listener for file-related events
     private StoreFileListener storeFileListener;
 
-    // Read-only mode and interruption checks
     private Boolean readOnly;
     private boolean checkInterrupts;
 
-    // Metadata store (transient to avoid serialization)
     private transient TableStore<SCQMeta> metaStore;
 
     // Enterprise-specific configurations
@@ -165,7 +139,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Consumer<Bytes<?>> messageHeaderReader;
     private SecretKeySpec key;
 
-    // Other configurations
     private int maxTailers;
     private AsyncBufferCreator bufferBytesStoreCreator;
     private Long pretouchIntervalMillis;
@@ -178,7 +151,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private AppenderListener appenderListener;
     private SyncMode syncMode;
 
-    // Default constructor
     protected SingleChronicleQueueBuilder() {
     }
     /*
@@ -187,10 +159,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * ========================
      */
 
-    /**
-     * Adds class aliases used for serialization and deserialization.
-     * This method is called in the static initializer.
-     */
     public static void addAliases() {
         // This is handled in the static initializer.
     }
@@ -241,8 +209,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                             + file.getParentFile());
 
             result.path(file.getParentFile());
-        } else
-            result.path(file); // Use the provided directory
+        } else {
+            result.path(file);
+        }
         return result;
     }
 
@@ -326,7 +295,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 queue.indexCount(),
                 queue.indexSpacing());
 
-        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore); // Write the header
+        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
         return wireStore;
     }
 
@@ -347,9 +316,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     private static RollCycle loadDefaultRollCycle() {
         String rollCycleProperty = Jvm.getProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
+        if (null == rollCycleProperty) {
+            return RollCycles.DEFAULT;
+        }
 
-        if (rollCycleProperty == null)
-            return RollCycles.DEFAULT; // Return the default roll cycle if the property is not set
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
         if (rollCyclePropertyParts.length > 0) {
             try {
@@ -365,7 +335,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                         @SuppressWarnings("unchecked")
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
-                            return (RollCycle) instance; // Return the parsed RollCycle instance
+                            return (RollCycle) instance;
                         } else {
                             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                     "Configured default rollcycle is not a subclass of RollCycle");
@@ -388,7 +358,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             }
         }
 
-        return RollCycles.DEFAULT; // Fallback to default roll cycle
+        return RollCycles.DEFAULT;
     }
 
     /**
@@ -410,17 +380,18 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
-        preBuild(); // Perform pre-build tasks and configuration
+        preBuild();
 
         SingleChronicleQueue chronicleQueue;
 
-        // Check if any enterprise-only features are requested after preBuild
+        // It is important to check enterprise features after preBuild()
+        // Enterprise-only config options can be loaded from the metadata
         if (checkEnterpriseFeaturesRequested())
-            chronicleQueue = buildEnterprise(); // Build enterprise version if required
+            chronicleQueue = buildEnterprise();
         else
-            chronicleQueue = new SingleChronicleQueue(this); // Otherwise, build the standard queue
+            chronicleQueue = new SingleChronicleQueue(this);
 
-        postBuild(chronicleQueue); // Perform post-build tasks
+        postBuild(chronicleQueue);
 
         return chronicleQueue;
     }
@@ -591,8 +562,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, @NotNull final ZoneId zoneId) {
         this.rollTime = rollTime;
         this.rollTimeZone = zoneId;
-        this.epoch = TimeUnit.SECONDS.toMillis(rollTime.toSecondOfDay()); // Set the epoch time
-        this.queueOffsetSpec = QueueOffsetSpec.ofRollTime(rollTime, zoneId); // Set the queue offset spec
+        this.epoch = TimeUnit.SECONDS.toMillis(rollTime.toSecondOfDay());
+        this.queueOffsetSpec = QueueOffsetSpec.ofRollTime(rollTime, zoneId);
         return this;
     }
 
@@ -601,15 +572,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * If in read-only mode and the metadata file is not found, falls back to a read-only table store.
      */
     protected void initializeMetadata() {
-        File metapath = metapath(); // Get the path to the metadata file
-        validateRollCycle(metapath); // Ensure the roll cycle is valid
+        File metapath = metapath();
+        validateRollCycle(metapath);
         SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle(), epoch(), rollTime, rollTimeZone), deltaCheckpointInterval(),
                 sourceId());
         try {
 
             boolean readOnly = readOnly();
             metaStore = SingleTableBuilder.binary(metapath, metadata).readOnly(readOnly).build();
-            // Check if metadata was overridden
+            // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
             sourceId(newMeta.sourceId());
 
@@ -645,7 +616,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      *
      * <p>For specific roll cycles like LARGE_HOURLY_SPARSE, LARGE_HOURLY_XSPARSE, LARGE_DAILY,
      * XLARGE_DAILY, HUGE_DAILY, and HUGE_DAILY_XSPARSE, the correct roll cycle must be manually
-     * provided during queue creation.</p>
+     * provided during queue creation.
      *
      * @param metapath the metadata path
      */
@@ -664,7 +635,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                         // Attempt to parse the filename using the cycle's format
                         DateTimeFormatter.ofPattern(cycle.format())
                                 .parse(filename.substring(0, filename.length() - 4));
-                        overrideRollCycle(cycle); // Set the roll cycle if matched
+                        overrideRollCycle(cycle);
                         break;
                     } catch (Exception expected) {
                         // Ignore the exception and continue checking other cycles
@@ -684,7 +655,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private void overrideRollCycleForFileName(String pattern) {
         for (RollCycle cycle : RollCycles.all()) {
             if (cycle.format().equals(pattern)) {
-                overrideRollCycle(cycle); // Set the roll cycle
+                overrideRollCycle(cycle);
                 return;
             }
         }
@@ -710,10 +681,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private File metapath() {
         final File storeFilePath;
         if ("".equals(path.getPath())) {
-            storeFilePath = new File(QUEUE_METADATA_FILE); // Use default metadata file name if no path is provided
+            storeFilePath = new File(QUEUE_METADATA_FILE);
         } else {
-            storeFilePath = new File(path, QUEUE_METADATA_FILE); // Use provided path
-            path.mkdirs(); // Create the directory if it does not exist
+            storeFilePath = new File(path, QUEUE_METADATA_FILE);
+            path.mkdirs();
         }
         return storeFilePath;
     }
@@ -868,7 +839,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder path(String path) {
-        return path(new File(path)); // Convert string to File and call the overloaded method
+        return path(new File(path));
     }
 
     /**
@@ -889,7 +860,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder path(final Path path) {
-        this.path = path.toFile(); // Convert Path to File
+        this.path = path.toFile();
         return this;
     }
 
@@ -932,7 +903,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder blockSize(long blockSize) {
-        this.blockSize = Math.max(SMALL_BLOCK_SIZE, blockSize); // Ensure block size is at least the minimum
+        this.blockSize = Math.max(SMALL_BLOCK_SIZE, blockSize);
         return this;
     }
 
@@ -943,7 +914,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder blockSize(int blockSize) {
-        return blockSize((long) blockSize); // Convert int to long and call the overloaded method
+        return blockSize((long) blockSize);
     }
 
     /**
@@ -955,7 +926,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public long blockSize() {
 
         long bs = blockSize == null
-                ? OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE // Default block size
+                ? OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE
                 : blockSize;
 
         // Ensure the block size can accommodate both an index2index and an index in one operation
@@ -988,7 +959,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueueBuilder wireType(@NotNull WireType wireType) {
         if (wireType == WireType.DELTA_BINARY)
-            deltaCheckpointInterval(64); // Set default delta checkpoint interval for delta binary wire type
+            deltaCheckpointInterval(64);
         this.wireType = wireType;
         return this;
     }
@@ -999,15 +970,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param deltaCheckpointInterval the interval to set
      */
     private void deltaCheckpointInterval(int deltaCheckpointInterval) {
-        assert checkIsPowerOf2(deltaCheckpointInterval); // Ensure the value is a power of 2
+        assert checkIsPowerOf2(deltaCheckpointInterval);
         this.deltaCheckpointInterval = deltaCheckpointInterval;
     }
 
     /**
-     * Checks if the given value is a power of 2.
+     * Checks if the given value is a power of 2, or zero is allowed.
      *
      * @param value the value to check
-     * @return true if the value is a power of 2, false otherwise
+     * @return true if the value is a power of 2, or zero, false otherwise
      */
     private boolean checkIsPowerOf2(long value) {
         return (value & (value - 1)) == 0; // Check if value is a power of 2
@@ -1141,7 +1112,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public EventLoop eventLoop() {
         if (eventLoop == null)
-            // Create a new OnDemandEventLoop if no event loop was set
             return new OnDemandEventLoop(
                     () -> new MediumEventLoop(null, path.getName(), Pauser.busy(), true, "none"));
         return eventLoop;
@@ -1181,7 +1151,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Checks if ring buffer reader processes can invoke the Chronicle Queue drainer.
-     * By default, this is disabled (since version 5.21ea0).
+     * By default, this is disabled
      *
      * @return true if ring buffer readers can invoke the drainer, false otherwise
      */
@@ -1491,12 +1461,21 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Enables or disables double-buffered writes on contention.
-     * Double-buffering allows writes to proceed without waiting for the write lock, deferring lock acquisition
-     * until the data is fully serialized. This can improve performance when writing large objects with high contention.
-     *
-     * @param doubleBuffer true to enable double-buffering, false to disable it
-     * @return the current builder instance for method chaining
+     * <p>
+     * Enables double-buffered writes on contention.
+     * <p>
+     * Normally, all writes to the queue will be serialized based on the write lock acquisition. Each time {@link ExcerptAppender#writingDocument()}
+     * is called, appender tries to acquire the write lock on the queue, and if it fails to do so it blocks until write
+     * lock is unlocked, and in turn locks the queue for itself.
+     * <p>
+     * When double-buffering is enabled, if appender sees that the write lock is acquired upon {@link ExcerptAppender#writingDocument()} call,
+     * it returns immediately with a context pointing to the secondary buffer, and essentially defers lock acquisition
+     * until the context.close() is called (normally with try-with-resources pattern it is at the end of the try block),
+     * allowing user to go ahead writing data, and then essentially doing memcpy on the serialized data (thus reducing cost of serialization).
+     * <p>
+     * This is only useful if (majority of) the objects being written to the queue are big enough AND their marshalling is not straight-forward
+     * (e.g. BytesMarshallable's marshalling is very efficient and quick and hence double-buffering will only slow things down), and if there's a
+     * heavy contention on writes (e.g. 2 or more threads writing a lot of data to the queue at a very high rate).
      */
     public SingleChronicleQueueBuilder doubleBuffer(boolean doubleBuffer) {
         this.doubleBuffer = doubleBuffer;
@@ -1558,9 +1537,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     protected void preBuild() {
         try {
-            initializeMetadata(); // Initialize the metadata for the queue
+            initializeMetadata();
         } catch (Exception ex) {
-            Closeable.closeQuietly(metaStore); // Ensure the metadata store is closed on failure
+            Closeable.closeQuietly(metaStore);
             throw ex;
         }
         if ((epoch == null || epoch == 0) && (rollTime != null && rollTimeZone != null))
@@ -1574,10 +1553,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return true if interrupts should be checked, false otherwise
      */
     public boolean checkInterrupts() {
-        // Check the system property first
+
         if (System.getProperties().contains("chronicle.queue.checkInterrupts"))
             return Jvm.getBoolean("chronicle.queue.checkInterrupts");
-        // Return the builder's configuration if no system property is set
+
         return checkInterrupts;
     }
 
@@ -1613,11 +1592,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * WARNING: Avoid using this method as it creates only a shallow copy.
-     * Fields in the cloned builder will reference the same objects as the original builder.
-     * This method is expected to be phased out in the future.
-     *
-     * @return a shallow copy of the current builder instance
+     * WARNING: Avoid using this method as it can have unintended consequences.
+     * We plan to phase it out.
+     * It's only a shallow copy so field will have the same objects.
      */
     public SingleChronicleQueueBuilder clone() {
         try {
@@ -1722,7 +1699,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         @Override
         public TimingPauser get() {
-            return new YieldingPauser(500_000); // Create a new pauser with a 500,000 ns yield duration
+            return new YieldingPauser(500_000);
         }
     }
 }

@@ -57,11 +57,10 @@ public class ChronicleHistoryReaderMain {
      * @param args Command-line arguments
      */
     protected void run(String[] args) {
-        final Options options = options(); // Initialize command line options
-        final CommandLine commandLine = parseCommandLine(args, options); // Parse command line arguments
+        final Options options = options();
+        final CommandLine commandLine = parseCommandLine(args, options);
 
         try (final ChronicleHistoryReader chronicleHistoryReader = chronicleHistoryReader()) {
-            // Setup and execute the history reader
             setup(commandLine, chronicleHistoryReader);
             chronicleHistoryReader.execute();
         }
@@ -74,13 +73,11 @@ public class ChronicleHistoryReaderMain {
      * @param chronicleHistoryReader The history reader to configure
      */
     protected void setup(@NotNull final CommandLine commandLine, @NotNull final ChronicleHistoryReader chronicleHistoryReader) {
-        // Set message sink to output to System.out
-        chronicleHistoryReader.withMessageSink(System.out::println)
-                .withProgress(commandLine.hasOption('p')) // Enable progress if '-p' is specified
-                .withHistosByMethod(commandLine.hasOption('m')) // Enable histograms by method if '-m' is specified
-                .withBasePath(Paths.get(commandLine.getOptionValue('d'))); // Set base path from the directory option
-
-        // Optionally configure time unit, items to ignore, window duration, and summary output
+        chronicleHistoryReader.
+                withMessageSink(System.out::println).
+                withProgress(commandLine.hasOption('p')).
+                withHistosByMethod(commandLine.hasOption('m')).
+                withBasePath(Paths.get(commandLine.getOptionValue('d')));
         if (commandLine.hasOption('t'))
             chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
         if (commandLine.hasOption('i'))
@@ -112,9 +109,8 @@ public class ChronicleHistoryReaderMain {
     protected CommandLine parseCommandLine(@NotNull final String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser(); // Initialize command-line parser
         CommandLine commandLine = null;
-
         try {
-            commandLine = parser.parse(options, args); // Parse arguments
+            commandLine = parser.parse(options, args);
 
             // If help option is selected, print help and exit
             if (commandLine.hasOption('h')) {
@@ -159,8 +155,8 @@ public class ChronicleHistoryReaderMain {
                 null,
                 true
         );
-        writer.flush(); // Ensure everything is printed
-        System.exit(status); // Exit with provided status
+        writer.flush();
+        System.exit(status);
     }
 
     /**
@@ -170,15 +166,15 @@ public class ChronicleHistoryReaderMain {
      */
     @NotNull
     protected Options options() {
-        final Options options = new Options(); // Initialize options
+        final Options options = new Options();
         ChronicleReaderMain.addOption(options, "d", "directory", true, "Directory containing chronicle queue files", true);
         ChronicleReaderMain.addOption(options, "h", "help-message", false, "Print this help and exit", false);
         ChronicleReaderMain.addOption(options, "t", "time unit", true, "Time unit. Default nanos", false);
         ChronicleReaderMain.addOption(options, "i", "ignore", true, "How many items to ignore from start", false);
         ChronicleReaderMain.addOption(options, "w", "window", true, "Window duration in time unit. Instead of one output at the end, will output every window period", false);
         ChronicleReaderMain.addOption(options, "u", "histo offset", true, "Summary output. Instead of histograms, will show one value only, in CSV format. Set this to 0 for 50th, 1 for 90th etc., -1 for worst", false);
-        options.addOption(new Option("p", false, "Show progress")); // Add 'p' option for showing progress
-        options.addOption(new Option("m", false, "By method")); // Add 'm' option for histogram by method
+        options.addOption(new Option("p", false, "Show progress"));
+        options.addOption(new Option("m", false, "By method"));
         return options;
     }
 }

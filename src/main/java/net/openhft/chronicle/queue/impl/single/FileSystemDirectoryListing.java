@@ -66,7 +66,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
      */
     @Override
     public void onFileCreated(final File file, final int cycle) {
-        onRoll(cycle); // Update cycle tracking on file creation
+        onRoll(cycle);
     }
 
     /**
@@ -80,17 +80,17 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     public void refresh(boolean force) {
         lastRefreshTimeMS = time.currentTimeMillis();
 
-        final String[] fileNamesList = queueDir.list(); // Get the list of filenames in the directory
+        final String[] fileNamesList = queueDir.list();
         String minFilename = INITIAL_MIN_FILENAME;
         String maxFilename = INITIAL_MAX_FILENAME;
         if (fileNamesList != null) {
             for (String fileName : fileNamesList) {
                 if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
                     if (minFilename.compareTo(fileName) > 0)
-                        minFilename = fileName; // Track the minimum filename
+                        minFilename = fileName;
 
                     if (maxFilename.compareTo(fileName) < 0)
-                        maxFilename = fileName; // Track the maximum filename
+                        maxFilename = fileName;
                 }
             }
         }
@@ -158,7 +158,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
      */
     @Override
     public void onRoll(int cycle) {
-        minCreatedCycle = Math.min(minCreatedCycle, cycle); // Update the minimum cycle
-        maxCreatedCycle = Math.max(maxCreatedCycle, cycle); // Update the maximum cycle
+        minCreatedCycle = Math.min(minCreatedCycle, cycle);
+        maxCreatedCycle = Math.max(maxCreatedCycle, cycle);
     }
 }

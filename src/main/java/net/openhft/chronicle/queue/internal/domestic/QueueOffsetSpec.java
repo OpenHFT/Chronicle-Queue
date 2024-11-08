@@ -31,17 +31,12 @@ import java.util.function.Function;
  * The offset can be defined based on an epoch, roll time, or none.
  * It provides methods to create, parse, and apply different types of offsets to a {@link SingleChronicleQueueBuilder}.
  *
- * <p> The class is final, and instances are immutable. </p>
+ * <p> The class is final, and instances are immutable. 
  */
 public final class QueueOffsetSpec {
 
-    // Delimiter used for separating tokens in the offset specification string
     private static final String TOKEN_DELIMITER = ";";
-
-    // The type of offset (EPOCH, ROLL_TIME, or NONE)
     private final Type type;
-
-    // The specific arguments related to the offset type
     private final String[] spec;
 
     /**
@@ -140,17 +135,14 @@ public final class QueueOffsetSpec {
         return Type.NONE.name();
     }
 
-    // Converts a string to a ZoneId
     private static ZoneId toZoneId(final String zoneId) {
         return ZoneId.of(zoneId);
     }
 
-    // Converts a string to a LocalTime
     private static LocalTime toLocalTime(final String timestamp) {
         return LocalTime.parse(timestamp);
     }
 
-    // Verifies that the number of tokens matches the expected length
     private static void expectArgs(final String[] tokens, final int expectedLength) {
         if (tokens.length != expectedLength) {
             throw new IllegalArgumentException("Expected " + expectedLength + " tokens in " + Arrays.toString(tokens));
@@ -215,11 +207,10 @@ public final class QueueOffsetSpec {
      * - NONE: No offset
      */
     public enum Type {
-        EPOCH(args -> args[0]),  // Formatter for EPOCH type
-        ROLL_TIME(args -> args[0] + TOKEN_DELIMITER + args[1]),  // Formatter for ROLL_TIME type
-        NONE(args -> "");  // Formatter for NONE type
+        EPOCH(args -> args[0]),
+        ROLL_TIME(args -> args[0] + TOKEN_DELIMITER + args[1]),
+        NONE(args -> "");
 
-        // Function to format the arguments based on the type
         private final Function<String[], String> argFormatter;
 
         Type(final Function<String[], String> argFormatter) {

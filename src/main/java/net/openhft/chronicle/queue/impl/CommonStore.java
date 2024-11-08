@@ -33,10 +33,9 @@ import java.io.File;
  * and dumping the contents of the store in a specific wire format.
  *
  * <p>This interface extends both {@link Demarshallable} and {@link WriteMarshallable}, allowing the store to
- * be serialized and deserialized using Chronicle's wire formats.</p>
+ * be serialized and deserialized using Chronicle's wire formats.
  */
 public interface CommonStore extends Demarshallable, WriteMarshallable {
-
     /**
      * Returns the file associated with this store, if any.
      *

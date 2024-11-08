@@ -46,16 +46,14 @@ import java.util.concurrent.locks.LockSupport;
  * </ul>
  */
 public class InternalBenchmarkMain {
-    // Flags and configuration for the benchmark
     static volatile boolean running = true;
-    static int throughput = Integer.getInteger("throughput", 250);  // Target throughput in MB/s
-    static int runtime = Integer.getInteger("runtime", 300);  // Benchmark runtime in seconds
-    static String basePath = System.getProperty("path", OS.TMP);  // Base path for the Chronicle Queue
-    static volatile long readerLoopTime = 0;  // Reader loop time
-    static volatile long readerEndLoopTime = 0;  // Reader end loop time
-    static int counter = 0;  // Counter for iterations
+    static int throughput = Integer.getInteger("throughput", 250); // MB/s
+    static int runtime = Integer.getInteger("runtime", 300); // seconds
+    static String basePath = System.getProperty("path", OS.TMP);
+    static volatile long readerLoopTime = 0;
+    static volatile long readerEndLoopTime = 0;
+    static int counter = 0;
 
-    // Static block for enabling JVM safepoint logging
     static {
         System.setProperty("jvm.safepoint.enabled", "true");
     }
@@ -93,12 +91,11 @@ public class InternalBenchmarkMain {
      * @param messageSize the size of each message in bytes
      */
     static void benchmark(int messageSize) {
-        Histogram writeTime = new Histogram(32, 7);  // Stores write latencies
-        Histogram transportTime = new Histogram(32, 7);  // Stores transport latencies
-        Histogram readTime = new Histogram(32, 7);  // Stores read latencies
-        String path = basePath + "/test-q-" + messageSize;  // Path for the queue files
+        Histogram writeTime = new Histogram(32, 7);
+        Histogram transportTime = new Histogram(32, 7);
+        Histogram readTime = new Histogram(32, 7);
+        String path = basePath + "/test-q-" + messageSize;
 
-        // Create a new ChronicleQueue at the given path
         ChronicleQueue queue = createQueue(path);
 
         // Pretoucher will only work with Queue Enterprise in the path
@@ -106,24 +103,24 @@ public class InternalBenchmarkMain {
             try (ExcerptAppender appender = queue.createAppender()) {
                 Thread thread = Thread.currentThread();
                 while (!thread.isInterrupted()) {
-                    appender.pretouch();  // Pre-touch the queue to pre-load memory pages
-                    Jvm.pause(10);  // Pause between touches
+                    appender.pretouch();
+                    Jvm.pause(10);
                 }
             }
         });
         pretoucher.setDaemon(true);
-        pretoucher.start();  // Start the pre-touching thread
+        pretoucher.start();
 
-        Histogram loopTime = new Histogram();  // Stores loop time measurements
+        Histogram loopTime = new Histogram();
 
         // Start a thread to read from the queue
         Thread reader = new Thread(() -> {
 //            try (ChronicleQueue queue2 = createQueue(path))
-            ExcerptTailer tailer = queue.createTailer().toEnd();  // Create a tailer that starts at the end of the queue
+            ExcerptTailer tailer = queue.createTailer().toEnd();
             long endLoop = System.nanoTime();
             while (running) {
-                loopTime.sample((double) (System.nanoTime() - endLoop));  // Measure loop times
-                Jvm.safepoint();  // Trigger JVM safepoint
+                loopTime.sample((double) (System.nanoTime() - endLoop));
+                Jvm.safepoint();
 
 //                    readerLoopTime = System.nanoTime();
 //                    if (readerLoopTime - readerEndLoopTime > 1000)
@@ -137,30 +134,30 @@ public class InternalBenchmarkMain {
 //                } finally {
 //                        readerEndLoopTime = System.nanoTime();
 //                }
-                Jvm.safepoint();  // Trigger JVM safepoint
-                endLoop = System.nanoTime();  // Update the loop time for the next iteration
+                Jvm.safepoint();
+                endLoop = System.nanoTime();
             }
         });
-        reader.start();  // Start the reader thread
-        Jvm.pause(250); // Give the reader time to start
+        reader.start();
+        Jvm.pause(250); // give the reader time to start
         long next = System.nanoTime();
-        long end = (long) (next + runtime * 1e9);  // End time for the benchmark
+        long end = (long) (next + runtime * 1e9);
 
-        ExcerptAppender appender = queue.createAppender();  // Create an appender to write to the queue
+        ExcerptAppender appender = queue.createAppender();
         while (end > System.nanoTime()) {
             long start = System.nanoTime();
             try (DocumentContext dc = appender.writingDocument(false)) {
-                writeMessage(dc.wire(), messageSize);  // Write a message to the queue
+                writeMessage(dc.wire(), messageSize);
             }
             long written = System.nanoTime();
-            long time = written - start;  // Calculate write latency
+            long time = written - start;
 //                System.out.println(time);
-            writeTime.sample(time);  // Sample the write time
+            writeTime.sample(time);
 
             // Ensure the reader is keeping up with the writer
             long diff = writeTime.totalCount() - readTime.totalCount();
-            Thread.yield();  // Yield to give the reader time to catch up
-            if (diff >= 200) {  // If the difference is too large, log details
+            Thread.yield();
+            if (diff >= 200) {
 //                long rlt = readerLoopTime;
 //                long delay = System.nanoTime() - rlt;
                 System.out.println("diff=" + diff /* +" delay= " + delay*/);
@@ -174,7 +171,7 @@ public class InternalBenchmarkMain {
             next += (long) (messageSize * 1e9 / (throughput * 1e6));
             long delay = next - System.nanoTime();
             if (delay > 0)
-                LockSupport.parkNanos(delay);  // Pause to maintain target throughput
+                LockSupport.parkNanos(delay);
         }
 
         // Wait for the reader to catch up before shutting down
@@ -208,7 +205,7 @@ public class InternalBenchmarkMain {
      * @param tailer        The ExcerptTailer used to read from the queue
      */
     private static void runInner(Histogram transportTime, Histogram readTime, ExcerptTailer tailer) {
-        Jvm.safepoint();  // Trigger JVM safepoint
+        Jvm.safepoint();
         /*if (tailer.peekDocument()) {
             if (counter++ < 1000) {
                 Jvm.safepoint();
@@ -220,21 +217,21 @@ public class InternalBenchmarkMain {
         else
             Jvm.safepoint();
         counter = 0;
-        try (DocumentContext dc = tailer.readingDocument(false)) {  // Read the next document
+        try (DocumentContext dc = tailer.readingDocument(false)) {
             Jvm.safepoint();
             if (!dc.isPresent()) {
                 return;
             }
-            long transport = System.nanoTime();  // Start measuring transport time
+            long transport = System.nanoTime();
             Jvm.safepoint();
             Wire wire = dc.wire();
             Bytes<?> bytes = wire.bytes();
-            long start = readMessage(bytes);  // Process the message from the bytes
-            long end = System.nanoTime();  // End of read operation
-            transportTime.sample((double) (transport - start));  // Sample transport time
-            readTime.sample((double) (end - transport));  // Sample read time
+            long start = readMessage(bytes);
+            long end = System.nanoTime();
+            transportTime.sample((double) (transport - start));
+            readTime.sample((double) (end - transport));
         }
-        Jvm.safepoint();  // Trigger JVM safepoint
+        Jvm.safepoint();
     }
 
     /**
@@ -246,8 +243,8 @@ public class InternalBenchmarkMain {
     @NotNull
     private static ChronicleQueue createQueue(String path) {
         return ChronicleQueue.singleBuilder(path)
-                .blockSize(1 << 30)  // Set the block size to 1GB
-                .pauserSupplier(Pauser::timedBusy)  // Use a timed busy pauser
+                .blockSize(1 << 30)
+                .pauserSupplier(Pauser::timedBusy)
                 .build();
     }
 
@@ -259,13 +256,13 @@ public class InternalBenchmarkMain {
      */
     private static long readMessage(Bytes<?> bytes) {
         Jvm.safepoint();
-        long start = bytes.readLong();  // Read the start time
+        long start = bytes.readLong();
         long rp = bytes.readPosition();
         long rl = bytes.readLimit();
         long addr = bytes.addressForRead(rp);
         long addrEnd = bytes.addressForRead(rl);
         Memory memory = OS.memory();
-        for (addr += 8; addr + 7 < addrEnd; addr += 8)  // Read the rest of the message
+        for (addr += 8; addr + 7 < addrEnd; addr += 8)
             memory.readLong(addr);
         Jvm.safepoint();
         return start;
@@ -282,12 +279,12 @@ public class InternalBenchmarkMain {
         long wp = bytes.writePosition();
         long addr = bytes.addressForWrite(wp);
         Memory memory = OS.memory();
-        for (int i = 0; i < messageSize; i += 16) {  // Write the message data
+        for (int i = 0; i < messageSize; i += 16) {
             memory.writeLong(addr + i, 0L);
             memory.writeLong(addr + i + 8, 0L);
         }
 
         bytes.writeSkip(messageSize);
-        bytes.writeLong(wp, System.nanoTime());  // Record the current time as the start time
+        bytes.writeLong(wp, System.nanoTime());
     }
 }

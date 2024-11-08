@@ -31,20 +31,21 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 public interface InternalAppender extends ExcerptAppender {
 
     /**
-     * Appends an excerpt at the specified index, provided that the index is the next valid one
-     * for the queue.
+     * Append an excerpt at the specified index, if the index is a valid next index for the queue.
      * <p>
-     * Behavior for various index scenarios:
-     * <ul>
-     *     <li>If the provided index is <strong>greater</strong> than the next valid index for the queue,
-     *     an {@link IllegalIndexException} will be thrown.</li>
-     *     <li>If the provided index is <strong>less than or equal</strong> to the last index in the queue,
-     *     the method will return without modifying the queue.</li>
-     * </ul>
+     * If the index is:
+     * <dl>
+     *     <dt>Greater than the next valid indices for the queue</dt>
+     *     <dd>An {@link IllegalIndexException} is thrown</dd>
      *
-     * @param index The index at which to append the excerpt.
-     * @param bytes The content to write at the specified index.
-     * @throws IllegalIndexException if the specified index is beyond the next valid index for the queue.
+     *     <dt>Less than or equal to the last index in the queue</dt>
+     *     <dd>The method returns without modifying the queue</dd>
+     * </dl>
+     *
+     * @param index index the index to append at
+     * @param bytes bytes the contents of the excerpt to write
+     * @throws IllegalIndexException if the index specified is larger than the valid next indices of the queue
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
+
 }

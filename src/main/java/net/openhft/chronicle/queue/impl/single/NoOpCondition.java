@@ -29,7 +29,7 @@ import java.util.concurrent.locks.Condition;
  * This condition is always true and does not block, signal, or modify any thread state.
  *
  * <p>All operations on this condition return immediately without performing any blocking
- * or waiting behavior, effectively serving as a placeholder or dummy condition.</p>
+ * or waiting behavior, effectively serving as a placeholder or dummy condition.
  */
 public final class NoOpCondition implements Condition {
 
@@ -45,12 +45,9 @@ public final class NoOpCondition implements Condition {
 
     /**
      * Does nothing, returns immediately.
-     *
-     * @throws InterruptedException This method does not throw an exception.
      */
     @Override
-    public void await() throws InterruptedException {
-        // No operation
+    public void await() {
     }
 
     /**
@@ -58,7 +55,6 @@ public final class NoOpCondition implements Condition {
      */
     @Override
     public void awaitUninterruptibly() {
-        // No operation
     }
 
     /**
@@ -101,7 +97,6 @@ public final class NoOpCondition implements Condition {
      */
     @Override
     public void signal() {
-        // No operation
     }
 
     /**
@@ -109,6 +104,5 @@ public final class NoOpCondition implements Condition {
      */
     @Override
     public void signalAll() {
-        // No operation
     }
 }

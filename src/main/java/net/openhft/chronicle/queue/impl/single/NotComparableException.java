@@ -24,9 +24,9 @@ package net.openhft.chronicle.queue.impl.single;
  *
  * <p>This exception is expected to be rare during a binary search operation. However, when it occurs,
  * it can significantly reduce the performance of the binary search due to the need for additional comparisons
- * or fallback logic.</p>
+ * or fallback logic.
  *
- * <p>This exception is a singleton, with a single instance available via the {@link #INSTANCE} field.</p>
+ * <p>This exception is a singleton, with a single instance available via the {@link #INSTANCE} field.
  */
 public final class NotComparableException extends RuntimeException {
     private static final long serialVersionUID = 0L;
@@ -40,6 +40,5 @@ public final class NotComparableException extends RuntimeException {
      * Private constructor to enforce singleton usage via {@link #INSTANCE}.
      */
     private NotComparableException() {
-        // No additional initialization required
     }
 }

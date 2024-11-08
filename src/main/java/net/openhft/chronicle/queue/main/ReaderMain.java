@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * ReaderMain is an entry point for displaying records from a Chronicle Queue in text format.
- * <p>This class delegates the reading and display of queue records to {@link ChronicleReaderMain}.</p>
+ * <p>This class delegates the reading and display of queue records to {@link ChronicleReaderMain}.
  */
 public final class ReaderMain {
 

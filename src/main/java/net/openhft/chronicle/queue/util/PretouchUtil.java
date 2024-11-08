@@ -89,7 +89,7 @@ public final class PretouchUtil {
          */
         @Override
         public EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue) {
-            return () -> false; // No-op event handler
+            return () -> false;
         }
 
         /**
@@ -100,7 +100,7 @@ public final class PretouchUtil {
          */
         @Override
         public Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
-            return queue.createPretoucher(); // Create a simple pretoucher
+            return queue.createPretoucher();
         }
     }
 }

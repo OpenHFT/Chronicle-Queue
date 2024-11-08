@@ -34,7 +34,7 @@ import java.util.function.Function;
  * This cache ensures that cached objects are reference-counted, and once the reference count
  * drops to one (held by this cache), the object will be automatically released.
  * The cache performs background cleanup to release resources when the last external reference is removed.
- * </p>
+ * 
  *
  * @param <K> The type of the cache key
  * @param <T> The type of the cached objects, which must implement both {@link ReferenceCounted} and {@link Closeable}
@@ -87,10 +87,10 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
 
             if (value == null) {
                 value = creator.apply(key);
-                value.reserveTransfer(INIT, this); // Reserve ownership to this cache
+                value.reserveTransfer(INIT, this);
                 value.addReferenceChangeListener(referenceChangeListener);
                 //System.err.println("Reserved " + value.toString() + " by " + this);
-                cache.put(key, value); // Add to cache
+                cache.put(key, value);
             }
 
             // this will add to the ref count and so needs to be done inside of sync block
@@ -122,7 +122,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     private void releaseResource(T value) {
         try {
             if (value != null)
-                value.release(this); // Release the object's resources
+                value.release(this);
         } catch (Exception e) {
             Jvm.debug().on(getClass(), e);
         }
@@ -146,7 +146,6 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
      */
     private class TriggerFlushOnLastReferenceRemoval implements ReferenceChangeListener {
 
-        // Runnable for background cleanup
         private final Runnable bgCleanup = this::bgCleanup;
 
         @Override

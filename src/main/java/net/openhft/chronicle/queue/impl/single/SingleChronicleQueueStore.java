@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
@@ -54,19 +53,20 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     @NotNull
-    final SCQIndexing indexing; // The indexing structure for the store
+    final SCQIndexing indexing;
+    // retains the MappedBytes used by the MappedFile
     @NotNull
-    private final LongValue writePosition; // The current write position in the queue
+    private final LongValue writePosition;
     @NotNull
-    private final MappedBytes mappedBytes; // The mapped bytes for the queue store
+    private final MappedBytes mappedBytes;
     @NotNull
-    private final MappedFile mappedFile; // The mapped file associated with the store
-    private final int dataVersion; // The version of the data format
+    private final MappedFile mappedFile;
+    private final int dataVersion;
     @SuppressWarnings("deprecation")
     @NotNull
-    private final transient Sequence sequence; // The sequence for encoding roll cycles
+    private final transient Sequence sequence;
 
-    private int cycle; // The current cycle of the queue
+    private int cycle;
 
     /**
      * Constructor used by {@link net.openhft.chronicle.wire.Demarshallable} to create an instance of SingleChronicleQueueStore
@@ -80,19 +80,14 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         boolean failed = true;
 
         try {
-            // Load the write position from the wire input
             writePosition = loadWritePosition(wire);
             this.mappedBytes = (MappedBytes) wire.bytes();
             this.mappedFile = mappedBytes.mappedFile();
             mappedFile.reserve(this);
-            // Initialize indexing structure from wire
             this.indexing = Objects.requireNonNull(wire.read(MetaDataField.indexing).typedMarshallable());
             this.indexing.writePosition = writePosition;
-            // Initialize the sequence for roll cycle encoding
             this.sequence = new RollCycleEncodeSequence(writePosition, indexing.indexCount(), indexing.indexSpacing());
             this.indexing.sequence = sequence;
-
-            // Handle data versioning for backward compatibility
             final String fieldName = wire.readEvent(String.class);
             int version = 0;
 
@@ -107,7 +102,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             failed = false;
         } finally {
             if (failed)
-                close(); // Ensure resources are closed on failure
+                close();
         }
     }
 
@@ -130,12 +125,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
         mappedFile.reserve(this);
-
-        // Ensure index count and spacing are powers of 2
         indexCount = Maths.nextPower2(indexCount, 8);
         indexSpacing = Maths.nextPower2(indexSpacing, 1);
 
-        // Initialize the indexing and sequence structures
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newTwoLongReference().get();
         this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(writePosition,
@@ -239,10 +231,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     private String dump(WireType wireType, boolean abbrev) {
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
-            bytes.readLimit(bytes.realCapacity()); // Set the read limit to the actual capacity of the file
-            final Wire w = wireType.apply(bytes); // Apply the wire type to the bytes
-            w.usePadding(dataVersion > 0); // Use padding if data version > 0
-            return Wires.fromSizePrefixedBlobs(w, abbrev); // Return the queue contents as size-prefixed blobs
+            bytes.readLimit(bytes.realCapacity());
+            final Wire w = wireType.apply(bytes);
+            w.usePadding(dataVersion > 0);
+            return Wires.fromSizePrefixedBlobs(w, abbrev);
         }
     }
 
@@ -254,11 +246,11 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public String dumpHeader() {
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
-            int size = bytes.readInt(0); // Read the header size at position 0
+            int size = bytes.readInt(0);
             if (!Wires.isReady(size))
-                return "not ready"; // If the header is not ready, return "not ready"
-            bytes.readLimit(Wires.lengthOf(size) + 4L); // Set the read limit to the length of the header
-            return Wires.fromSizePrefixedBlobs(bytes); // Dump the size-prefixed blobs
+                return "not ready";
+            bytes.readLimit(Wires.lengthOf(size) + 4L);
+            return Wires.fromSizePrefixedBlobs(bytes);
         }
     }
 
@@ -281,10 +273,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     @Override
     public WireStore writePosition(long position) {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
-        assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position; // Assert that the position is within valid bounds
-        writePosition.setMaxValue(position); // Update the write position to the new value
+        assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
+        writePosition.setMaxValue(position);
         return this;
     }
 
@@ -298,12 +290,12 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Nullable
     @Override
     public ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index) {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
         try {
-            return indexing.moveToIndex(ec, index); // Attempt to move to the specified index using the indexing structure
+            return indexing.moveToIndex(ec, index);
         } catch (@NotNull UnrecoverableTimeoutException e) {
-            return ScanResult.NOT_REACHED; // If an unrecoverable timeout occurs, return "NOT_REACHED"
+            return ScanResult.NOT_REACHED;
         }
     }
 
@@ -316,27 +308,26 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Nullable
     @Override
     public ScanResult moveToStartForRead(@NotNull ExcerptContext ec) {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
-        Wire wire = ec.wire(); // Get the wire associated with the excerpt context
-        wire.bytes().readPositionUnlimited(0); // Set the read position to the start of the queue
+        Wire wire = ec.wire();
+        wire.bytes().readPositionUnlimited(0);
 
         try {
-            // Attempt to read the data header and determine the type
             final WireIn.HeaderType headerType = wire.readDataHeader(true);
             switch (headerType) {
                 case DATA:
                 case META_DATA:
-                    return ScanResult.FOUND; // If the header is data or metadata, return "FOUND"
+                    return ScanResult.FOUND;
                 case NONE:
-                    return ScanResult.NOT_REACHED; // If no data is found, return "NOT_REACHED"
+                    return ScanResult.NOT_REACHED;
                 case EOF:
-                    return ScanResult.END_OF_FILE; // If EOF is reached, return "END_OF_FILE"
+                    return ScanResult.END_OF_FILE;
                 default:
-                    throw new AssertionError("headerType=" + headerType); // Unknown header type, throw an assertion error
+                    throw new AssertionError("headerType=" + headerType);
             }
         } catch (EOFException eof) {
-            return ScanResult.END_OF_FILE; // If an EOFException is thrown, return "END_OF_FILE"
+            return ScanResult.END_OF_FILE;
         }
     }
 
@@ -348,9 +339,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @Override
     public long moveToEndForRead(@NotNull Wire w) {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
-        return indexing.moveToEnd(w); // Move to the end of the queue using the indexing structure
+        return indexing.moveToEnd(w);
     }
 
     /**
@@ -359,17 +350,16 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @Override
     protected void performClose() {
-        // Safely close the write position and indexing resources
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
 
         // Release the mapped bytes and file if they are initialized
         if (mappedBytes != null) {
-            mappedBytes.release(INIT); // Release the initial reference to mapped bytes
+            mappedBytes.release(INIT);
             try {
-                mappedFile.release(this); // Release the mapped file
+                mappedFile.release(this);
             } catch (IllegalStateException e) {
-                Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e); // Log any issues during release
+                Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
             }
         }
     }
@@ -383,10 +373,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @NotNull
     @Override
     public MappedBytes bytes() {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
-        final MappedBytes mbytes = MappedBytes.mappedBytes(mappedFile); // Create a new MappedBytes instance
-        mbytes.singleThreadedCheckDisabled(true); // Disable single-threaded checks for performance
+        final MappedBytes mbytes = MappedBytes.mappedBytes(mappedFile);
+        mbytes.singleThreadedCheckDisabled(true);
         return mbytes;
     }
 
@@ -401,9 +391,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @Override
     public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws StreamCorruptedException {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
-        return indexing.sequenceForPosition(ec, position, inclusive); // Retrieve the sequence number from indexing
+        return indexing.sequenceForPosition(ec, position, inclusive);
     }
 
     /**
@@ -414,8 +404,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @throws StreamCorruptedException if the stream is corrupted
      */
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
-        throwExceptionIfClosedInSetter(); // Ensure the store is not closed during a setter operation
-        return indexing.lastSequenceNumber(ec); // Retrieve the last sequence number from indexing
+        throwExceptionIfClosedInSetter();
+        return indexing.lastSequenceNumber(ec);
     }
 
     /**
@@ -449,9 +439,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public void writeMarshallable(@NotNull WireOut wire) {
 
         ValueOut wireOut = wire.write(MetaDataField.writePosition);
-        intForBinding(wireOut, writePosition) // Write the write position
-                .write(MetaDataField.indexing).typedMarshallable(this.indexing) // Write the indexing
-                .write(MetaDataField.dataFormat).int32(dataVersion); // Write the data format version
+        intForBinding(wireOut, writePosition)
+                .write(MetaDataField.indexing).typedMarshallable(this.indexing)
+                .write(MetaDataField.dataFormat).int32(dataVersion);
     }
 
     /**
@@ -461,12 +451,12 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @Override
     public void initIndex(@NotNull Wire wire) {
-        throwExceptionIfClosedInSetter(); // Ensure the store is not closed during a setter operation
+        throwExceptionIfClosedInSetter();
 
         try {
-            indexing.initIndex(wire); // Initialize the index using the indexing structure
+            indexing.initIndex(wire);
         } catch (IOException ex) {
-            throw new UncheckedIOException(ex); // Wrap IOExceptions in UncheckedIOException
+            throw new UncheckedIOException(ex);
         }
     }
 
@@ -478,7 +468,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @Override
     public boolean indexable(long index) {
-        return indexing.indexable(index); // Check if the index can be indexed
+        return indexing.indexable(index);
     }
 
     /**
@@ -493,15 +483,16 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public void setPositionForSequenceNumber(@NotNull final ExcerptContext ec,
                                              long sequenceNumber,
                                              long position) throws StreamCorruptedException {
-        throwExceptionIfClosedInSetter(); // Ensure the store is not closed during a setter operation
+        throwExceptionIfClosedInSetter();
 
-        sequence.setSequence(sequenceNumber, position); // Set the sequence number and position
+        sequence.setSequence(sequenceNumber, position);
 
-        long nextSequence = indexing.nextEntryToBeIndexed(); // Get the next entry to be indexed
+        long nextSequence = indexing.nextEntryToBeIndexed();
         if (nextSequence > sequenceNumber)
-            return; // If the next sequence is already greater, no need to update
+            return;
 
-        indexing.setPositionForSequenceNumber(ec, sequenceNumber, position); // Set the position in the indexing structure
+        indexing.setPositionForSequenceNumber(ec, sequenceNumber, position);
+
     }
 
     /**
@@ -515,9 +506,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @Override
     public ScanResult linearScanTo(final long index, final long knownIndex, final ExcerptContext ec, final long knownAddress) {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
-        return indexing.linearScanTo(index, knownIndex, ec, knownAddress); // Perform the linear scan using the indexing structure
+        return indexing.linearScanTo(index, knownIndex, ec, knownAddress);
     }
 
     /**
@@ -529,14 +520,15 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     @Override
     public boolean writeEOF(@NotNull Wire wire, long timeoutMS) {
-        throwExceptionIfClosed(); // Ensure the store is not closed
+        throwExceptionIfClosed();
 
-        String fileName = mappedFile.file().getAbsolutePath(); // Get the name of the mapped file
+        String fileName = mappedFile.file().getAbsolutePath();
 
         // Attempt to write the EOF marker, and ensure resources are released afterward
         if (wire.bytes().tryReserve(this)) {
             try {
-                return writeEOFAndShrink(wire, timeoutMS); // Write the EOF marker and shrink the file
+                return writeEOFAndShrink(wire, timeoutMS);
+
             } finally {
                 wire.bytes().release(this);
             }
@@ -561,7 +553,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @return true if the EOF marker was written successfully, false otherwise
      */
     boolean writeEOFAndShrink(@NotNull Wire wire, long timeoutMS) {
-        return wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition()); // Write the EOF marker
+        return wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
     }
 
     /**
@@ -581,7 +573,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @return the updated {@link SingleChronicleQueueStore}
      */
     public SingleChronicleQueueStore cycle(int cycle) {
-        throwExceptionIfClosedInSetter(); // Ensure the store is not closed during a setter operation
+        throwExceptionIfClosedInSetter();
 
         this.cycle = cycle;
         return this;

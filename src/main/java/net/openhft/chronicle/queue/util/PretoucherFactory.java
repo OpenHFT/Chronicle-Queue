@@ -31,7 +31,6 @@ import org.jetbrains.annotations.NotNull;
  * {@link SingleChronicleQueue}.
  */
 public interface PretoucherFactory {
-
     /**
      * Creates an {@link EventHandler} for the specified {@link SingleChronicleQueue}.
      * <p>The event handler can be used to periodically pretouch or handle other events related to the queue.

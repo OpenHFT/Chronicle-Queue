@@ -65,7 +65,7 @@ public class MicroToucher {
         if (nextPage != lastPageTouched) {
             lastPageTouched = nextPage;
             try {
-                // Best effort to touch the page
+                // best effort
                 final BytesStore<?, ?> bs = bytes.bytesStore();
                 if (bs.inside(nextPage, 8))
                     touchPage(nextPage, bs);

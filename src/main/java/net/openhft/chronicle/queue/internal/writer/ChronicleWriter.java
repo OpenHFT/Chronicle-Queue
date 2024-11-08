@@ -34,13 +34,13 @@ import java.util.List;
  * <p>
  * It reads data from a list of files and writes the contents to the queue, optionally using a method writer
  * if an interface class is provided.
- * </p>
+ * 
  */
 public class ChronicleWriter {
-    private Path basePath;        // The base path of the Chronicle Queue
-    private String methodName;    // The method name used to write each message
-    private List<String> files;   // List of files to read from and write to the queue
-    private Class<?> writeTo;     // The interface class for method writing
+    private Path basePath;
+    private String methodName;
+    private List<String> files;
+    private Class<?> writeTo;
 
     /**
      * Executes the process of reading from files and writing their contents to the Chronicle Queue.
@@ -52,12 +52,12 @@ public class ChronicleWriter {
              final ExcerptAppender appender = queue.createAppender()) {
 
             for (final String file : files) {
-                final Object payload = Marshallable.fromFile(Object.class, file); // Load the file into a payload object
+                final Object payload = Marshallable.fromFile(Object.class, file);
                 try (final DocumentContext dc = appender.writingDocument()) {
                     if (writeTo != null)
-                        dc.wire().write(methodName).marshallable((WriteMarshallable) payload); // Use method writer if interface is provided
+                        dc.wire().write(methodName).marshallable((WriteMarshallable) payload);
                     else
-                        dc.wire().write(methodName).object(payload); // Write as a generic object if no method writer
+                        dc.wire().write(methodName).object(payload);
                 }
             }
         }
@@ -78,16 +78,16 @@ public class ChronicleWriter {
      * Sets the interface class to use for writing through method calls.
      * <p>
      * This method allows writing through a method writer by specifying the name of an interface class.
-     * </p>
+     * 
      *
      * @param interfaceName The fully qualified name of the interface class
      * @return This {@code ChronicleWriter} instance for method chaining
      */
     public ChronicleWriter asMethodWriter(String interfaceName) {
         try {
-            this.writeTo = Class.forName(interfaceName); // Load the interface class
+            this.writeTo = Class.forName(interfaceName);
         } catch (ClassNotFoundException e) {
-            throw Jvm.rethrow(e); // Handle class loading error
+            throw Jvm.rethrow(e);
         }
         return this;
     }

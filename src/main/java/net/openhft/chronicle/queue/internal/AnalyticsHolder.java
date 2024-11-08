@@ -26,7 +26,6 @@ import net.openhft.chronicle.core.pom.PomProperties;
  * <p>
  * It fetches the Chronicle Queue version and builds the analytics facade using standard configurations, including
  * a debug logger.
- * </p>
  */
 public enum AnalyticsHolder {
     ; // Enum with no instances, acting as a static holder
@@ -36,9 +35,9 @@ public enum AnalyticsHolder {
 
     // Builds the analytics facade with standard settings, including a debug logger
     private static final AnalyticsFacade ANALYTICS = AnalyticsFacade.standardBuilder("G-4K5MBLGPLE", "k1hK3x2qQaKk4F5gL-PBhQ", VERSION)
-            //.withReportDespiteJUnit() // Uncomment to report analytics even during JUnit tests
-            .withDebugLogger(System.out::println) // Logs debug information to the system output
-            //.withUrl("https://www.google-analytics.com/debug/mp/collect") // Uncomment for custom analytics URL
+            //.withReportDespiteJUnit()
+            .withDebugLogger(System.out::println)
+            //.withUrl("https://www.google-analytics.com/debug/mp/collect")
             .build();
 
     /**

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
@@ -42,7 +41,7 @@ import static net.openhft.chronicle.core.Jvm.warn;
  * <p>It provides a non-reentrant locking mechanism that guarantees to acquire the lock or throw an exception
  * after a timeout. This class supports forceful unlocking depending on the {@link UnlockMode}.
  * The write lock is used to protect write operations in Chronicle Queue, ensuring that only one thread or process
- * can write at a time.</p>
+ * can write at a time.
  */
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock, Closeable {
     private static final String STORE_LOCK_THREAD = "chronicle.store.lock.thread";
@@ -87,7 +86,8 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
     @Override
     public void lock() {
         throwExceptionIfClosed();
-        assert checkNotAlreadyLocked(); // Ensures that the lock is not already held by the current thread
+
+        assert checkNotAlreadyLocked();
 
         long currentLockValue = 0;
         TimingPauser tlPauser = pauser.get();
@@ -101,9 +101,9 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
 
             // success
         } catch (TimeoutException e) {
-            handleTimeoutEx(currentLockValue); // Handle lock acquisition timeout
+            handleTimeoutEx(currentLockValue);
         } finally {
-            tlPauser.reset(); // Reset the pauser
+            tlPauser.reset();
         }
     }
 
@@ -134,13 +134,13 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
             throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         else if (forceUnlockOnTimeoutWhen == UnlockMode.LOCKING_PROCESS_DEAD) {
             if (forceUnlockIfProcessIsDead())
-                lock(); // Retry locking
+                lock();
             else
                 throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         } else {
             warn().on(getClass(), warningMsg + UNLOCKING_FORCIBLY_MSG);
-            forceUnlock(currentLockValue); // Force unlock
-            lock(); // Retry locking
+            forceUnlock(currentLockValue);
+            lock();
         }
     }
 

@@ -22,7 +22,7 @@ import net.openhft.chronicle.queue.internal.main.InternalRemovableRollFileCandid
 
 /**
  * RemovableRollFileCandidatesMain is an entry point for producing a list of removable roll file candidates from a given directory.
- * <p>This utility prints the absolute path of each removable file to the standard output, one file per row.</p>
+ * <p>This utility prints the absolute path of each removable file to the standard output, one file per row.
  */
 public final class RemovableRollFileCandidatesMain {
 

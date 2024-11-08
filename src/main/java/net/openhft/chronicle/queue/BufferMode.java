@@ -27,17 +27,17 @@ public enum BufferMode {
      * The default buffer mode.
      * No additional buffering or special handling is applied.
      */
-    None,    // Default mode, no buffering
+    None,
 
     /**
      * Buffer mode used in conjunction with encryption.
      * Data is copied into a buffer before being processed.
      */
-    Copy,    // Used when encryption is enabled to handle buffered copies
+    Copy,
 
     /**
      * Buffer mode used for asynchronous processing.
      * This mode is specific to Chronicle Ring, an enterprise product.
      */
-    Asynchronous   // Asynchronous buffering used by Chronicle Ring (enterprise feature)
+    Asynchronous
 }

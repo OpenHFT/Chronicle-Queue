@@ -33,9 +33,9 @@ import java.util.regex.Pattern;
  */
 public final class PatternFilterMessageConsumer implements MessageConsumer {
 
-    private final List<Pattern> patterns;  // List of patterns to match against
-    private final boolean shouldBePresent;  // True if the patterns should match, false if they should not
-    private final MessageConsumer nextMessageConsumer;  // The next consumer in the chain for filtered messages
+    private final List<Pattern> patterns;
+    private final boolean shouldBePresent;
+    private final MessageConsumer nextMessageConsumer;
 
     /**
      * Constructs a {@code PatternFilterMessageConsumer} with the specified patterns, matching condition,
@@ -64,7 +64,7 @@ public final class PatternFilterMessageConsumer implements MessageConsumer {
         for (Pattern pattern : patterns) {
             // Check if the message matches the pattern, based on the shouldBePresent flag
             if (shouldBePresent != pattern.matcher(message).find()) {
-                return false;  // If it doesn't meet the condition, filter out the message
+                return false;
             }
         }
         // Pass the message to the next consumer if all patterns matched (or didn't, depending on the flag)
