@@ -45,7 +45,6 @@ public class QueueLockTest extends QueueTestCommon {
 
     @Test
     public void testTimeout() throws InterruptedException {
-        expectException("queue.dont.recover.lock.timeout property is deprecated and will be removed");
         check(true);
     }
 
@@ -69,7 +68,7 @@ public class QueueLockTest extends QueueTestCommon {
             expectException("Forced unlock for the lock");
 
         try {
-            System.setProperty("queue.dont.recover.lock.timeout", Boolean.toString(shouldThrowException));
+            System.setProperty("queue.force.unlock.mode", shouldThrowException ? "NEVER" : "ALWAYS" );
 
             final long timeoutMs = 2_000;
             final File queueDir = DirectoryUtils.tempDir("check");
@@ -122,7 +121,7 @@ public class QueueLockTest extends QueueTestCommon {
             }
             finishedNormally = true;
         } finally {
-            System.clearProperty("queue.dont.recover.lock.timeout");
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 }
