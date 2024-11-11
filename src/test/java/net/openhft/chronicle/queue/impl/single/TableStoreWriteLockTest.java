@@ -123,8 +123,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @Test(timeout = 5_000, expected = UnrecoverableTimeoutException.class)
     public void lockWillThrowExceptionAfterTimeoutWhenDontRecoverLockTimeoutIsTrue() throws InterruptedException {
-        expectException("queue.dont.recover.lock.timeout property is deprecated and will be removed");
-        System.setProperty("queue.dont.recover.lock.timeout", "true");
+        System.setProperty("queue.force.unlock.mode", "NEVER");
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
             Thread t = new Thread(testLock::lock);
             t.start();
@@ -132,7 +131,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             testLock.lock();
             fail("Should have thrown trying to lock()");
         } finally {
-            System.clearProperty("queue.dont.recover.lock.timeout");
+            System.clearProperty("queue.force.unlock.mode");
         }
     }
 

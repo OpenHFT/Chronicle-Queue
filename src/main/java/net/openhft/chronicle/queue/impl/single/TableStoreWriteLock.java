@@ -37,8 +37,8 @@ import static net.openhft.chronicle.core.Jvm.warn;
 /**
  * Implements {@link WriteLock} using memory access primitives - see {@link AbstractTSQueueLock}.
  * <p>
- * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
- * for a timed-out lock to be overridden.
+ * The default behaviour (see also {@code queue.force.unlock.mode} system property) is
+ * for a timed-out lock to be overridden but only if the locking process is dead.
  */
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock, Closeable {
     private static final String STORE_LOCK_THREAD = "chronicle.store.lock.thread";
