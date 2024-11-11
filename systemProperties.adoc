@@ -14,7 +14,7 @@ https://github.com/OpenHFT/Chronicle-Core/blob/351e79ed593fa656c21b4e5a540a3a583
 | chronicle.queue.rollingResourceCache.size | 128 | Determines how many information elements (at most) pertaining to rolled queue files that should be held in memory at any given moment | _CACHE_SIZE_ (int)
 | chronicle.queue.warnSlowAppenderMs | 100 | Triggers warning message if an appender takes longer than default time | _WARN_SLOW_APPENDER_MS_ (int)
 | chronicle.table.store.timeoutMS | 10000 ms | The maximum time allowed when trying to acquire the exclusive table store lock | timeoutMS (long)
-| queue.dont.recover.lock.timeout | `false` | Setting this property to "yes", "true" or "" throws an exception instead of forcibly unlocking the queue | dontRecoverLockTimeout (boolean)
+| queue.force.unlock.mode | `LOCKING_PROCESS_DEAD` | See `UnlockMode` enum for allowable values |
 | queue.ignoreIndexingFailure | `false` | Setting this property to "yes", "true" or "", an exception is not thrown if the number of entries exceeds the max number for the current rollcycle | _IGNORE_INDEXING_FAILURE_ (boolean)
 | queue.check.index | `false` | Setting this property to "yes", "true" or "" returns if Chronicle Queue shall assert certain index invariants on various occasions throughout the code. Setting this property to "", "yes" or "true" will enable this feature. Enabling the feature will slow down execution if assertions (-ea) are enabled. | _CHECK_INDEX_ (boolean)
 | SingleChronicleQueueExcerpts.earlyAcquireNextCycle | `false` | Used by the pretoucher to acquire the next cycle file, but does NOT do the roll. Setting this property to "yes", "true" or "" results in acquiring the cycle file early | _EARLY_ACQUIRE_NEXT_CYCLE_ (boolean)

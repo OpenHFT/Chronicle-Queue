@@ -35,8 +35,8 @@ import static net.openhft.chronicle.core.Jvm.getProcessId;
 /**
  * Implements a lock using {@link LongValue} and primitives such as CAS.
  * <p>
- * WARNING: the default behaviour (see also {@code queue.dont.recover.lock.timeout} system property) is
- * for a timed-out lock to be overridden.
+ * The default behaviour (see also {@code queue.force.unlock.mode} system property) is
+ * for a timed-out lock to be overridden but only if the locking process is dead.
  */
 @SuppressWarnings("this-escape")
 public abstract class AbstractTSQueueLock extends AbstractCloseable implements Closeable {
@@ -60,14 +60,10 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         this.path = tableStore.file();
         this.lockKey = lockKey;
 
-        final boolean dontRecoverLockTimeout = Jvm.getBoolean("queue.dont.recover.lock.timeout");
-        if (dontRecoverLockTimeout) {
-            forceUnlockOnTimeoutWhen = UnlockMode.NEVER;
-            Jvm.warn().on(getClass(), "queue.dont.recover.lock.timeout property is deprecated and will be removed in a future version. " +
-                    "Use queue.force.unlock.mode=NEVER instead");
-        } else {
-            forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.LOCKING_PROCESS_DEAD.name()).toUpperCase());
+        if (Jvm.getProperty("queue.dont.recover.lock.timeout") != null) {
+            throw new IllegalStateException("queue.dont.recover.lock.timeout property is no longer supported. Use queue.force.unlock.mode instead");
         }
+        forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.LOCKING_PROCESS_DEAD.name()).toUpperCase());
 
         singleThreadedCheckDisabled(true);
     }
