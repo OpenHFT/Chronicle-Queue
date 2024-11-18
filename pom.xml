@@ -239,7 +239,7 @@
                             <goal>enforcer</goal>
                         </goals>
                         <configuration>
-                            <referenceVersion>5.26ea0</referenceVersion>
+                            <referenceVersion>5.27ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                             <binaryCompatibilityPercentageRequired>99.8</binaryCompatibilityPercentageRequired>
                             <extraOptions>
