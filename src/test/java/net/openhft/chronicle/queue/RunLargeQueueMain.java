@@ -19,41 +19,70 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.bytes.SyncMode;
 
+/**
+ * Demonstrates the use of Chronicle Queue to write and read large datasets,
+ * simulating the handling of large files with configurable message sizes.
+ * <p>
+ * This example writes and reads messages using a Chronicle Queue with specified
+ * file and message sizes. Performance metrics for both operations are logged.
+ * <p>
+ * Usage: java -Dfile.size=<size_in_gb> -Dmsg.size=<message_size_in_bytes> RunLargeQueueMain [queue_path]
+ */
 public enum RunLargeQueueMain {
-    ; // none
+    ; // no instances allowed
 
-    private static final int FILE_SIZE = Integer.getInteger("file.size", 1024);
-    private static final int MSG_SIZE = Integer.getInteger("msg.size", 512);
-    private static final double BLOCK_SIZE = Double.parseDouble(System.getProperty("block.size", "64"));
-    private static final boolean PRETOUCH = Jvm.getBoolean("pretouch");
+    // Configurable constants with defaults
+    private static final int FILE_SIZE = Integer.getInteger("file.size", 1024); // in GB
+    private static final int MSG_SIZE = Integer.getInteger("msg.size", 1024);  // in bytes
 
+    /**
+     * Main entry point for the application.
+     *
+     * @param args Optional. The first argument specifies the path to the queue directory.
+     */
     public static void main(String[] args) {
-        System.out.println("file.size: " + FILE_SIZE + " # GB");
-        System.out.println("msg.size: " + MSG_SIZE + " # B");
-        System.out.println("block.size: " + BLOCK_SIZE + " # MB");
-        System.out.println("pretouch: " + PRETOUCH);
-        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(args[0]).blockSize((int) (BLOCK_SIZE * (1 << 20))).build();
-             ExcerptAppender appender = queue.createAppender()) {
-            ExcerptTailer tailer = queue.createTailer();
-            BytesStore<?, Void> bytes = BytesStore.nativeStore(MSG_SIZE);
-            Bytes<?> bytes2 = Bytes.allocateDirect(MSG_SIZE);
+        System.out.printf("Configured file size: %d GB%n", FILE_SIZE);
+        System.out.printf("Configured message size: %d B%n", MSG_SIZE);
+
+        // Default queue path or user-specified path
+        String queuePath = args.length > 0 ? args[0] : "/data/tmp/cq";
+
+        // Create and use Chronicle Queue resources
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath)
+                .blockSize((long) MSG_SIZE << 30)  // 1 GB blocks
+                .syncMode(SyncMode.SYNC)          // Synchronous writes
+                .build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+
+            BytesStore<?, Void> writeBuffer = BytesStore.nativeStore(MSG_SIZE);
+            Bytes<?> readBuffer = Bytes.allocateDirect(MSG_SIZE);
+
+            // Main write-read performance loop
             for (int t = 1; t <= FILE_SIZE; t++) {
-                long start = System.currentTimeMillis();
-                for (int i = 0; i < 1 << 30; i += MSG_SIZE) {
-                    appender.writeBytes(bytes);
+                long writeStart = System.currentTimeMillis();
+
+                // Write 1 GB of data in chunks
+                for (int i = 0; i < 1_000_000_000; i += MSG_SIZE) {
+                    appender.writeBytes(writeBuffer);
                 }
-                long mid = System.currentTimeMillis();
-                for (int i = 0; i < 1 << 30; i += MSG_SIZE) {
-                    bytes2.clear();
-                    tailer.readBytes(bytes2);
+                appender.sync(); // Ensure data is flushed to disk
+
+                long writeEnd = System.currentTimeMillis();
+
+                // Read the same 1 GB of data
+                for (int i = 0; i < 1_000_000_000; i += MSG_SIZE) {
+                    readBuffer.clear();
+                    tailer.readBytes(readBuffer);
                 }
-                long end = System.currentTimeMillis();
-                System.out.printf("%d: Took %.3f seconds to write and %.3f seconds to read 1 GB%n", t, (mid - start) / 1e3, (end - mid) / 1e3);
-                if (PRETOUCH)
-                    appender.pretouch();
-                Jvm.pause(8_000);
+
+                long readEnd = System.currentTimeMillis();
+
+                // Log performance metrics
+                System.out.printf("%d: Took %.3f seconds to write and %.3f seconds to read 1 GB%n",
+                        t, (writeEnd - writeStart) / 1e3, (readEnd - writeEnd) / 1e3);
             }
         }
     }
