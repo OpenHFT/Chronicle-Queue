@@ -692,7 +692,10 @@ class StoreTailer extends AbstractCloseable
             return NOT_REACHED;
 
         index(index);
-        final ScanResult scanResult = this.store().moveToIndexForRead(this, sequenceNumber);
+        SingleChronicleQueueStore store0 = this.store();
+        if (store0 == null)
+            return NOT_REACHED;
+        final ScanResult scanResult = store0.moveToIndexForRead(this, sequenceNumber);
         switch (scanResult) {
             case FOUND:
                 Wire privateWire = privateWire();
@@ -1259,10 +1262,10 @@ class StoreTailer extends AbstractCloseable
         return moveToState.indexMoveCount;
     }
 
-    @NotNull
     private SingleChronicleQueueStore store() {
         if (store == null)
-            setCycle(cycle());
+            if (!cycle(cycle()))
+                Jvm.warn().on(getClass(), "Unable to find cycle=" + cycle() + ", queue=" + queue.fileAbsolutePath());
         return store;
     }
 

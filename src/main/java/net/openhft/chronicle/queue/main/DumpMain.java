@@ -30,7 +30,6 @@ import java.io.PrintStream;
  * private static final String FILE = System.getProperty("file");
  * private static final boolean SKIP_TABLE_STORE = Jvm.getBoolean("skipTableStoreDump");
  * private static final boolean UNALIGNED = Jvm.getBoolean("dumpUnaligned");
- * private static final int LENGTH = ", 0".length();
  */
 public final class DumpMain {
 

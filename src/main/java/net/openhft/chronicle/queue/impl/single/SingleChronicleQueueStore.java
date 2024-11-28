@@ -217,7 +217,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @param index the index we wish to move to
      * @return whether the index was found for reading.
      */
-    @Nullable
+    @NotNull
     @Override
     public ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index) {
         throwExceptionIfClosed();

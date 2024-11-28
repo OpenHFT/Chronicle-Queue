@@ -3659,6 +3659,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     public void lastIndexShouldReturnLastIndexForPopulatedQueue() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
+            assertEquals(-1, queue.lastIndex());
+
             long actualLastIndex;
             try (ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText("Hello!");
