@@ -207,6 +207,11 @@ Non-batching streaming components are highly performant, deterministic, and repr
 You can reproduce bugs which only show up after a million events played in a particular order, with accelerated realistic timings.
 This makes using Stream processing attractive for systems which need a high degree of quality outcomes.
 
+==== Setting the Roll Cycle of a queue
+
+You can have different instances of `SingleChronicleQueue` set with different roll cycles.
+However, if you have instances of `SingleChronicleQueue` with the same path but different roll cycles, first queue to be created determines the roll cycle, even if the first queue only have a tailer. If the first queue is read-only, it will fail to read the queue if the roll cycle is later different.
+
 == Downloading Chronicle Queue
 
 Releases are available on Maven Central as:
