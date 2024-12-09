@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.bench;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.NanoSampler;
@@ -76,7 +77,6 @@ public class MethodReaderBenchmark implements JLBHTask {
         int throughput = Integer.getInteger("benchmarkThroughput", 20_000);
         System.out.println("Throughput: " + throughput);
 
-        // disable as otherwise single GC event skews results heavily
         JLBHOptions lth = new JLBHOptions()
                 .warmUpIterations(100_000)
                 .iterations(iterations)
@@ -96,14 +96,14 @@ public class MethodReaderBenchmark implements JLBHTask {
         if (benchmarkQueuePath != null) {
             System.out.println("Creating queue in dir: " + benchmarkQueuePath);
 
-            IOTools.deleteDirWithFiles(benchmarkQueuePath, 10);
+            IOTools.deleteDirWithFilesOrThrow(benchmarkQueuePath);
 
             queue = ChronicleQueue.single(benchmarkQueuePath);
         } else {
             System.out.println("Creating queue in temp dir");
 
             try {
-                queue = ChronicleQueue.single(Files.createTempDirectory("temp").toString());
+                queue = ChronicleQueue.single(Files.createTempDirectory(this.getClass().getSimpleName()).toString());
             } catch (IOException e) {
                 throw new IORuntimeException(e);
             }
@@ -148,10 +148,11 @@ public class MethodReaderBenchmark implements JLBHTask {
                         jlbh.sample(System.nanoTime() - startNs);
                     }
                 }
+            } catch (Throwable e) {
+                Jvm.error().on(MethodReaderBenchmark.class, "Reading thread failed", e);
             }
         });
         consumerThread.start();
-
     }
 
     @Override
