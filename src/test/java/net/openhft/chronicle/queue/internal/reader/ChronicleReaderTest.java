@@ -280,6 +280,31 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    public void shouldNotShowIndexForFilteredMessages() {
+        basicReader()
+                .asMethodReader(SayWhen.class.getName())
+                .execute();
+
+        assertTrue(capturedOutput.isEmpty());
+    }
+
+    @Test
+    public void shouldNotShowIndexForHistoryMessages() {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build();
+             final ExcerptAppender appender = queue.createAppender()) {
+            try (DocumentContext dc = appender.writingDocument()) {
+                MessageHistory.writeHistory(dc);
+            }
+        }
+
+        basicReader()
+                .asMethodReader(SayWhen.class.getName())
+                .execute();
+
+        assertTrue(capturedOutput.isEmpty());
+    }
+
+    @Test
     public void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
         basicReader().
                 asMethodReader(Say.class.getName()).
