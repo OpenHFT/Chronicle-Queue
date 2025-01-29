@@ -140,7 +140,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final long forceDirectoryListingRefreshIntervalMs;
     private final long[] chunkCount = {0};
     private final SyncMode syncMode;
-    private final LastAcknowledgedIndexReplicatedStrategy lastAcknowledgedIndexReplicatedStrategy;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         try {
@@ -215,7 +214,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
 
             this.forceDirectoryListingRefreshIntervalMs = builder.forceDirectoryListingRefreshIntervalMs();
-            this.lastAcknowledgedIndexReplicatedStrategy = builder.lastAcknowledgedIndexReplicatedStrategy();
 
             sourceId = builder.sourceId();
 
@@ -292,16 +290,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public void lastAcknowledgedIndexReplicated(long newValue) {
         if (lastAcknowledgedIndexReplicated != null)
             lastAcknowledgedIndexReplicated.setMaxValue(newValue);
-    }
-
-    @Override
-    public void lastAcknowledgedIndexReplicated(long acknowledgeIndex, int remoteHostId) {
-        long newValue = acknowledgeIndex;
-        if (lastAcknowledgedIndexReplicatedStrategy != null) {
-            newValue = lastAcknowledgedIndexReplicatedStrategy.onAckReceived(acknowledgeIndex, remoteHostId);
-        }
-
-        lastAcknowledgedIndexReplicated(newValue);
     }
 
     @Override
