@@ -1,2 +1,1 @@
 * xref:replication.adoc[Queue Replication ★]
-** xref:replication-protocol.adoc[Replication Protocol]

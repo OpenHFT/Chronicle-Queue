@@ -298,7 +298,7 @@ These are:
 - Encryption of message queues and messages.
 For more information see link:https://portal.chronicle.software/docs/queue/chronicle-queue/encryption/encryption.html[Encryption documentation].
 - TCP/IP (and optionally UDP) Replication between hosts to ensure real-time backup of all your queue data.
-For more information see the link:https://portal.chronicle.software/docs/queue/chronicle-queue/replication/replication.html[replication] documentation, the queue replication protocol is covered in link:https://portal.chronicle.software/docs/queue/chronicle-queue/replication/replication-protocol.html[Replication Protocol].
+For more information see the link:https://portal.chronicle.software/docs/queue/chronicle-queue/replication/replication.html[replication] documentation.
 - Timezone support for daily queue rollover scheduling.
 For more information see link:https://portal.chronicle.software/docs/queue/chronicle-queue/configuration/timezone_rollover.html[Timezone support].
 - Async mode support to give improved performance at high throughput on slower filesystems.

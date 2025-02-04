@@ -12,10 +12,6 @@ Chronicle Queue Enterprise replication performs simple uni-directional, multi-wa
 .Chronicle Queue Replication
 image::chronicle-queue.png[500,450]
 
-=== Replication protocol overview
-
-See xref:replication-protocol.adoc[Replication Protocol Overview]
-
 === The mechanics of Chronicle Queue Replication
 
 The queue that we write to is known as the `source` queue. The copy(ies) is the `sink` queue.
