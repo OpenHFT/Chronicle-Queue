@@ -641,4 +641,87 @@ public class StoreTailerTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void shouldHandleCycleRollBackward() {
+        File dir = getTmpDir();
+        MutableTimeProvider timeProvider = new MutableTimeProvider();
+        timeProvider.setTime(System.currentTimeMillis());
+
+        try (ChronicleQueue chronicle = minutely(dir, timeProvider).build();
+             ChronicleQueue chronicle2 = minutely(dir, timeProvider).build();
+             final ExcerptAppender append = chronicle2.createAppender()) {
+
+            append.writeDocument(w -> w.write("test").text("firstCycle"));
+
+            timeProvider.addTime(10, TimeUnit.MINUTES);
+
+            append.writeDocument(w -> w.write("test").text("secondCycle"));
+
+            // create tailer from the first queue, move it to end, then set direction to BACKWARD.
+            ExcerptTailer tailer = chronicle.createTailer();
+            tailer.toEnd();
+            tailer.direction(TailerDirection.BACKWARD);
+
+            // first backward read should retrieve message from second cycle
+            boolean firstRead = tailer.readDocument(w ->
+                    assertEquals("secondCycle", w.read("test").text())
+            );
+            if (!firstRead) {
+                fail("Did not read expected second cycle message!!");
+            }
+
+            // second backward read should cross the cycle boundary - reading the message from the first cycle.
+            boolean secondRead = tailer.readDocument(w ->
+                    assertEquals("firstCycle", w.read("test").text())
+            );
+            if (!secondRead) {
+                fail("Did not read expected first cycle message!!");
+            }
+        }
+    }
+
+    @Test
+    public void testOriginalToEndBeforeInitialised() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer()) {
+            tailer.direction(TailerDirection.BACKWARD);
+            tailer.toEnd();
+        }
+    }
+
+    @Test
+    public void currentFileShouldReturnFileIfInitialised() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            appender.writeText("Test123");
+            tailer.readText();
+
+            assertNotNull(tailer.currentFile());
+        }
+    }
+
+    @Test
+    public void currentFileShouldReturnNullWhenNotInitialised() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer()) {
+
+            assertNull(tailer.currentFile());
+        }
+    }
+
+    @Test
+    public void syncShouldReturnNullIfNotInitialised() {
+        File dir = getTmpDir();
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
+             ExcerptTailer tailer = queue.createTailer()) {
+            tailer.sync();
+
+            assertNull(tailer.currentFile());
+        }
+    }
+
 }
