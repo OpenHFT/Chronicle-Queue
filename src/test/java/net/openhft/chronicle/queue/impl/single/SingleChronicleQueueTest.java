@@ -71,8 +71,8 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
-@SuppressWarnings({"try", "serial"})
 @RunWith(Parameterized.class)
+@SuppressWarnings({"try", "serial"})
 public class SingleChronicleQueueTest extends QueueTestCommon {
 
     private static final long TIMES = (4L << 20L);
@@ -1937,7 +1937,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @NotNull
     protected String expectedMetaDataTest2() {
-        if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT || wireType == WireType.COMPRESSED_BINARY)
+        if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
             return "" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -2535,7 +2535,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @NotNull
     protected String expectedMultipleAppenders() {
-        if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT || wireType == WireType.COMPRESSED_BINARY)
+        if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
