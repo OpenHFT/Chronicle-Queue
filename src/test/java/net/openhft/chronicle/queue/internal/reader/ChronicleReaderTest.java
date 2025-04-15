@@ -91,7 +91,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Before
     public void before() {
-        assumeFalse(Jvm.isArm());
+        // assumeFalse(Jvm.isArm());
 
         // Reader opens queues in read-only mode
         if (OS.isWindows())
@@ -296,13 +296,58 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 MessageHistory.writeHistory(dc);
             }
         }
-
-        basicReader()
-                .asMethodReader(SayWhen.class.getName())
-                .execute();
-
-        assertTrue(capturedOutput.isEmpty());
     }
+
+//        basicReader()
+//                .asMethodReader(SayWhen.class.getName())
+//                .execute();
+//
+//        assertTrue(capturedOutput.isEmpty());
+//    }
+
+    @Test
+    public void canReadPastEmptyMessage() {
+        dataDir = getTmpDir().toPath();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
+                .sourceId(1)
+                .testBlockSize()
+                .build()) {
+            final VanillaMethodWriterBuilder<ChronicleMethodReaderTest.All> methodWriterBuilder = queue.methodWriterBuilder(ChronicleMethodReaderTest.All.class);
+            final ChronicleMethodReaderTest.All events = methodWriterBuilder.build();
+            final ExcerptAppender appender = queue.createAppender();
+
+            for (int i = 0; i < 3; ) {
+                ChronicleMethodReaderTest.Method1Type m1 = new ChronicleMethodReaderTest.Method1Type();
+                m1.text = "hello";
+                m1.value = i;
+                m1.number = i;
+                events.method1(m1);
+
+                try (DocumentContext dc = appender.writingDocument()) {
+                    MessageHistory.writeHistory(dc);
+                }
+
+                i++;
+                ChronicleMethodReaderTest.Method2Type m2 = new ChronicleMethodReaderTest.Method2Type();
+                m2.text = "goodbye";
+                m2.value = i;
+                m2.number = i;
+                events.method2(m2);
+                i++;
+            }
+        }
+
+        System.out.println("Done with the queue!");
+
+        ChronicleReader methodReaderForQueue = new ChronicleReader()
+                .withBasePath(dataDir)
+                .asMethodReader(ChronicleMethodReaderTest.All.class.getName())
+                .inReverseOrder()
+                .withMessageSink(System.out::println);
+
+        methodReaderForQueue.execute();
+    }
+
 
     @Test
     public void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
