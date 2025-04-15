@@ -61,7 +61,7 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
         }
         if (bytes.isEmpty()) {
             // we read something from the queue but the MR filtered it i.e. did not dispatch
-            return false;
+            return true;
         }
         messageConsumer.consume(tailer.lastReadIndex(), bytes.toString());
         bytes.clear();
