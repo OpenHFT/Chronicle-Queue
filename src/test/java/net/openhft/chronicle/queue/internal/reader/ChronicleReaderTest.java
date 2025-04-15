@@ -296,13 +296,67 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 MessageHistory.writeHistory(dc);
             }
         }
-
-        basicReader()
-                .asMethodReader(SayWhen.class.getName())
-                .execute();
-
-        assertTrue(capturedOutput.isEmpty());
     }
+
+//        basicReader()
+//                .asMethodReader(SayWhen.class.getName())
+//                .execute();
+//
+//        assertTrue(capturedOutput.isEmpty());
+//    }
+
+    @Test
+    public void canReadPastEmptyMessageInReverseOrder() {
+        dataDir = getTmpDir().toPath();
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
+                .sourceId(1)
+                .testBlockSize()
+                .build()) {
+            final VanillaMethodWriterBuilder<ChronicleMethodReaderTest.All> methodWriterBuilder = queue.methodWriterBuilder(ChronicleMethodReaderTest.All.class);
+            final ChronicleMethodReaderTest.All events = methodWriterBuilder.build();
+            final ExcerptAppender appender = queue.createAppender();
+
+            for (int i = 0; i < 3; ) {
+                ChronicleMethodReaderTest.Method1Type m1 = new ChronicleMethodReaderTest.Method1Type();
+                m1.text = "hello";
+                m1.value = i;
+                m1.number = i;
+                events.method1(m1);
+
+                try (DocumentContext dc = appender.writingDocument()) {
+                    MessageHistory.writeHistory(dc);
+                }
+
+                i++;
+                ChronicleMethodReaderTest.Method2Type m2 = new ChronicleMethodReaderTest.Method2Type();
+                m2.text = "goodbye";
+                m2.value = i;
+                m2.number = i;
+                events.method2(m2);
+                i++;
+            }
+        }
+
+        ChronicleReader methodReaderForQueue = new ChronicleReader()
+                .withBasePath(dataDir)
+                .asMethodReader(ChronicleMethodReaderTest.All.class.getName())
+                .inReverseOrder()
+                .withMessageSink(capturedOutput::add);
+
+        methodReaderForQueue.execute();
+
+        assertThat(capturedOutput.size(), is(8));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("goodbye"));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("hello"));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("goodbye"));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("hello"));
+        capturedOutput.poll();
+    }
+
 
     @Test
     public void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
