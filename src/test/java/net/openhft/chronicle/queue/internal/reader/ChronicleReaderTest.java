@@ -306,7 +306,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 //    }
 
     @Test
-    public void canReadPastEmptyMessage() {
+    public void canReadPastEmptyMessageInReverseOrder() {
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
@@ -343,9 +343,20 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 .withBasePath(dataDir)
                 .asMethodReader(ChronicleMethodReaderTest.All.class.getName())
                 .inReverseOrder()
-                .withMessageSink(System.out::println);
+                .withMessageSink(capturedOutput::add);
 
         methodReaderForQueue.execute();
+
+        assertThat(capturedOutput.size(), is(8));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("goodbye"));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("hello"));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("goodbye"));
+        capturedOutput.poll();
+        assertThat(capturedOutput.poll(), containsString("hello"));
+        capturedOutput.poll();
     }
 
 
