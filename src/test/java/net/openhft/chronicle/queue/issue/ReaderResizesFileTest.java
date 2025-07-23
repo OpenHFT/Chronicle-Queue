@@ -19,29 +19,33 @@ import java.nio.channels.FileLock;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ReaderResizesFileTest {
-    public static final String QUEUE_NAME = OS.getTarget() + "/ReaderResizesFileTest-" + System.nanoTime();
+    private static final File QUEUE_DIR = new File(OS.getTarget(), "ReaderResizesFileTest-" + System.nanoTime());
 
     @After
     public void cleanup() {
-        IOTools.deleteDirWithFiles(new File(QUEUE_NAME));
+        IOTools.deleteDirWithFiles(QUEUE_DIR);
     }
 
     @Test
     public void testReaderResizesFile() throws IOException {
         int blockSize = 64 << 10;
-        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_NAME).rollCycle(TestRollCycles.TEST4_DAILY).blockSize(blockSize).build();
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR).rollCycle(TestRollCycles.TEST4_DAILY).blockSize(blockSize).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
             appender.writeText("Hello World");
-            // get the first file ending in .cq4 in the queue directory
-            File firstFile = new File(QUEUE_NAME).listFiles(f -> f.getName().endsWith(".cq4"))[0];
+
+            File[] files = QUEUE_DIR.listFiles((d, n) -> n.endsWith(".cq4"));
+            assertNotNull(files, "Queue directory must exist");
+            assertEquals(1, files.length, "Expected exactly one cycle file");
+            File firstFile = files[0];
+
             assertEquals(blockSize * 2, firstFile.length());
 
-            // Simulate a resize by writing more data
+            // Trigger a potential resize by writing more data
             try (DocumentContext dc = appender.writingDocument()) {
                 Bytes<?> bytes = dc.wire().bytes();
                 bytes.append("More data to increase file size");
-                for (int i = 0; i < 8192; i++)
+                for (int i = 0; i < blockSize; i += 8)
                     bytes.writeLong(i);
             }
             assertEquals(blockSize * 2, firstFile.length());
