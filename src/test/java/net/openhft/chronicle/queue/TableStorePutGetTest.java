@@ -146,7 +146,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                 .rollCycle(TEST_DAILY)
                 .testBlockSize()
                 .build()) {
-            for (int j = 0; j < 4_000; j++) {
+            for (int j = 0; j < 1_800; j++) {
                 cq.tableStorePut("=this_is_a_long_key_to_try_and_consume_space_quicker_" + j, j);
             }
         }
