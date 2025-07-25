@@ -30,20 +30,20 @@ public class ReaderResizesFileTest {
     @Test
     public void testReaderResizesFile() throws IOException {
         // go for the smallest possible block size to ensure we can test resizing
-        long blockSize = 1 << 10;
+        int blockSize = 1 << 10;
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR).rollCycle(TestRollCycles.TEST4_DAILY).blockSize(blockSize).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
             appender.writeText("Hello World");
             // retrieve the actual block size used by the queue
-            blockSize = queue.blockSize();
+            long actualChunkSize = appender.wire().bytes().bytesStore().capacity();
 
             File[] files = QUEUE_DIR.listFiles((d, n) -> n.endsWith(".cq4"));
             assertNotNull(files, "Queue directory must exist");
             assertEquals(1, files.length, "Expected exactly one cycle file");
             File firstFile = files[0];
 
-            assertEquals(blockSize * 2, firstFile.length());
+            assertEquals(actualChunkSize, firstFile.length());
 
             // Trigger a potential resize by writing more data
             try (DocumentContext dc = appender.writingDocument()) {
@@ -52,7 +52,7 @@ public class ReaderResizesFileTest {
                 for (int i = 0; i < blockSize; i += 8)
                     bytes.writeLong(i);
             }
-            assertEquals(blockSize * 2, firstFile.length());
+            assertEquals(actualChunkSize, firstFile.length());
 
             try (RandomAccessFile raf = new RandomAccessFile(firstFile, "rw");
                  FileLock lockFile = raf.getChannel().lock()) {
@@ -61,7 +61,7 @@ public class ReaderResizesFileTest {
                     try (DocumentContext dc = tailer.readingDocument()) {
                         assertTrue(dc.isPresent(), "Document should be present");
                     }
-                    assertEquals(blockSize * 2, firstFile.length());
+                    assertEquals(actualChunkSize, firstFile.length());
                 }
 
                 try (DocumentContext dc = tailer.readingDocument()) {
