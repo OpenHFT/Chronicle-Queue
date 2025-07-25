@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -28,11 +29,14 @@ public class ReaderResizesFileTest {
 
     @Test
     public void testReaderResizesFile() throws IOException {
-        int blockSize = 64 << 10;
-        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR).rollCycle(TestRollCycles.TEST4_DAILY).blockSize(blockSize).build();
+        // go for the smallest possible block size to ensure we can test resizing
+        long blockSize = 1 << 10;
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR).rollCycle(TestRollCycles.TEST4_DAILY).blockSize(blockSize).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
             appender.writeText("Hello World");
+            // retrieve the actual block size used by the queue
+            blockSize = queue.blockSize();
 
             File[] files = QUEUE_DIR.listFiles((d, n) -> n.endsWith(".cq4"));
             assertNotNull(files, "Queue directory must exist");
