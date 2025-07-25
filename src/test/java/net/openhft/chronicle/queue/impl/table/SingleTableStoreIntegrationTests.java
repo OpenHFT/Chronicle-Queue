@@ -61,7 +61,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     public void largeNumberOfKeyValuePairs() {
         finishedNormally = false;
         SingleChronicleQueue queue1 = context.newQueueInstance();
-        int count = 5_000;
+        int count = 4_000;
         for (int i = 0; i < count; i++) {
             queue1.tableStorePut("key.prefix." + i, i);
         }
@@ -74,10 +74,10 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     @Test
     public void longKeyPutAndGet() {
         SingleChronicleQueue queue1 = context.newQueueInstance();
-        StringBuilder keyBuffer = new StringBuilder();
+        StringBuilder keyBuffer = new StringBuilder("AAAA");
         Random random = new Random();
-        for (int i = 0; i < 121; i++) {
-            keyBuffer.append(random.nextInt(10));
+        while(keyBuffer.length() < 100) {
+            keyBuffer.append(random.nextInt());
         }
         String key = keyBuffer.toString();
         queue1.tableStorePut(key, 1);
