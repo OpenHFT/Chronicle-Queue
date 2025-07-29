@@ -117,6 +117,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             if (!readOnly && file.createNewFile() && !file.canWrite()) {
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
             }
+            // TODO Change this to a single chunk file in x.28
             bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);
             // these MappedBytes are shared, but the assumption is they shouldn't grow. Supports 2K entries.
             bytes.singleThreadedCheckDisabled(true);
