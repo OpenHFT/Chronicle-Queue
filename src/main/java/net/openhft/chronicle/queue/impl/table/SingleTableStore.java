@@ -256,7 +256,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             long start = mappedBytes.readPosition();
             mappedBytes.writePosition(start);
-            final long pos = mappedWire.enterHeader(128L);
+            final long pos = mappedWire.enterHeader(256L);
             final LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
             mappedWire.writeAlignTo(Integer.BYTES, 0);
