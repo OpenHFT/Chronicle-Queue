@@ -4,6 +4,9 @@ Peter Lawrey, Rob Austin
 :toc: macro
 :toclevels: 2
 :icons: font
+:source-highlighter: rouge
+
+Chronicle Queue is a broker-less, off-heap Java library for ultra-low-latency, persisted messaging at millions of events/sec.
 
 image:https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue/badge.svg[caption="",link=https://maven-badges.herokuapp.com/maven-central/net.openhft/chronicle-queue]
 image:https://javadoc.io/badge2/net.openhft/chronicle-queue/javadoc.svg[link="https://www.javadoc.io/doc/net.openhft/chronicle-queue/latest/index.html"]
@@ -16,13 +19,9 @@ image::docs/images/Queue_line.png[width=20%]
 
 toc::[]
 
-== About Chronicle Software
-
-https://player.vimeo.com/video/201989439
-
 == Overview
 
-Chronicle Queue is a persisted low-latency messaging framework for high performance applications.
+Chronicle Queue is a persisted low-latency messaging framework for high performance applications. It supports multiple writers to a queue via locking, and multiple lock-less concurrent readers of the queue.
 
 This project covers the Java version of Chronicle Queue.
 A {cpp} version of this project is also available and supports Java/{cpp} interoperability plus additional language bindings e.g. Python.
@@ -35,6 +34,8 @@ When implementing high-performance and memory-intensive applications (you heard 
 
 Chronicle Queue allows messages to be added to the end of a queue ("appended"), read from the queue ("tailed"),
 and also supports random-access seek.
+
+link:https://player.vimeo.com/video/201989439[Why Use Chronicle Queue Between Microservices?]
 
 == What Is Chronicle Queue?
 
