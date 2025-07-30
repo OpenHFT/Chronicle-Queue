@@ -62,6 +62,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
     public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
+    final boolean DEBUG_FILE_RELEASED = Jvm.getBoolean("debug.file.released", false);
 
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
@@ -901,7 +902,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     public StoreFileListener storeFileListener() {
-        return storeFileListener == null ? StoreFileListeners.DEBUG : storeFileListener;
+        if (storeFileListener != null)
+            return storeFileListener;
+        return DEBUG_FILE_RELEASED ? StoreFileListeners.DEBUG : StoreFileListener.NO_OP;
     }
 
     public SingleChronicleQueueBuilder sourceId(int sourceId) {

@@ -34,10 +34,9 @@ public enum StoreFileListeners implements StoreFileListener {
         }
     },
     DEBUG {
-        final boolean DEBUG_FILE_RELEASED = Jvm.getBoolean("debug.file.released", false);
         @Override
         public void onReleased(int cycle, File file) {
-            if (DEBUG_FILE_RELEASED && Jvm.isDebugEnabled(getClass()))
+            if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "File released " + file);
         }
 
