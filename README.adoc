@@ -608,6 +608,19 @@ We recommend that you use the same `blockSize` for each queue instance when repl
 
 TIP: Use the same `blockSize` for each instance of replicated queues.
 
+The default blocksize is 64 MB. However, in production you may want this to be high to reduce jitter from creating new chunks.
+
+----
+-DSingleChronicleQueueBuilder.blocksize=512G
+----
+
+or add to the `system.properties` file:
+----
+SingleChronicleQueueBuilder.blocksize=1G
+----
+
+You can use `nK` or `nM` or `nG` or `nT` to specify the block size in KB, MB, GB, or TB respectively.
+
 * *indexSpacing*
 
 This parameter shows the space between excerpts that are explicitly indexed.

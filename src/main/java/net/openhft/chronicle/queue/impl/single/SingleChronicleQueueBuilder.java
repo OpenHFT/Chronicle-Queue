@@ -63,6 +63,9 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
     public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
     static final boolean DEBUG_FILE_RELEASED = Jvm.getBoolean("debug.file.released", false);
+    private static final long DEFAULT_BLOCK_SIZE = Math.min(
+            Jvm.getSize("SingleChronicleQueueBuilder.blocksize", OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE),
+            OS.is64Bit() && OS.isLinux() ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
 
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
@@ -617,7 +620,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     public long blockSize() {
 
         long bs = blockSize == null
-                ? OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE
+                ? DEFAULT_BLOCK_SIZE
                 : blockSize;
 
         // can add an index2index & an index in one go.
