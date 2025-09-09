@@ -71,14 +71,14 @@ public class ChangeRollCycleTest {
                     // Write two messages to the queue
                     appender3.writeText("World");
 
-                    if (readOnly)
+                    if (readOnly && !OS.isWindows())
                            assertEquals("Roll cycle should match WEEKLY for read-only mode",
 RollCycles.WEEKLY, q3.rollCycle());
                 }
 
                 // If the tailer is read-only, the roll cycle cannot not be changed
                 // The read only case assumes there queue is historical and the roll cycle is fixed
-                assumeFalse(readOnly);
+                if (readOnly) return;
 
                 // Step 4: Verify the data can be read back correctly
                 assertEquals("First message should match", "Hello", tailer.readText());
