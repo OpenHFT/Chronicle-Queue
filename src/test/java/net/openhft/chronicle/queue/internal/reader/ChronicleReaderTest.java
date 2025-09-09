@@ -96,6 +96,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         // Reader opens queues in read-only mode
         if (OS.isWindows())
             if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") ||
+                    testName.getMethodName().equals("shouldNotShowIndexForHistoryMessages") ||
                     testName.getMethodName().equals("shouldBeAbleToReadFromReadOnlyFile") ||
                     testName.getMethodName().equals("shouldPrintTimestampsToLocalTime") ||
                     testName.getMethodName().equals("namedTailerRequiresReadWrite") ||
