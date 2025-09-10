@@ -88,6 +88,7 @@ public enum RollCycles implements RollCycle {
     private final int lengthInMillis;
     private final int defaultEpoch;
     private final RollCycleArithmetic arithmetic;
+    private final long maxMessagesPerCycle;
 
     RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this(format, lengthInMillis, indexCount, indexSpacing, 0);
@@ -97,6 +98,7 @@ public enum RollCycles implements RollCycle {
         this.lengthInMillis = lengthInMillis;
         this.defaultEpoch = defaultEpoch;
         this.arithmetic = RollCycleArithmetic.of(indexCount, indexSpacing);
+        maxMessagesPerCycle = arithmetic.maxMessagesPerCycle();
     }
 
     public static Iterable<RollCycle> all() {
@@ -104,7 +106,7 @@ public enum RollCycles implements RollCycle {
     }
 
     public long maxMessagesPerCycle() {
-        return arithmetic.maxMessagesPerCycle();
+        return maxMessagesPerCycle;
     }
 
     @Override
