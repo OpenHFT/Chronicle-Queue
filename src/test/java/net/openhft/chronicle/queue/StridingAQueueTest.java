@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 chronicle.software
+ * Copyright 2016-2025 chronicle.software
  */
 
 package net.openhft.chronicle.queue;

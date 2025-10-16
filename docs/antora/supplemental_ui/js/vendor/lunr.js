@@ -710,7 +710,6 @@ lunr.Pipeline.prototype.runString = function (str, metadata) {
 
 /**
  * Resets the pipeline by removing any existing processors.
- *
  */
 lunr.Pipeline.prototype.reset = function () {
   this._stack = []

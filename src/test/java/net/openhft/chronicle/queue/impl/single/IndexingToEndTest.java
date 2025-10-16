@@ -1,3 +1,7 @@
+/*
+ * Copyright 2016-2025 chronicle.software
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.TailerDirection;

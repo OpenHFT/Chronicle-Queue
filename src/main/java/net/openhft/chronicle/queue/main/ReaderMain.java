@@ -1,7 +1,5 @@
 /*
- * Copyright 2014 Higher Frequency Trading
- *
- *       https://chronicle.software
+ * Copyright 2014-2025 chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +21,6 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Display records in a queue in a text form.
- *
  */
 public final class ReaderMain {
 
