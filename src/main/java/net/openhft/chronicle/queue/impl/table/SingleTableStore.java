@@ -229,7 +229,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     @Override
     protected void performClose() {
-        mappedBytes.releaseLast();
+        mappedBytes.close();
     }
 
     /**
@@ -250,14 +250,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 "wireType=" + wireType +
                 ", mappedFile=" + mappedFile +
                 '}';
-    }
-
-    // *************************************************************************
-    // Marshalling
-    // *************************************************************************
-
-    private void onCleanup() {
-        mappedBytes.releaseLast();
     }
 
     /**
