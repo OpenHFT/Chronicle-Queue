@@ -261,6 +261,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>-Dchronicle.test.env=from-cpp</argLine>
                     <forkCount>1</forkCount>
                     <!--                    <reuseForks>false</reuseForks>-->
                     <runOrder>hourly</runOrder>
