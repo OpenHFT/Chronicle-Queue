@@ -607,7 +607,7 @@
                         </executions>
                         <configuration>
                             <effort>Max</effort>
-                            <threshold>High</threshold>
+                            <threshold>Medium</threshold>
                             <failOnError>true</failOnError>
                             <excludeFilterFile>src/main/config/spotbugs-exclude.xml</excludeFilterFile>
                             <plugins>

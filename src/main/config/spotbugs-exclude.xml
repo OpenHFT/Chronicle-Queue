@@ -11,6 +11,9 @@
             <Bug pattern="NP_GUARANTEED_DEREF"/>
             <Bug pattern="NP_NULL_ON_SOME_PATH"/>
             <Bug pattern="NP_NULL_PARAM_DEREF"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+            <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+            <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
         </Or>
     </Match>
 
@@ -19,6 +22,7 @@
         <Class name="net.openhft.chronicle.queue.impl.single.StoreAppender$StoreAppenderContext"/>
         <Or>
             <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
         </Or>
     </Match>
 
@@ -28,6 +32,9 @@
         <Or>
             <Bug pattern="NP_NULL_ON_SOME_PATH"/>
             <Bug pattern="NP_NONNULL_RETURN_VIOLATION"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+            <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+            <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
         </Or>
     </Match>
 
@@ -36,6 +43,7 @@
         <Class name="net.openhft.chronicle.queue.impl.single.SCQIndexing"/>
         <Or>
             <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+            <Bug pattern="CT_CONSTRUCTOR_THROW"/>
         </Or>
     </Match>
 
@@ -68,10 +76,203 @@
         <Bug pattern="PATH_TRAVERSAL_IN"/>
     </Match>
 
+    <!-- CQ-QUALITY-2173 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.ChronicleHistoryReaderMain"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2173 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.ChronicleReaderMain"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2173 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.internal.writer.ChronicleWriterMain"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2173 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.PrecreatedFiles"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2173 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.table.SingleTableBuilder"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2173 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.SingleChronicleQueue"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2173 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.SingleChronicleQueue$StoreSupplier"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
     <!-- CQ-QUALITY-2174: Tests mutate this property to emulate runtime toggles -->
     <Match>
         <Class name="net.openhft.chronicle.queue.QueueSystemProperties"/>
         <Bug pattern="MS_SHOULD_BE_FINAL"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2176: Store construction refactors will eliminate CT/representation noise -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.RollCycleEncodeSequence"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.SCQMeta"/>
+        <Or>
+            <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+            <Bug pattern="EI_EXPOSE_REP"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.SingleChronicleQueue"/>
+        <Or>
+            <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+            <Bug pattern="INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+            <Bug pattern="PREDICTABLE_RANDOM"/>
+            <Bug pattern="REC_CATCH_EXCEPTION"/>
+            <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+            <Bug pattern="WA_AWAIT_NOT_IN_LOOP"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.SingleChronicleQueue$StoreSupplier"/>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+            <Bug pattern="PATH_TRAVERSAL_IN"/>
+            <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore"/>
+        <Or>
+            <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.TableDirectoryListing"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory$StandardIndexUpdater"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory$VersionedIndexUpdater"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2176 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.table.SingleTableStore"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2177: Remaining queue utilities need defensive rewrites -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.MicroToucher"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2177 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.internal.main.InternalBenchmarkMain"/>
+        <Or>
+            <Bug pattern="DB_DUPLICATE_BRANCHES"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2177 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.internal.main.InternalPingPongMain"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2177 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.internal.reader.PatternFilterMessageConsumer"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2177 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.internal.util.InternalFileUtil$ProcFdWalker"/>
+        <Bug pattern="REDOS"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2177 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.internal.writer.ChronicleWriter"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+            <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+        </Or>
+    </Match>
+
+    <!-- CQ-QUALITY-2177 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.reader.ChronicleHistoryReader"/>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+
+    <!-- CQ-QUALITY-2177 -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.util.PretouchUtil"/>
+        <Bug pattern="REC_CATCH_EXCEPTION"/>
     </Match>
 
 </FindBugsFilter>
