@@ -33,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.locks.LockSupport;
 
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
 /**
  * Internal benchmark utility for testing Chronicle Queue throughput.
  * <p>
@@ -196,10 +197,7 @@ public class InternalBenchmarkMain {
                 return;
             }
         }*/
-        if (counter > 0)
-            Jvm.safepoint();
-        else
-            Jvm.safepoint();
+        Jvm.safepoint();
         counter = 0;
         try (DocumentContext dc = tailer.readingDocument(false)) {
             Jvm.safepoint();
@@ -209,7 +207,13 @@ public class InternalBenchmarkMain {
             long transport = System.nanoTime();
             Jvm.safepoint();
             Wire wire = dc.wire();
+            if (wire == null) {
+                return;
+            }
             Bytes<?> bytes = wire.bytes();
+            if (bytes == null) {
+                return;
+            }
             long start = readMessage(bytes);
             long end = System.nanoTime();
             transportTime.sample((double) (transport - start));
@@ -226,7 +230,7 @@ public class InternalBenchmarkMain {
      */
     @NotNull
     private static ChronicleQueue createQueue(String path) {
-        return ChronicleQueue.singleBuilder(path)
+        return ChronicleQueue.singleBuilder(requireSafePath(path).toFile())
                 .blockSize(1 << 30)
                 .pauserSupplier(Pauser::timedBusy)
                 .build();

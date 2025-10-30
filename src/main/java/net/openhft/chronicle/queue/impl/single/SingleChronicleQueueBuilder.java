@@ -39,6 +39,8 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
+
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.lang.reflect.Constructor;
@@ -829,7 +831,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder path(String path) {
-        return path(new File(path));
+        return path(requireSafePath(path).toFile());
     }
 
     /**
@@ -839,7 +841,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder path(final File path) {
-        this.path = path;
+        this.path = requireSafePath(path.getPath()).toFile();
         return this;
     }
 
@@ -850,8 +852,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder path(final Path path) {
-        this.path = path.toFile();
-        return this;
+        return path(path.toFile());
     }
 
     /**

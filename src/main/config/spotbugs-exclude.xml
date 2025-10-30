@@ -58,6 +58,32 @@
         <Bug pattern="PATH_TRAVERSAL_IN"/>
     </Match>
 
+    <!-- CQ-QUALITY-2173: CLI path validation now centralised, suppress residual spots until SpotBugs recognises requireSafePath -->
+    <Match>
+        <Class name="net.openhft.chronicle.queue.ChronicleHistoryReaderMain"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <Match>
+        <Class name="net.openhft.chronicle.queue.ChronicleReaderMain"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <Match>
+        <Class name="net.openhft.chronicle.queue.internal.writer.ChronicleWriterMain"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.single.PrecreatedFiles"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <Match>
+        <Class name="net.openhft.chronicle.queue.impl.table.SingleTableBuilder"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
     <!-- CQ-QUALITY-2173 -->
     <Match>
         <Class name="net.openhft.chronicle.queue.internal.main.InternalRemovableRollFileCandidatesMain"/>
@@ -73,36 +99,6 @@
     <!-- CQ-QUALITY-2173 -->
     <Match>
         <Class name="net.openhft.chronicle.queue.main.RefreshMain"/>
-        <Bug pattern="PATH_TRAVERSAL_IN"/>
-    </Match>
-
-    <!-- CQ-QUALITY-2173 -->
-    <Match>
-        <Class name="net.openhft.chronicle.queue.ChronicleHistoryReaderMain"/>
-        <Bug pattern="PATH_TRAVERSAL_IN"/>
-    </Match>
-
-    <!-- CQ-QUALITY-2173 -->
-    <Match>
-        <Class name="net.openhft.chronicle.queue.ChronicleReaderMain"/>
-        <Bug pattern="PATH_TRAVERSAL_IN"/>
-    </Match>
-
-    <!-- CQ-QUALITY-2173 -->
-    <Match>
-        <Class name="net.openhft.chronicle.queue.internal.writer.ChronicleWriterMain"/>
-        <Bug pattern="PATH_TRAVERSAL_IN"/>
-    </Match>
-
-    <!-- CQ-QUALITY-2173 -->
-    <Match>
-        <Class name="net.openhft.chronicle.queue.impl.single.PrecreatedFiles"/>
-        <Bug pattern="PATH_TRAVERSAL_IN"/>
-    </Match>
-
-    <!-- CQ-QUALITY-2173 -->
-    <Match>
-        <Class name="net.openhft.chronicle.queue.impl.table.SingleTableBuilder"/>
         <Bug pattern="PATH_TRAVERSAL_IN"/>
     </Match>
 

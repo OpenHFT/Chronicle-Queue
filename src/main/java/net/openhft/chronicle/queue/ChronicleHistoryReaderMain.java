@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.apache.commons.cli.*;
@@ -23,10 +24,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
 
 /**
  * The main class for reading {@link MessageHistory} from a Chronicle queue
@@ -72,12 +74,13 @@ public class ChronicleHistoryReaderMain {
      * @param commandLine Parsed command-line options
      * @param chronicleHistoryReader The history reader to configure
      */
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     protected void setup(@NotNull final CommandLine commandLine, @NotNull final ChronicleHistoryReader chronicleHistoryReader) {
         chronicleHistoryReader.
                 withMessageSink(System.out::println).
                 withProgress(commandLine.hasOption('p')).
                 withHistosByMethod(commandLine.hasOption('m')).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+                withBasePath(requireSafePath(commandLine.getOptionValue('d')));
         if (commandLine.hasOption('t'))
             chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
         if (commandLine.hasOption('i'))

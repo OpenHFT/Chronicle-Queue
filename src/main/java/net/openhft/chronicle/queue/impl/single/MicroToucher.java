@@ -64,13 +64,15 @@ public class MicroToucher {
         Bytes<?> bytes = bufferWire.bytes();
         if (bytes == null)
             return false;
+        final BytesStore<?, ?> bytesStore = bytes.bytesStore();
+        if (bytesStore == null)
+            return false;
         if (nextPage != lastPageTouched) {
             lastPageTouched = nextPage;
             try {
                 // best effort
-                final BytesStore<?, ?> bs = bytes.bytesStore();
-                if (bs.inside(nextPage, 8))
-                    touchPage(nextPage, bs);
+                if (bytesStore.inside(nextPage, 8))
+                    touchPage(nextPage, bytesStore);
             } catch (Throwable ignored) {
             }
             return true;
@@ -102,6 +104,8 @@ public class MicroToucher {
             return;
 
         BytesStore<?, ?> bytes = wireBytes.bytesStore();
+        if (bytes == null)
+            return;
         sync(bytes, start, length);
         this.lastPageSynced += length;
     }

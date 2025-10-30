@@ -16,15 +16,16 @@
 
 package net.openhft.chronicle.queue.internal.writer;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 
 import static net.openhft.chronicle.queue.ChronicleReaderMain.addOption;
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
 
 /**
  * {@code ChronicleWriterMain} is the main class responsible for configuring and running the {@link ChronicleWriter}
@@ -109,8 +110,9 @@ public class ChronicleWriterMain {
      * @param writer       The {@link ChronicleWriter} instance to configure
      * @param commandLine  The parsed command-line options
      */
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     private void configure(final ChronicleWriter writer, final CommandLine commandLine) {
-        writer.withBasePath(Paths.get(commandLine.getOptionValue('d')));
+        writer.withBasePath(requireSafePath(commandLine.getOptionValue('d')));
         writer.withMethodName(commandLine.getOptionValue('m'));
 
         if (commandLine.hasOption('i')) {

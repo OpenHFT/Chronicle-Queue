@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.queue.reader.ContentBasedLimiter;
 import net.openhft.chronicle.wire.AbstractTimestampLongConverter;
@@ -27,11 +28,11 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.stream;
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
 
 /**
  * Main class for reading and displaying records from a Chronicle Queue in text form.
@@ -163,13 +164,14 @@ public class ChronicleReaderMain {
      * @param chronicleReader The ChronicleReader instance to configure
      * @param commandLine     Parsed command-line options
      */
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     protected void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
         final Consumer<String> messageSink = commandLine.hasOption('l') ?
                 s -> System.out.println(s.replaceAll("\n", "")) :
                 System.out::println;
         chronicleReader.
                 withMessageSink(messageSink).
-                withBasePath(Paths.get(commandLine.getOptionValue('d')));
+                withBasePath(requireSafePath(commandLine.getOptionValue('d')));
 
         if (commandLine.hasOption('i')) {
             stream(commandLine.getOptionValues('i')).forEach(chronicleReader::withInclusionRegex);

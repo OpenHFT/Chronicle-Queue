@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.table;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -41,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
 
 public class SingleTableBuilder<T extends Metadata> implements Builder<TableStore<T>> {
 
@@ -63,25 +65,29 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
     }
 
     @NotNull
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     public static <T extends Metadata> SingleTableBuilder<T> builder(@NotNull File file, @NotNull WireType wireType, @NotNull T metadata) {
-        if (file.isDirectory()) {
-            throw new IllegalArgumentException("Tables should be configured with the table file, not a directory. Actual file used: " + file.getParentFile());
+        final File safeFile = requireSafePath(file.getPath()).toFile();
+        if (safeFile.isDirectory()) {
+            throw new IllegalArgumentException("Tables should be configured with the table file, not a directory. Actual file used: " + safeFile.getParentFile());
         }
-        if (!file.getName().endsWith(SingleTableStore.SUFFIX)) {
-            throw new IllegalArgumentException("Invalid file type: " + file.getName());
+        if (!safeFile.getName().endsWith(SingleTableStore.SUFFIX)) {
+            throw new IllegalArgumentException("Invalid file type: " + safeFile.getName());
         }
 
-        return new SingleTableBuilder<>(file, metadata).wireType(wireType);
+        return new SingleTableBuilder<>(safeFile, metadata).wireType(wireType);
     }
 
     @NotNull
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     public static <T extends Metadata> SingleTableBuilder<T> binary(@NotNull Path path, @NotNull T metadata) {
-        return binary(path.toFile(), metadata);
+        return binary(requireSafePath(path.toString()).toFile(), metadata);
     }
 
     @NotNull
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     public static <T extends Metadata> SingleTableBuilder<T> binary(@NotNull String file, @NotNull T metadata) {
-        return binary(new File(file), metadata);
+        return binary(requireSafePath(file).toFile(), metadata);
     }
 
     @NotNull

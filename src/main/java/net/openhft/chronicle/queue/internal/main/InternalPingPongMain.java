@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
+
 /**
  * The InternalPingPongMain class demonstrates a ping-pong benchmark using Chronicle Queue.
  * It writes messages to the queue and reads them back in another thread, recording the latencies
@@ -142,6 +144,6 @@ public final class InternalPingPongMain {
      */
     @NotNull
     private static ChronicleQueue createQueue(String path) {
-        return ChronicleQueue.single(path);
+        return ChronicleQueue.single(requireSafePath(path).toString());
     }
 }

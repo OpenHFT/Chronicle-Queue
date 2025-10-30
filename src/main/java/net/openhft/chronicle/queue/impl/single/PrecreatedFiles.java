@@ -16,9 +16,13 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.openhft.chronicle.core.Jvm;
 
 import java.io.File;
+import java.nio.file.Path;
+
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
 
 /**
  * Utility class for handling pre-created Chronicle Queue files. Pre-created files have a specific
@@ -37,10 +41,13 @@ public enum PrecreatedFiles {
      *
      * @param requiredQueueFile The queue file that the pre-created file should be renamed to.
      */
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     public static void renamePreCreatedFileToRequiredFile(final File requiredQueueFile) {
-        final File preCreatedFile = preCreatedFile(requiredQueueFile);
+        final Path requiredPath = requireSafePath(requiredQueueFile.getPath());
+        final File required = requiredPath.toFile();
+        final File preCreatedFile = preCreatedPath(requiredPath).toFile();
         if (preCreatedFile.exists()) {
-            if (!preCreatedFile.renameTo(requiredQueueFile)) {
+            if (!preCreatedFile.renameTo(required)) {
                 Jvm.warn().on(PrecreatedFiles.class, "Failed to rename pre-created queue file");
             }
         }
@@ -53,9 +60,10 @@ public enum PrecreatedFiles {
      * @param requiredStoreFile The file for which a pre-created store file is required.
      * @return The pre-created store file object.
      */
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     public static File preCreatedFileForStoreFile(final File requiredStoreFile) {
-        return new File(requiredStoreFile.getParentFile(), requiredStoreFile.getName() +
-                PRE_CREATED_FILE_SUFFIX);
+        final Path requiredPath = requireSafePath(requiredStoreFile.getPath());
+        return requiredPath.resolveSibling(requiredPath.getFileName() + PRE_CREATED_FILE_SUFFIX).toFile();
     }
 
     /**
@@ -65,10 +73,17 @@ public enum PrecreatedFiles {
      * @param requiredQueueFile The file for which a pre-created queue file is required.
      * @return The pre-created queue file object.
      */
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Path validated via UserPathValidator.requireSafePath")
     public static File preCreatedFile(final File requiredQueueFile) {
-        final String fileName = requiredQueueFile.getName();
-        final String name = fileName.substring(0, fileName.length() - 4);
-        return new File(requiredQueueFile.getParentFile(), name +
-                PRE_CREATED_FILE_SUFFIX);
+        final Path requiredPath = requireSafePath(requiredQueueFile.getPath());
+        return preCreatedPath(requiredPath).toFile();
+    }
+
+    private static Path preCreatedPath(Path requiredPath) {
+        final String fileName = requiredPath.getFileName().toString();
+        final String baseName = fileName.endsWith(".cq4") && fileName.length() > 4
+                ? fileName.substring(0, fileName.length() - 4)
+                : fileName;
+        return requiredPath.resolveSibling(baseName + PRE_CREATED_FILE_SUFFIX);
     }
 }
