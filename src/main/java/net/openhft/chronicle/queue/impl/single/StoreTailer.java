@@ -299,8 +299,7 @@ class StoreTailer extends AbstractCloseable
 
         } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
-        } catch (UnrecoverableTimeoutException notComplete) {
-            // Treat the document as empty if the operation timed out.
+        } catch (UnrecoverableTimeoutException notComplete) { // NOPMD.EmptyCatchBlock - timeout implies no document available yet.
         } catch (DecoratedBufferUnderflowException e) {
             // read-only tailer view is fixed, a writer could continue past the end of the view
             // at the point this tailer was created. Log a warning and return no document.
@@ -1059,8 +1058,7 @@ class StoreTailer extends AbstractCloseable
                 lastCycle--;
                 try {
                     return approximateLastCycle2(lastCycle);
-                } catch (MissingStoreFileException e) {
-                    // try again.
+                } catch (MissingStoreFileException e) { // NOPMD.EmptyCatchBlock - cycle may legitimately be missing; continue searching previous cycles.
                 }
             }
             this.setCycle(firstCycle);

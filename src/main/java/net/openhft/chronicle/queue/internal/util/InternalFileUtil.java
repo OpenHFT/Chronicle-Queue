@@ -137,8 +137,7 @@ public final class InternalFileUtil {
     public static FileState state(@NotNull File file) {
         try {
             return state(file, getAllOpenFiles());
-        } catch (IOException e) {
-            // Do nothing
+        } catch (IOException e) { // NOPMD.EmptyCatchBlock - failure to probe falls back to UNDETERMINED status.
         }
         return FileState.UNDETERMINED;
     }
@@ -239,7 +238,7 @@ public final class InternalFileUtil {
                     final String e = file.toRealPath().toAbsolutePath().toString();
                     final String pid = file.getName(PID_PATH_INDEX).toString(); // pid holding file open
                     openFiles.put(e, pid);
-                } catch (NoSuchFileException | AccessDeniedException e) {
+                } catch (NoSuchFileException | AccessDeniedException e) { // NOPMD.EmptyCatchBlock - /proc entries often vanish mid-traversal.
                     // Ignore, sometimes they disappear & we can't access all the files
                 } catch (IOException e) {
                     Jvm.warn().on(ProcFdWalker.class, "Error resolving " + file, e);

@@ -686,7 +686,7 @@ public class ChronicleReader implements Reader {
                         indexToMoveTo = dc.index();
                     else
                         break;
-                } catch (NotComparableException e) {
+                } catch (NotComparableException e) { // NOPMD.EmptyCatchBlock - comparator may reject entry; continue scanning.
                     // continue
                 }
             }
@@ -716,7 +716,7 @@ public class ChronicleReader implements Reader {
                         indexToMoveTo = dc.index();
                         break;
                     }
-                } catch (NotComparableException e) {
+                } catch (NotComparableException e) { // NOPMD.EmptyCatchBlock - mismatch simply terminates the scan.
                     break;
                 }
             }

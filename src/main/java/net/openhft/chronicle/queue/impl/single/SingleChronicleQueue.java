@@ -45,11 +45,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.ZoneId;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -185,7 +186,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             time = builder.timeProvider();
             pauserSupplier = builder.pauserSupplier();
             // add a 20% random element to make it less likely threads will timeout at the same time.
-            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * new SecureRandom().nextFloat())); // Not time critical
+            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * ThreadLocalRandom.current().nextDouble())); // Not time critical
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
@@ -1496,7 +1497,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
                     String s = Long.toHexString(pos);
                     System.err.println("pos=" + s);
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps"), StandardCharsets.UTF_8))) {
                         for (String line; (line = br.readLine()) != null; )
                             if (line.contains(".cq4"))
                                 System.err.println(line);

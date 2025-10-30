@@ -21,6 +21,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
 import java.io.File;
 
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
+
 public final class RefreshMain {
 
     /**
@@ -29,7 +31,7 @@ public final class RefreshMain {
      * @param args the directory
      */
     public static void main(String[] args) {
-        final File path = new File(args[0]);
+        final File path = new File(requireSafePath(args[0]).toUri());
         if (!path.isDirectory()) {
             System.err.println("Path argument must be a queue directory");
             System.exit(1);

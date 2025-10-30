@@ -23,8 +23,10 @@ import net.openhft.chronicle.wire.WireType;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.function.Consumer;
@@ -138,7 +140,7 @@ public class ChronicleReaderMain {
      * @param message Optional message to display before help
      */
     protected void printHelpAndExit(final Options options, int status, String message) {
-        final PrintWriter writer = new PrintWriter(System.out);
+        final PrintWriter writer = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
         new HelpFormatter().printHelp(
                 writer,
                 180,

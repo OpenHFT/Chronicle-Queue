@@ -20,6 +20,8 @@ import net.openhft.chronicle.queue.util.FileUtil;
 
 import java.io.File;
 
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
+
 /**
  * The InternalRemovableRollFileCandidatesMain class is responsible for finding removable
  * roll file candidates in a specified directory and printing their absolute paths.
@@ -35,9 +37,9 @@ public final class InternalRemovableRollFileCandidatesMain {
     public static void main(String[] args) {
         final File dir;
         if (args.length == 0) {
-            dir = new File(".");
+            dir = new File(requireSafePath(".").toUri());
         } else {
-            dir = new File(args[0]);
+            dir = new File(requireSafePath(args[0]).toUri());
         }
         FileUtil.removableRollFileCandidates(dir)
                 .map(File::getAbsolutePath)

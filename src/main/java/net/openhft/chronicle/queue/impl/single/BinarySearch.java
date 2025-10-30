@@ -124,8 +124,7 @@ public enum BinarySearch {
                             return prevIndex;
                         prevIndex = current;
                         break;
-                    } catch (NotComparableException e) {
-                        // Keep scanning forward
+                    } catch (NotComparableException e) { // NOPMD.EmptyCatchBlock - comparator may reject mismatched entries; continue scanning.
                     } finally {
                         key.bytes().readPosition(readPosition);
                     }

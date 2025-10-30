@@ -81,7 +81,9 @@ public final class InternalPingPongMain {
                 ExcerptTailer tailer = queue.createTailer();
                 while (running.get()) {
                     //noinspection StatementWithEmptyBody
-                    while (readCount.get() == writeCount.get()) ;
+                    while (readCount.get() == writeCount.get()) {
+                        // busy-spin until the writer advances the count
+                    }
 
                     long wakeTime = System.nanoTime();
                     while (running.get()) {

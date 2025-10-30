@@ -28,9 +28,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static java.lang.System.err;
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
 
 /**
  * The InternalDumpMain class provides methods to dump the content of Chronicle Queue and Table Store files.
@@ -65,8 +67,17 @@ public class InternalDumpMain {
      * @throws FileNotFoundException if the specified file or directory is not found
      */
     public static void dump(@NotNull String path) throws FileNotFoundException {
-        File path2 = new File(path);
-        PrintStream out = FILE == null ? System.out : new PrintStream(FILE);
+        File path2 = new File(requireSafePath(path).toUri());
+        PrintStream out;
+        if (FILE == null) {
+            out = System.out;
+        } else {
+            try {
+                out = new PrintStream(FILE, StandardCharsets.UTF_8.name());
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException("UTF-8 must be available", e);
+            }
+        }
         long upperLimit = Long.MAX_VALUE;
         dump(path2, out, upperLimit);
     }

@@ -25,6 +25,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 
+import static net.openhft.chronicle.queue.util.UserPathValidator.requireSafePath;
+
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 
 /**
@@ -43,7 +45,7 @@ public final class InternalUnlockMain {
      * @param args Arguments provided, where the first argument should be the path to the queue directory.
      */
     public static void main(String[] args) {
-        unlock(args[0]);
+        unlock(requireSafePath(args[0]).toString());
     }
 
     /**
@@ -54,7 +56,7 @@ public final class InternalUnlockMain {
      *            Must be a valid queue directory with a metadata file.
      */
     private static void unlock(@NotNull String dir) {
-        File path = new File(dir);
+        File path = new File(requireSafePath(dir).toUri());
         if (!path.isDirectory()) {
             System.err.println("Path argument must be a queue directory");
             System.exit(1);
