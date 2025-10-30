@@ -13,13 +13,14 @@ NOTE: Queue onfigurations related to indexing is detailed in xref:configuration:
 
 [#_index]
 == The 8 Byte Index 
+
 Every Chronicle Queue index is a byte string of length 8 bytes (`long`).
 It references a specific data entry as a combination of the cycle (high bits) and sequence number (low bits).
 Recalling from the chapter on xref:configuration:roll-cycle.adoc[Roll Cycles], a new cycle begins whenever the queue is rolled (a new queue file is created).
 In turn, the sequence number simply refers to the n:th entry within that queue file (cycle).
 Both the cycle and sequence number are incremented by 1, and the count begins at 0.
 
-// image::../../../../images/queue-index.png[Queue Indexes]
+//image::../../../../images/queue-index.png[Queue Indexes]
 
 Different roll-cycles have a difference balance between how many bits are allocated to the message sequence number, and how many of the remaining bits are allocated to the cycle number.
 In other words, different roll-cycles allow us to trade off the maximum number of cycles, for the maximum number of messages within the cycle.
@@ -28,26 +29,27 @@ Learn more about this in xref:configuration:roll-cycle.adoc[Roll Cycle]
 The convenience method below can help with properly forming an index, assuming the cycle and sequence number is known.
 See a full example xref:_tail_from_index[here].
 
-[source, Java]
+[source,java]
 ----
 long index = queue.rollCycle().toIndex(int cycle, long sequenceNumber); 
 ----
 
 == End Of Queue Index
+
 You can retrieve the last index written by the appender by calling `lastIndexAppended`.
 
-[source, Java]
+[source,java]
 ----
 long index = appender.lastIndexAppended();
 ----
 
 It should again be noted that Chronicle Queue appenders are thread-local, meaning only one appender can exist per thread.
-The  first call to `acquireAppender()` creates the appender, and subsequent calls by the same thread reuses and returns the same instance.
+The first call to `acquireAppender()` creates the appender, and subsequent calls by the same thread reuses and returns the same instance.
 However, in a multi-threaded environment there may be more than one appender.
 In such case `lastIndexAppended()` returns the last index written by the specific appender; not the last index written by _any_ appender.
 If you wish to find the index of the last record written to the queue, simply call:
 
-[source, Java]
+[source,java]
 ----
 queue.lastIndex()
 ----
@@ -58,13 +60,15 @@ WARNING: If the queue is being written to concurrently it’s possible the value
 
 [#_tail_from_index]
 == Tail from Index
+
 As described in the chapter on xref:tailing.adoc[Tailing], the tailer performs sequential reads either forwards or backwards.
 We can move the tailer's current position using:
 
-[source, Java]
+[source,java]
 ----
 tailer.moveToIndex(long index);
 ----
+
 This means the next message read will be the one positioned at the given index, and messages will then sequentially by read from this point in the queue unless the tailer is moved again.
 
 The following example shows how to write 10 messages and then reading the 5th.
@@ -93,14 +97,16 @@ try (final ChronicleQueue queue = singleBuilder("queue").build()) {
 
 }
 ----
+
 <1> Reads the current index from the document context to derive the cycle number of the current queue.
 <2> Combines the cycle and sequence number to form an index.
 <3> Moves the tailer to the target index.
 
 == Count Messages Between Indexes
+
 To count the number of messages between two indexes you can use:
 
-[source, Java]
+[source,java]
 ----
 queue.countExcerpts(long fromIndex, long toIndex);
 ----

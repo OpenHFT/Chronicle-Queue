@@ -34,7 +34,8 @@ As the data access is thread-safe, it can be shared between threads, or processe
 Every queue starts with a header that stores basic information e.g. the wire type, the roll cycle, and how indexing is performed.
 
 Below follows an example of a queue header:
-[source, yaml]
+
+[source,yaml]
 ----
 --- !!meta-data #binary # <1>
 header: !SCQStore { # <2>
@@ -83,12 +84,13 @@ The two remaining bits are reserved for:
 * Whether the message is complete or not.
 
 .A logical representation of the Queue message header. The actual alignment in memory depends on the link:https://en.wikipedia.org/wiki/Endianness[endianness,window=blank].
-image::message-header.svg[Queue Message Header, width=800px]
+image::message-header.svg[Queue Message Header,width=800px]
 
 [NOTE]
 .Incomplete messages
 ====
-When the message is not complete, it cannot be read.  However, if the length is known, a writer can skip such messages and attempt to write after it.
+When the message is not complete, it cannot be read.
+However, if the length is known, a writer can skip such messages and attempt to write after it.
 
 For example:
 
@@ -99,4 +101,3 @@ For example:
 This way, multiple threads can be writing to the queue concurrently.
 Any message which is detected as bad (for example, the thread died), can be marked as meta-data and skipped by the reader.
 ====
-

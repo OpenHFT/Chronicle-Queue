@@ -6,6 +6,7 @@ author: Julia Gustafsson
 :source-highlighter: highlight.js
 
 == Producer-Centric Systems
+
 Chronicle Queue is most often used for producer-centric systems where you need to retain a lot of data for days or years.
 
 Most messaging systems are consumer-centric.
@@ -24,7 +25,8 @@ If any networking is needed (e.g. to make the data accessible to multiple hosts)
 == Market Data
 
 Market data publishers don't give you the option to push back on the producer for long; if at all.
-A few of our users consume data from CME OPRA. This produces peaks of 10 million events per minute, sent as UDP packets without any retry.
+A few of our users consume data from CME OPRA.
+This produces peaks of 10 million events per minute, sent as UDP packets without any retry.
 If you miss, or drop a packet, then it is lost.
 You have to consume and record those packets as fast as they come to you, with very little buffering in the network adapter.
 For market data in particular, real time means in a *few microseconds*; it doesn't mean intra-day (during the day).
@@ -62,4 +64,3 @@ Chronicle Queue is being used to store 100+ TB of data, which can be replayed fr
 Non-batching streaming components are highly performant, deterministic, and reproducible.
 You can reproduce bugs which only show up after a million events played in a particular order, with accelerated realistic timings.
 This makes using Stream processing attractive for systems which need a high degree of quality outcomes.
-

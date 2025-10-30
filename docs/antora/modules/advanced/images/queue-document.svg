@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 26.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
-	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
-	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
-	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
-	<!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
-	<!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
-	<!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
-	<!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
-	<!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
-]>
-<svg version="1.1" id="Lager_1" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
-	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 881.8 439.2"
-	 style="enable-background:new 0 0 881.8 439.2;" xml:space="preserve">
+        <!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
+        <!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
+        <!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
+        <!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
+        <!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
+        <!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
+        <!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
+        <!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
+        ]>
+<svg version="1.1" id="Lager_1" xmlns:i="&ns_ai;"
+     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+     viewBox="0 0 881.8 439.2"
+     style="enable-background:new 0 0 881.8 439.2;" xml:space="preserve">
 <style type="text/css">
 	.st0{fill:#222549;}
 	.st1{fill:none;stroke:#FFFFFF;stroke-width:4.7527;stroke-miterlimit:10;}
@@ -35,55 +36,57 @@
 	.st18{font-size:30px;}
 	.st19{letter-spacing:6;}
 </style>
-<switch>
+    <switch>
 	<foreignObject requiredExtensions="&ns_ai;" x="0" y="0" width="1" height="1">
-		<i:aipgfRef  xlink:href="#adobe_illustrator_pgf">
+		<i:aipgfRef xlink:href="#adobe_illustrator_pgf">
 		</i:aipgfRef>
 	</foreignObject>
-	<g i:extraneous="self">
-		<rect id="rect152_00000055682458466396646380000001182102596155563672_" class="st0" width="881.8" height="439.2"/>
-		<polygon class="st1" points="585.2,141.8 584.4,393.8 832.9,393.8 832.9,93.1 633.3,93.1 		"/>
-		<path class="st2" d="M584.4,179.2"/>
-		<line class="st3" x1="636.6" y1="92.2" x2="636.6" y2="146.9"/>
-		<line class="st2" x1="583.5" y1="145.4" x2="639.1" y2="145.4"/>
-		<rect x="598.7" y="158.6" class="st4" width="219.3" height="46.8"/>
-		<rect x="598.7" y="217" class="st5" width="219.3" height="161.2"/>
-		<text transform="matrix(1 0 0 1 633.7336 188.3933)" class="st6 st7 st8">4-byte header</text>
-		<text transform="matrix(1 0 0 1 668.712 295.3936)"><tspan x="0" y="0" class="st6 st7 st8">Excerpt</tspan><tspan x="-20.1" y="24" class="st6 st7 st8">(message)</tspan></text>
-		<text transform="matrix(1 0 0 1 641.0878 65.9589)" class="st6 st9 st10">Document</text>
-		<text transform="matrix(1 0 0 1 176.8166 297.3931)" class="st6 st9 st10">Chronicle Queue</text>
-		<g class="st11">
+        <g i:extraneous="self">
+		<rect id="rect152_00000055682458466396646380000001182102596155563672_" class="st0" width="881.8"
+              height="439.2"/>
+            <polygon class="st1" points="585.2,141.8 584.4,393.8 832.9,393.8 832.9,93.1 633.3,93.1 		"/>
+            <path class="st2" d="M584.4,179.2"/>
+            <line class="st3" x1="636.6" y1="92.2" x2="636.6" y2="146.9"/>
+            <line class="st2" x1="583.5" y1="145.4" x2="639.1" y2="145.4"/>
+            <rect x="598.7" y="158.6" class="st4" width="219.3" height="46.8"/>
+            <rect x="598.7" y="217" class="st5" width="219.3" height="161.2"/>
+            <text transform="matrix(1 0 0 1 633.7336 188.3933)" class="st6 st7 st8">4-byte header</text>
+            <text transform="matrix(1 0 0 1 668.712 295.3936)"><tspan x="0" y="0" class="st6 st7 st8">Excerpt</tspan>
+                <tspan x="-20.1" y="24" class="st6 st7 st8">(message)</tspan></text>
+            <text transform="matrix(1 0 0 1 641.0878 65.9589)" class="st6 st9 st10">Document</text>
+            <text transform="matrix(1 0 0 1 176.8166 297.3931)" class="st6 st9 st10">Chronicle Queue</text>
+            <g class="st11">
 			<polygon class="st12" points="107.7,338.4 107.5,394.4 162.7,394.4 162.7,327.5 118.4,327.5 			"/>
-			<line class="st12" x1="119.1" y1="327.3" x2="119.1" y2="339.5"/>
-			<line class="st12" x1="107.3" y1="339.2" x2="119.7" y2="339.2"/>
+                <line class="st12" x1="119.1" y1="327.3" x2="119.1" y2="339.5"/>
+                <line class="st12" x1="107.3" y1="339.2" x2="119.7" y2="339.2"/>
 		</g>
-		<g class="st13">
+            <g class="st13">
 			<polygon class="st12" points="181.7,338.4 181.5,394.4 236.8,394.4 236.8,327.5 192.4,327.5 			"/>
-			<line class="st12" x1="193.1" y1="327.3" x2="193.1" y2="339.5"/>
-			<line class="st12" x1="181.4" y1="339.2" x2="193.7" y2="339.2"/>
+                <line class="st12" x1="193.1" y1="327.3" x2="193.1" y2="339.5"/>
+                <line class="st12" x1="181.4" y1="339.2" x2="193.7" y2="339.2"/>
 		</g>
-		<g class="st14">
+            <g class="st14">
 			<polygon class="st12" points="256.4,338.4 256.2,394.4 311.5,394.4 311.5,327.5 267.1,327.5 			"/>
-			<line class="st12" x1="267.8" y1="327.3" x2="267.8" y2="339.5"/>
-			<line class="st12" x1="256" y1="339.2" x2="268.4" y2="339.2"/>
+                <line class="st12" x1="267.8" y1="327.3" x2="267.8" y2="339.5"/>
+                <line class="st12" x1="256" y1="339.2" x2="268.4" y2="339.2"/>
 		</g>
-		<g class="st15">
+            <g class="st15">
 			<polygon class="st12" points="331.6,338.4 331.4,394.4 386.6,394.4 386.6,327.5 342.3,327.5 			"/>
-			<line class="st12" x1="343" y1="327.3" x2="343" y2="339.5"/>
-			<line class="st12" x1="331.2" y1="339.2" x2="343.6" y2="339.2"/>
+                <line class="st12" x1="343" y1="327.3" x2="343" y2="339.5"/>
+                <line class="st12" x1="331.2" y1="339.2" x2="343.6" y2="339.2"/>
 		</g>
-		<g>
+            <g>
 			<polygon class="st12" points="406.8,338.5 406.7,394.5 461.9,394.5 461.9,327.6 417.5,327.6 			"/>
-			<line class="st12" x1="418.2" y1="327.4" x2="418.2" y2="339.6"/>
-			<line class="st12" x1="406.5" y1="339.3" x2="418.8" y2="339.3"/>
+                <line class="st12" x1="418.2" y1="327.4" x2="418.2" y2="339.6"/>
+                <line class="st12" x1="406.5" y1="339.3" x2="418.8" y2="339.3"/>
 		</g>
-		<path class="st0" d="M473.2,338.3"/>
-		<line class="st16" x1="461.9" y1="355.7" x2="584.9" y2="285.1"/>
-		<text transform="matrix(1 0 0 1 50.5699 364.4587)" class="st17 st9 st18 st19">...</text>
-		<text transform="matrix(1 0 0 1 1036.0137 302.6514)" class="st9 st18 st19">Lorem ipsum</text>
+            <path class="st0" d="M473.2,338.3"/>
+            <line class="st16" x1="461.9" y1="355.7" x2="584.9" y2="285.1"/>
+            <text transform="matrix(1 0 0 1 50.5699 364.4587)" class="st17 st9 st18 st19">...</text>
+            <text transform="matrix(1 0 0 1 1036.0137 302.6514)" class="st9 st18 st19">Lorem ipsum</text>
 	</g>
 </switch>
-<i:aipgf  id="adobe_illustrator_pgf" i:pgfEncoding="zstd/base64" i:pgfVersion="24">
+    <i:aipgf id="adobe_illustrator_pgf" i:pgfEncoding="zstd/base64" i:pgfVersion="24">
 	<![CDATA[
 	KLUv/QBYrP4DnnkF9AsusNQMJW3EqQ+a8UKiDLYqfhGMjWURAYT9VlXSOUV2b9rsR+Sl9qTZ2dmB
 /AcNIfgP2QqNClnrFaq1eT/NqKQpSU9zsLVsaIBc0NAAsUBitLLtN3mlskmeTHZphVU8geQvXtlv

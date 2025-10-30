@@ -7,30 +7,40 @@ author: Julia Gustafsson
 
 [#a]
 == A
+
 * *Appender:* An appender is the message source.You add data by appending it to the Chronicle Queue.Sequential writes can be performed by appending to the end of queue only.There is no way to insert, or delete excerpts.
 
 [#d]
 == D
+
 * *Document:* Chronicle Queue reads and writes documents.Each document comprises a 4-byte header, followed by the data excerpt.
 
 [#e]
 == E
+
 * *Exerpt:* An excerpt is the part of the documents that Chronicle Queue writes, that contains the actual data.When writing message to a Chronicle Queue, a new xref:advanced:advanced.adoc#_queue_documents[document] (containing an excerpt) is created and written to.
 
 [#m]
 == M
+
 * *Marshallable:* Represents a data structure that supports both reading from and writing to external formats such as binary or JSON.
 
 [#r]
 == R
+
 * *Async Mode:* A Chronicle Enterprise feature that reduces disk latency for Chronicle Queues using memory backed buffers.
 * *Roll cycle:* A Roll cycle determines the timestamp range of data stored in each Chronicle Queue file.
 * *Rolling:* Chronicle refers to writing to a new Chronicle Queue `.cq4` file as Queue Rolling.
 
 [#t]
 == T
-* *Tailer:* A tailer is an excerpt reader optimized for sequential reads. It can perform sequential and random reads, both forwards and backwards. Tailers read the next available message each time they are called.
-* *Topic:* A topic is a directory of queue files. If you have a topic called `mytopic`, the layout could look like this:
+
+* *Tailer:* A tailer is an excerpt reader optimized for sequential reads.
+It can perform sequential and random reads, both forwards and backwards.
+Tailers read the next available message each time they are called.
+* *Topic:* A topic is a directory of queue files.
+If you have a topic called `mytopic`, the layout could look like this:
+
 ----
 - mytopic/
     - 20160710.cq4
@@ -38,4 +48,3 @@ author: Julia Gustafsson
     - 20160712.cq4
     - 20160713.cq4
 ----
-

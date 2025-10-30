@@ -9,4 +9,3 @@ Chronicle Queue Encryption is an enterprise feature includes the ability to encr
 For more information on Chronicle Queue encryption please visit the link:https://portal.chronicle.software/docs/queue/chronicle-queue/encryption/encryption.html[].
 
 <<../README.adoc#,Back to Chronicle Queue>>
-

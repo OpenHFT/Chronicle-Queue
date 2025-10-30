@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 26.2.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1"
-	 id="Lager_1" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:svg="http://www.w3.org/2000/svg"
-	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 431.9 410.6"
-	 style="enable-background:new 0 0 431.9 410.6;" xml:space="preserve">
+     id="Lager_1" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+     viewBox="0 0 431.9 410.6"
+     style="enable-background:new 0 0 431.9 410.6;" xml:space="preserve">
 <style type="text/css">
 	.st0{fill:#222649;}
 	.st1{fill:#756EB0;}
@@ -20,15 +22,19 @@
 	.st12{fill:none;stroke:#F6F6F6;stroke-width:1.5;stroke-miterlimit:10;}
 	.st13{fill:none;stroke:#F6F6F6;stroke-width:2;stroke-miterlimit:10;stroke-dasharray:1.9929,1.9929;}
 </style>
-<sodipodi:namedview  bordercolor="#eeeeee" borderopacity="1" id="namedview1411" inkscape:current-layer="Lager_1" inkscape:cx="381.5959" inkscape:cy="249.6908" inkscape:pagecheckerboard="0" inkscape:pageopacity="0" inkscape:pageshadow="0" inkscape:window-height="770" inkscape:window-maximized="0" inkscape:window-width="1440" inkscape:window-x="0" inkscape:window-y="25" inkscape:zoom="1.3456643" pagecolor="#505050" showgrid="false">
+    <sodipodi:namedview bordercolor="#eeeeee" borderopacity="1" id="namedview1411" inkscape:current-layer="Lager_1"
+                        inkscape:cx="381.5959" inkscape:cy="249.6908" inkscape:pagecheckerboard="0"
+                        inkscape:pageopacity="0" inkscape:pageshadow="0" inkscape:window-height="770"
+                        inkscape:window-maximized="0" inkscape:window-width="1440" inkscape:window-x="0"
+                        inkscape:window-y="25" inkscape:zoom="1.3456643" pagecolor="#505050" showgrid="false">
 	</sodipodi:namedview>
-<rect id="rect1007" class="st0" width="431.9" height="410.6"/>
-<rect id="rect1334" x="37.2" y="37.1" class="st1" width="141.9" height="153.6"/>
-<rect id="rect1336" x="54.4" y="69.7" class="st2" width="106.2" height="106.2"/>
-<text transform="matrix(1 0 0 1 65.0478 93.7773)" class="st3 st4 st5">Chronicle Queu</text>
-<text transform="matrix(1 0 0 1 143.0463 93.7773)" class="st3 st6 st5">e</text>
-<text transform="matrix(1 0 0 1 90.0278 107.7773)" class="st3 st6 st5">Source</text>
-<image style="overflow:visible;enable-background:new    ;" width="437" height="437" id="image1344" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbUAAAG/CAYAAADfMUm7AAAACXBIWXMAAGcJAABnCQEfIVPrAAAA
+    <rect id="rect1007" class="st0" width="431.9" height="410.6"/>
+    <rect id="rect1334" x="37.2" y="37.1" class="st1" width="141.9" height="153.6"/>
+    <rect id="rect1336" x="54.4" y="69.7" class="st2" width="106.2" height="106.2"/>
+    <text transform="matrix(1 0 0 1 65.0478 93.7773)" class="st3 st4 st5">Chronicle Queu</text>
+    <text transform="matrix(1 0 0 1 143.0463 93.7773)" class="st3 st6 st5">e</text>
+    <text transform="matrix(1 0 0 1 90.0278 107.7773)" class="st3 st6 st5">Source</text>
+    <image style="overflow:visible;enable-background:new    ;" width="437" height="437" id="image1344" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbUAAAG/CAYAAADfMUm7AAAACXBIWXMAAGcJAABnCQEfIVPrAAAA
 GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAUx9JREFUeNrsvVd7XFeWprkQDt57
 gAa0ohMlUV4pKZW2TFZl1zyq0nR3zvQ8czH/oH9QX4wuJqcmu7q7sjozK13JO1KUaETRkyAI7xEA
 AkAAs7591hGDYARJgBGIc058r56tAECYOG5/e9ktQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEII
@@ -405,10 +411,10 @@ QgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEII
 IYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQkgI+f8FGADK
 SjM5PuUBGQAAAABJRU5ErkJggg==" transform="matrix(0.1074 0 0 0.1074 84.0251 115.149)">
 </image>
-<text id="text1346" transform="matrix(1 0 0 1 54.3901 58.1917)" class="st3 st4 st7">Host</text>
-<rect id="rect1348" x="254.3" y="37.1" class="st1" width="141.9" height="153.6"/>
-<rect id="rect1350" x="271.6" y="69.7" class="st2" width="106.2" height="106.2"/>
-<image style="overflow:visible;enable-background:new    ;" width="437" height="437" id="image1352" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAb8AAAG/CAYAAADIE9lyAAAACXBIWXMAAGcJAABnCQEfIVPrAAAA
+    <text id="text1346" transform="matrix(1 0 0 1 54.3901 58.1917)" class="st3 st4 st7">Host</text>
+    <rect id="rect1348" x="254.3" y="37.1" class="st1" width="141.9" height="153.6"/>
+    <rect id="rect1350" x="271.6" y="69.7" class="st2" width="106.2" height="106.2"/>
+    <image style="overflow:visible;enable-background:new    ;" width="437" height="437" id="image1352" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAb8AAAG/CAYAAADIE9lyAAAACXBIWXMAAGcJAABnCQEfIVPrAAAA
 GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAV99JREFUeNrsved3nNeV5rsropBz
 YibFJFE5W7Zstds93RPu3JnxWv3F/8D8TfO9v3jNeOb2vdO3u91BsiXLVqASKSYxAkTOuQBUYc5z
 zj7ky2KBBMAq4A3PT+ssUIyoN5znPPvsvY8IIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEII
@@ -806,10 +812,10 @@ hBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQ
 QgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEII
 IYQQQgghhBBCCCFkL/wfAQYAFwqaTNerQ5QAAAAASUVORK5CYII=" transform="matrix(0.1074 0 0 0.1074 301.1908 115.149)">
 </image>
-<text id="text1354" transform="matrix(1 0 0 1 271.5557 58.1917)" class="st3 st4 st7">Host</text>
-<rect id="rect1356" x="253.7" y="221" class="st1" width="141.9" height="153.6"/>
-<rect id="rect1358" x="270.9" y="253.5" class="st2" width="106.2" height="106.2"/>
-<image style="overflow:visible;enable-background:new    ;" width="437" height="437" id="image1360" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAb8AAAG/CAYAAADIE9lyAAAACXBIWXMAAGcJAABnCQEfIVPrAAAA
+    <text id="text1354" transform="matrix(1 0 0 1 271.5557 58.1917)" class="st3 st4 st7">Host</text>
+    <rect id="rect1356" x="253.7" y="221" class="st1" width="141.9" height="153.6"/>
+    <rect id="rect1358" x="270.9" y="253.5" class="st2" width="106.2" height="106.2"/>
+    <image style="overflow:visible;enable-background:new    ;" width="437" height="437" id="image1360" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAb8AAAG/CAYAAADIE9lyAAAACXBIWXMAAGcJAABnCQEfIVPrAAAA
 GXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAUldJREFUeNrsvQd3nNeZ5/mgqgAU
 cg7MOYmiqGhZcpLdtuzt7ul2t7u956zP2S8x32M+wZ45s8Gzs54z9sx2b9tuty1ZOVISg5jETOSc
 UQiFff73Pq9YBAsgCaKq3vD/2VcAiFj3fd/7v0+8IoQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGE
@@ -1180,39 +1186,40 @@ CcRy1URstcjHgSW3Ym8xkHU5alYb3h80cRsx4VswkVsssPzoviQUP0ISKoqZAsuvep3lB7EM6hAb
 TChb5V7Hmlb7/kzB54rFFtP2sws/VyhgxayseROz+YKPx+xtzgRuysaEWXAbWX4sNyAUP0LIY4tj
 Mcuv2kZg+RV+vJ6sWZFNcq8sIxCw2QLrbsuWH4/7IYTiR0jYRHRTy49WGSGEEEIIIYQQQgghhBBC
 CCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQggh
-hBBCCCGEEEIIIYQQQgghhBBCCCEk0fz/AgwA5VJQH2I4YMEAAAAASUVORK5CYII=" transform="matrix(0.1074 0 0 0.1074 300.5421 298.9828)">
+hBBCCCGEEEIIIYQQQgghhBBCCCEk0fz/AgwA5VJQH2I4YMEAAAAASUVORK5CYII="
+           transform="matrix(0.1074 0 0 0.1074 300.5421 298.9828)">
 </image>
-<text id="text1362" transform="matrix(1 0 0 1 270.9071 242.0254)" class="st3 st4 st7">Host</text>
-<text transform="matrix(1 0 0 1 281.5648 93.7773)" class="st3 st4 st5">Chronicle Queue</text>
-<text transform="matrix(1 0 0 1 313.6448 107.7773)" class="st3 st6 st5">Sink</text>
-<text transform="matrix(1 0 0 1 281.5648 275.6111)" class="st3 st4 st5">Chronicle Queue</text>
-<text transform="matrix(1 0 0 1 313.6448 289.6111)" class="st3 st6 st5">Sink</text>
-<line id="line1376" class="st8" x1="163.8" y1="122.8" x2="164.6" y2="122.8"/>
-<line id="line1382" class="st8" x1="264.3" y1="122.8" x2="265" y2="122.8"/>
-<g id="line1380">
+    <text id="text1362" transform="matrix(1 0 0 1 270.9071 242.0254)" class="st3 st4 st7">Host</text>
+    <text transform="matrix(1 0 0 1 281.5648 93.7773)" class="st3 st4 st5">Chronicle Queue</text>
+    <text transform="matrix(1 0 0 1 313.6448 107.7773)" class="st3 st6 st5">Sink</text>
+    <text transform="matrix(1 0 0 1 281.5648 275.6111)" class="st3 st4 st5">Chronicle Queue</text>
+    <text transform="matrix(1 0 0 1 313.6448 289.6111)" class="st3 st6 st5">Sink</text>
+    <line id="line1376" class="st8" x1="163.8" y1="122.8" x2="164.6" y2="122.8"/>
+    <line id="line1382" class="st8" x1="264.3" y1="122.8" x2="265" y2="122.8"/>
+    <g id="line1380">
 	<g>
 		<line class="st9" x1="164.6" y1="122.8" x2="165.6" y2="122.8"/>
-		<line class="st10" x1="167.6" y1="122.8" x2="261.5" y2="122.8"/>
-		<line class="st9" x1="262.5" y1="122.8" x2="263.5" y2="122.8"/>
+        <line class="st10" x1="167.6" y1="122.8" x2="261.5" y2="122.8"/>
+        <line class="st9" x1="262.5" y1="122.8" x2="263.5" y2="122.8"/>
 	</g>
 </g>
-<g id="g1386">
+    <g id="g1386">
 	<g id="polygon1384">
 		<polygon class="st11" points="262.7,126.7 269.2,122.9 262.7,119.2 		"/>
 	</g>
 </g>
-<line id="line1398" class="st12" x1="265.6" y1="303.7" x2="266" y2="304.4"/>
-<g id="g1402">
+    <line id="line1398" class="st12" x1="265.6" y1="303.7" x2="266" y2="304.4"/>
+    <g id="g1402">
 	<g id="polygon1400">
 		<polygon class="st11" points="261.1,304.3 268.2,308.5 268.3,300.3 		"/>
 	</g>
 </g>
-<text id="text1408" transform="matrix(1 0 0 1 197.6861 113.9539)" class="st3 st6 st5">TCP/IP</text>
-<g id="line1380_00000108275312131604459250000003046163810113184184_">
+    <text id="text1408" transform="matrix(1 0 0 1 197.6861 113.9539)" class="st3 st6 st5">TCP/IP</text>
+    <g id="line1380_00000108275312131604459250000003046163810113184184_">
 	<g>
 		<line class="st9" x1="163.9" y1="122.1" x2="164.3" y2="123"/>
-		<line class="st13" x1="165.3" y1="124.7" x2="264.1" y2="301.3"/>
-		<line class="st9" x1="264.5" y1="302.1" x2="265" y2="303"/>
+        <line class="st13" x1="165.3" y1="124.7" x2="264.1" y2="301.3"/>
+        <line class="st9" x1="264.5" y1="302.1" x2="265" y2="303"/>
 	</g>
 </g>
 </svg>

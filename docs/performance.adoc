@@ -9,4 +9,3 @@ Chronicle Queue, Chronicle Queue Enterprise, and Chronicle Queue Zero are all hi
 For detailed performance tuning and performance test results visit link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/performance.html[]
 
 <<../ReadMe.adoc#,Back to ReadMe>>
-

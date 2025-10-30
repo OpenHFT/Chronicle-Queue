@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 26.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
-	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
-	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
-	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
-	<!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
-	<!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
-	<!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
-	<!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
-	<!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
-]>
-<svg version="1.1" id="Lager_1" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
-	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 969 271.6"
-	 style="enable-background:new 0 0 969 271.6;" xml:space="preserve">
+        <!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
+        <!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
+        <!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
+        <!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
+        <!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
+        <!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
+        <!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
+        <!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
+        ]>
+<svg version="1.1" id="Lager_1" xmlns:i="&ns_ai;"
+     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+     viewBox="0 0 969 271.6"
+     style="enable-background:new 0 0 969 271.6;" xml:space="preserve">
 <style type="text/css">
 	.st0{fill:#222549;}
 	.st1{fill:#00A79D;}
@@ -29,52 +30,58 @@
 	.st12{font-size:14px;}
 	.st13{font-size:15px;}
 </style>
-<switch>
+    <switch>
 	<foreignObject requiredExtensions="&ns_ai;" x="0" y="0" width="1" height="1">
-		<i:aipgfRef  xlink:href="#adobe_illustrator_pgf">
+		<i:aipgfRef xlink:href="#adobe_illustrator_pgf">
 		</i:aipgfRef>
 	</foreignObject>
-	<g i:extraneous="self">
+        <g i:extraneous="self">
 		<rect id="rect152_00000055682458466396646380000001182102596155563672_" class="st0" width="969" height="271.6"/>
-		<rect x="150.4" y="67.5" class="st1" width="685.9" height="38.5"/>
-		<line class="st2" x1="131.9" y1="67.5" x2="851.4" y2="67.5"/>
-		<line class="st2" x1="851.4" y1="106" x2="131.9" y2="106"/>
-		<line class="st3" x1="150.4" y1="106" x2="150.4" y2="67.5"/>
-		<line class="st3" x1="836.4" y1="67.5" x2="836.4" y2="106"/>
-		<line class="st3" x1="495.7" y1="67.5" x2="495.7" y2="106"/>
-		<line class="st3" x1="666" y1="67.5" x2="666" y2="106"/>
-		<line class="st3" x1="323.1" y1="106" x2="323.1" y2="67.5"/>
-		<text transform="matrix(1 0 0 1 743.0532 56.3381)" class="st4 st5 st6">0</text>
-		<text transform="matrix(1 0 0 1 573.863 56.0782)" class="st4 st5 st6">1</text>
-		<text transform="matrix(1 0 0 1 400.9896 56.3381)" class="st4 st5 st6">2</text>
-		<text transform="matrix(1 0 0 1 228.2638 56.0781)" class="st4 st5 st6">3</text>
-		<text transform="matrix(1 0 0 1 404.9399 93.0806)" class="st4 st5 st7">L</text>
-		<text transform="matrix(1 0 0 1 576.0029 93.0811)" class="st4 st5 st7">L</text>
-		<text transform="matrix(1 0 0 1 748.5873 93.0811)" class="st4 st5 st7">L</text>
-		<line class="st8" x1="150.4" y1="67.5" x2="87.4" y2="170.3"/>
-		<line class="st8" x1="151.4" y1="106" x2="89.1" y2="219.6"/>
-		<line class="st8" x1="323.1" y1="106" x2="383.9" y2="219.6"/>
-		<line class="st8" x1="323.1" y1="67.2" x2="384.6" y2="170.3"/>
-		<rect x="88.1" y="171.1" class="st9" width="295.8" height="48.5"/>
-		<line class="st10" x1="234.8" y1="171.6" x2="234.8" y2="219.6"/>
-		<line class="st10" x1="310.1" y1="171.3" x2="310.1" y2="219.3"/>
-		<line class="st10" x1="348" y1="171.6" x2="348" y2="219.6"/>
-		<line class="st10" x1="272.9" y1="171.6" x2="272.9" y2="219.6"/>
-		<line class="st10" x1="160.3" y1="171.5" x2="160.3" y2="219.4"/>
-		<line class="st10" x1="198.2" y1="171.7" x2="198.2" y2="219.7"/>
-		<line class="st10" x1="123.1" y1="171.7" x2="123.1" y2="219.7"/>
-		<text transform="matrix(1 0 0 1 100.0591 201.1554)" class="st4 st11 st12">D</text>
-		<text transform="matrix(1 0 0 1 136.2771 201.1555)" class="st4 st11 st12">C</text>
-		<text transform="matrix(1 0 0 1 175.1893 201.155)" class="st4 st11 st12">L</text>
-		<text transform="matrix(1 0 0 1 212.2231 201.1552)" class="st4 st11 st12">L</text>
-		<text transform="matrix(1 0 0 1 250.2147 201.1555)" class="st4 st11 st12">L</text>
-		<text transform="matrix(1 0 0 1 287.5679 201.1555)" class="st4 st11 st12">L</text>
-		<text transform="matrix(1 0 0 1 324.6017 201.1555)" class="st4 st11 st12">L</text>
-		<text transform="matrix(1 0 0 1 362.9127 201.1555)" class="st4 st11 st12">L</text>
-		<text transform="matrix(1 0 0 1 464.7759 178.7401)"><tspan x="0" y="0" class="st4 st11 st13">Data bit (D) - </tspan><tspan x="106" y="0" class="st4 st5 st13">Signals if data is user- or meta-data</tspan><tspan x="0" y="20" class="st4 st11 st13">Complete bit (C) - </tspan><tspan x="145.4" y="20" class="st4 st5 st13">Signals if message is complete </tspan><tspan x="0" y="40" class="st4 st11 st13">Length bits (L) - </tspan><tspan x="124.6" y="40" class="st4 st5 st13">Contains the message length </tspan><tspan x="0" y="100" class="st4 st11 st13">  </tspan></text>
+            <rect x="150.4" y="67.5" class="st1" width="685.9" height="38.5"/>
+            <line class="st2" x1="131.9" y1="67.5" x2="851.4" y2="67.5"/>
+            <line class="st2" x1="851.4" y1="106" x2="131.9" y2="106"/>
+            <line class="st3" x1="150.4" y1="106" x2="150.4" y2="67.5"/>
+            <line class="st3" x1="836.4" y1="67.5" x2="836.4" y2="106"/>
+            <line class="st3" x1="495.7" y1="67.5" x2="495.7" y2="106"/>
+            <line class="st3" x1="666" y1="67.5" x2="666" y2="106"/>
+            <line class="st3" x1="323.1" y1="106" x2="323.1" y2="67.5"/>
+            <text transform="matrix(1 0 0 1 743.0532 56.3381)" class="st4 st5 st6">0</text>
+            <text transform="matrix(1 0 0 1 573.863 56.0782)" class="st4 st5 st6">1</text>
+            <text transform="matrix(1 0 0 1 400.9896 56.3381)" class="st4 st5 st6">2</text>
+            <text transform="matrix(1 0 0 1 228.2638 56.0781)" class="st4 st5 st6">3</text>
+            <text transform="matrix(1 0 0 1 404.9399 93.0806)" class="st4 st5 st7">L</text>
+            <text transform="matrix(1 0 0 1 576.0029 93.0811)" class="st4 st5 st7">L</text>
+            <text transform="matrix(1 0 0 1 748.5873 93.0811)" class="st4 st5 st7">L</text>
+            <line class="st8" x1="150.4" y1="67.5" x2="87.4" y2="170.3"/>
+            <line class="st8" x1="151.4" y1="106" x2="89.1" y2="219.6"/>
+            <line class="st8" x1="323.1" y1="106" x2="383.9" y2="219.6"/>
+            <line class="st8" x1="323.1" y1="67.2" x2="384.6" y2="170.3"/>
+            <rect x="88.1" y="171.1" class="st9" width="295.8" height="48.5"/>
+            <line class="st10" x1="234.8" y1="171.6" x2="234.8" y2="219.6"/>
+            <line class="st10" x1="310.1" y1="171.3" x2="310.1" y2="219.3"/>
+            <line class="st10" x1="348" y1="171.6" x2="348" y2="219.6"/>
+            <line class="st10" x1="272.9" y1="171.6" x2="272.9" y2="219.6"/>
+            <line class="st10" x1="160.3" y1="171.5" x2="160.3" y2="219.4"/>
+            <line class="st10" x1="198.2" y1="171.7" x2="198.2" y2="219.7"/>
+            <line class="st10" x1="123.1" y1="171.7" x2="123.1" y2="219.7"/>
+            <text transform="matrix(1 0 0 1 100.0591 201.1554)" class="st4 st11 st12">D</text>
+            <text transform="matrix(1 0 0 1 136.2771 201.1555)" class="st4 st11 st12">C</text>
+            <text transform="matrix(1 0 0 1 175.1893 201.155)" class="st4 st11 st12">L</text>
+            <text transform="matrix(1 0 0 1 212.2231 201.1552)" class="st4 st11 st12">L</text>
+            <text transform="matrix(1 0 0 1 250.2147 201.1555)" class="st4 st11 st12">L</text>
+            <text transform="matrix(1 0 0 1 287.5679 201.1555)" class="st4 st11 st12">L</text>
+            <text transform="matrix(1 0 0 1 324.6017 201.1555)" class="st4 st11 st12">L</text>
+            <text transform="matrix(1 0 0 1 362.9127 201.1555)" class="st4 st11 st12">L</text>
+            <text transform="matrix(1 0 0 1 464.7759 178.7401)"><tspan x="0" y="0" class="st4 st11 st13">Data bit (D) - </tspan>
+                <tspan x="106" y="0" class="st4 st5 st13">Signals if data is user- or meta-data</tspan>
+                <tspan x="0" y="20" class="st4 st11 st13">Complete bit (C) - </tspan>
+                <tspan x="145.4" y="20" class="st4 st5 st13">Signals if message is complete </tspan>
+                <tspan x="0" y="40" class="st4 st11 st13">Length bits (L) - </tspan>
+                <tspan x="124.6" y="40" class="st4 st5 st13">Contains the message length </tspan>
+                <tspan x="0" y="100" class="st4 st11 st13">  </tspan></text>
 	</g>
 </switch>
-<i:aipgf  id="adobe_illustrator_pgf" i:pgfEncoding="zstd/base64" i:pgfVersion="24">
+    <i:aipgf id="adobe_illustrator_pgf" i:pgfEncoding="zstd/base64" i:pgfVersion="24">
 	<![CDATA[
 	KLUv/QBYxP4DHnlF8gsuwJQMJW24K/hrwCusg60KUwUAEJAMtGC/1dpDlimyuzf7UfUAOhgIgiCX
 KIpzAfUPxgqRCoWKkh7NTbpXLNRr/brvqLgocU092Z4bGCAXNDBALpBUnlXdcYzF3MSnokOfpZWi

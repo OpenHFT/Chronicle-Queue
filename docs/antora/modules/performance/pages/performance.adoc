@@ -6,6 +6,7 @@ author: Julia Gustafsson
 :source-highlighter: highlight.js
 
 == Using High Resolution Timings Across Machines
+
 On most systems `System.nanoTime()` is roughly the number of nanoseconds since the system last rebooted (although different JVMs may behave differently).
 This is the same across JVMs on the same machine, but wildly different between machines.
 The absolute difference when it comes to machines is meaningless.
@@ -15,21 +16,25 @@ We have a class called `RunningMinimum` to obtain timings from different machine
 The more often you take measurements, the more accurate this running minimum is.
 
 == Avoid Interrupts
+
 For performance reasons, Chronicle Queue does not check for interrupts.
 Because of this, it is recommended to avoid using Chronicle Queue with code that generates interrupts.
 If you can not avoid generating interrupts then we suggest that you create a separate instance of Chronicle Queue per thread.
 
 == Performance Between Disk and RAM. Should We Specify Faster RAM or a Faster Disk to Chronicle Improve Read/Write Performance?
 
-Chronicle recommends lots of high-speed RAM. This is because Chronicle uses the page cache and RAM is in effect a cache to the disk.
+Chronicle recommends lots of high-speed RAM.
+This is because Chronicle uses the page cache and RAM is in effect a cache to the disk.
 
 There are two cases where having a high-speed disk will give you a real benefit:
 
 === Data Rate
+
 If the rate of data that you are writing exceeds the disk write speed.
 In most applications this is unlikely to occur.
 
 === Page Cache Miss
+
 For Chronicle queues which write and read messages lineally across memory, we mitigate this situation with the use of the Chronicle pre-toucher.
 The pre-toucher ensures that the page is loaded into the page cache before being written into the queue.
 
@@ -45,8 +50,7 @@ In addition, you should avoid using network attached storage, as this usually of
 == How Do We Reduce Garbage?
 
 For the most latency-sensitive systems, you may want to keep your allocation rate to below `300` KB/s.
-At this rate you will produce less than `24` GB of garbage a day, and
-if your `Eden space` is larger than this, you can run all day without a minor collection.
+At this rate you will produce less than `24` GB of garbage a day, and if your `Eden space` is larger than this, you can run all day without a minor collection.
 A GC is something that you can do as an overnight maintainence task.
 Reduce your garbage-per-day to less than `5` GB, and you might be able to run all week without a GC.
 

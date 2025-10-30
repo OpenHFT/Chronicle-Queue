@@ -12,8 +12,8 @@ Every reader sees every message, and a reader can join at any time and still see
 We assume that you can read/scan through messages fast enough that, even if you are not interested in most messages, it will still be fast enough.
 These are not consumers as such, and messages do not disappear after reading them.
 
-// removed the link as the web page is not available
-// image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
+//removed the link as the web page is not available
+//image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
 
 Retaining every message has a number of advantages:
 
@@ -45,7 +45,7 @@ To put that in context, most messaging solutions have flow control; this is a "c
 Consumer-centric solutions make sense in many applications, especially between servers and client GUIs.
 Any data that you send to a client GUI is for display to a human.
 Desktop applications can be run on a variety of machines, over a variety of networks, and a human can only see a limited rate of data.
-Updates  of more than about 20 times a second just appear as a blur, and are counter productive.
+Updates of more than about 20 times a second just appear as a blur, and are counter productive.
 
 It makes sense for a desktop application to receive only as much data as it can handle, and to push back on the server when it cannot handle the data rate.
 
@@ -57,22 +57,26 @@ Chronicle Queue deliberately does not use flow control, as flow control is not a
 
 Some examples of systems where Chronicle Queue is often used are:
 
-* *Market data gateways*. You cannot slow down an exchange because you are not keeping up.
-* *Compliance systems*. You have to feed information to them, but you never want to be slowed down by them.
-* *Core trading systems*. As these feed from Market Data gateways, you want them to be as fast as possible, all the time.
+* *Market data gateways*: You cannot slow down an exchange because you are not keeping up.
+* *Compliance systems*: You have to feed information to them, but you never want to be slowed down by them.
+* *Core trading systems*: As these feed from Market Data gateways, you want them to be as fast as possible, all the time.
 
 In a Producer-centric solution, the producer is not slowed down by a slow consumer, and the consumer is never more than main memory behind the producer.
 The consumer might be an overnight batch job, and be a whole day, or week behind.
 
 The producer-centric solution has a number of advantages:
 
-* You can reproduce a bug, even if it only occurs once in a million messages, by replaying all the messages which led to that bug triggering. More importantly, you can have confidence that *the* bug, rather than just *a* bug has been fixed.
+* You can reproduce a bug, even if it only occurs once in a million messages, by replaying all the messages which led to that bug triggering.
+More importantly, you can have confidence that *the* bug, rather than just *a* bug has been fixed.
 
-* You can test every micro-service independently, as there is no flow control interaction between them. If you have flow control, say 20 services, any one of those services could slow down any producer, until your entire system locks up.  This means the only real performance test is a complete system test.
+* You can test every micro-service independently, as there is no flow control interaction between them.
+If you have flow control, say 20 services, any one of those services could slow down any producer, until your entire system locks up.
+This means the only real performance test is a complete system test.
 
 * You can test a micro-service, replaying from the same input file repeatedly, without the producer or down stream consumers running.
 
-* You can restart and upgrade a service, by replaying its *outputs* to ensure it is committed to the decisions/outcomes it has produced in the past.  This allows you to change your service and know that, even those your new version might have made different decision, it can honour those already made.
+* You can restart and upgrade a service, by replaying its *outputs* to ensure it is committed to the decisions/outcomes it has produced in the past.
+This allows you to change your service and know that, even those your new version might have made different decision, it can honour those already made.
 
 * Flow control is designed to smooth out burst and jitter in the system; but it can also hide such jitter as result.
 
@@ -134,13 +138,14 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
    // System.out.print(queue.dump());
 }
 ----
+
 <1> Written as `keys` and `values`.
 <2> Written as a command message with a "typed" payload.
 
 In a real unit test we would do an `assertEquals(expectedString, queue.dump());`
 
 .Dump of the queue as YAML
-[source, yaml]
+[source,yaml]
 ----
 --- !!meta-data #binary
 header: !SCQStore {
@@ -185,8 +190,7 @@ Chronicle Queue is design for sequential writes and reads.
 It also supports random access, and updates in-place.
 Although you cannot change the size of an existing entry, you can pad an entry for future use.
 
-This append-only structure is more efficient for passing data between threads using the `CPU L2 cache` coherence bus, It can also be faster than attempting to pass an object between threads, as it avoids random access which can be
-common in `Java` objects where there can be a lot of reference chasing.
+This append-only structure is more efficient for passing data between threads using the `CPU L2 cache` coherence bus, It can also be faster than attempting to pass an object between threads, as it avoids random access which can be common in `Java` objects where there can be a lot of reference chasing.
 
 It is also more efficient for persistence to disk; HDD and SSD are much more efficient when being accessed sequentially.
 
@@ -233,7 +237,7 @@ This ensures that all writers and readers roll at the same point, in a timely ma
 
 *Header example*:
 
-[source, yaml]
+[source,yaml]
 ----
 --- !!meta-data #binary # <1>
 header: !SCQStore { # <2>
@@ -253,6 +257,7 @@ header: !SCQStore { # <2>
   lastAcknowledgedIndexReplicated: 0 # <6>
 }
 ----
+
 <1> First message is meta-data written in binary
 <2> Type of header is aliased as the name `SCQStore`.
 <3> `writePosition` is the first bound value.
@@ -270,7 +275,7 @@ The rolling and indexing strategies can also be customized.
 
 If we look at the last message, you can see the message type, the type of the payload, and the value of all the fields.
 
-[source, java]
+[source,java]
 ----
 --- !!data #binary
 newOrder: !Order {
@@ -284,8 +289,7 @@ newOrder: !Order {
 === How do we reduce garbage?
 
 For the most latency-sensitive systems, you may want to keep your allocation rate to below `300` KB/s.
-At this rate you will produce less than `24` GB of garbage a day, and
-if your `Eden space` is larger than this, you can run all day without a minor collection.
+At this rate you will produce less than `24` GB of garbage a day, and if your `Eden space` is larger than this, you can run all day without a minor collection.
 A GC is something that you can do as an overnight maintainence task.
 Reduce your garbage-per-day to less than `5` GB, and you might be able to run all week without a GC.
 
@@ -296,4 +300,5 @@ We use object pools where appropriate, and we support reading into mutable objec
 For text data we support both a `String` pool and reading to/from `StringBuilder`.
 
 '''
+
 <<../README.adoc#,Back to ReadMe>>

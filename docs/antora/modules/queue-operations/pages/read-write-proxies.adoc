@@ -12,7 +12,7 @@ You start by defining an asynchronous `interface`, where all methods have:
 * No return value or exceptions expected.
 
 .A simple asynchronous interface
-[source, java]
+[source,java]
 ----
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 interface MessageListener {
@@ -40,7 +40,7 @@ static class Message2 extends SelfDescribingMarshallable {
 
 To write to the queue you can call a proxy which implements this interface.
 
-[source, java]
+[source,java]
 ----
 SingleChronicleQueue queue1 = ChronicleQueue.singleBuilder(path).build();
 
@@ -53,7 +53,7 @@ writer1.method2(new Message2(234));
 
 These calls produce messages which can be dumped as follows.
 
-[source, yaml]
+[source,yaml]
 ----
 # position: 262568, header: 0
 --- !!data #binary
@@ -69,7 +69,7 @@ method2: {
 
 To read the messages, you can provide a reader which calls your implementation with the same calls that you made.
 
-[source, java]
+[source,java]
 ----
 // a proxy which print each method called on it
 MessageListener processor = ObjectUtils.printAll(MessageListener.class)
@@ -83,7 +83,7 @@ assertFalse(reader1.readOne());
 
 Running this example prints:
 
-[source, json]
+[source,json]
 ----
 method1 [!Message1 {
   text: hello

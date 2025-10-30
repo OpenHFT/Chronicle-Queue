@@ -11,7 +11,7 @@ Unlike other Java queuing solutions, messages are not lost when they are read wi
 This is covered in more detail in the section below on "Reading from a queue using a tailer".
 
 .Start Reading
-[source, java]
+[source,java]
 ----
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
    final ExcerptTailer tailer = queue.createTailer();
@@ -21,7 +21,7 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
 You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments.
 Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
 
-[source, java]
+[source,java]
 ----
 // reading using method calls
 RiskMonitor monitor = System.out::println;
@@ -34,7 +34,7 @@ You can decode the message yourself.
 
 NOTE: The names, type, and order of the fields doesn't have to match.
 
-[source, java]
+[source,java]
 ----
 assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
         m -> {
@@ -51,7 +51,7 @@ assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
 You can read self-describing data values.
 This will check the types are correct, and convert as required.
 
-[source, java]
+[source,java]
 ----
 assertTrue(tailer.readDocument(w -> {
     ValueIn in = w.getValueIn();
@@ -64,7 +64,7 @@ assertTrue(tailer.readDocument(w -> {
 
 You can read raw data as primitives and strings.
 
-[source, java]
+[source,java]
 ----
 assertTrue(tailer.readBytes(in -> {
     int code = in.readByte();
@@ -78,7 +78,7 @@ assertTrue(tailer.readBytes(in -> {
 
 or, you can get the underlying memory address and access the native memory.
 
-[source, java]
+[source,java]
 ----
 assertTrue(tailer.readBytes(b -> {
     long address = b.address(b.readPosition());
@@ -112,7 +112,7 @@ Across topics, there is no guarantee of ordering; if you want to replay determin
 Chronicle Queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
 If you are writing your code not have GC pauses and you explicitly want to clean up the file handlers, you can call the following:
 
-[source, java]
+[source,java]
 ----
 ((StoreTailer)tailer).releaseResources()
 ----
@@ -145,7 +145,7 @@ When reading backwards, then the `toEnd()` method will move the tailer to the la
 If the queue is not empty, then there will be a
 `DocumentContext` available for reading:
 
-[source, java]
+[source,java]
 ----
 // this will be true if there is at least one message in the queue
 boolean messageAvailable = tailer.toEnd().direction(TailerDirection.BACKWARD).
@@ -158,7 +158,7 @@ AKA named tailers.
 
 It can be useful to have a tailer which continues from where it was up to on restart of the application.
 
-[source, java]
+[source,java]
 ----
 try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
     ExcerptTailer atailer = cq.createTailer("a");
@@ -180,6 +180,7 @@ try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
     assertEquals("test 1", btailer.readText()); #<4>
 }
 ----
+
 <1> Tailer "a" last reads message 2
 <2> Tailer "a" next reads message 3
 <3> Tailer "b" last reads message 0
@@ -197,7 +198,7 @@ If this is prevented by an error, the same message will be read on each restart.
 
 Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
 
-[source, text]
+[source,text]
 ----
 \�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
 ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
@@ -212,6 +213,5 @@ Chronicle Queue stores its data in binary format, with a file extension of `cq4`
 This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.
 This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
 
-You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`.
-`DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue.
+You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue.
 More information and examples of usage is provided on the xref:command-line:command_line_tools.adoc[Command Line Tools] page.

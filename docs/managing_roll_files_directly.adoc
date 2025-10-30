@@ -90,7 +90,7 @@ for (File file : removableFileCandidates(baseDir).collect(Collectors.toList())) 
 
 It is possible to obtain removable roll file candidates directly from the command line:
 
-[source, sh]
+[source,sh]
 ----
 mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.internal.main.InternalRemovableRollFileCandidatesMain" -Dexec.classScope=compile -Dexec.args="my_queue_dir"
 ----

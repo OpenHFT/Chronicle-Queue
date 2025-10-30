@@ -9,7 +9,7 @@ This chapter describes how Chronicle Queue is configured.
 Settings are preferably made when instantiating the queue using `ChronicleQueue.singleBuilder`.
 For example, this builder sets the roll cycle to `RollCycle.HOURLY`:
 
-[source, java]
+[source,java]
 ----
 String basePath = OS.getTarget() + "/getting-started";
 ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)

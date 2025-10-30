@@ -5,9 +5,9 @@ site:
 content:
   sources:
     - url: ./../../
-      branches: [HEAD]
+      branches: [ HEAD ]
       start_path: docs/antora
-      tags: []
+      tags: [ ]
 runtime:
   fetch: true
 ui:

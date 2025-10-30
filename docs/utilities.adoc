@@ -16,7 +16,7 @@ Chronicle Reader allows you to specify a Chronicle Queue folder, and export the 
 
 To run the Chronicle Reader utility using Maven:
 
-[source, java]
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"
 ....
@@ -25,10 +25,10 @@ You can specify arguments that tailor the way that the Chronicle Reader utility 
 For example:
 
 === Command-line arguments
+
 The following table lists the available command line option arguments:
 
 .Command-line arguments
-
 |===
 |Argument |Description
 |`-d`
@@ -62,7 +62,7 @@ The following examples show how the option arguments can be used:
 
 To write out the data from a queue that exists in `/data/queue`:
 
-[source, java]
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue"
 ....
@@ -74,7 +74,7 @@ It will wait, and append new messages as they arrive on the queue.
 
 To follow a queue:
 
-[source, java]
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f"
 ....
@@ -83,7 +83,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 To export data from a queue which includes only messages containing `USD`:
 
-[source, java]
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD"
 ....
@@ -91,13 +91,15 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 To display records that contain certain string values: For example:
 
 ===== `USD`, *and* `CHI-X` (Include)
-[source, java]
+
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD" -i "CHI-X"
 ....
 
 ===== `USD`, *but not* `CHI-X` (Exclude)
-[source, java]
+
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -i USD" -e "CHI-X"
 ....
@@ -106,7 +108,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 To export up to the last `1000` messages from a queue:
 
-[source, java]
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -m 1000"
 ....
@@ -115,7 +117,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 To follow a queue from the index point, `0x123ABE`:
 
-[source, java]
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-d /data/queue -f -n 0x123ABE"
 ....
@@ -124,7 +126,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMai
 
 When reading from a queue that has been created using a `MethodWriter`:
 
-[source, java]
+[source,java]
 ....
 MethodWriterBuilder<StringEvents> methodWriterBuilder = excerptAppender.methodWriterBuilder(StringEvents.class);
 StringEvents events = methodWriterBuilder.build();
@@ -137,7 +139,7 @@ Using `-r` will cause the reader to treat each event within a document excerpt a
 
 To display the help documentation:
 
-[source, java]
+[source,java]
 ....
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-h"
 ....

@@ -1,13 +1,15 @@
 = Chronicle Queue
 Peter Lawrey
 
-// removed the link as web page is not available
-// image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
+//removed the link as web page is not available
+//image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
 == How Chronicle Works
+
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
 
 == What is Different?
+
 This project can be seen as yet another queue implementation but it has major design choices that should be emphasized.
 
 Using non-heap storage options (`RandomAccessFile`) Chronicle provides a processing environment where applications do not suffer from garbage collection (GC).
@@ -15,15 +17,16 @@ Using non-heap storage options (`RandomAccessFile`) Chronicle provides a process
 While implementing high performance, and memory-intensive, applications in Java, one of the biggest problems is garbage collection.
 Garbage collection may slow down your critical operations non-deterministically at any time.
 In order to avoid non-determinism, and escape from GC delays off-heap memory solutions are addressed.
-The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory, so that you can build your own solutions over it.
+The main idea is to manage your memory manually so it does not suffer from GC.
+Chronicle behaves like a management interface over off-heap memory, so that you can build your own solutions over it.
 
 Chronicle uses `RandomAccessFiles` while managing memory, and this choice brings a great deal of possibilities.
 Random access files permit non-sequential, or random, access to a files contents.
-To access a file randomly, you open the file, seek a particular location, and then read from, or write to, that file.
-`RandomAccessFiles` can be seen as large C-type byte arrays that allows you to access any random index directly using pointers.
+To access a file randomly, you open the file, seek a particular location, and then read from, or write to, that file. `RandomAccessFiles` can be seen as large C-type byte arrays that allows you to access any random index directly using pointers.
 File portions can be used as `ByteBuffers` if the portion is mapped into memory.
 
 === What is the effect of page faults when we have a huge Chronicle and not enough RAM ?
+
 Pages are swapped in and out by the operating system on demand.
 Writes are performed asynchronously, and under moderate loads do not impact the latency of writes.
 Sequential reads are also read using look-ahead, that is, before you ask for them.
@@ -49,18 +52,20 @@ For each data record, Chronicle builds it indexes ( used for random access reads
 An appender is used to write/add data to the queue.
 
 == Getting Started
+
 In the following example we will:
 
 * Create a Chronicle Queue
 * Put a record to the queue
 * Read the record from queue.
 
-[source, Java]
+[source,java]
 ----
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 ----
-[source, Java]
+
+[source,java]
 ----
 // will write the .cq4 file to working directory
 try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(".").build();
@@ -92,9 +97,9 @@ ExcerptAppender appender = queue.acquireAppender();
 ExcerptTailer tailer = queue.createTailer();
 ----
 
-The `write` and `read` an object 
+The `write` and `read` an object
 
-[source, java]
+[source,java]
 ----
 package net.openhft.chronicle.queue;
 
@@ -141,7 +146,7 @@ public class Example {
 }
 ----
 
-outputs the following: 
+outputs the following:
 
 ----
 !net.openhft.chronicle.queue.Example$MyObject {
@@ -151,10 +156,12 @@ outputs the following:
 ----
 
 == Tiered Indexing
+
 Chronicle Queue uses tiered multi-level indexing to provide a fast and efficient method for searching for messages in a large queue.
 
 === Primary index
-[source, YAML]
+
+[source,YAML]
 ----
 # position: 385, header: -1 #  <1>
 --- !!meta-data #binary
@@ -164,6 +171,7 @@ index2index: [ #  <2>
   0, 0, 0, 0, 0,
 ]
 ----
+
 <1> `position` specifies the starting address of the data that follows, within the queue (*.cq4) file.
 <2> `index2Index` defines a pointer to the next lower level of index.
 <3> specifies the point to the next level index.
@@ -181,6 +189,7 @@ index: [ #  <2>
   0, 0, 0, 0, 0, 0, 0, 0,
 ]
 ----
+
 <1> `position` specifies the point in the queue.
 
 <2> `index` defines a pointer to the data.
@@ -197,6 +206,7 @@ index: [ #  <2>
 # 785952 bytes remaining
 
 ----
+
 <1> `position` specifies the point in the queue where the data begins.
 
 <2> `data` defines the information that follows is data (`--- !!data #binary #`), rather than than meta data (`--- !!meta-data #binary`).
@@ -204,31 +214,23 @@ index: [ #  <2>
 == File rolling
 
 A Chronicle Queue is a logical view of a directory on the file-system.
-The queue data itself is split across multiple files, each of which contains
-data belonging to a single _cycle_.
-The length of the cycle is determined by
-the _rollCycle_ parameter passed to the queue builder.
+The queue data itself is split across multiple files, each of which contains data belonging to a single _cycle_.
+The length of the cycle is determined by the _rollCycle_ parameter passed to the queue builder.
 
 Example configuration of _RollCycle_:
 
 * `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
 * `RollCycles.HOURLY` every hour, a new queue file will be created for written events
 
-As new files are created to accommodate events being written to the queue, a persisted
-data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
+As new files are created to accommodate events being written to the queue, a persisted data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
 _cycle_ numbers present in the directory.
 
-Maintaining this table allows an `ExcerptTailer` to busy-spin waiting for new data to
-be appended to the queue, without the need to make costly calls to the file-system to
-check for the existence of new queue files.
+Maintaining this table allows an `ExcerptTailer` to busy-spin waiting for new data to be appended to the queue, without the need to make costly calls to the file-system to check for the existence of new queue files.
 
 === Read-only mode
 
-When opening a queue in read-only mode, it is not possible to utilise the structure
-described above (since the structure needs to be written to).
-In this case,
-Chronicle Queue will fallback to inspecting the file-system to determine when
-new queue files are created.
+When opening a queue in read-only mode, it is not possible to utilise the structure described above (since the structure needs to be written to).
+In this case, Chronicle Queue will fallback to inspecting the file-system to determine when new queue files are created.
 
 For this reason, significant garbage will be generated when using an `ExcerptTailer`
 in a busy-spin loop in read-only mode.
@@ -237,18 +239,14 @@ in a busy-spin loop in read-only mode.
 
 As a queue is written to, it will create a new file for each _roll-cycle_.
 
-Over time, it may become necessary to automatically delete or archive
-old files.
-An automated process needs to ensure that there are not active
-file-handles open on a queue file before attempting to delete.
+Over time, it may become necessary to automatically delete or archive old files.
+An automated process needs to ensure that there are not active file-handles open on a queue file before attempting to delete.
 
-To facilitate this operation, Enterprise Chronicle Queue tracks
-references to its _roll-cycle_ files internally.
+To facilitate this operation, Enterprise Chronicle Queue tracks references to its _roll-cycle_ files internally.
 
-The suggested approach is to perform the maintenance operation from
-a separate JVM to the application, in the following manner:
+The suggested approach is to perform the maintenance operation from a separate JVM to the application, in the following manner:
 
-[source, java]
+[source,java]
 ....
 public void removeOldQueueFiles() throws IOException {
     final Path queuePath = Paths.get("/path/to/queue");
@@ -267,8 +265,7 @@ public void removeOldQueueFiles() throws IOException {
 }
 ....
 
-Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are
-zero references to a given file before attempting to delete it.
+Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are zero references to a given file before attempting to delete it.
 
 == Configuration
 
@@ -307,11 +304,8 @@ try (ChronicleQueue recreated = ChronicleQueue.singleBuilder(queueDir).rollCycle
 }
 ----
 
-In the case where a Chronicle Queue instance is created _before_ any appends have been made, and there is
-a subsequent append operation with a _different_ roll-cycle, then the roll-cycle will be updated to match the
-persisted roll-cycle.
-In this case, a warning log message will be printed in order to notify the library user
-of the situation:
+In the case where a Chronicle Queue instance is created _before_ any appends have been made, and there is a subsequent append operation with a _different_ roll-cycle, then the roll-cycle will be updated to match the persisted roll-cycle.
+In this case, a warning log message will be printed in order to notify the library user of the situation:
 
 [source,java]
 ----
@@ -330,7 +324,9 @@ try (ChronicleQueue minuteRollCycleQueue = ChronicleQueue.singleBuilder(queueDir
     }
 }
 ----
+
 console output:
+
 [source]
 ----
 [main] WARN SingleChronicleQueueBuilder - Overriding roll cycle from HOURLY to MINUTELY.

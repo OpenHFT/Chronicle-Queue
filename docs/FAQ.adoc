@@ -9,10 +9,10 @@
 This document provides information for some common questions about Chronicle Queue.
 
 == Features
+
 === What is Single Chronicle Queue?
 
-Single Chronicle Queue is designed to be easier to work with compared with
-the previous vanilla and indexed Chronicle Queue versions.
+Single Chronicle Queue is designed to be easier to work with compared with the previous vanilla and indexed Chronicle Queue versions.
 It supports:
 
 * concurrent readers in different JVMs.
@@ -28,13 +28,12 @@ Chronicle Queue's design to record everything of interest in the logger and pers
 A key requirement of low latency systems is transparency, and you can record enough information to enable a monitoring system to recreate the state of the monitored system.
 This allows downstream systems to record any information they need, and perform queries without having to touch the critical system.
 
-Chronicle Queue works best in `SEDA` style event-driven systems, where latency is critical, and you need a record of exactly what was performed, and  when.
+Chronicle Queue works best in `SEDA` style event-driven systems, where latency is critical, and you need a record of exactly what was performed, and when.
 All this can be done without expensive network sniffing/recording systems.
 
 === What was the library originally designed for?
 
-The original design was for a low-latency trading system which required persistence of everything in, and out, for a complete record of
-what happened, when, and for deterministic testing.
+The original design was for a low-latency trading system which required persistence of everything in, and out, for a complete record of what happened, when, and for deterministic testing.
 The target round-trip time for persisting the request, processing, and persisting the response, was `1` micro-second.
 
 Key principles are:
@@ -63,8 +62,10 @@ No one would consider having a JVM heap with `100` TB.
 
 A couple of prime examples are:
 
-* Market data consumers. You cannot use flow control with an exchange.
-* Compliance.  It Is something you have to have, but systems which send data to compliance, never want to be slowed down by it.
+* Market data consumers.
+You cannot use flow control with an exchange.
+* Compliance.
+It Is something you have to have, but systems which send data to compliance, never want to be slowed down by it.
 
 === Can Chronicle Queue be used like RMI?
 
@@ -81,12 +82,14 @@ The server has a thread that is polling (busy spin with back-off) on `Q1`.
 When it receives a request:
 
 * with `id=x` it does whatever is needed, and writes out response to `Q2`
-* with `id=x`. `C` polls `Q2` with some policy, and reads out responses as they appear. It uses the `id` to tie responses to requests.
+* with `id=x`. `C` polls `Q2` with some policy, and reads out responses as they appear.
+It uses the `id` to tie responses to requests.
 
 The main task would be in devising a wire-level protocol for serialising your commands (equivalent to the method calls) from the client.
 This is application-specific, and can be done efficiently with the Chronicle tools.
 
-Another issues to consider is what should the client do with the historical responses on startup? Some heartbeat systems so that the client knows that the server is alive.
+Another issues to consider is what should the client do with the historical responses on startup?
+Some heartbeat systems so that the client knows that the server is alive.
 Archiving the old queues (`VanillaChronicle`) makes it easier, but at some cost.
 For more details on how to do this read these https://vanilla-java.github.io/2016/03/23/Microservices-in-the-Chronicle-world-Part-1.html[series of posts]
 
@@ -96,9 +99,9 @@ Chronicle Queue v4.x does not currently support a synchronous mode.
 The best approach is to wait for a replicated message to be acknowledged.
 
 === How is disk space managed?
+
 A key assumption is that disk space is cheap, or at least it should be.
-Some organizations have unrealistic internal charging rates,
-but you should be able to get `100` GB for about one hour of your time.
+Some organizations have unrealistic internal charging rates, but you should be able to get `100` GB for about one hour of your time.
 This assumes retail costs for disks compared with minimum wage.
 The organizational cost of disk is often `10-100x` the real cost, but so is your cost to the business.
 
@@ -124,7 +127,8 @@ You can still use raw writing of bytes if you need maximum performance.
 Two approaches for reducing CPU usage are;
 
 * combine tasks into the same thread. `EventGroup` in Chronicle threads helps to do this dynamically.
-* use a Pauser such as a `LongPauser` to control how a thread backs off if there is nothing to do.  There is a `PauseMonitor` to allow you to periodically print how busy each thread is.
+* use a Pauser such as a `LongPauser` to control how a thread backs off if there is nothing to do.
+There is a `PauseMonitor` to allow you to periodically print how busy each thread is.
 
 === How does Chronicle Queue use memory?
 
@@ -162,14 +166,17 @@ Having one node which can handle the load of a data centre can also save money, 
 
 === Should we specify faster RAM or a faster disk to Chronicle improve read/write performance?
 
-Chronicle recommends lots of high-speed RAM. This is because Chronicle uses the page cache and RAM is in effect a cache to the disk.
+Chronicle recommends lots of high-speed RAM.
+This is because Chronicle uses the page cache and RAM is in effect a cache to the disk.
 There are two cases where having a high-speed disk will give you a real benefit:
 
 ==== 1. Data rate
+
 If the rate of data that you are writing exceeds the disk write speed.
 In most applications this is unlikely to occur.
 
 ==== 2. Page cache miss
+
 For Chronicle queues which write and read messages lineally across memory, we mitigate this situation with the use of the Chronicle pre-toucher.
 The pre-toucher ensures that the page is loaded into the page cache before being written into the queue.
 
@@ -183,7 +190,9 @@ If you were going to install high-speed SSDs, Chronicle recommends that you use 
 In addition, you should avoid using network attached storage, as this usually offers worst performance than local disks.
 
 === How can I determine the speed of my disk sub system?
+
 Use the following command:
+
 [source,ssh]
 ----
 $ for i in 0 1 2 3 4 5 6 7 8 9; do dd bs=65536 count=163840 if=/dev/zero of=deleteme$i ; done
@@ -228,7 +237,7 @@ $ for i in 0 1 2 3 4 5 6 7 8 9; do dd bs=65536 count=163840 if=/dev/zero of=dele
 163840+0 records out
 10737418240 bytes (11 GB) copied, 12.7551 s, 842 MB/s
 ----
-                                             
+
 === Can Chronicle Queue compete with Spark in this domain?
 
 To our knowledge, Spark Streaming is designed for real-time, but is looking to support a much lower message rate, and does not attempt to be ultra-low GC (minor GC less than once a day).
@@ -240,6 +249,7 @@ It tends to be used for downstream monitoring and reporting.
 === What types of excerpt are there?
 
 Chronicle has three types of excerpt, each optimised for different purposes.
+
 [source,java]
 ----
 ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build();
@@ -250,6 +260,7 @@ ExcerptAppender appender = queue.acquireAppender(); // sequential writes.
 // For sequential reads ideally, but random reads/write also possible
 ExcerptTailer tailer = queue.createTailer();
 ----
+
 === How does writing work?
 
 You can write using a try-with-resource block:
@@ -292,7 +303,7 @@ try (DocumentContext context = tailer.readingDocument()) {
 
 === How to find the current cq4 Chronicle Queue is writing to?
 
-[source,Java]
+[source,java]
 ----
 WireStore wireStore = queue.storeForCycle(queue.cycle(), 0, false);
 System.out.println(wireStore.file().getAbsolutePath());
@@ -319,7 +330,7 @@ At this point you get significant inefficiencies, unless you increase the data a
 You can access the bytes in wire as follows:
 
 .Writing to Bytes
-[source,Java]
+[source,java]
 ----
 try (DocumentContext dc = appender.writingDocument()) {
     Wire wire = dc.wire();
@@ -329,7 +340,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 ----
 
 .Reading from Bytes
-[source,Java]
+[source,java]
 ----
 try (DocumentContext dc = tailer.readingDocument()) {
     Wire wire = dc.wire();
@@ -340,7 +351,8 @@ try (DocumentContext dc = tailer.readingDocument()) {
 
 .Checking that you have data
 You can use `isPresent()` to check that there is data to read.
-[source,Java]
+
+[source,java]
 ----
 try (DocumentContext dc = tailer.readingDocument()) {
     if(!dc.isPresent()) // this will tell you if there is any data  to read
@@ -355,7 +367,7 @@ try (DocumentContext dc = tailer.readingDocument()) {
 You can access native memory:
 
 .Writing to native memory
-[source,Java]
+[source,java]
 ----
 try (DocumentContext dc = appender.writingDocument()) {
     Wire wire = dc.wire();
@@ -367,7 +379,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 ----
 
 .Reading from native memory
-[source,Java]
+[source,java]
 ----
 try (DocumentContext dc = appender.writingDocument()) {
     Wire wire = dc.wire();
@@ -394,7 +406,7 @@ The `writingDocument()` should be performed as quickly as possible because a wri
 This blocks other appenders and tailers.
 More dangerously, if something keeps the thread busy long enough(more than recovery timeout, which is 20 seconds by default) between call to `appender.writingDocument()` and code that actually writes something into bytes, it can cause recovery to kick in from other appenders (potentially in other process), which will rewrite message header, and if your thread subsequently continues writing its own message it the will corrupt queue file.
 
-[source,Java]
+[source,java]
 ----
 try (DocumentContext dc = appender.writingDocument()) {
   // this should be performed as quickly as possible because a write lock is held until the
@@ -408,8 +420,7 @@ The recommended pattern for implementing a listener pattern, is to use the `meth
 
 For example, you may want a built-in Chronicle queue mechanism for asynchronous 'appender -> tailer' notifications, where, upon receipt of a notification event, a given tailer is guaranteed to have at least one entry posted by appender ready for read.
 For the tailer, the only way it knows there is a message, is by reading/polling the end of the queue.
-If the appender and tailer are in
-the same process, you can use a different mechanism of your choice.
+If the appender and tailer are in the same process, you can use a different mechanism of your choice.
 
 We would suggest you read these https://vanilla-java.github.io/tag/Microservices/ from the bottom up starting with part `1`.
 
@@ -455,7 +466,7 @@ while (!closed) {
 
 In another thread you can wake the reader with:
 
-[source,Java]
+[source,java]
 ----
 pauser.unpause();
 ----
@@ -480,10 +491,11 @@ They are almost the same, except `files directory-listing.cq4t` was in earlier v
 === How to change the time that Chronicle Queue rolls?
 
 The time Chronicle Queue rolls, is based on the UTC time, it uses `System.currentTimeMillis()`.
-When using daily-rolling, Chronicle Queue will roll at midnight UTC. If you wish to change the time it rolls, you have to change Chronicle Queue's `epoch()` time.
+When using daily-rolling, Chronicle Queue will roll at midnight UTC.
+If you wish to change the time it rolls, you have to change Chronicle Queue's `epoch()` time.
 This time is a milliseconds offset, in other words, if you set the `epoch` to be `epoch(1)` then chronicle will roll at 1 millisecond past midnight.
 
-[source,Java]
+[source,java]
 ----
 Path path = Files.createTempDirectory("rollCycleTest");
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder(path).epoch(0).build();
@@ -493,7 +505,7 @@ We do not recommend that you change the `epoch()` on an existing system, which a
 
 If you were to set :
 
-[source,Java]
+[source,java]
 ----
 .epoch(System.currentTimeMillis()
 ----
@@ -504,7 +516,7 @@ This would make the current time the roll time, and the cycle numbers would star
 
 You should try to avoid abruptly killing Chronicle Queue, especially if its in the middle of writing a message.
 
-[source,Java]
+[source,java]
 ----
 try (DocumentContext dc = appender.writingDocument()) {
     // killing chronicle queue here will leave the file in a locked state
@@ -590,7 +602,8 @@ See <<replication.adoc#,Replication>>
 === How does the byte order work with replication?
 
 The byte order does not change with replication.
-This means that it will work best in byte-endian homogeneous systems such as Windows/Linux x86/x64/ARM. Chronicle may support changing the byte order in future.
+This means that it will work best in byte-endian homogeneous systems such as Windows/Linux x86/x64/ARM.
+Chronicle may support changing the byte order in future.
 
 == Exceptions and Faults
 
@@ -615,8 +628,10 @@ When a memory mapping is truly freed, it cannot be accessed, or it will trigger 
 The reason to suspect this, is that it should be free on a roll from one cycle to the next.
 
 === If you are seeing "OutOfMemoryError: Map failed"
+
 If you see the following error:
-[source,Java]
+
+[source,java]
 ----
 Caused by: java.lang.OutOfMemoryError: Map failed
             at sun.nio.ch.FileChannelImpl.map0(Native Method)
@@ -640,7 +655,7 @@ If the exception was thrown halfway through writing your data, then you will end
 If there is a possibility of an exception during writing, you should use something like the below.
 This calls the `DocumentContext.rollbackOnClose()` method to tell the `DocumentContext` to rollback the data.
 
-[source,Java]
+[source,java]
 ----
 @NotNull DocumentContext dc = writingDocument();
 try {
@@ -731,8 +746,9 @@ One option to consider may be using local disk for the shared appender/tailer da
 If you only have NFS available then using NFS locally can be fine subject to some caveats as above.
 Tests would be required to confirm correct behaviour in your specific environment.
 
-NOTE: The above explanation assumes C\` Queue on Linux.
+NOTE: The above explanation assumes C{pp} Queue on Linux.
 Java Queue has similar functional requirements which should ultimately use similar native calls to C` via the JVM, but this would need to be confirmed in your environment.
 
 '''
+
 <<../README.adoc#,Back to ReadMe>>

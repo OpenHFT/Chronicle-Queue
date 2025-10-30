@@ -13,7 +13,8 @@ The natural trade-off associated with this value is that more frequent indexing 
 However, the sequential read performance is not affected by this property at all.
 
 The index spacing can be set when building your Chronicle queue as follows:
-[source, java]
+
+[source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
     .indexSpacing(16)
@@ -21,6 +22,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
 ----
 
 The default index spacing varies depending on the xref:roll-cycle.adoc[roll cycle], per the table below.
+
 |===
 | Roll-cycle | Default index spacing
 | `SMALL_DAILY` | 8

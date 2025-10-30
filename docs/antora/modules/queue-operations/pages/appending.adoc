@@ -9,7 +9,7 @@ Data is appended (written) to the end of a Chronicle Queue using an _appender_.M
 
 An appender is acquired from the queue instance as follows:
 
-[source,Java]
+[source,java]
 ----
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder("trades").build()) { 
    final ExcerptAppender appender = queue.acquireAppender(); 
@@ -18,7 +18,7 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder("trades").build()) {
 
 A simple text message can then be written using the method `writeText(CharSequence text)`.
 
-[source, Java]
+[source,java]
 ----
 String message = "Hello World!";
 appender.writeText(message);
@@ -27,10 +27,12 @@ appender.writeText(message);
 There are however various ways of appending data, ranging from high-level abstractions such as `writeText` and xref:queue-operations:read-write-proxies.adoc#_methodwriter[write proxies] down to a low-level API, or even writing directly to raw memory.These alternatives are presented in more detail in the following sections.
 
 == Low-level API  
-== Writing Text 
+
+== Writing Text
+
 The high-level methods such as `writeText()` are convenience methods on directly calling `appender.writingDocument()`, but both approaches essentially achieve the same thing.The implementation of `writeText(CharSequence text)` looks like this:
 
-[source,Java]
+[source,java]
 ----
 void writeText(CharSequence text) {
     try (DocumentContext dc = writingDocument()) {
@@ -41,7 +43,7 @@ void writeText(CharSequence text) {
 
 As shown above, the document context can be used to append data directly:
 
-[source,Java]
+[source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
       dc.wire().write().text(“Your text data“);
@@ -50,7 +52,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
 
 The length of the data is written to the header when the try-with-resources block reaches _close_.You can also use the `DocumentContext` to find out the index that the data has just been assigned (see below).The index can later be used to move-to/look up this excerpt.
 
-[source,Java]
+[source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
     dc.wire().write().text(“your text data“);
@@ -62,18 +64,19 @@ NOTE: Each Chronicle Queue excerpt has a unique index.
 
 You can also write a text message with an associated label
 
-[source, Java]
+[source,java]
 ----
 appender.writeDocument(wire -> wire.write("FirstName").text("Rob"));
 appender.writeDocument(wire -> wire.write("LastName").text("Rob"));
 ----
 
 === Self-describing Message
+
 You also have the option to write a "self-describing message".
 Such messages can support schema changes.
 They are also easier to understand when debugging or diagnosing problems.
 
-[source,Java]
+[source,java]
 ----
 appender.writeDocument(w -> w.write("trade").marshallable(
         m -> m.write("timestamp").dateTime(now)
@@ -86,11 +89,12 @@ appender.writeDocument(w -> w.write("trade").marshallable(
 
 [#_writing_an_object]
 === Writing an Object 
+
 You also have the option to append an object to the queue.
 In such case, we recommend that the class implements `net.openhft.chronicle.wire.Marshallable` and overrides the `toString` method to allow for more efficient serialisation.
 See the example below:
 
-[source,Java]
+[source,java]
 ----
     static class Person implements Marshallable {
         String name;
@@ -105,7 +109,7 @@ See the example below:
 
 An instance of `Person` can be then be written with `appender.writeDocument()` as follows:
 
-[source, java]
+[source,java]
 ----
 SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files
     .createTempDirectory("queue").toFile()).build();
@@ -121,13 +125,15 @@ appender.writeDocument(person);
 NOTE: Learn how to read the object from the queue in xref:tailing.adoc#_reading_an_object[Reading an Object].
 
 == Writing Raw Data
+
 If you want more control over how objects are serialised you have the option to append "raw data" to the queue.
 
 === Self Describing 
+
 You can write "raw data" which is self-describing.
 The types will always be correct; position is the only indication as to the meaning of those values.
 
-[source,Java]
+[source,java]
 ----
 appender.writeDocument(w -> w
         .getValueOut().int32(0x123456)
@@ -136,10 +142,11 @@ appender.writeDocument(w -> w
 ----
 
 === Not Self-describing 
+
 You can write "raw data" which is not self-describing.
 Your reader must know what this data means, and the types that were used.
 
-[source,Java]
+[source,java]
 ----
 appender.writeBytes(b -> b
         .writeByte((byte) 0x12)
@@ -149,9 +156,10 @@ appender.writeBytes(b -> b
 ----
 
 == Writing to Raw Memory 
+
 At the lowest abstraction level you get an address to raw memory where you can write whatever you want.
 
-[source,Java]
+[source,java]
 ----
 // Unsafe low level
 appender.writeBytes(b -> {
@@ -168,6 +176,3 @@ appender.writeBytes(b -> {
     b.writeSkip(1 + 4 + 8 + bytes.length);
 });
 ----
-
-// == Preloading
-// TODO: Link to performance chapter on preloading

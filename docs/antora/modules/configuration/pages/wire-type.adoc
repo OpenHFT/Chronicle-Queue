@@ -11,7 +11,7 @@ It's possible to configure how Chronicle Queue will store the data by explicitly
 
 For example:
 
-[source, java]
+[source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("wireTypeTest")
     .wireType(WireType.BINARY)
@@ -33,4 +33,3 @@ In particular, the following wire types are not supported:
 
 * `READ_ANY`
 ====
-

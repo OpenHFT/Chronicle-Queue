@@ -8,9 +8,9 @@ content:
   sources:
     - url: https://github.com/OpenHFT/Chronicle-Queue
       # Only generate from git tags (and not branches)
-      branches: [develop]
+      branches: [ develop ]
       start_path: docs/antora
-      tags: [testdoc]
+      tags: [ testdoc ]
 ui:
   bundle:
     url: ui-bundle.zip # The UI bundle (page styling) is in Chronicle-Antora library.
@@ -18,7 +18,7 @@ ui:
     #path: ui.yml
     #  contents: |
     #    static_files: [ .nojekyll ]
-    #  path: .nojekyll
+  #  path: .nojekyll
 asciidoc:
   attributes:
     page-pagination: true

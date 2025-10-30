@@ -1,20 +1,22 @@
 = Chronicle Queue User Guide
-:pp: ++
-
 keywords: chronicle, queue, java
 author: Per Minborg, Julia Gustafsson
+:pp: ++
 :reftext: Introduction
 :navtitle: Introduction
 :source-highlighter: highlight.js
 
 == A High Performance Message Queue
+
 Chronicle Queue is a low-latency message queue that allows persistence of messages in high performance, mission critical applications.
 It can be used for low latency Interprocess Communication (IPC) without affecting your system performance, hence is tailored to transfer large amounts of data.
 
 == Overview of Documentation
+
 The Chronicle Queue documentation comprises two parts of which the first is this comprehensive user guide, and the second a rich library of runnable code examples.
 
 === User Guide
+
 The user guide is structured as follows:
 
 WARNING: This section is under construction
@@ -38,6 +40,7 @@ This chapter teaches how that is accomplished.
 Learn how to protect the contents of a Chronicle Queue with encryption.
 
 === Runnable Demos
+
 Chronicle has gathered all runnable code demonstrations on GitHub for easy access.
 The demos are great examples of how the learnings from the user guide can be put into practise.
 
@@ -45,6 +48,7 @@ NOTE: The documentation primarily covers usage of Chronicle Queue with Java.
 If you are interested in the C{pp} version please contact link:mailto:sales@chronicle.software[sales@chronicle.software].
 
 == Where to Begin
+
 If this is your first time getting to know Chronicle Queue, you may want to familiarize yourself with the overall capabilities of Queue by reading xref:introduction:what-is-chronicle-queue.adoc[What is Chronicle Queue?].
 Thereafter, follow the xref:getting-started:quick-start.adoc[Quick-start Guide] to get set up in minutes.
 Then you are ready to explore the rest of the chapters that explores
@@ -53,6 +57,7 @@ In case you are not yet interested in integrating Queue in one of your projects,
 You find our demonstrations [here].
 
 == Chronicle Queue Enterprise
+
 link:https://github.com/ChronicleEnterprise/Chronicle-Queue-Enterprise[Chronicle Queue Enterprise] is a commercially supported version of Chronicle Queue OSS.
 The following features are implemented by Chronicle Queue Enterprise:
 
@@ -82,6 +87,7 @@ These sections are clearly marked with a star-symbol (★) and include:
 For more information on Chronicle Queue Enterprise, please contact link:mailto:sales@chronicle.software[sales@chronicle.software].
 
 == Phone Home
+
 Chronicle Queue sends usage data and platform information via a secure connection to Google Analytics, a web analytics service provided by Google, Inc.("Google").
 This data is collected to learn how Chronicle's products are used, which in turn helps us focus our resources more efficiently in our effort to improve our libraries and provide better and more widely adopted solutions for the community.
 

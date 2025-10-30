@@ -5,6 +5,7 @@
 Contents moved to link:http://portal.chronicle.software[]
 ====
 
-Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle Queue from one host, to one or more other hosts using TCP/IP or optionally UDP. Further documentation available at link: https://portal.chronicle.software/docs/queue/chronicle-queue/replication/replication.html[]
+Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle Queue from one host, to one or more other hosts using TCP/IP or optionally UDP.
+Further documentation available at link: https://portal.chronicle.software/docs/queue/chronicle-queue/replication/replication.html[]
 
 <<../README.adoc#,Back to Chronicle Queue>>

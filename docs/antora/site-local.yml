@@ -5,9 +5,9 @@ site:
 content:
   sources:
     - url: ./../../
-      branches: [HEAD]
+      branches: [ HEAD ]
       start_path: docs/antora
-      tags: []
+      tags: [ ]
 ui:
   bundle:
     url: ui-bundle.zip # The UI bundle (page styling) is in Chronicle-Antora library.
@@ -15,7 +15,7 @@ ui:
     #- path: ui.yml
     #  contents: |
     #    static_files: [ .nojekyll ]
-    #- path: .nojekyll
+  #- path: .nojekyll
 asciidoc:
   attributes:
     page-pagination: true

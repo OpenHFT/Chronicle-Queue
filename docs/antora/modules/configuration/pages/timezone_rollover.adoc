@@ -30,14 +30,14 @@ If this is used with in the open-source version, any `zoneId` other than `UTC` w
 
 The following code extract is an instruction to use `Europe/London` as time zone, and rolls over queues at midnight regardless of offset to UTC - periodic time zone changes e.g. in the transition from winter to/from summer will be respected.
 
-[source, java]
+[source,java]
 ----
 .rollTime(LocalTime.of(0, 0), ZoneId.of("Europe/London"))
 ----
 
 The following code extract is an instruction to use `America/New_York` as time zone, and rolls over queues at midnight regardless of offset to UTC.
 
-[source, java]
+[source,java]
 ----
 .rollTime(LocalTime.of(17, 0), ZoneId.of("America/New_York"))
 ----
