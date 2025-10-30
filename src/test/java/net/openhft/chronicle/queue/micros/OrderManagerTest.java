@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
@@ -108,6 +109,7 @@ public class OrderManagerTest extends QueueTestCommon {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
             } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete queuePath", e);
             }
         }
     }
@@ -181,6 +183,7 @@ public class OrderManagerTest extends QueueTestCommon {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete queue directories", e);
             }
         }
     }
@@ -240,14 +243,14 @@ public class OrderManagerTest extends QueueTestCommon {
         } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
-
-            } catch (Exception ignore) {
+            } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete queuePath", e);
             }
 
             try {
-
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
-            } catch (Exception ignore) {
+            } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete queuePath2", e);
             }
         }
     }

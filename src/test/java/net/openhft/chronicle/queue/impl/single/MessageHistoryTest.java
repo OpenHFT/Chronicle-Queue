@@ -155,7 +155,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
         assertFalse(reader.readOne());
     }
 
-    private ChronicleQueue createQueue(final File queueDir, final int sourceId) {
+    private ChronicleQueue createQueue(File queueDir, int sourceId) {
         return ChronicleQueue.singleBuilder(queueDir)
                 .sourceId(sourceId)
                 .timeProvider(clock::get)
@@ -164,23 +164,23 @@ public final class MessageHistoryTest extends QueueTestCommon {
 
     @FunctionalInterface
     interface First {
-        void say(final String word);
+        void say(String word);
     }
 
     @FunctionalInterface
     interface Second {
-        void count(final int value);
+        void count(int value);
     }
 
     private static final class LoggingFirst implements First {
         private final Second second;
 
-        private LoggingFirst(final Second second) {
+        private LoggingFirst(Second second) {
             this.second = second;
         }
 
         @Override
-        public void say(final String word) {
+        public void say(String word) {
             second.count(word.length());
         }
     }

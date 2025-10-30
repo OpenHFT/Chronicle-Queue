@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -30,7 +31,7 @@ import java.util.NavigableSet;
  * The {@code BinarySearch} class provides functionality to perform a binary search
  * across excerpts within a Chronicle Queue using {@link Wire} as the key and a {@link Comparator}
  * for matching.
- *
+ * <p>
  * This implementation relies on Chronicle Queue's encoded 64-bit indexes. While it works under current
  * assumptions where the high bit of the index is not set, it may become unreliable if that changes in future.
  */
@@ -68,7 +69,7 @@ public enum BinarySearch {
             if (startCycle == endCycle)
                 return findWithinCycle(key, c, startCycle, tailer, rollCycle);
 
-            final NavigableSet<Long> cycles = ((SingleChronicleQueue)tailer.queue()).listCyclesBetween(startCycle, endCycle);
+            final NavigableSet<Long> cycles = ((SingleChronicleQueue) tailer.queue()).listCyclesBetween(startCycle, endCycle);
             final int cycle = (int) findCycleLinearSearch(cycles, key, c, tailer);
 
             if (cycle == -1)
@@ -82,10 +83,10 @@ public enum BinarySearch {
     /**
      * Performs a linear search through the available cycles to find the one that may contain the key.
      *
-     * @param cycles  The set of available cycles.
-     * @param key     The key to search for.
-     * @param c       The comparator for comparing keys.
-     * @param tailer  The tailer used for reading the queue.
+     * @param cycles The set of available cycles.
+     * @param key    The key to search for.
+     * @param c      The comparator for comparing keys.
+     * @param tailer The tailer used for reading the queue.
      * @return The found cycle or the previous cycle if no exact match was found.
      */
     private static long findCycleLinearSearch(@NotNull NavigableSet<Long> cycles, Wire key,
@@ -124,7 +125,8 @@ public enum BinarySearch {
                             return prevIndex;
                         prevIndex = current;
                         break;
-                    } catch (NotComparableException e) { // NOPMD.EmptyCatchBlock - comparator may reject mismatched entries; continue scanning.
+                    } catch (NotComparableException e) {
+                        Jvm.debug().on(BinarySearch.class, "Skipping non-comparable entry", e);
                     } finally {
                         key.bytes().readPosition(readPosition);
                     }
@@ -137,11 +139,11 @@ public enum BinarySearch {
     /**
      * Finds an entry within the cycle that matches the key using binary search.
      *
-     * @param key         The key to search for.
-     * @param c           The comparator for comparing keys.
-     * @param cycle       The cycle to search within.
-     * @param tailer      The tailer used to navigate the queue.
-     * @param rollCycle   The roll cycle information for the queue.
+     * @param key       The key to search for.
+     * @param c         The comparator for comparing keys.
+     * @param cycle     The cycle to search within.
+     * @param tailer    The tailer used to navigate the queue.
+     * @param rollCycle The roll cycle information for the queue.
      * @return The index if an exact match is found, an approximation in the form of -approximateIndex
      * or a negative number (- the approx index) if there was no searching to be done.
      * <p>
@@ -186,12 +188,10 @@ public enum BinarySearch {
                             if (cmp < 0) {
                                 lowSeqNum = rollCycle.toSequenceNumber(dc.index()) + 1;
                                 break;
-                            }
-                            else if (cmp > 0) {
+                            } else if (cmp > 0) {
                                 highSeqNum = midSeqNumber - 1;
                                 break;
-                            }
-                            else
+                            } else
                                 return dc.index(); // key found
                         } catch (NotComparableException e) {
                             // We reached the upper bound, eliminate the top half of the range

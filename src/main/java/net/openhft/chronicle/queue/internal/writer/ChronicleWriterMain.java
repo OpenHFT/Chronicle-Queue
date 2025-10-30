@@ -90,7 +90,7 @@ public class ChronicleWriterMain {
         final PrintWriter writer = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
         new HelpFormatter().printHelp(
                 writer,
-                180,
+                HELP_OUTPUT_LINE_WIDTH,
                 this.getClass().getSimpleName() + " files..",
                 message,
                 options,

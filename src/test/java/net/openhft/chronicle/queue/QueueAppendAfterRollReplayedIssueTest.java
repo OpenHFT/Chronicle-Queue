@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
@@ -73,7 +74,7 @@ public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
             try {
                 IOTools.deleteDirWithFiles(path, 2);
             } catch (IORuntimeException todoFixOnWindows) {
-
+                Jvm.warn().on(QueueAppendAfterRollReplayedIssueTest.class, "Failed to delete test path", todoFixOnWindows);
             }
         }
     }

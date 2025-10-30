@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.wire.Wire;
@@ -28,6 +29,7 @@ import net.openhft.posix.PosixAPI;
  * It is used in conjunction with the {@link StoreAppender} to track and handle
  * the memory pages that need touching or syncing during append operations.
  */
+@SuppressFBWarnings({"EI_EXPOSE_REP2"})
 public class MicroToucher {
     private final StoreAppender appender;
     private long lastPageTouched = 0;
@@ -60,6 +62,8 @@ public class MicroToucher {
         final long lastPage = lastPosition & ~0xFFF;
         final long nextPage = (lastPosition + 0xFFF) & ~0xFFF;
         Bytes<?> bytes = bufferWire.bytes();
+        if (bytes == null)
+            return false;
         if (nextPage != lastPageTouched) {
             lastPageTouched = nextPage;
             try {
@@ -93,7 +97,11 @@ public class MicroToucher {
         if (bufferWire == null)
             return;
 
-        BytesStore<?, ?> bytes = bufferWire.bytes().bytesStore();
+        Bytes<?> wireBytes = bufferWire.bytes();
+        if (wireBytes == null)
+            return;
+
+        BytesStore<?, ?> bytes = wireBytes.bytesStore();
         sync(bytes, start, length);
         this.lastPageSynced += length;
     }

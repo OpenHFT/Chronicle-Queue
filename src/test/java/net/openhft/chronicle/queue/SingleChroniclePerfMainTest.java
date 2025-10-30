@@ -36,7 +36,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@SuppressWarnings({"rawtypes","unchecked"})
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class SingleChroniclePerfMainTest extends QueueTestCommon {
     static final int count = 1_000_000;
     static final int size = 4 << 10;
@@ -103,20 +103,20 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
 
     static void writeMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
-            bytes.writeInt(i);// 4 bytes
-            bytes.writeFloat(i);// 4 bytes
-            bytes.writeLong(i);// 8 bytes
-            bytes.writeDouble(i);// 8 bytes
+            bytes.writeInt(i); // 4 bytes
+            bytes.writeFloat(i); // 4 bytes
+            bytes.writeLong(i); // 8 bytes
+            bytes.writeDouble(i); // 8 bytes
             bytes.writeUtf8("Hello!!"); // 8 bytes
         }
     }
 
     static void readMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
-            s32 = bytes.readInt();// 4 bytes
-            f32 = bytes.readFloat();// 4 bytes
-            s64 = bytes.readLong();// 8 bytes
-            f64 = bytes.readDouble();// 8 bytes
+            s32 = bytes.readInt(); // 4 bytes
+            f32 = bytes.readFloat(); // 4 bytes
+            s64 = bytes.readLong(); // 8 bytes
+            f64 = bytes.readDouble(); // 8 bytes
             s = bytes.readUtf8(); // 8 bytes
             assertEquals("Hello!!", s);
         }

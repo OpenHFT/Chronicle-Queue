@@ -40,7 +40,7 @@ public final class NoOpCondition implements Condition, IgnoresEverything {
     /**
      * Private constructor to enforce singleton usage through {@link #INSTANCE}.
      */
-    private NoOpCondition() {}
+    private NoOpCondition() { }
 
     /**
      * Does nothing, returns immediately.

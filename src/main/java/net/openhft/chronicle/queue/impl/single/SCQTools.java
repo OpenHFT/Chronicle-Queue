@@ -33,7 +33,7 @@ import static net.openhft.chronicle.wire.BinaryWireCode.FIELD_NUMBER;
  */
 @SuppressWarnings("deprecation")
 public enum SCQTools {
-    ; // none
+    INSTANCE;
 
     /**
      * Reads the message history from the provided {@link DocumentContext} and updates the given

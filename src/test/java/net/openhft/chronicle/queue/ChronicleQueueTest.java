@@ -3,10 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
@@ -23,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @SuppressWarnings("deprecation")
 public class ChronicleQueueTest extends QueueTestCommon {
 
-    static final String PATH_NAME = OS.getTarget()+"/test-path";
+    static final String PATH_NAME = OS.getTarget() + "/test-path";
 
     @AfterClass
     public static void cleanup() {
@@ -50,7 +47,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testCreateTailerThrowsUnsupportedOperationExceptionForNamedTailer() {
         // Test that createTailer(String id) throws an UnsupportedOperationException for the default implementation
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertThrows(UnsupportedOperationException .class, () ->queue.createTailer("namedTailer"));
+            assertThrows(UnsupportedOperationException.class, () -> queue.createTailer("namedTailer"));
         }
     }
 

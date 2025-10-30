@@ -540,8 +540,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <jacoco.line.coverage>0.30</jacoco.line.coverage>
-                <jacoco.branch.coverage>0.15</jacoco.branch.coverage>
+                <jacoco.line.coverage>0.60</jacoco.line.coverage>
+                <jacoco.branch.coverage>0.40</jacoco.branch.coverage>
             </properties>
             <build>
                 <plugins>
@@ -570,10 +570,13 @@
                             <consoleOutput>true</consoleOutput>
                             <failOnViolation>true</failOnViolation>
                             <violationSeverity>warning</violationSeverity>
-                            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                            <includeTestSourceDirectory>true</includeTestSourceDirectory>
                             <sourceDirectories>
                                 <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
                             </sourceDirectories>
+                            <testSourceDirectories>
+                                <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
+                            </testSourceDirectories>
                         </configuration>
                     </plugin>
 
@@ -692,12 +695,6 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <includes>
-                                <include>**/RollCyclesAsciiDocGeneratingTest.java</include>
-                                <include>**/AcquireReleaseTest.java</include>
-                                <include>**/ChronicleReaderMainTest.java</include>
-                                <include>**/ChronicleHistoryReaderMainTest.java</include>
-                            </includes>
                             <reuseForks>false</reuseForks>
                             <trimStackTrace>false</trimStackTrace>
                         </configuration>

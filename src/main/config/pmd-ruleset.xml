@@ -4,7 +4,20 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.net/ruleset_2_0_0.xsd">
 
-    <description>Minimal PMD configuration for code-review profile; only enforce EmptyCatchBlock for now.</description>
+    <description>Broader PMD configuration for code-review profile with high-signal best practices and error-prone checks.</description>
 
+    <!-- Error-prone rules aimed at catching logic defects -->
     <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
+    <rule ref="category/java/codestyle.xml/EmptyControlStatement"/>
+    <rule ref="category/java/errorprone.xml/ReturnFromFinallyBlock"/>
+    <rule ref="category/java/errorprone.xml/BrokenNullCheck"/>
+    <rule ref="category/java/errorprone.xml/ImplicitSwitchFallThrough"/>
+
+    <!-- Best practice rules that should hold project-wide -->
+    <rule ref="category/java/bestpractices.xml/AvoidPrintStackTrace"/>
+    <rule ref="category/java/bestpractices.xml/AvoidUsingHardCodedIP"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
+
+    <!-- Concurrency guard rails -->
+    <rule ref="category/java/multithreading.xml/DoubleCheckedLocking"/>
 </ruleset>

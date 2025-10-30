@@ -18,7 +18,7 @@ public class WeeklyRollCycleTest extends QueueTestCommon {
 
     @Test
     public void testWeekly() {
-        @NotNull String tmpDir = OS.getTarget()+"/testWeekly";
+        @NotNull String tmpDir = OS.getTarget() + "/testWeekly";
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.WEEKLY).build()) {
             // 1970-02-01 is a Sunday
             assertEquals(4, queue.cycle(new SetTimeProvider("1970/02/01T00:00:00")));
@@ -32,7 +32,7 @@ public class WeeklyRollCycleTest extends QueueTestCommon {
             assertEquals(4, queue.cycle(new SetTimeProvider("1970/02/07T23:59:59")));
             assertEquals(5, queue.cycle(new SetTimeProvider("1970/02/08T00:00:00")));
         } finally {
-           IOTools.deleteDirWithFiles(tmpDir);
+            IOTools.deleteDirWithFiles(tmpDir);
         }
     }
 }

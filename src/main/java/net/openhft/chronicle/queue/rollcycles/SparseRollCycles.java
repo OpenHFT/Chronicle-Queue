@@ -27,8 +27,7 @@ public enum SparseRollCycles implements RollCycle {
     /**
      * 0xffffffffffff entries per day with super-sparse indexing (every (2^20)th entry)
      */
-    HUGE_DAILY_XSPARSE("yyyyMMdd'HX'", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20),
-    ;
+    HUGE_DAILY_XSPARSE("yyyyMMdd'HX'", 24 * 60 * 60 * 1000, 16 << 10, 1 << 20);
 
     private final String format;
     private final int lengthInMillis;

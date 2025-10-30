@@ -36,5 +36,5 @@ public interface CycleCalculator {
      * @param offsetMillis  The time offset in milliseconds, typically used for adjusting the cycle calculation
      * @return The current cycle as an integer, calculated according to the given roll cycle and time
      */
-    int currentCycle(final RollCycle rollCycle, final TimeProvider timeProvider, final long offsetMillis);
+    int currentCycle(RollCycle rollCycle, TimeProvider timeProvider, long offsetMillis);
 }

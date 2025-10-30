@@ -104,7 +104,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
             thread.start();
 
             Bytes<Object> underlyingBytes = BytesStore.empty().bytesForRead();
-            UncheckedBytes<BytesStore<?,?>> bytes = new UncheckedBytes<>(underlyingBytes);
+            UncheckedBytes<BytesStore<?, ?>> bytes = new UncheckedBytes<>(underlyingBytes);
             try (ExcerptAppender appender = chronicle.createAppender()) {
                 for (int i = 0; i < count; i++) {
                     long start = System.nanoTime();
@@ -147,20 +147,20 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
     static void writeMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
-            bytes.writeInt(i);// 4 bytes
-            bytes.writeFloat(i);// 4 bytes
-            bytes.writeLong(i);// 8 bytes
-            bytes.writeDouble(i);// 8 bytes
+            bytes.writeInt(i); // 4 bytes
+            bytes.writeFloat(i); // 4 bytes
+            bytes.writeLong(i); // 8 bytes
+            bytes.writeDouble(i); // 8 bytes
             bytes.writeUtf8("Hello!!"); // 8 bytes
         }
     }
 
     static void readMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
-            s32 = bytes.readInt();// 4 bytes
-            f32 = bytes.readFloat();// 4 bytes
-            s64 = bytes.readLong();// 8 bytes
-            f64 = bytes.readDouble();// 8 bytes
+            s32 = bytes.readInt(); // 4 bytes
+            f32 = bytes.readFloat(); // 4 bytes
+            s64 = bytes.readLong(); // 8 bytes
+            f64 = bytes.readDouble(); // 8 bytes
             s = bytes.readUtf8(); // 8 bytes
             assertEquals("Hello!!", s);
         }

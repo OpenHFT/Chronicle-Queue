@@ -164,7 +164,7 @@ public class RollingResourcesCache {
         final String name;
         final int count;
 
-        public ParseCount(String name, int count) {
+        ParseCount(String name, int count) {
             this.name = name;
             this.count = count;
         }

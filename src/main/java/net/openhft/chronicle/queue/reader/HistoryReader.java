@@ -41,7 +41,7 @@ public interface HistoryReader {
      * @param messageSink The consumer for processing message strings
      * @return The current instance of {@link HistoryReader}
      */
-    HistoryReader withMessageSink(final Consumer<String> messageSink);
+    HistoryReader withMessageSink(Consumer<String> messageSink);
 
     /**
      * Sets the base path for the {@link ChronicleQueue} that the history reader will operate on.
@@ -49,7 +49,7 @@ public interface HistoryReader {
      * @param path The base directory path for the Chronicle Queue
      * @return The current instance of {@link HistoryReader}
      */
-    HistoryReader withBasePath(final Path path);
+    HistoryReader withBasePath(Path path);
 
     /**
      * Enables or disables progress reporting.

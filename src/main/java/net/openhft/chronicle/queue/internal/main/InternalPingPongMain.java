@@ -81,15 +81,18 @@ public final class InternalPingPongMain {
                 ExcerptTailer tailer = queue.createTailer();
                 while (running.get()) {
                     //noinspection StatementWithEmptyBody
-                    while (readCount.get() == writeCount.get()) {
-                        // busy-spin until the writer advances the count
-                    }
+                while (readCount.get() == writeCount.get()) {
+                    // busy-spin until the writer advances the count
+                    Jvm.pause(1);
+                }
 
                     long wakeTime = System.nanoTime();
                     while (running.get()) {
                         try (DocumentContext dc = tailer.readingDocument(true)) {
-                            if (!dc.isPresent())
+                            if (!dc.isPresent()) {
+                                Jvm.pause(1);
                                 continue;
+                            }
                         }
                         break;
                     }

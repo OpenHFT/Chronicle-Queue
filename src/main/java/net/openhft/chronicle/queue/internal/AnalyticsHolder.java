@@ -26,7 +26,7 @@ import net.openhft.chronicle.core.pom.PomProperties;
  * a debug logger.
  */
 public enum AnalyticsHolder {
-    ; // none
+    INSTANCE;
 
     private static final String VERSION = PomProperties.version("net.openhft", "chronicle-queue");
 

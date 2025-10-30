@@ -85,7 +85,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         DELAY_WRITER_RANDOM_MS = Jvm.getInteger("delayWriter", 1);
         CORES = Jvm.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
-        NUMBER_OF_INTS = Jvm.getInteger("numberInts", 18);//1060 / 4;
+        NUMBER_OF_INTS = Jvm.getInteger("numberInts", 18); // 1060 / 4
         PRETOUCH = (type == StressTestType.PRETOUCH || type == StressTestType.PRETOUCH_EA);
         if (type == StressTestType.PRETOUCH_EA)
             System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");

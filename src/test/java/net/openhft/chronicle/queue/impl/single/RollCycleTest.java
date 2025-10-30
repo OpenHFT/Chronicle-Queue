@@ -312,7 +312,7 @@ public class RollCycleTest extends QueueTestCommon {
         CountDownLatch progressLatch;
         volatile int documentsRead;
 
-        public ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
+        ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
             queue = SingleChronicleQueueBuilder.binary(path.toFile())
                     .testBlockSize()
                     .rollCycle(TEST_DAILY)

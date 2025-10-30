@@ -284,7 +284,7 @@ public class MethodReaderBenchmark implements JLBHTask {
         private double price;
         private long createdTime;
 
-        public OrderDTO(Random r) {
+        OrderDTO(Random r) {
             side = (char) r.nextInt();
             ordType = (char) r.nextInt();
             symbol = nextSymbol(r);
@@ -325,7 +325,7 @@ public class MethodReaderBenchmark implements JLBHTask {
         private char handlInst;
         private long createdNS;
 
-        public ExecutionReportDTO(Random r) {
+        ExecutionReportDTO(Random r) {
             orderID = nextSymbol(r);
             clOrdID = Bytes.from(nextSymbol(r));
             execID = nextSymbol(r);

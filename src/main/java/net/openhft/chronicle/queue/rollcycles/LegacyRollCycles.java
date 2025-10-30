@@ -23,8 +23,7 @@ public enum LegacyRollCycles implements RollCycle {
     /**
      * 0xffffffff entries per day, indexing every 64th entry, leave as 8K and 64 for historical reasons.
      */
-    DAILY(/*-----------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64),
-    ;
+    DAILY(/*-----------*/"yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64);
 
     private final String format;
     private final int lengthInMillis;

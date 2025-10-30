@@ -101,7 +101,7 @@ public class ReadOneBackwardsTest extends QueueTestCommon {
     static class SnapshotDTO extends SelfDescribingMarshallable {
         String data;
 
-        public SnapshotDTO(String data) {
+        SnapshotDTO(String data) {
             this.data = data;
         }
     }

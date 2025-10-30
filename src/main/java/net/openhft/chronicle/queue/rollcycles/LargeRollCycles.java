@@ -27,8 +27,7 @@ public enum LargeRollCycles implements RollCycle {
     /**
      * 0xffffffffffff entries per day with sparse indexing (every 1024th entry)
      */
-    HUGE_DAILY(/*------*/"yyyyMMdd'H'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 1024),
-    ;
+    HUGE_DAILY(/*------*/"yyyyMMdd'H'", 24 * 60 * 60 * 1000, MAX_INDEX_COUNT, 1024);
 
     private final String format;
     private final int lengthInMillis;

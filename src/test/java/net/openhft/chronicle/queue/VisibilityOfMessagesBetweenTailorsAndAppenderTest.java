@@ -85,7 +85,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
             try {
                 f2.get(Jvm.isCodeCoverage() ? 20 : 5, TimeUnit.SECONDS);
             } catch (TimeoutException ignore) {
-
+                // expected: allow thread to keep running for cleanup
             }
 
             e1.shutdown();

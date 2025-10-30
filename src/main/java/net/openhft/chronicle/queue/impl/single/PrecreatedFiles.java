@@ -26,7 +26,7 @@ import java.io.File;
  * when necessary.
  */
 public enum PrecreatedFiles {
-    ; // none
+    INSTANCE;
 
     private static final String PRE_CREATED_FILE_SUFFIX = ".precreated";
 

@@ -312,7 +312,7 @@ public class RollingCycleTest extends QueueTestCommon {
         long _value2;
         long _value3;
 
-        public TestBytesMarshallable(int i) {
+        TestBytesMarshallable(int i) {
             final Random rand = new Random(i);
             _name = "name_" + rand.nextInt();
             _value1 = rand.nextLong();

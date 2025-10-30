@@ -1408,7 +1408,7 @@ class StoreAppender extends AbstractCloseable
                         bytes.writeByte(i, (byte) 0);
                     long lastPosition = StoreAppender.this.lastPosition;
                     position0(lastPosition, lastPosition, bytes);
-                    ((InternalWire)wire).forceNotInsideHeader();
+                    ((InternalWire) wire).forceNotInsideHeader();
                 } catch (BufferOverflowException | IllegalStateException e) {
                     if (bytes instanceof MappedBytes && ((MappedBytes) bytes).isClosed()) {
                         Jvm.warn().on(getClass(), "Unable to roll back excerpt as it is closed.");

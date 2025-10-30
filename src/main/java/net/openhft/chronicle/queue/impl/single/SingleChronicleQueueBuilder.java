@@ -133,8 +133,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private transient TableStore<SCQMeta> metaStore;
 
     // enterprise stuff
-    private Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier;
-    private Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier;
+    private Supplier<BiConsumer<BytesStore<?, ?>, Bytes<?>>> encodingSupplier;
+    private Supplier<BiConsumer<BytesStore<?, ?>, Bytes<?>>> decodingSupplier;
     private Updater<Bytes<?>> messageInitializer;
     private Consumer<Bytes<?>> messageHeaderReader;
     private SecretKeySpec key;
@@ -330,7 +330,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                         Jvm.warn().on(SingleChronicleQueueBuilder.class,
                                 "Default roll cycle configured as enum, but enum value not specified: " + rollCycleProperty);
                     } else {
-                        @SuppressWarnings({"unchecked","rawtypes"})
+                        @SuppressWarnings({"unchecked", "rawtypes"})
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
                         @SuppressWarnings("unchecked")
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
@@ -1436,7 +1436,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      *
      * @return the encoding supplier, or null if not set
      */
-    public Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier() {
+    public Supplier<BiConsumer<BytesStore<?, ?>, Bytes<?>>> encodingSupplier() {
         return encodingSupplier;
     }
 
@@ -1446,7 +1446,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      *
      * @return the decoding supplier, or null if not set
      */
-    public Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier() {
+    public Supplier<BiConsumer<BytesStore<?, ?>, Bytes<?>>> decodingSupplier() {
         return decodingSupplier;
     }
 
@@ -1460,8 +1460,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @throws UnsupportedOperationException if one supplier is set and the other is null
      */
     public SingleChronicleQueueBuilder codingSuppliers(@Nullable
-                                                       Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> encodingSupplier,
-                                                       @Nullable Supplier<BiConsumer<BytesStore<?,?>, Bytes<?>>> decodingSupplier) {
+                                                       Supplier<BiConsumer<BytesStore<?, ?>, Bytes<?>>> encodingSupplier,
+                                                       @Nullable Supplier<BiConsumer<BytesStore<?, ?>, Bytes<?>>> decodingSupplier) {
         if ((encodingSupplier == null) != (decodingSupplier == null))
             throw new UnsupportedOperationException("Both encodingSupplier and decodingSupplier must be set or neither");
         this.encodingSupplier = encodingSupplier;

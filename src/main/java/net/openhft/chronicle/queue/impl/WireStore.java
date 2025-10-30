@@ -87,7 +87,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @throws UnrecoverableTimeoutException if the operation times out
      * @throws StreamCorruptedException if the stream is corrupted
      */
-    void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws StreamCorruptedException;
+    void setPositionForSequenceNumber(ExcerptContext ec, long sequenceNumber, long position) throws StreamCorruptedException;
 
     /**
      * Writes an EOF (End Of File) marker to the store.

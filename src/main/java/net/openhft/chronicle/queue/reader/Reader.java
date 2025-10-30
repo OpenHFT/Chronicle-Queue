@@ -89,7 +89,7 @@ public interface Reader {
      * @param index The start index.
      * @return The current instance of {@link Reader}
      */
-    Reader withStartIndex(final long index);
+    Reader withStartIndex(long index);
 
     /**
      * Sets the content-based limiter for this Reader to control the processing of messages based on their content.
@@ -128,7 +128,7 @@ public interface Reader {
      * @param maxHistoryRecords The maximum number of history records.
      * @return The current instance of {@link Reader}
      */
-    Reader historyRecords(final long maxHistoryRecords);
+    Reader historyRecords(long maxHistoryRecords);
 
     /**
      * Sets the method reader interface for this Reader.

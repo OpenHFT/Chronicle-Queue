@@ -109,8 +109,9 @@ public class CycleNotFoundTest extends QueueTestCommon {
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
                 for (int i = 0; i < NUMBER_OF_MSG; i++) {
-                    while (System.nanoTime() < next)
-                        /* busy wait*/ ;
+                    while (System.nanoTime() < next) {
+                        // busy wait
+                    }
                     try (DocumentContext dc = appender.writingDocument()) {
                         dc.wire().write().int64(i);
                     }

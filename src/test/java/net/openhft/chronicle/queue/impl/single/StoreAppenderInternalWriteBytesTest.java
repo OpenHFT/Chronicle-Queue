@@ -148,7 +148,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         private final Path destinationDir;
         private final int copyId;
 
-        public QueueCopier(Path sourceDir, Path destinationDir, int copyId) {
+        QueueCopier(Path sourceDir, Path destinationDir, int copyId) {
             this.sourceDir = sourceDir;
             this.destinationDir = destinationDir;
             this.copyId = copyId;

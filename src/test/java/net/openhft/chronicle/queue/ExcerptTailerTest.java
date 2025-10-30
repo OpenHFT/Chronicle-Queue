@@ -58,6 +58,6 @@ public class ExcerptTailerTest extends QueueTestCommon {
     public void testCycle() {
         // Since no data has been read, cycle should be Integer.MIN_VALUE as no cycle has been loaded
         int cycle = excerptTailer.cycle();
-        assertEquals(Integer.MIN_VALUE,cycle);
+        assertEquals(Integer.MIN_VALUE, cycle);
     }
 }

@@ -1347,7 +1347,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the BytesStore representation of the key
      */
     @SuppressWarnings("unchecked")
-    private BytesStore<?,Void> asBytes(CharSequence key, Bytes<Void> bytes) {
+    private BytesStore<?, Void> asBytes(CharSequence key, Bytes<Void> bytes) {
         return key instanceof BytesStore
                 ? ((BytesStore<?, Void>) key)
                 : bytes.append(key);

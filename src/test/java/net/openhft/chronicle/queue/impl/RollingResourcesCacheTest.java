@@ -237,7 +237,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
                 assertEquals(daysBetweenEpochAndInstant, (long) cycle);
 
-                assertEquals((long) cycle * DAILY.lengthInMillis(),((long) cycle) * ONE_DAY_IN_MILLIS);
+                assertEquals((long) cycle * DAILY.lengthInMillis(), ((long) cycle) * ONE_DAY_IN_MILLIS);
 
                 if (LOG_TEST_DEBUG) {
                     System.out.printf("Epoch: %d%n", epoch);

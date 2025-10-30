@@ -64,6 +64,7 @@ class StoreTailer extends AbstractCloseable
     private final IndexUpdater indexUpdater;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
+    @SuppressWarnings("PMD.UnusedPrivateField")
     private final Finalizer finalizer;
     long index; // index of the next read.
     long lastReadIndex; // index of the last read message
@@ -85,7 +86,7 @@ class StoreTailer extends AbstractCloseable
      * @param queue the queue to be read
      * @param storePool the pool that manages WireStore instances
      */
-    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool) {
+    StoreTailer(@NotNull SingleChronicleQueue queue, WireStorePool storePool) {
         this(queue, storePool, null);
     }
 
@@ -96,7 +97,7 @@ class StoreTailer extends AbstractCloseable
      * @param storePool the pool that manages WireStore instances
      * @param indexUpdater optional index updater for reading from specific positions
      */
-    public StoreTailer(@NotNull final SingleChronicleQueue queue, WireStorePool storePool, IndexUpdater indexUpdater) {
+    StoreTailer(@NotNull SingleChronicleQueue queue, WireStorePool storePool, IndexUpdater indexUpdater) {
         boolean error = true;
         try {
             this.queue = queue;

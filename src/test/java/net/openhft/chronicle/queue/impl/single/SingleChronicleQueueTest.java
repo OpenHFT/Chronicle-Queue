@@ -351,7 +351,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 final Bytes<?> bytes = result.poll(5, TimeUnit.SECONDS);
                 if (bytes == null) {
-                    // troubleshoot failed test http://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshothttp://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
+                    // Troubleshoot occasional CI failures: http://teamcity.chronicle.software:8111/viewLog.html?buildId=264141&tab=buildResultsDiv&buildTypeId=OpenHFT_ChronicleQueue4_Snapshot
                     f.get(1, TimeUnit.SECONDS);
                     throw new NullPointerException("nothing in result");
                 }
@@ -1088,7 +1088,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assertTrue("i: " + i,
                         tailer.moveToIndex(
                                 index));
-                try (final DocumentContext context = tailer.readingDocument()){
+                try (final DocumentContext context = tailer.readingDocument()) {
                     assertEquals(index, context.index());
                     context.wire().read("key").text(sb);
                     assertEquals("value=" + i, sb.toString());
@@ -3732,11 +3732,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         String name;
 
         @UsedViaReflection
-        public MyMarshable(@NotNull WireIn wire) {
+        MyMarshable(@NotNull WireIn wire) {
             readMarshallable(wire);
         }
 
-        public MyMarshable() {
+        MyMarshable() {
         }
     }
 
@@ -3744,7 +3744,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         private BytesStore<?, ?> bytes;
         private long index;
 
-        public BytesWithIndex(Bytes<?> bytes, long index) {
+        BytesWithIndex(Bytes<?> bytes, long index) {
             this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
             this.index = index;
         }

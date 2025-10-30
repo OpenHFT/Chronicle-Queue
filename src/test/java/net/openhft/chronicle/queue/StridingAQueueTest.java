@@ -48,7 +48,9 @@ public class StridingAQueueTest extends QueueTestCommon {
             StringWriter sw = new StringWriter();
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd().striding(true);
             MethodReader reader = tailer.methodReader(Mocker.logging(SAQMessage.class, "", sw));
-            while (reader.readOne()) ;
+            while (reader.readOne()) {
+                // consume entries
+            }
             assertEquals("hi[4, 9]\n" +
                             "hi[4, 8]\n" +
                             "hi[4, 4]\n" +

@@ -52,7 +52,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the {@code SingleChronicleQueueStore} for the given cycle, or {@code null} if the store doesn't exist and {@code createIfAbsent} is false.
      */
     @Nullable
-    SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);
+    SingleChronicleQueueStore storeForCycle(int cycle, long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);
 
     /**
      * Finds and returns the first cycle number in the queue.

@@ -458,7 +458,7 @@ public class StoreTailerTest extends QueueTestCommon {
                 assertTrue(dc.isMetaData());
                 assertEquals("header", dc.wire().readEvent(String.class));
                 assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toStart();//forbidden
+                tailer.toStart(); // forbidden
             }
         }
     }
@@ -476,7 +476,7 @@ public class StoreTailerTest extends QueueTestCommon {
                 assertTrue(dc.isMetaData());
                 assertEquals("header", dc.wire().readEvent(String.class));
                 assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toEnd();//forbidden
+                tailer.toEnd(); // forbidden
             }
         }
     }

@@ -64,7 +64,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +
-                    "]",sb.toString());
+                    "]", sb.toString());
         } finally {
             IOTools.deleteDirWithFiles(dir);
         }
@@ -84,7 +84,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +
-                    "]",sb.toString());
+                    "]", sb.toString());
         } finally {
             IOTools.deleteDirWithFiles(dir);
         }
@@ -104,7 +104,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +
-                    "]",sb.toString());
+                    "]", sb.toString());
         } finally {
             IOTools.deleteDirWithFiles(dir);
         }

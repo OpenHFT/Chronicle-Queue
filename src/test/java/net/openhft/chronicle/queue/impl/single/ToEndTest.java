@@ -33,7 +33,6 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -281,8 +280,10 @@ public class ToEndTest extends QueueTestCommon {
             ExcerptTailer tailer = rqueue.createTailer();
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
-            //noinspection StatementWithEmptyBody
-            while (tailer.readText() != null) ;
+            // exhaust existing entries
+            while (tailer.readText() != null) {
+                // no-op
+            }
 
             assertNull(tailer.readText());
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);

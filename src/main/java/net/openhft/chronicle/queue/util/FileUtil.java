@@ -33,7 +33,7 @@ import java.util.stream.Stream;
  */
 public final class FileUtil {
 
-    private FileUtil() {}
+    private FileUtil() { }
 
     /**
      * Returns a Stream of roll Queue files that are likely removable

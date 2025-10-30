@@ -125,12 +125,12 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
                 new CyclicBarrier(2, () -> LOGGER.info("Iteration finished"));
         protected final int iterations;
 
-        public BlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+        BlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
             this.queue = queue;
             this.iterations = iterations;
         }
 
-        public void run() throws ExecutionException, InterruptedException {
+        void run() throws ExecutionException, InterruptedException {
             ExecutorService executorService = Executors.newFixedThreadPool(2);
             try {
                 Future<?> blockerFuture = executorService.submit(this::runBlocker);
@@ -142,7 +142,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
             }
         }
 
-        public void runBlocker() {
+        void runBlocker() {
             LOGGER.info("--- Starting {} iterations ({}) --", iterations, this.getClass().getSimpleName());
             try (ExcerptAppender appender = queue.createAppender()) {
                 everyoneHasAppenders.await();
@@ -162,7 +162,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
             }
         }
 
-        public void runBlockee() {
+        void runBlockee() {
             try (ExcerptAppender appender = queue.createAppender()) {
                 everyoneHasAppenders.await();
                 for (int i = 0; i < iterations; i++) {
@@ -182,7 +182,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
         abstract protected void writeBlockeeRecordForIteration(int iteration, ExcerptAppender appender)
                 throws InterruptedException, BrokenBarrierException;
 
-        abstract public void readBlockeeRecordForIteration(int iteration, ExcerptTailer tailer);
+        abstract void readBlockeeRecordForIteration(int iteration, ExcerptTailer tailer);
     }
 
     /**
@@ -190,7 +190,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
      */
     static class MethodWriterBlockedWriterScenario extends BlockedWriterScenario {
 
-        public MethodWriterBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+        MethodWriterBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
             super(queue, iterations);
         }
 
@@ -212,7 +212,8 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
         }
 
         @Override
-        public void readBlockeeRecordForIteration(int iteration, ExcerptTailer tailer) {
+        @Override
+        void readBlockeeRecordForIteration(int iteration, ExcerptTailer tailer) {
             CountingFoo countingFoo = new CountingFoo();
             try (MethodReader methodReader = tailer.methodReaderBuilder().build(countingFoo)) {
                 assertTrue(methodReader.readOne());
@@ -247,7 +248,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
      */
     static class RawBlockedWriterScenario extends BlockedWriterScenario {
 
-        public RawBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+        RawBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
             super(queue, iterations);
         }
 
@@ -265,7 +266,8 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
         }
 
         @Override
-        public void readBlockeeRecordForIteration(int iteration, ExcerptTailer tailer) {
+        @Override
+        void readBlockeeRecordForIteration(int iteration, ExcerptTailer tailer) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertEquals("blocked!", dc.wire().read().text());
             }
@@ -278,7 +280,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
      */
     static class RollbackBlockedWriterScenario extends RawBlockedWriterScenario {
 
-        public RollbackBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+        RollbackBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
             super(queue, iterations);
             if (iterations < 3) {
                 throw new IllegalArgumentException("This test is only meaningful with at least three iterations");
@@ -293,6 +295,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
             }
         }
 
+        @Override
         @Override
         public void readBlockeeRecordForIteration(int iteration, ExcerptTailer tailer) {
             if (shouldRollBack(iteration)) {
@@ -312,7 +315,7 @@ public class StoreAppenderDoubleBufferTest extends QueueTestCommon {
      */
     static class CallIndexWhileBlockedWriterScenario extends RawBlockedWriterScenario {
 
-        public CallIndexWhileBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
+        CallIndexWhileBlockedWriterScenario(ChronicleQueue queue, Integer iterations) {
             super(queue, iterations);
         }
 

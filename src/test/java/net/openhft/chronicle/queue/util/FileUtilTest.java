@@ -192,7 +192,7 @@ public class FileUtilTest extends QueueTestCommon {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
 
         // open file for writing, keeping file handle open
-        File temporaryFile = new File(OS.getTmp() , "testOpenFilesWithPid.txt-" + System.nanoTime());
+        File temporaryFile = new File(OS.getTmp(), "testOpenFilesWithPid.txt-" + System.nanoTime());
         FileWriter fstream = new FileWriter(temporaryFile);
         BufferedWriter out = new BufferedWriter(fstream);
         out.write("somedata");

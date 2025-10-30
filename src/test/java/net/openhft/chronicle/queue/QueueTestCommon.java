@@ -38,6 +38,7 @@ import org.junit.runner.Description;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -168,7 +169,17 @@ public class QueueTestCommon {
         exceptionTracker = JvmExceptionTracker.create(false);
         if (OS.isWindows())
             ignoreException("Read-only mode is not supported on Windows® platforms, defaulting to read/write");
-        for (String msg : "Shrinking ,Allocation of , ms to add mapping for ,jar to the classpath, ms to pollDiskSpace for , us to linearScan by position from ,File released ,Overriding roll length from existing metadata, was 3600000, overriding to 86400000   ".split(",")) {
+        for (String msg : Arrays.asList(
+                "Shrinking ",
+                "Allocation of ",
+                " ms to add mapping for ",
+                "jar to the classpath",
+                " ms to pollDiskSpace for ",
+                " us to linearScan by position from ",
+                "File released ",
+                "Overriding roll length from existing metadata",
+                " was 3600000",
+                " overriding to 86400000   ")) {
             ignoreException(msg);
         }
     }

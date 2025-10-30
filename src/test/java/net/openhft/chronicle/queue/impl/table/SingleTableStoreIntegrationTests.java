@@ -80,7 +80,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         SingleChronicleQueue queue1 = context.newQueueInstance();
         StringBuilder keyBuffer = new StringBuilder("AAAA");
         Random random = new Random();
-        while(keyBuffer.length() < 100) {
+        while (keyBuffer.length() < 100) {
             keyBuffer.append(random.nextInt());
         }
         String key = keyBuffer.toString();

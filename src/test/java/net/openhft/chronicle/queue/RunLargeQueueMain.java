@@ -29,7 +29,7 @@ import net.openhft.chronicle.bytes.SyncMode;
  * Usage: java -Dfile.size=<size_in_gb> -Dmsg.size=<message_size_in_bytes> RunLargeQueueMain [queue_path]
  */
 public enum RunLargeQueueMain {
-    ; // no instances allowed
+    INSTANCE;
 
     // Configurable constants with defaults
     private static final int FILE_SIZE = Integer.getInteger("file.size", 1024); // in GB

@@ -26,7 +26,6 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -306,10 +305,10 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             int deletedUpTo = 0;
             // int numberOfCycles = queueWithCycleDetails.rollCycles.size();
             while (!queueWithCycleDetails.rollCycles.isEmpty()) {
-                Jvm.startup().on(TestDeleteQueueFile.class, "Deleting from " + deletedUpTo + " to " + (deletedUpTo + CYCLES_TO_DELETE_PER_ITERATION));
+                Jvm.startup().on(TestDeleteQueueFile.class,
+                        "Deleting from " + deletedUpTo + " to " + (deletedUpTo + CYCLES_TO_DELETE_PER_ITERATION));
                 for (int i = 0; i < CYCLES_TO_DELETE_PER_ITERATION; i++) {
                     final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(0);
-                    // Jvm.startup().on(TestDeleteQueueFile.class, "Deleting " + rollCycleDetails.filename + " (" + deletedUpTo + "/" + numberOfCycles + "), firstIndex=" + toHexString(rollCycleDetails.firstIndex) + ", lastIndex=" + toHexString(rollCycleDetails.lastIndex));
                     Files.delete(Paths.get(rollCycleDetails.filename));
                     deletedUpTo++;
                 }
@@ -330,7 +329,14 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 final int index = ThreadLocalRandom.current().nextInt(1, queueWithCycleDetails.rollCycles.size());
                 final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(index);
                 deleted++;
-                Jvm.startup().on(TestDeleteQueueFile.class, "Deleting " + rollCycleDetails.rollCycle + ": " + rollCycleDetails.filename + " (" + deleted + "/" + numberOfCycles + "), firstIndex=" + toHexString(rollCycleDetails.firstIndex) + ", lastIndex=" + toHexString(rollCycleDetails.lastIndex));
+                String message = String.format("Deleting %s: %s (%d/%d), firstIndex=%s, lastIndex=%s",
+                        rollCycleDetails.rollCycle,
+                        rollCycleDetails.filename,
+                        deleted,
+                        numberOfCycles,
+                        toHexString(rollCycleDetails.firstIndex),
+                        toHexString(rollCycleDetails.lastIndex));
+                Jvm.startup().on(TestDeleteQueueFile.class, message);
                 Files.delete(Paths.get(rollCycleDetails.filename));
                 queueWithCycleDetails.queue.refreshDirectoryListing();
                 Jvm.pause(20);

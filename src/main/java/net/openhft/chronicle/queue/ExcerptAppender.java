@@ -38,7 +38,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @param bytes to write to excerpt.
      * @throws UnrecoverableTimeoutException if the operation times out.
      */
-    void writeBytes(@NotNull BytesStore<?,?> bytes);
+    void writeBytes(@NotNull BytesStore<?, ?> bytes);
 
     /**
      * Writes (i.e. appends) the provided {@code bytes} to the queue.
@@ -144,5 +144,5 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * Used by replication sinks on startup to cover off any edge cases where the replicated EOF was not received/applied
      * Can also be used on any appender, but this is not currently done automatically
      */
-    default void normaliseEOFs() {}
+    default void normaliseEOFs() { }
 }

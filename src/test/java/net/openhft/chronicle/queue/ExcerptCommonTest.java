@@ -20,7 +20,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
         private final ChronicleQueue queue;
         private final File currentFile;
 
-        public ExcerptCommonImpl(int sourceId, ChronicleQueue queue, File currentFile) {
+        ExcerptCommonImpl(int sourceId, ChronicleQueue queue, File currentFile) {
             this.sourceId = sourceId;
             this.queue = queue;
             this.currentFile = currentFile;

@@ -224,7 +224,9 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                 for (int i = -WARMUP; i < ITERATIONS; i++) {
                     long s0 = System.nanoTime();
                     if (s0 < next) {
-                        do ; while (System.nanoTime() < next);
+                        do {
+                            // spin until scheduled time
+                        } while (System.nanoTime() < next);
                         next = System.nanoTime(); // if we failed to come out of the spin loop on time, reset next.
                     }
 

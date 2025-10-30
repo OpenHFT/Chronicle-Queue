@@ -36,7 +36,7 @@ public interface PretoucherFactory {
      * @param queue The {@link SingleChronicleQueue} instance for which the event handler is created
      * @return A new {@link EventHandler} for the given queue
      */
-    EventHandler createEventHandler(@NotNull final SingleChronicleQueue queue);
+    EventHandler createEventHandler(@NotNull SingleChronicleQueue queue);
 
     /**
      * Creates a {@link Pretoucher} for the specified {@link SingleChronicleQueue}.
@@ -46,5 +46,5 @@ public interface PretoucherFactory {
      * @param queue The {@link SingleChronicleQueue} instance for which the pretoucher is created
      * @return A new {@link Pretoucher} for the given queue
      */
-    Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue);
+    Pretoucher createPretoucher(@NotNull SingleChronicleQueue queue);
 }
