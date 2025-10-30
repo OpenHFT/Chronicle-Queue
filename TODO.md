@@ -1,0 +1,7 @@
+# Chronicle Queue Code Review Follow-ups
+
+- [ ] CQ-QUALITY-2170 (target: Sprint 25): Refactor StoreAppender lifecycle to remove nullable state and drop SpotBugs suppressions.
+- [ ] CQ-QUALITY-2171 (target: Sprint 25): Document StoreTailer reset contract and eliminate SpotBugs nullability suppressions.
+- [ ] CQ-QUALITY-2172 (target: Sprint 26): Harden SCQIndexing null handling during sequence lookup.
+- [ ] CQ-QUALITY-2173 (target: Sprint 26): Introduce central CLI path validation and revisit PATH_TRAVERSAL suppressions across tooling mains.
+- [ ] CQ-QUALITY-2175 (target: Sprint 27): Restore full code-review test execution/Jacoco coverage once long-running queue tests have automation-safe guards.

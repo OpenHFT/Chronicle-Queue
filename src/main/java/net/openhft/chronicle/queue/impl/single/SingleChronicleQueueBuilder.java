@@ -55,6 +55,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
+import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE_METADATA_FILE;
 
@@ -601,6 +602,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             else
                 Jvm.warn().on(getClass(), "Failback to readonly tablestore", ex);
 
+            closeQuietly(metaStore);
             // Fallback to read-only table store if metadata file is not found
             metaStore = new ReadonlyTableStore<>(metadata);
         }

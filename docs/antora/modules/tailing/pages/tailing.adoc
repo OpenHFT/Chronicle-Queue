@@ -7,7 +7,8 @@ author: Julia Gustafsson
 
 Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
 
-Unlike other Java queuing solutions, messages are not lost when they are read with a tailer. This is covered in more detail in the section below on "Reading from a queue using a tailer".
+Unlike other Java queuing solutions, messages are not lost when they are read with a tailer.
+This is covered in more detail in the section below on "Reading from a queue using a tailer".
 
 .Start Reading
 [source, java]
@@ -17,7 +18,8 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
 }
 ----
 
-You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments. Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
+You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments.
+Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
 
 [source, java]
 ----
@@ -46,7 +48,8 @@ assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
         })));
 ----
 
-You can read self-describing data values. This will check the types are correct, and convert as required.
+You can read self-describing data values.
+This will check the types are correct, and convert as required.
 
 [source, java]
 ----
@@ -98,9 +101,11 @@ assertTrue(tailer.readBytes(b -> {
 
 NOTE: Every tailer sees every message.
 
-An abstraction can be added to filter messages, or assign messages to just one message processor. However, in general you only need one main tailer for a topic, with possibly, some supporting tailers for monitoring etc.
+An abstraction can be added to filter messages, or assign messages to just one message processor.
+However, in general you only need one main tailer for a topic, with possibly, some supporting tailers for monitoring etc.
 
-As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic. Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
+As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic.
+Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
 
 == Tailers and File Handlers Clean Up
 
@@ -136,7 +141,8 @@ ExcerptTailer tailer = queue.createTailer();
 tailer.direction(TailerDirection.BACKWARD).toEnd();
 ----
 
-When reading backwards, then the `toEnd()` method will move the tailer to the last record in the queue. If the queue is not empty, then there will be a
+When reading backwards, then the `toEnd()` method will move the tailer to the last record in the queue.
+If the queue is not empty, then there will be a
 `DocumentContext` available for reading:
 
 [source, java]
@@ -203,6 +209,9 @@ Chronicle Queue stores its data in binary format, with a file extension of `cq4`
 �����������������������������������������������������������������
 ----
 
-This can often be a bit difficult to read, so it is better to dump the `cq4` files as text. This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
+This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.
+This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
 
-You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue. More information and examples of usage is provided on the xref:command-line:command_line_tools.adoc[Command Line Tools] page.
+You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`.
+`DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue.
+More information and examples of usage is provided on the xref:command-line:command_line_tools.adoc[Command Line Tools] page.

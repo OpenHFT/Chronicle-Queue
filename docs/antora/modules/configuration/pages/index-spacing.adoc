@@ -5,9 +5,12 @@ author: Julia Gustafsson
 :navtitle: Index sizing
 :source-highlighter: highlight.js
 
-Each queue explicitly indexes certain excerpts with a fixed interval for quicker referencing. What excerpts are indexed is controlled with the parameter `indexSpacing(int spacing)`, a property that defines the space between indexed excerpts. In the extreme case of setting this property to 1, every excerpt is indexed.
+Each queue explicitly indexes certain excerpts with a fixed interval for quicker referencing.
+What excerpts are indexed is controlled with the parameter `indexSpacing(int spacing)`, a property that defines the space between indexed excerpts.
+In the extreme case of setting this property to 1, every excerpt is indexed.
 
-The natural trade-off associated with this value is that more frequent indexing yields faster random access read, but decreases the sequential write performance. However, the sequential read performance is not affected by this property at all.
+The natural trade-off associated with this value is that more frequent indexing yields faster random access read, but decreases the sequential write performance.
+However, the sequential read performance is not affected by this property at all.
 
 The index spacing can be set when building your Chronicle queue as follows:
 [source, java]

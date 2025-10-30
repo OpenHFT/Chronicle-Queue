@@ -69,7 +69,9 @@ appender.writeDocument(wire -> wire.write("LastName").text("Rob"));
 ----
 
 === Self-describing Message
-You also have the option to write a "self-describing message". Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
+You also have the option to write a "self-describing message".
+Such messages can support schema changes.
+They are also easier to understand when debugging or diagnosing problems.
 
 [source,Java]
 ----
@@ -84,7 +86,9 @@ appender.writeDocument(w -> w.write("trade").marshallable(
 
 [#_writing_an_object]
 === Writing an Object 
-You also have the option to append an object to the queue. In such case, we recommend that the class implements `net.openhft.chronicle.wire.Marshallable` and overrides the `toString` method to allow for more efficient serialisation. See the example below:
+You also have the option to append an object to the queue.
+In such case, we recommend that the class implements `net.openhft.chronicle.wire.Marshallable` and overrides the `toString` method to allow for more efficient serialisation.
+See the example below:
 
 [source,Java]
 ----
@@ -120,7 +124,8 @@ NOTE: Learn how to read the object from the queue in xref:tailing.adoc#_reading_
 If you want more control over how objects are serialised you have the option to append "raw data" to the queue.
 
 === Self Describing 
-You can write "raw data" which is self-describing. The types will always be correct; position is the only indication as to the meaning of those values.
+You can write "raw data" which is self-describing.
+The types will always be correct; position is the only indication as to the meaning of those values.
 
 [source,Java]
 ----
@@ -131,7 +136,8 @@ appender.writeDocument(w -> w
 ----
 
 === Not Self-describing 
-You can write "raw data" which is not self-describing. Your reader must know what this data means, and the types that were used.
+You can write "raw data" which is not self-describing.
+Your reader must know what this data means, and the types that were used.
 
 [source,Java]
 ----
@@ -163,5 +169,5 @@ appender.writeBytes(b -> {
 });
 ----
 
-//== Preloading
+// == Preloading
 // TODO: Link to performance chapter on preloading

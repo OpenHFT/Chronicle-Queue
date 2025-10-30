@@ -8,11 +8,18 @@ author: Julia Gustafsson
 == Producer-Centric Systems
 Chronicle Queue is most often used for producer-centric systems where you need to retain a lot of data for days or years.
 
-Most messaging systems are consumer-centric. Flow control is implemented to avoid the consumer ever getting overloaded; even momentarily. A common example is a server supporting multiple GUI users. Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times. For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.
+Most messaging systems are consumer-centric.
+Flow control is implemented to avoid the consumer ever getting overloaded; even momentarily.
+A common example is a server supporting multiple GUI users.
+Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times.
+For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.
 
-Chronicle Queue is a producer-centric solution and does everything possible to never push back on the producer, or tell it to slow down. This makes it a powerful tool, providing a big buffer between your system, and an upstream producer over which you have little, or no, control.
+Chronicle Queue is a producer-centric solution and does everything possible to never push back on the producer, or tell it to slow down.
+This makes it a powerful tool, providing a big buffer between your system, and an upstream producer over which you have little, or no, control.
 
-IMPORTANT: If using Chronicle Queue on NFS, there are a number of considerations to take into account. See https://github.com/OpenHFT/Chronicle-Queue/blob/ea/docs/FAQ.adoc#creating-chronicle-queue-on-network-file-system-nfs-mount[this Chronicle Queue documentation] for more information. If any networking is needed (e.g. to make the data accessible to multiple hosts), the recommended solution is to use Chronicle Queue Replication (Enterprise feature).
+IMPORTANT: If using Chronicle Queue on NFS, there are a number of considerations to take into account.
+See https://github.com/OpenHFT/Chronicle-Queue/blob/ea/docs/FAQ.adoc#creating-chronicle-queue-on-network-file-system-nfs-mount[this Chronicle Queue documentation] for more information.
+If any networking is needed (e.g. to make the data accessible to multiple hosts), the recommended solution is to use Chronicle Queue Replication (Enterprise feature).
 
 == Market Data
 

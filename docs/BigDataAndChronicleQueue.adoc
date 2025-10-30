@@ -12,17 +12,18 @@ Every reader sees every message, and a reader can join at any time and still see
 We assume that you can read/scan through messages fast enough that, even if you are not interested in most messages, it will still be fast enough.
 These are not consumers as such, and messages do not disappear after reading them.
 
-//removed the link as the web page is not available
-//image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
+// removed the link as the web page is not available
+// image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
 
 Retaining every message has a number of advantages:
 
-- a message can be replayed as many times as is needed.
-- a day of production messages can be replayed in a testing environment months later.
-- reduces the requirement for logging almost entirely, speeding up your application.
-- greater transparency leads to optimisations that you might have missed without a detailed record of every event that you process.
+* a message can be replayed as many times as is needed.
+* a day of production messages can be replayed in a testing environment months later.
+* reduces the requirement for logging almost entirely, speeding up your application.
+* greater transparency leads to optimisations that you might have missed without a detailed record of every event that you process.
 
-One of our clients, first implemented their trading system without Chronicle Queue and achieved an average latency of 35 micro-seconds tick to trade. However, after switching to Chronicle Queue, the latency was reduced to 23 micro-seconds.
+One of our clients, first implemented their trading system without Chronicle Queue and achieved an average latency of 35 micro-seconds tick to trade.
+However, after switching to Chronicle Queue, the latency was reduced to 23 micro-seconds.
 
 === What makes Chronicle Queue different from similar solutions
 
@@ -56,25 +57,27 @@ Chronicle Queue deliberately does not use flow control, as flow control is not a
 
 Some examples of systems where Chronicle Queue is often used are:
 
-- *Market data gateways*. You cannot slow down an exchange because you are not keeping up.
-- *Compliance systems*. You have to feed information to them, but you never want to be slowed down by them.
-- *Core trading systems*. As these feed from Market Data gateways, you want them to be as fast as possible, all the time.
+* *Market data gateways*. You cannot slow down an exchange because you are not keeping up.
+* *Compliance systems*. You have to feed information to them, but you never want to be slowed down by them.
+* *Core trading systems*. As these feed from Market Data gateways, you want them to be as fast as possible, all the time.
 
-In a Producer-centric solution, the producer is not slowed down by a slow consumer, and the consumer is never more than main memory behind the producer. The consumer might be an overnight batch job, and be a whole day, or week behind.
+In a Producer-centric solution, the producer is not slowed down by a slow consumer, and the consumer is never more than main memory behind the producer.
+The consumer might be an overnight batch job, and be a whole day, or week behind.
 
 The producer-centric solution has a number of advantages:
 
-- You can reproduce a bug, even if it only occurs once in a million messages, by replaying all the messages which led to that bug triggering. More importantly, you can have confidence that *the* bug, rather than just *a* bug has been fixed.
+* You can reproduce a bug, even if it only occurs once in a million messages, by replaying all the messages which led to that bug triggering. More importantly, you can have confidence that *the* bug, rather than just *a* bug has been fixed.
 
-- You can test every micro-service independently, as there is no flow control interaction between them. If you have flow control, say 20 services, any one of those services could slow down any producer, until your entire system locks up.  This means the only real performance test is a complete system test.
+* You can test every micro-service independently, as there is no flow control interaction between them. If you have flow control, say 20 services, any one of those services could slow down any producer, until your entire system locks up.  This means the only real performance test is a complete system test.
 
-- You can test a micro-service, replaying from the same input file repeatedly, without the producer or down stream consumers running.
+* You can test a micro-service, replaying from the same input file repeatedly, without the producer or down stream consumers running.
 
-- You can restart and upgrade a service, by replaying its *outputs* to ensure it is committed to the decisions/outcomes it has produced in the past.  This allows you to change your service and know that, even those your new version might have made different decision, it can honour those already made.
+* You can restart and upgrade a service, by replaying its *outputs* to ensure it is committed to the decisions/outcomes it has produced in the past.  This allows you to change your service and know that, even those your new version might have made different decision, it can honour those already made.
 
-- Flow control is designed to smooth out burst and jitter in the system; but it can also hide such jitter as result.
+* Flow control is designed to smooth out burst and jitter in the system; but it can also hide such jitter as result.
 
-The main disadvantage is that this assumes disk space is cheap.  If you look at retail prices for enterprise grade disks, you can get TBs of disk for a few hundred dollars.
+The main disadvantage is that this assumes disk space is cheap.
+If you look at retail prices for enterprise grade disks, you can get TBs of disk for a few hundred dollars.
 Many investment banks do not take this approach, and internal charge rates for managed storage can be orders of magnitude higher.
 I have worked on systems that have more free memory than free disk space.
 
@@ -178,7 +181,9 @@ You will note that `YAML` supports `typed data`, `enumerated values`, `comments`
 
 === Append-only data structure
 
-Chronicle Queue is design for sequential writes and reads.  It also supports random access, and updates in-place. Although you cannot change the size of an existing entry, you can pad an entry for future use.
+Chronicle Queue is design for sequential writes and reads.
+It also supports random access, and updates in-place.
+Although you cannot change the size of an existing entry, you can pad an entry for future use.
 
 This append-only structure is more efficient for passing data between threads using the `CPU L2 cache` coherence bus, It can also be faster than attempting to pass an object between threads, as it avoids random access which can be
 common in `Java` objects where there can be a lot of reference chasing.
@@ -191,9 +196,12 @@ The append-only structure makes replication much simpler as well.
 
 Chronicle Queue is built on a class called `MappedBytes` in `Chronicle-Bytes`.
 This visualises the file to act as an unbounded array of bytes mapped to a file.
-As you append data, it will add memory mappings transparently. The file grows as you write more data.
+As you append data, it will add memory mappings transparently.
+The file grows as you write more data.
 
-The key benefit of using memory-mapped files, is that you are no longer limited by the size of your `JVM`, or even the size of your main memory.  You are only limited by the amount of disk space you have. If you want to load `100` TB into a `JVM` for replay the operating system does all the heavy lifting for you.
+The key benefit of using memory-mapped files, is that you are no longer limited by the size of your `JVM`, or even the size of your main memory.
+You are only limited by the amount of disk space you have.
+If you want to load `100` TB into a `JVM` for replay the operating system does all the heavy lifting for you.
 
 Another benefit of using a memory-mapped file is the ability to bind a portion of memory to an object.
 The key attributes in the header are bound when first loading, and after that they work like a normal object, updating off-heap memory and the file in a thread-safe manner.
@@ -202,12 +210,14 @@ As the data access is thread-safe, it can be shared between threads, or processe
 
 === The data structure in more detail
 
-Each record is a "Size Prefixed Blob", where the first four bytes contain a `30` bit length of the message. The top two bits are used to record:
+Each record is a "Size Prefixed Blob", where the first four bytes contain a `30` bit length of the message.
+The top two bits are used to record:
 
- - whether this message is user-data, or meta-data required to support the queue itself,
- - a bit to flag whether the message is complete or not.
+* whether this message is user-data, or meta-data required to support the queue itself,
+* a bit to flag whether the message is complete or not.
 
-When the message is not complete, it cannot be read.  However, if the length is known, a writer can skip such messages, and attempt to write after it.
+When the message is not complete, it cannot be read.
+However, if the length is known, a writer can skip such messages, and attempt to write after it.
 
 For example:
 
@@ -218,7 +228,8 @@ For example:
 In this way, multiple threads can be writing to the queue concurrently.
 Any message which is detected as bad (for example, the thread died), can be marked as meta-data and skipped by the reader.
 
-There is a special value ("poison pill" value), which indicates the file has been rolled. This ensures that all writers and readers roll at the same point, in a timely manner.
+There is a special value ("poison pill" value), which indicates the file has been rolled.
+This ensures that all writers and readers roll at the same point, in a timely manner.
 
 *Header example*:
 
@@ -244,14 +255,18 @@ header: !SCQStore { # <2>
 ----
 <1> First message is meta-data written in binary
 <2> Type of header is aliased as the name `SCQStore`.
-<3> `writePosition` is the first bound value. It is the highest known byte which has been written to, and is updated atomically.
+<3> `writePosition` is the first bound value.
+It is the highest known byte which has been written to, and is updated atomically.
 <4> Roll cycle is daily.
-<5> This class controls how it will be indexed on-demand.  This adds meta-data entries for indexed lookup.
+<5> This class controls how it will be indexed on-demand.
+This adds meta-data entries for indexed lookup.
 <6> Highest message index which was acknowledged by a replica.
 
 For us a key feature of Chronicle Queue is not just how the data structure is arranged, but also how transparently this binary data structure can be inspected.
 
-NOTE: The `SCQStore` "bootstraps" the queue itself.  If you provided another, custom implementation, the queue could behave as you wish, provided it support the same interface.  The rolling and indexing strategies can also be customized.
+NOTE: The `SCQStore` "bootstraps" the queue itself.
+If you provided another, custom implementation, the queue could behave as you wish, provided it support the same interface.
+The rolling and indexing strategies can also be customized.
 
 If we look at the last message, you can see the message type, the type of the payload, and the value of all the fields.
 
@@ -270,7 +285,8 @@ newOrder: !Order {
 
 For the most latency-sensitive systems, you may want to keep your allocation rate to below `300` KB/s.
 At this rate you will produce less than `24` GB of garbage a day, and
-if your `Eden space` is larger than this, you can run all day without a minor collection.  A GC is something that you can do as an overnight maintainence task.
+if your `Eden space` is larger than this, you can run all day without a minor collection.
+A GC is something that you can do as an overnight maintainence task.
 Reduce your garbage-per-day to less than `5` GB, and you might be able to run all week without a GC.
 
 We have a number of strategies to minimise garbage; the key one being that we translate directly between on-heap and native memory without intermediate temporary objects.

@@ -12,44 +12,46 @@ The following command line tools can be used to interact with Chronicle Queue.
 [cols="1,1"]
 |===
 
-| ★ <<_archiverollfiles,*ArchiveRollFiles*>>
+| ★ <<_archiverollfiles,_ArchiveRollFiles_>>
 | Assists in management of roll cycle files
 
-| <<_chroniclehistoryreadermain,*ChronicleHistoryReaderMain*>>
+| <<_chroniclehistoryreadermain,_ChronicleHistoryReaderMain_>>
 | Reads history from queue and outputs latency histograms
 
-| <<_chroniclereadermain,*ChronicleReaderMain*>>
+| <<_chroniclereadermain,_ChronicleReaderMain_>>
 | Displays records from a queue in text form, supporting more complex operations
 
-| <<_chroniclewritermain,*ChronicleWriterMain*>>
+| <<_chroniclewritermain,_ChronicleWriterMain_>>
 | Write contents of files provided to queue
 
-| <<_dumpmain,*DumpMain*>>
+| <<_dumpmain,_DumpMain_>>
 | Performs simple text output of queue contents
 
 | <<_refreshmain,RefreshMain>>
 | Refreshes the directory listing for a queue
 
-| <<_unlockmain,*UnlockMain*>>
+| <<_unlockmain,_UnlockMain_>>
 | Manually force-unlocks a queue
 |===
 
 === Using Command Line Tools
 
-Where noted, each command line tool can be invoked via a shell script. Command line tools can also be invoked using Maven, assuming a project POM file that includes the Chronicle Queue artifact. For example:
+Where noted, each command line tool can be invoked via a shell script.
+Command line tools can also be invoked using Maven, assuming a project POM file that includes the Chronicle Queue artifact.
+For example:
 
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -Dexec.args="myqueue"
 ----
 
-In the above command invoking *DumpMain*,  _myqueue_ is the directory containing your .cq4 files.
+In the above command invoking _DumpMain_,  _myqueue_ is the directory containing your .cq4 files.
 
 == ★ ArchiveRollFiles
 
 To facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the `ArchiveRollFiles` utility.
 
-**Invocation via Maven:**
+*Invocation via Maven:*
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain" -Dexec.args="<archiving arguments>"
@@ -134,13 +136,13 @@ $  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.Arch
 
 `ChronicleHistoryReaderMain` reads the message history from a Chronicle queue and outputs histograms for latencies for each component that has processed a message, as well as latencies between each component that has processed a message.
 
-**Invocation via Maven:**
+*Invocation via Maven:*
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleHistoryReaderMain" -Dexec.args="<reader arguments>"
 ----
 
-**Invocation via shell script from the `Chronicle-Queue` root folder:**
+*Invocation via shell script from the `Chronicle-Queue` root folder:*
 [source, shell script]
 ----
 $ ./bin/history_reader.sh <options>
@@ -162,15 +164,16 @@ usage: ChronicleHistoryReaderMain
 
 == ChronicleReaderMain
 
-`ChronicleReaderMain` can be used to log the contents of a chronicle queue, and is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
+`ChronicleReaderMain` can be used to log the contents of a chronicle queue, and is able to perform several operations beyond printing the file content to the console.
+For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
 
-**Invocation via Maven:**
+*Invocation via Maven:*
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain" -Dexec.args="<reader arguments>"
 ----
 
-**Invocation via shell script from the `Chronicle-Queue` root folder:**
+*Invocation via shell script from the `Chronicle-Queue` root folder:*
 [source, shell script]
 ----
 $ ./bin/queue_reader.sh <options>
@@ -198,13 +201,13 @@ usage: ChronicleReaderMain
 
 `ChronicleWriterMain` can be used to write to a queue, using a method writer to write the contents of files provided.
 
-**Invocation via Maven:**
+*Invocation via Maven:*
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleWriterMain" -Dexec.args="<writer arguments>"
 ----
 
-**Invocation via shell script from the `Chronicle-Queue` root folder:**
+*Invocation via shell script from the `Chronicle-Queue` root folder:*
 [source, shell script]
 ----
 $ ./bin/queue_writer.sh <options>
@@ -221,17 +224,19 @@ usage: ChronicleWriterMain
 
 == DumpMain
 
-`DumpMain` takes a single parameter indicating the path to dump text from. This path can either represent a single .cq4 queue file, or a directory containing queue files.
+`DumpMain` takes a single parameter indicating the path to dump text from.
+This path can either represent a single .cq4 queue file, or a directory containing queue files.
 
-NOTE: `DumpMain` is a tool intended for low-level debugging. In most situations, <<_chroniclereadermain>> will provide more suited functionality for viewing the contents of queue files.
+NOTE: `DumpMain` is a tool intended for low-level debugging.
+In most situations, <<_chroniclereadermain>> will provide more suited functionality for viewing the contents of queue files.
 
-**Invocation via Maven:**
+*Invocation via Maven:*
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -Dexec.args="myqueue"
 ----
 
-**Invocation via shell script from the `Chronicle-Queue` root folder:**
+*Invocation via shell script from the `Chronicle-Queue` root folder:*
 [source, shell script]
 ----
 $ ./bin/dump_queue.sh 19700101-02.cq4
@@ -280,15 +285,16 @@ The following system properties can be used optionally to configure the behaviou
 
 == RefreshMain
 
-`RefreshMain` can be used to refresh the directory listing for a queue, contained within the tablestore file for the queue. RefreshMain takes a single parameter indicating the directory containing queue files.
+`RefreshMain` can be used to refresh the directory listing for a queue, contained within the tablestore file for the queue.
+RefreshMain takes a single parameter indicating the directory containing queue files.
 
-**Invocation via Maven:**
+*Invocation via Maven:*
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.RefreshMain" -Dexec.args="myqueue"
 ----
 
-**Invocation via shell script from the `Chronicle-Queue` root folder:**
+*Invocation via shell script from the `Chronicle-Queue` root folder:*
 [source, shell script]
 ----
 $ ./bin/refresh_queue.sh myqueue
@@ -296,15 +302,16 @@ $ ./bin/refresh_queue.sh myqueue
 
 == UnlockMain
 
-`UnlockMain` can be used to forcibly unlock the a queue. UnlockMain takes a single parameter indicating the directory containing queue to unlock.
+`UnlockMain` can be used to forcibly unlock the a queue.
+UnlockMain takes a single parameter indicating the directory containing queue to unlock.
 
-**Invocation via Maven:**
+*Invocation via Maven:*
 [source, shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.UnlockMain" -Dexec.args="myqueue"
 ----
 
-**Invocation via shell script from the `Chronicle-Queue` root folder:**
+*Invocation via shell script from the `Chronicle-Queue` root folder:*
 [source, shell script]
 ----
 $ ./bin/unlock_queue.sh myqueue

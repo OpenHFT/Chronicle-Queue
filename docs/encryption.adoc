@@ -5,7 +5,8 @@
 Contents moved to link:http://portal.chronicle.software[]
 ====
 
-Chronicle Queue Encryption is an enterprise feature includes the ability to encrypt your message queues and the constituent messages. For more information on Chronicle Queue encryption please visit the link:https://portal.chronicle.software/docs/queue/chronicle-queue/encryption/encryption.html[].
+Chronicle Queue Encryption is an enterprise feature includes the ability to encrypt your message queues and the constituent messages.
+For more information on Chronicle Queue encryption please visit the link:https://portal.chronicle.software/docs/queue/chronicle-queue/encryption/encryption.html[].
 
 <<../README.adoc#,Back to Chronicle Queue>>
 

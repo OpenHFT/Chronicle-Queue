@@ -5,6 +5,7 @@
 Contents moved to link:http://portal.chronicle.software[]
 ====
 
-Chronicle Queue pre-toucher is an enterprise feature that provides pre-touching of storage resources to significantly improve average write speed and reduce write speed variation. For more information on Chronicle Queue Pre-toucher please visit the link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/pretouching.html[].
+Chronicle Queue pre-toucher is an enterprise feature that provides pre-touching of storage resources to significantly improve average write speed and reduce write speed variation.
+For more information on Chronicle Queue Pre-toucher please visit the link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/pretouching.html[].
 
 <<../README.adoc#,Back to Chronicle Queue>>

@@ -12,10 +12,10 @@ NOTE: The source code for this demo can be found link:https://github.com/OpenHFT
 == Running the Demo from IntelliJ
 The following steps are needed
 
-- Open the `pom.xml` as a project
-- Run `BridgeMain`, note it don't complete until the `PublisherMain` is run
-- Run `PublisherMain`
-- Run `DumpOutMain`
+* Open the `pom.xml` as a project
+* Run `BridgeMain`, note it don't complete until the `PublisherMain` is run
+* Run `PublisherMain`
+* Run `DumpOutMain`
 
 NOTE: You can run the `PublisherMain` with `-Devents=1000000` for more events, and `-Drate=5000` to adjust the rate per second of messages.
 
@@ -48,7 +48,7 @@ Or you can dump with the chronicle queue tool `net.openhft.chronicle.queue.Chron
 mvn exec:java@CHRM
 
 which will output like the below
-```
+----
 Timings below in MICROSECONDS
 sourceId                   1     startTo1
 count:                100001       100001
@@ -57,7 +57,7 @@ count:                100001       100001
 99:                       31           40
 99.9:                     62           80
 99.99:                   108          120
-```
+----
 `1` is time taken to cross the bridge microservice and `startTo1` the time taken to get from publisher to bridge microservice.
 
 === Common Errors

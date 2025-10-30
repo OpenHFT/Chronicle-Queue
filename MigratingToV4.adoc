@@ -81,8 +81,8 @@ tailer.readBytes(b -> {
 
 There is two ways to use the Wire API
 
-- as field names and values.
-- a stream of values.
+* as field names and values.
+* a stream of values.
 
 Using the Wire API to write values means the data is self describing.
 This allows for changes in type as well as automatic dumping of the data.
@@ -105,13 +105,13 @@ Chronicle Bytes distinguishes between the read and write position, remaining and
 
 When reading you want to use
 
-- getter `readPosition()` and setter `readPosition(long)` - position to read next
-- getter `readLimit()` and setter `readLimit(long)` -  last valid readPosition(). It is also the writePosition()
-- readRemaining() is  readLimit() - readPosition();
+* getter `readPosition()` and setter `readPosition(long)` - position to read next
+* getter `readLimit()` and setter `readLimit(long)` -  last valid readPosition(). It is also the writePosition()
+* readRemaining() is  readLimit() - readPosition();
 
 When writing you want to use
 
-- getter `writePosition()` and setter `writePosition(long)` - position to write next
-- getter `writeLimit()` and setter `writeLimit(long)` -  last valid writePosition().
-- writeRemaining() is  writeLimit() - writePosition();
+* getter `writePosition()` and setter `writePosition(long)` - position to write next
+* getter `writeLimit()` and setter `writeLimit(long)` -  last valid writePosition().
+* writeRemaining() is  writeLimit() - writePosition();
 

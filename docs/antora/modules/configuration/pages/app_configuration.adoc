@@ -5,7 +5,9 @@ author: Julia Gustafsson
 :navtitle: Chronicle Queue Configuration
 :source-highlighter: highlight.js
 
-This chapter describes how Chronicle Queue is configured. Settings are preferably made when instantiating the queue using `ChronicleQueue.singleBuilder`. For example, this builder sets the roll cycle to `RollCycle.HOURLY`:
+This chapter describes how Chronicle Queue is configured.
+Settings are preferably made when instantiating the queue using `ChronicleQueue.singleBuilder`.
+For example, this builder sets the roll cycle to `RollCycle.HOURLY`:
 
 [source, java]
 ----
@@ -16,9 +18,11 @@ ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
 }
 ----
 
-The table presented below shows the options which can be set using the Chronicle Queue builder. More detailed information about each property can be found by clicking on the field name in each row.
+The table presented below shows the options which can be set using the Chronicle Queue builder.
+More detailed information about each property can be found by clicking on the field name in each row.
 
-NOTE: Some features are only available in Chronicle Queue Enterprise. Please availability for Chronicle Queue OSS in column _Available in Chronicle Queue OSS_.
+NOTE: Some features are only available in Chronicle Queue Enterprise.
+Please availability for Chronicle Queue OSS in column _Available in Chronicle Queue OSS_.
 
 .Available fields when using the Chronicle Queue builder
 |===

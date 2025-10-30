@@ -5,10 +5,11 @@ author: Julia Gustafsson
 :navtitle: Read/write proxies
 :source-highlighter: highlight.js
 
-Chronicle v4.4+ supports the use of proxies to write and read messages. You start by defining an asynchronous `interface`, where all methods have:
+Chronicle v4.4+ supports the use of proxies to write and read messages.
+You start by defining an asynchronous `interface`, where all methods have:
 
-- Arguments which are only inputs
-- No return value or exceptions expected.
+* Arguments which are only inputs
+* No return value or exceptions expected.
 
 .A simple asynchronous interface
 [source, java]

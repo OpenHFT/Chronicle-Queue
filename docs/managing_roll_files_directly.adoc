@@ -8,7 +8,8 @@ Per Minborg
 
 toc::[]
 
-This document describes how roll files can be managed directly via Java. One example of direct management would be to remove old unused roll files.
+This document describes how roll files can be managed directly via Java.
+One example of direct management would be to remove old unused roll files.
 
 == Chronicle FileUtil class
 
@@ -56,7 +57,8 @@ NOTE: The method above is only supported on Linux/BSD systems and not Windows.
 
 === Removable roll files
 
-After some time, there might be lingering queue files that are no longer used. Identifying these files is non-trivial as there might be tailers that are still on older roll files.
+After some time, there might be lingering queue files that are no longer used.
+Identifying these files is non-trivial as there might be tailers that are still on older roll files.
 
 For example, appenders may be on roll file 10, tailer A on file 3 and tailer B on file 5. In this case, it is only safe to remove the rolls 0, 1 and 2. In particular, roll 4 must not be removed or else tailer A will eventually fail.
 

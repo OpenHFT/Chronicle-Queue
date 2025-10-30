@@ -5,7 +5,8 @@ author: Julia Gustafsson
 :navtitle: Index count
 :source-highlighter: highlight.js
 
-It is possible to cap the total number of index arrays per queue file, hence also determine the size of each index array. This is done by configuring the parameter `indexCount(int indexCount)` when building the queue.
+It is possible to cap the total number of index arrays per queue file, hence also determine the size of each index array.
+This is done by configuring the parameter `indexCount(int indexCount)` when building the queue.
 
 [source, java]
 ----

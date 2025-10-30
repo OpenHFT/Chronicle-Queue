@@ -1,8 +1,8 @@
 = Chronicle Queue
 Peter Lawrey
 
-//removed the link as web page is not available
-//image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
+// removed the link as web page is not available
+// image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
 == How Chronicle Works
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
@@ -12,34 +12,48 @@ This project can be seen as yet another queue implementation but it has major de
 
 Using non-heap storage options (`RandomAccessFile`) Chronicle provides a processing environment where applications do not suffer from garbage collection (GC).
 
-While implementing high performance, and memory-intensive, applications in Java, one of the biggest problems is garbage collection. Garbage collection may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism, and escape from GC delays off-heap memory solutions are addressed. The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory, so that you can build your own solutions over it.
+While implementing high performance, and memory-intensive, applications in Java, one of the biggest problems is garbage collection.
+Garbage collection may slow down your critical operations non-deterministically at any time.
+In order to avoid non-determinism, and escape from GC delays off-heap memory solutions are addressed.
+The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory, so that you can build your own solutions over it.
 
-Chronicle uses `RandomAccessFiles` while managing memory, and this choice brings a great deal of possibilities. Random access files permit non-sequential, or random, access to a files contents. To access a file randomly, you open the file, seek a particular location, and then read from, or write to, that file. `RandomAccessFiles` can be seen as large C-type byte arrays that allows you to access any random index directly using pointers. File portions can be used as `ByteBuffers` if the portion is mapped into memory.
+Chronicle uses `RandomAccessFiles` while managing memory, and this choice brings a great deal of possibilities.
+Random access files permit non-sequential, or random, access to a files contents.
+To access a file randomly, you open the file, seek a particular location, and then read from, or write to, that file.
+`RandomAccessFiles` can be seen as large C-type byte arrays that allows you to access any random index directly using pointers.
+File portions can be used as `ByteBuffers` if the portion is mapped into memory.
 
 === What is the effect of page faults when we have a huge Chronicle and not enough RAM ?
-Pages are swapped in and out by the operating system on demand.  Writes are performed asynchronously, and under moderate loads do not impact the latency of writes.  Sequential reads are also read using look-ahead, that is, before you ask for them.  Random reads perform best when the data accessed is already in memory
+Pages are swapped in and out by the operating system on demand.
+Writes are performed asynchronously, and under moderate loads do not impact the latency of writes.
+Sequential reads are also read using look-ahead, that is, before you ask for them.
+Random reads perform best when the data accessed is already in memory
 
-The size of data stored can exceed the amount of memory you have. Provided the amount you use is less than the main memory size, you see little impact.  If you exceed main memory size, you will see measurable performance degradation, but it is dramatically more graceful than using too much heap.  Using the same amount of heap can cause the machine to fail.
+The size of data stored can exceed the amount of memory you have.
+Provided the amount you use is less than the main memory size, you see little impact.
+If you exceed main memory size, you will see measurable performance degradation, but it is dramatically more graceful than using too much heap.
+Using the same amount of heap can cause the machine to fail.
 
 == Building Blocks
 
 Chronicle Queue has two main conceptual components:
 
- - Tailer - used for both sequential reads and random reads
- - Appender - sequential writes
+* Tailer - used for both sequential reads and random reads
+* Appender - sequential writes
 
 Chronicle Queue is the main interface for management and can be seen as the collection class of the Chronicle environment.
 
-Chronicle Queue allows you to put huge numbers of objects of different sizes onto a single queue. For each data record, Chronicle builds it indexes ( used for random access reads ) automatically when ever messages are appended to the queue. 
+Chronicle Queue allows you to put huge numbers of objects of different sizes onto a single queue.
+For each data record, Chronicle builds it indexes ( used for random access reads ) automatically when ever messages are appended to the queue.
 
 An appender is used to write/add data to the queue.
 
 == Getting Started
 In the following example we will:
 
-- Create a Chronicle Queue
-- Put a record to the queue
-- Read the record from queue.
+* Create a Chronicle Queue
+* Put a record to the queue
+* Read the record from queue.
 
 [source, Java]
 ----
@@ -191,13 +205,14 @@ index: [ #  <2>
 
 A Chronicle Queue is a logical view of a directory on the file-system.
 The queue data itself is split across multiple files, each of which contains
-data belonging to a single _cycle_. The length of the cycle is determined by
+data belonging to a single _cycle_.
+The length of the cycle is determined by
 the _rollCycle_ parameter passed to the queue builder.
 
 Example configuration of _RollCycle_:
 
-   * `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
-   * `RollCycles.HOURLY` every hour, a new queue file will be created for written events
+* `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
+* `RollCycles.HOURLY` every hour, a new queue file will be created for written events
 
 As new files are created to accommodate events being written to the queue, a persisted
 data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
@@ -210,7 +225,8 @@ check for the existence of new queue files.
 === Read-only mode
 
 When opening a queue in read-only mode, it is not possible to utilise the structure
-described above (since the structure needs to be written to). In this case,
+described above (since the structure needs to be written to).
+In this case,
 Chronicle Queue will fallback to inspecting the file-system to determine when
 new queue files are created.
 
@@ -222,7 +238,8 @@ in a busy-spin loop in read-only mode.
 As a queue is written to, it will create a new file for each _roll-cycle_.
 
 Over time, it may become necessary to automatically delete or archive
-old files. An automated process needs to ensure that there are not active
+old files.
+An automated process needs to ensure that there are not active
 file-handles open on a queue file before attempting to delete.
 
 To facilitate this operation, Enterprise Chronicle Queue tracks
@@ -292,7 +309,8 @@ try (ChronicleQueue recreated = ChronicleQueue.singleBuilder(queueDir).rollCycle
 
 In the case where a Chronicle Queue instance is created _before_ any appends have been made, and there is
 a subsequent append operation with a _different_ roll-cycle, then the roll-cycle will be updated to match the
-persisted roll-cycle. In this case, a warning log message will be printed in order to notify the library user
+persisted roll-cycle.
+In this case, a warning log message will be printed in order to notify the library user
 of the situation:
 
 [source,java]

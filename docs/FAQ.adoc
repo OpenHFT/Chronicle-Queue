@@ -1,4 +1,5 @@
 = Frequently Asked Questions about Chronicle Queue
+:pp: ++
 :toc: manual
 :toclevels: 1
 :css-signature: demo
@@ -14,30 +15,33 @@ Single Chronicle Queue is designed to be easier to work with compared with
 the previous vanilla and indexed Chronicle Queue versions.
 It supports:
 
-- concurrent readers in different JVMs.
-- concurrent writers in different JVMs.
-- writing raw bytes or use a wire format to make schema changes, and to simplify dumping the data.
-- rolling files; weekly, daily, or even more often.
-- storing key information in the header so that there is no longer the requirement that the writers and readers be configured the same.
-- not needing to know the size of the message.
+* concurrent readers in different JVMs.
+* concurrent writers in different JVMs.
+* writing raw bytes or use a wire format to make schema changes, and to simplify dumping the data.
+* rolling files; weekly, daily, or even more often.
+* storing key information in the header so that there is no longer the requirement that the writers and readers be configured the same.
+* not needing to know the size of the message.
 
 === What is Chronicle Queue designed for?
 
 Chronicle Queue's design to record everything of interest in the logger and persisted IPC.
-A key requirement of low latency systems is transparency, and you can record enough information to enable a monitoring system to recreate the state of the monitored system.  This allows downstream systems to record any information they need, and perform queries without having to touch the critical system.
+A key requirement of low latency systems is transparency, and you can record enough information to enable a monitoring system to recreate the state of the monitored system.
+This allows downstream systems to record any information they need, and perform queries without having to touch the critical system.
 
-Chronicle Queue works best in `SEDA` style event-driven systems, where latency is critical, and you need a record of exactly what was performed, and  when. All this can be done without expensive network sniffing/recording systems.
+Chronicle Queue works best in `SEDA` style event-driven systems, where latency is critical, and you need a record of exactly what was performed, and  when.
+All this can be done without expensive network sniffing/recording systems.
 
 === What was the library originally designed for?
 
 The original design was for a low-latency trading system which required persistence of everything in, and out, for a complete record of
-what happened, when, and for deterministic testing. The target round-trip time for persisting the request, processing, and persisting the response, was `1` micro-second.
+what happened, when, and for deterministic testing.
+The target round-trip time for persisting the request, processing, and persisting the response, was `1` micro-second.
 
 Key principles are:
 
-- ultra-low garbage collection; less than one object per event
-- lock-less
-- cache friendly data structures
+* ultra-low garbage collection; less than one object per event
+* lock-less
+* cache friendly data structures
 
 === What was not in the original design?
 
@@ -51,40 +55,51 @@ Our largest Chronicle Queue client pulls in up to `100` TB into a single JVM usi
 === Tell us more about the way Chronicle Queue is used?
 
 Chronicle Queue is compelling as it uses a no-flow control model.
-Chronicle Queue is designed to not slow down the producer if you have a slow consumer. Instead, you need to give it plenty of disk space as a buffer.  Disk space is cheaper than main memory, and is cheaper than heap space. You can buy a system with multiple `16` TB SSD drives today. No one would consider having a JVM heap with `100` TB.
+Chronicle Queue is designed to not slow down the producer if you have a slow consumer.
+Instead, you need to give it plenty of disk space as a buffer.
+Disk space is cheaper than main memory, and is cheaper than heap space.
+You can buy a system with multiple `16` TB SSD drives today.
+No one would consider having a JVM heap with `100` TB.
 
 A couple of prime examples are:
 
-- Market data consumers. You cannot use flow control with an exchange.
-- Compliance.  It Is something you have to have, but systems which send data to compliance, never want to be slowed down by it.
+* Market data consumers. You cannot use flow control with an exchange.
+* Compliance.  It Is something you have to have, but systems which send data to compliance, never want to be slowed down by it.
 
 === Can Chronicle Queue be used like RMI?
 
 It is possible to use Chronicle Queue to invoke a method on the other JVM, and wait for the return value.
 However, this could be overkill, especially if you do not have to keep the history of the request and responses.
 
-Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `SingleChronicleQueue`s:
+Imagine a simple scenario with two processes: `C` (client) and `S` (server).
+Create two `SingleChronicleQueue`s:
 
-- `Q1` for sending requests from `C` to `S`
-- `Q2` for sending responses from `S` to `C`
+* `Q1` for sending requests from `C` to `S`
+* `Q2` for sending responses from `S` to `C`
 
-The server has a thread that is polling (busy spin with back-off) on `Q1`. When it receives a request:
+The server has a thread that is polling (busy spin with back-off) on `Q1`.
+When it receives a request:
 
-- with `id=x` it does whatever is needed, and writes out response to `Q2`
-- with `id=x`. `C` polls `Q2` with some policy, and reads out responses as they appear. It uses the `id` to tie responses to requests.
+* with `id=x` it does whatever is needed, and writes out response to `Q2`
+* with `id=x`. `C` polls `Q2` with some policy, and reads out responses as they appear. It uses the `id` to tie responses to requests.
 
-The main task would be in devising a wire-level protocol for serialising your commands (equivalent to the method calls) from the client. This is application-specific, and can be done efficiently with the Chronicle tools.
+The main task would be in devising a wire-level protocol for serialising your commands (equivalent to the method calls) from the client.
+This is application-specific, and can be done efficiently with the Chronicle tools.
 
-Another issues to consider is what should the client do with the historical responses on startup? Some heartbeat systems so that the client knows that the server is alive. Archiving the old queues (`VanillaChronicle`) makes it easier, but at some cost.
+Another issues to consider is what should the client do with the historical responses on startup? Some heartbeat systems so that the client knows that the server is alive.
+Archiving the old queues (`VanillaChronicle`) makes it easier, but at some cost.
 For more details on how to do this read these https://vanilla-java.github.io/2016/03/23/Microservices-in-the-Chronicle-world-Part-1.html[series of posts]
 
 === Does Chronicle Queue support a synchronous mode?
 
-Chronicle Queue v4.x does not currently support a synchronous mode. The best approach is to wait for a replicated message to be acknowledged.
+Chronicle Queue v4.x does not currently support a synchronous mode.
+The best approach is to wait for a replicated message to be acknowledged.
 
 === How is disk space managed?
-A key assumption is that disk space is cheap, or at least it should be.  Some organizations have unrealistic internal charging rates,
-but you should be able to get `100` GB for about one hour of your time.  This assumes retail costs for disks compared with minimum wage.
+A key assumption is that disk space is cheap, or at least it should be.
+Some organizations have unrealistic internal charging rates,
+but you should be able to get `100` GB for about one hour of your time.
+This assumes retail costs for disks compared with minimum wage.
 The organizational cost of disk is often `10-100x` the real cost, but so is your cost to the business.
 
 In essence, disk space should be cheap, and you can record between a week and a month of continuous data, on one cheap drive.
@@ -92,35 +107,43 @@ Nevertheless, there is less maintenance overhead if the Chronicle logs rotate th
 
 === Can I use Chronicle Queue as an off-heap cache?
 
-Chronicle Queue is designed for replay.  While it can be used as an off-heap persisted cache, it does not do this very easily.
+Chronicle Queue is designed for replay.
+While it can be used as an off-heap persisted cache, it does not do this very easily.
 Chronicle Map is likely to be a better choice for this requirement.
 
 == Performance
 
 === What is the performance like?
 
-Single Chronicle Queue (single file per cycle) supports sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+Single Chronicle Queue (single file per cycle) supports sub-microsecond latencies.
+If you use Wire, the typical latencies tend to be around one micro-second.
+You can still use raw writing of bytes if you need maximum performance.
 
 === With a tight reader loop, I see 100% utilization. Will there be processing capability left for anything else?
 
 Two approaches for reducing CPU usage are;
 
- - combine tasks into the same thread. `EventGroup` in Chronicle threads helps to do this dynamically.
- - use a Pauser such as a `LongPauser` to control how a thread backs off if there is nothing to do.  There is a `PauseMonitor` to allow you to periodically print how busy each thread is.
+* combine tasks into the same thread. `EventGroup` in Chronicle threads helps to do this dynamically.
+* use a Pauser such as a `LongPauser` to control how a thread backs off if there is nothing to do.  There is a `PauseMonitor` to allow you to periodically print how busy each thread is.
 
 === How does Chronicle Queue use memory?
 
-Chronicle Queue is designed to use virtual memory which can be much larger than main memory (or the heap). This is done without a significant impact on your system, and allows you to access the data at random, quickly.
+Chronicle Queue is designed to use virtual memory which can be much larger than main memory (or the heap).
+This is done without a significant impact on your system, and allows you to access the data at random, quickly.
 See https://vanilla-java.github.io/2017/01/27/Chronicle-Queue-storing-1-TB-in-virtual-memory-on-a-128-GB-machine.html[*Article with an example of a process writing 1 TB in 3 hours.*]
 This example shows how much slower it gets as the queue grows.
 Even after it is 1 TB in size, on a machine with 128 GB, it can still consistently write 1 GB in under 2 seconds.
 
-While this does not cause a technical problem, we are aware this does concern people who can find this out-of-the-ordinary. We plan to have a mode which reduces virtual memory use; even if it is a little slower for some use cases.
+While this does not cause a technical problem, we are aware this does concern people who can find this out-of-the-ordinary.
+We plan to have a mode which reduces virtual memory use; even if it is a little slower for some use cases.
 
 ===  How fast is fast?
 
-Chronicle Queue is designed to persist messages, and replay them in micro-second time.  Simple messages take as low as `0.4` micro-seconds.
-Complex messages might take `10` micro-seconds to write and read. Also Chronicle Queue is designed to sustain millions of inserts and updates per second. For bursts of up to `10%` of your main memory, you can sustain rates of `1 - 3` GB/second written.
+Chronicle Queue is designed to persist messages, and replay them in micro-second time.
+Simple messages take as low as `0.4` micro-seconds.
+Complex messages might take `10` micro-seconds to write and read.
+Also Chronicle Queue is designed to sustain millions of inserts and updates per second.
+For bursts of up to `10%` of your main memory, you can sustain rates of `1 - 3` GB/second written.
 
 For example,l a laptop with `8` GB of memory might handle bursts of `800` MB at a rate of `1` GB per second.
 A server with `64` GB of memory might handle a burst of `6.5` GB at a rate of `3` GB per second.
@@ -128,8 +151,11 @@ If your key system is not measuring latency in micro-seconds, and throughput in 
 
 === How does it scale?
 
-It scales vertically.  Many distributed systems can scale by adding more boxes.  They are designed to handle between `100` and `1000` transactions per-second, per-node.
-Chronicle is design to handle more transaction per-node, in the order of `100K` to `1M` transactions per second.  This means that you need far fewer nodes; typically, between `10` and `100` times fewer.
+It scales vertically.
+Many distributed systems can scale by adding more boxes.
+They are designed to handle between `100` and `1000` transactions per-second, per-node.
+Chronicle is design to handle more transaction per-node, in the order of `100K` to `1M` transactions per second.
+This means that you need far fewer nodes; typically, between `10` and `100` times fewer.
 
 Vertical scalability is essential for low latency, as having more nodes usually increases latency.
 Having one node which can handle the load of a data centre can also save money, and power consumption.
@@ -140,14 +166,21 @@ Chronicle recommends lots of high-speed RAM. This is because Chronicle uses the 
 There are two cases where having a high-speed disk will give you a real benefit:
 
 ==== 1. Data rate
-If the rate of data that you are writing exceeds the disk write speed. In most applications this is unlikely to occur.
+If the rate of data that you are writing exceeds the disk write speed.
+In most applications this is unlikely to occur.
 
 ==== 2. Page cache miss
-For Chronicle queues which write and read messages lineally across memory, we mitigate this situation with the use of the Chronicle pre-toucher. The pre-toucher ensures that the page is loaded into the page cache before being written into the queue.
+For Chronicle queues which write and read messages lineally across memory, we mitigate this situation with the use of the Chronicle pre-toucher.
+The pre-toucher ensures that the page is loaded into the page cache before being written into the queue.
 
-For Chronicle Map, it is somewhat more complicated because Chronicle Map reads and writes your entries with random access across both the memory and disk. In this situation, if the entire map can be held within the page cache, then a read, or write, to the map will not have to access the disk. The operating system will work in the background ensuring that entries written to the page cache are propagated to the disk, but this is done via the operating system and is not on the critical path.
+For Chronicle Map, it is somewhat more complicated because Chronicle Map reads and writes your entries with random access across both the memory and disk.
+In this situation, if the entire map can be held within the page cache, then a read, or write, to the map will not have to access the disk.
+The operating system will work in the background ensuring that entries written to the page cache are propagated to the disk, but this is done via the operating system and is not on the critical path.
 
-It follows that if you have quite a few maps, especially large maps, and your page cache is not large enough to hold all of these maps, then a read, or write, to a random entry may cause a cache miss. This in turn would cause a disk read or write. If you were going to install high-speed SSDs, Chronicle recommends that you use them to store the Chronicle maps and leave the slower cheap disks for the Chronicle queues. In addition, you should avoid using network attached storage, as this usually offers worst performance than local disks.
+It follows that if you have quite a few maps, especially large maps, and your page cache is not large enough to hold all of these maps, then a read, or write, to a random entry may cause a cache miss.
+This in turn would cause a disk read or write.
+If you were going to install high-speed SSDs, Chronicle recommends that you use them to store the Chronicle maps and leave the slower cheap disks for the Chronicle queues.
+In addition, you should avoid using network attached storage, as this usually offers worst performance than local disks.
 
 === How can I determine the speed of my disk sub system?
 Use the following command:
@@ -198,7 +231,9 @@ $ for i in 0 1 2 3 4 5 6 7 8 9; do dd bs=65536 count=163840 if=/dev/zero of=dele
                                              
 === Can Chronicle Queue compete with Spark in this domain?
 
-To our knowledge, Spark Streaming is designed for real-time, but is looking to support a much lower message rate, and does not attempt to be ultra-low GC (minor GC less than once a day).  We have not heard of any one using Spark in the core of a trading system. It tends to be used for downstream monitoring and reporting.
+To our knowledge, Spark Streaming is designed for real-time, but is looking to support a much lower message rate, and does not attempt to be ultra-low GC (minor GC less than once a day).
+We have not heard of any one using Spark in the core of a trading system.
+It tends to be used for downstream monitoring and reporting.
 
 == Read and Write
 
@@ -234,9 +269,12 @@ appender.writeDocument(wire -> wire.write("FirstName").text("Steve")
                                    .write("Surname").text("Jobs"));
 ----
 
-For example, you may want to write different types of messages to a Chronicle Queue, and process messages in consumers depending on their types. Chronicle Queue provides low level building blocks so that you can write any kind of message; it is up to you to choose the right data structure.
-For example, you can prefix the data that you write to a Chronicle Queue with a small header, and some meta-data. You can then use it as a discriminator for data processing.
-You can also write/read a generic object. This will be slightly slower than using your own schema, but is it a simple way to always read the type you wrote.
+For example, you may want to write different types of messages to a Chronicle Queue, and process messages in consumers depending on their types.
+Chronicle Queue provides low level building blocks so that you can write any kind of message; it is up to you to choose the right data structure.
+For example, you can prefix the data that you write to a Chronicle Queue with a small header, and some meta-data.
+You can then use it as a discriminator for data processing.
+You can also write/read a generic object.
+This will be slightly slower than using your own schema, but is it a simple way to always read the type you wrote.
 
 === How does reading work?
 
@@ -262,7 +300,8 @@ System.out.println(wireStore.file().getAbsolutePath());
 
 === Can messages be updated?
 
-Chronicle Queue messages are immutable. In other words, once written, you should not attempt to modify existing messages.
+Chronicle Queue messages are immutable.
+In other words, once written, you should not attempt to modify existing messages.
 If you require existing messages to be modified, we would have to work with you on a consultancy arrangement to achieve this.
 
 === How do I know the reader is up to date?
@@ -342,7 +381,8 @@ try (DocumentContext dc = appender.writingDocument()) {
 === Padding added to the end of Excerpts
 
 If you are writing bytes to a Chronicle Queue you will find that it occasionally adds padding to the end of each message.
-This is to ensure that each message starts on a 4-byte boundary which is a requirement for ARM architectures. NOTE: Intel requires that messages don’t straggle 64-byte cash lines.
+This is to ensure that each message starts on a 4-byte boundary which is a requirement for ARM architectures.
+NOTE: Intel requires that messages don’t straggle 64-byte cash lines.
 but aligning to 4 bytes also ensures 64-byte alignment and allows your Chronicle Queues to be shared between various different platforms.
 
 For Chronicle Queue, the 4-byte alignment is now enforced, so there is now, no way to turn this feature on or off.
@@ -367,7 +407,8 @@ try (DocumentContext dc = appender.writingDocument()) {
 The recommended pattern for implementing a listener pattern, is to use the `methodReader`/`methodWriter` which can also take care of timestamps when.
 
 For example, you may want a built-in Chronicle queue mechanism for asynchronous 'appender -> tailer' notifications, where, upon receipt of a notification event, a given tailer is guaranteed to have at least one entry posted by appender ready for read.
-For the tailer, the only way it knows there is a message, is by reading/polling the end of the queue. If the appender and tailer are in
+For the tailer, the only way it knows there is a message, is by reading/polling the end of the queue.
+If the appender and tailer are in
 the same process, you can use a different mechanism of your choice.
 
 We would suggest you read these https://vanilla-java.github.io/tag/Microservices/ from the bottom up starting with part `1`.
@@ -377,21 +418,26 @@ We would suggest you read these https://vanilla-java.github.io/tag/Microservices
 === Can I have multiple readers?
 
 A given Chronicle queue can safely have many readers, both inside and outside of the process creating it.
-To have multiple readers of a Chronicle queue, you should generally create a new Chronicle queue per-reader, pointing at the same underlying journal. On each of these Chronicle queues, you will call `createTailer` and get a new tailer that can be used to read it. These tailers should never be shared.
-A less performant option, is to share a single Chronicle queue and tailer, and lock access with synchronized or `ReentrantLock`. Only one tailer should ever be active at the same time.
+To have multiple readers of a Chronicle queue, you should generally create a new Chronicle queue per-reader, pointing at the same underlying journal.
+On each of these Chronicle queues, you will call `createTailer` and get a new tailer that can be used to read it.
+These tailers should never be shared.
+A less performant option, is to share a single Chronicle queue and tailer, and lock access with synchronized or `ReentrantLock`.
+Only one tailer should ever be active at the same time.
 
 === Can I have multiple writers?
 
-You can have any number of writers. However, you may get higher throughput if you have only one writer at a time. Having multiple writers increases contention, but works as you would expect.
+You can have any number of writers.
+However, you may get higher throughput if you have only one writer at a time.
+Having multiple writers increases contention, but works as you would expect.
 
 === Is there an appender to tailer notification?
 
 Not implicitly.
 We didn't want to assume whether the appenders or tailers:
 
-- were running at the same time
-- were in the same process
-- wanted to block on the queue for either writing or reading.
+* were running at the same time
+* were in the same process
+* wanted to block on the queue for either writing or reading.
 
 If both the appender and tailer are in the same process, the tailer can use a pauser when not busy.
 
@@ -418,7 +464,8 @@ pauser.unpause();
 
 Chronicle has an advantage over other queuing systems, in that the consumer can be any amount behind the producer; up to the free space on your disk.
 
-Chronicle has been tested where the consumer was more than the whole of main memory behind the producer. This reduced the maximum throughput by about half.
+Chronicle has been tested where the consumer was more than the whole of main memory behind the producer.
+This reduced the maximum throughput by about half.
 Most systems, in Java, where the queue exceeds the size of main memory, cause the machine to become unusable.
 
 NOTE: The Consumer can stop, restart, and continue, with minimal impact to the producer, if the data is still in main memory.
@@ -492,7 +539,8 @@ With hourly rolling we can store messages up to the year 246,947.
 
 If you have more than 4 billion messages per cycle you can increase the number of bits used for cycles and thus the number of messages per cycle, though reducing the number of cycles.
 For example, you may have up to 1 trillion messages per day and you need 23-bit cycles to allow for up to the year 24,936. If we had rolled every second with 32-bit 4 bn messages per second, we would be running out in about a decade.
-With hourly and daily-rolling it's pretty limitless. Also, by changing the `epoch`, you can extend the dates further, shifting the limit between the first and last cycle to 31-bits or 23-bits.
+With hourly and daily-rolling it's pretty limitless.
+Also, by changing the `epoch`, you can extend the dates further, shifting the limit between the first and last cycle to 31-bits or 23-bits.
 
 The following table shows the maximum number of messages per roll cycle.
 
@@ -541,7 +589,8 @@ See <<replication.adoc#,Replication>>
 
 === How does the byte order work with replication?
 
-The byte order does not change with replication.  This means that it will work best in byte-endian homogeneous systems such as Windows/Linux x86/x64/ARM. Chronicle may support changing the byte order in future.
+The byte order does not change with replication.
+This means that it will work best in byte-endian homogeneous systems such as Windows/Linux x86/x64/ARM. Chronicle may support changing the byte order in future.
 
 == Exceptions and Faults
 
@@ -551,15 +600,18 @@ The message will be lost, and it is truncated.
 
 === I get an exception attempting to read an excerpt. What does this mean?
 
-Most likely your read code does not match your write code. Using Wire means it can handle changes to fields, and to data types, transparently.
+Most likely your read code does not match your write code.
+Using Wire means it can handle changes to fields, and to data types, transparently.
 
 === In Chronicle Queue v4, will an error such as `IllegalStateException` appear when there is a high number of messages to write?
 
-Chronicle Queue v4+ does not have the limitation of using just one thread. It supports any number of threads, with a single file per cycle.
+Chronicle Queue v4+ does not have the limitation of using just one thread.
+It supports any number of threads, with a single file per cycle.
 
 === What would cause Chronicle Queue to segfault?
 
-It could be a race condition. When a memory mapping is truly freed, it cannot be accessed, or it will trigger a segmentation fault.
+It could be a race condition.
+When a memory mapping is truly freed, it cannot be accessed, or it will trigger a segmentation fault.
 The reason to suspect this, is that it should be free on a roll from one cycle to the next.
 
 === If you are seeing "OutOfMemoryError: Map failed"
@@ -604,14 +656,16 @@ try {
 === Unlocking a locked queue
 
 To unlock a locked chronicle queue (perhaps an appending process has been abruptly killed), the
-`net.openhft.chronicle.queue.QueueUnlockMain` utility will accomplish this. There is also a script `unlock_queue.sh` to call this.
+`net.openhft.chronicle.queue.QueueUnlockMain` utility will accomplish this.
+There is also a script `unlock_queue.sh` to call this.
 
 == Compatibility
 
 [#containerisation-recommendations]
 === Does Chronicle Queue work in Linux containers?
 
-Chronicle Queue supports Linux container technology. The below is in regards to our testing on docker.
+Chronicle Queue supports Linux container technology.
+The below is in regards to our testing on docker.
 
 You need to ensure that:
 
@@ -632,10 +686,13 @@ Chronicle Queue v4 is a complete re-write so there is no problem using it at the
 
 === Does Chronicle support other serialization libraries?
 
-Chronicle Queue supports `CharSequence`, `Appendable`, `OutputStream` and `InputStream` APIs.  It also has a fast copy to/from a `byte[]` and `ByteBuffer`.
+Chronicle Queue supports `CharSequence`, `Appendable`, `OutputStream` and `InputStream` APIs.
+It also has a fast copy to/from a `byte[]` and `ByteBuffer`.
 
-Chronicle Queue is designed to be faster 'with persistence' than other serialization libraries are even 'without persistence'. Chronicle Queue supports `YAML`, `JSON`, `Binary YAML`, and `CSV`.
-To date, we have not found a faster library for serialization without a standardized format. Chronicle does not yet support `XML`.
+Chronicle Queue is designed to be faster 'with persistence' than other serialization libraries are even 'without persistence'.
+Chronicle Queue supports `YAML`, `JSON`, `Binary YAML`, and `CSV`.
+To date, we have not found a faster library for serialization without a standardized format.
+Chronicle does not yet support `XML`.
 
 Where `XML` is needed downstream, we suggest writing in binary format, and have the reader incur the overhead of the conversion, rather than slow down the producer.
 
@@ -654,23 +711,28 @@ OpenJ9 version 0.12.1 and earlier requires the file descriptor limit to be manua
 One of the challenges with NFS is the variation in behaviour/functionality from version to version, across Operating Systems, and also differences between how individual deployments have been configured.
 The main concerns with NFS relevant to a Chronicle Queue are:
 
-- support and behaviour of file locks (including fine-grained locking of distinct byte ranges within a file)
-- support and behaviour of memory mapping, and visibility of changes across separate mappings
+* support and behaviour of file locks (including fine-grained locking of distinct byte ranges within a file)
+* support and behaviour of memory mapping, and visibility of changes across separate mappings
 
 Crucially, if you are only using the file on one host, then the OS layer for memory mapping comes before the file system, so the fact that the backing file resides on an NFS mount is less of a concern.
 There are however some nuances with NFS around the behaviour of syncs to disk (both in normal operation and importantly if an application crashes) which in turn requires slightly more defensive programming and consequently some degradation in performance is likely.
 
-File locking will generally work provided you are using an up to date version of NFS (4+) and it has been suitably configured. There are additional elements to file locking through NFS which need to be handled (e.g. dealing with network interruptions with an NFS server which can cause locks to go stale/lost), but the basic mechanism works as needed.
+File locking will generally work provided you are using an up to date version of NFS (4+) and it has been suitably configured.
+There are additional elements to file locking through NFS which need to be handled (e.g. dealing with network interruptions with an NFS server which can cause locks to go stale/lost), but the basic mechanism works as needed.
 
-So in summary using an NFS mount locally is fine, however care is needed to ensure the environment is correctly configured. The _"local"_ caveat is very important.
+So in summary using an NFS mount locally is fine, however care is needed to ensure the environment is correctly configured.
+The _"local"_ caveat is very important.
 
-NOTE: We would certainly recommend running a series of tests to confirm lock and memory map behaviour. Chronicle Software can work with you to set this up.
+NOTE: We would certainly recommend running a series of tests to confirm lock and memory map behaviour.
+Chronicle Software can work with you to set this up.
 
 In brief, our recommendation is that using local disk rather than NFS is always preferable in cases where appenders and tailers are on the same host.
 One option to consider may be using local disk for the shared appender/tailer data, then replicate this onto an NFS mount if passive copies are needed elsewhere.
-If you only have NFS available then using NFS locally can be fine subject to some caveats as above. Tests would be required to confirm correct behaviour in your specific environment.
+If you only have NFS available then using NFS locally can be fine subject to some caveats as above.
+Tests would be required to confirm correct behaviour in your specific environment.
 
-NOTE: The above explanation assumes C\++ Queue on Linux. Java Queue has similar functional requirements which should ultimately use similar native calls to C++ via the JVM, but this would need to be confirmed in your environment.
+NOTE: The above explanation assumes C\` Queue on Linux.
+Java Queue has similar functional requirements which should ultimately use similar native calls to C` via the JVM, but this would need to be confirmed in your environment.
 
 '''
 <<../README.adoc#,Back to ReadMe>>

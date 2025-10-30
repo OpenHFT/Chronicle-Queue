@@ -4,7 +4,8 @@ This product uses Google Analytics, a web analytics service provided by Google, 
 
 This product sends usage data and platform information via a secure connection to Google Analytics.
 
-This product stores a small file with a random client id (UUID) in the user's home directory. Because it is random, it does not contain any personal information.
+This product stores a small file with a random client id (UUID) in the user's home directory.
+Because it is random, it does not contain any personal information.
 
 == Conveyed Properties
 Properties are conveyed over a secure (https) connection and includes the following:
@@ -14,16 +15,16 @@ Properties are conveyed over a secure (https) connection and includes the follow
 * The three top-most external package names (e.g. "org.apache.commons")
 * A random client id (UUID) (e.g. "c38175c7-e822-40ef-a2ff-73a2e888b47c")
 * The following System Properties:
-  - java.runtime.name (e.g "Java(TM) SE Runtime Environment")
-  - java.runtime.version (e.g. "1.8.0_191-b12")
-  - os.name (e.g. "Mac OS X")
-  - os.arch (e.g. "x86_64")
-  - os.version (e.g. "10.16")
-  - timezone.default (e.g. "Europe/London")
-  - available.processors (e.g. "16")
-  - max.memory.gib (e.g "14")
-  - java.major.version (e.g. "8")
-  - max.direct.memory.gib (e.g. "14")
+** java.runtime.name (e.g "Java(TM) SE Runtime Environment")
+** java.runtime.version (e.g. "1.8.0_191-b12")
+** os.name (e.g. "Mac OS X")
+** os.arch (e.g. "x86_64")
+** os.version (e.g. "10.16")
+** timezone.default (e.g. "Europe/London")
+** available.processors (e.g. "16")
+** max.memory.gib (e.g "14")
+** java.major.version (e.g. "8")
+** max.direct.memory.gib (e.g. "14")
 
 The following library-specific properties are also conveyed:
 
@@ -35,11 +36,12 @@ Knowing how our products are used allows us to focus our resources more efficien
 provide better and more widely adopted solutions for the community.
 
 == System Resources
-Data collection is using a separate thread for sending information. The thread itself will not consume CPU resources when idle.
+Data collection is using a separate thread for sending information.
+The thread itself will not consume CPU resources when idle.
 
 == Open Data Pledge
 Chronicle pledges to make aggregated data reports (using collected data) available to the general public at no cost.
-Contact info@chronicle.software to obtain a link to these reports.
+Contact mailto:info@chronicle.software[info@chronicle.software] to obtain a link to these reports.
 
 == Consent
 By using this product, you consent to the collection, storage and processing of data (sent by this library) by Google and Chronicle in the manner and for the purposes set out above.
@@ -50,4 +52,4 @@ A) Refrain from using this product
 
 OR
 
-B) Contact info@chronicle.software to have this feature removed
+B) Contact mailto:info@chronicle.software[info@chronicle.software] to have this feature removed

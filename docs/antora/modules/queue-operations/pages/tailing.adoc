@@ -7,7 +7,8 @@ author: Julia Gustafsson
 
 Reading the queue follows the same pattern as writing, except there is a possibility there is not a message when you attempt to read it.
 
-Unlike other Java queuing solutions, messages are not lost when they are read with a tailer. This is covered in more detail in the section below on "Reading from a queue using a tailer".
+Unlike other Java queuing solutions, messages are not lost when they are read with a tailer.
+This is covered in more detail in the section below on "Reading from a queue using a tailer".
 
 .Start Reading
 [source, java]
@@ -17,7 +18,8 @@ try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build
 }
 ----
 
-You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments. Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
+You can turn each message into a method call based on the content of the message, and have Chronicle Queue automatically deserialize the method arguments.
+Calling `reader.readOne()` will automatically skip over (filter out) any messages that do not match your method reader.
 
 [source, java]
 ----
@@ -46,7 +48,8 @@ assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
         })));
 ----
 
-You can read self-describing data values. This will check the types are correct, and convert as required.
+You can read self-describing data values.
+This will check the types are correct, and convert as required.
 
 [source, java]
 ----
@@ -98,9 +101,11 @@ assertTrue(tailer.readBytes(b -> {
 
 NOTE: Every tailer sees every message.
 
-An abstraction can be added to filter messages, or assign messages to just one message processor. However, in general you only need one main tailer for a topic, with possibly, some supporting tailers for monitoring etc.
+An abstraction can be added to filter messages, or assign messages to just one message processor.
+However, in general you only need one main tailer for a topic, with possibly, some supporting tailers for monitoring etc.
 
-As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic. Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
+As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic.
+Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
 
 == Tailers and File Handlers Clean Up
 
@@ -136,7 +141,8 @@ ExcerptTailer tailer = queue.createTailer();
 tailer.direction(TailerDirection.BACKWARD).toEnd();
 ----
 
-When reading backwards, then the `toEnd()` method will move the tailer to the last record in the queue. If the queue is not empty, then there will be a
+When reading backwards, then the `toEnd()` method will move the tailer to the last record in the queue.
+If the queue is not empty, then there will be a
 `DocumentContext` available for reading:
 
 [source, java]
@@ -203,9 +209,12 @@ Chronicle Queue stores its data in binary format, with a file extension of `cq4`
 �����������������������������������������������������������������
 ----
 
-This can often be a bit difficult to read, so it is better to dump the `cq4` files as text. This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
+This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.
+This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
 
-You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue. They can both be run from the command line in a number of ways described below.
+You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`.
+`DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue.
+They can both be run from the command line in a number of ways described below.
 
 == DumpMain
 
@@ -218,7 +227,9 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -De
 
 In the above command _myqueue_ is the directory containing your .cq4 files
 
-You can also set up any dependent files manually. This requires the `chronicle-queue.jar`, from any version 4.5.3 or later, and that all dependent files are present on the class path. The dependent jars are listed below:
+You can also set up any dependent files manually.
+This requires the `chronicle-queue.jar`, from any version 4.5.3 or later, and that all dependent files are present on the class path.
+The dependent jars are listed below:
 
 [source, shell script]
 ----
@@ -276,7 +287,8 @@ header: !SCQStore {
 
 NOTE: The example above does not show any user data, because no user data was written to this example file.
 
-There is also a script named `dump_queue.sh` located in the `Chonicle-Queue/bin`-folder that gathers the needed dependencies in a shaded jar and uses it to dump the queue with `DumpMain`. The script can be run from the `Chronicle-Queue` root folder like this:
+There is also a script named `dump_queue.sh` located in the `Chonicle-Queue/bin`-folder that gathers the needed dependencies in a shaded jar and uses it to dump the queue with `DumpMain`.
+The script can be run from the `Chronicle-Queue` root folder like this:
 
 [source, shell script]
 ----
@@ -286,7 +298,9 @@ $ ./bin/dump_queue.sh <file path>
 '''
 === Reading a Queue Using `ChronicleReaderMain`
 
-The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project). As mentioned above, it is able to perform several operations beyond printing the file content to the console. For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
+The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project).
+As mentioned above, it is able to perform several operations beyond printing the file content to the console.
+For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
 
 Below is the command line interface used to configure `ChronicleReaderMain`:
 
@@ -306,14 +320,16 @@ usage: ChronicleReaderMain
  -w <wire-type>       Control output i.e. JSON
 ----
 
-Just as with `DumpQueue` you need the classes in the example above present on the class path. This can again be achieved by manually adding them and then run:
+Just as with `DumpQueue` you need the classes in the example above present on the class path.
+This can again be achieved by manually adding them and then run:
 
 [source, shell script]
 ----
 $ java -cp chronicle-queue-5.20.108.jar net.openhft.chronicle.queue.ChronicleReaderMain -d <directory>
 ----
 
-Another option is to create an Uber Jar using the Maven shade plugin. It is configured as follows:
+Another option is to create an Uber Jar using the Maven shade plugin.
+It is configured as follows:
 
 [source, xml]
 ----
@@ -353,7 +369,9 @@ Once the Uber jar is present, you can run `ChronicleReaderMain` from the command
 java -cp "$UBER_JAR" net.openhft.chronicle.queue.ChronicleReaderMain "19700101-02.cq4"
 ----
 
-Lastly, there is a script for running the reader named `queue_reader.sh` which again is located in the `Chonicle-Queue/bin`-folder. It automatically gathers the needed dependencies in a shaded jar and uses it to run `ChronicleReaderMain`. The script can be run from the `Chronicle-Queue` root folder like this:
+Lastly, there is a script for running the reader named `queue_reader.sh` which again is located in the `Chonicle-Queue/bin`-folder.
+It automatically gathers the needed dependencies in a shaded jar and uses it to run `ChronicleReaderMain`.
+The script can be run from the `Chronicle-Queue` root folder like this:
 
 [source, shell script]
 ----

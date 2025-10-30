@@ -5,9 +5,13 @@ author: Julia Gustafsson
 :navtitle: Queue operations
 :source-highlighter: highlight.js
 
-This chapter describes how to perform the most common Chronicle Queue operations. That includes various ways of writing and reading data from a queue. The data could be of various types, including text, numbers, or serialised blobs. Regardless of the data type, it is stored as a series of bytes.
+This chapter describes how to perform the most common Chronicle Queue operations.
+That includes various ways of writing and reading data from a queue.
+The data could be of various types, including text, numbers, or serialised blobs.
+Regardless of the data type, it is stored as a series of bytes.
 
-Before moving forward, it should be noted that Chronicle refers to the act of writing as _appending_, and reading as _tailing_. Following from this terminology, writing to a queue is done using an xref:getting-started:glossary.adoc#a[appender] and reading from a queue is done using a xref:getting-started:glossary.adoc#t[tailer].
+Before moving forward, it should be noted that Chronicle refers to the act of writing as _appending_, and reading as _tailing_.
+Following from this terminology, writing to a queue is done using an xref:getting-started:glossary.adoc#a[appender] and reading from a queue is done using a xref:getting-started:glossary.adoc#t[tailer].
 
 The details of these concepts are covered in the respective chapters:
 

@@ -5,9 +5,15 @@ author: Niel Clifford, Julia Gustafsson
 :navtitle: Contended writes
 :source-highlighter: highlight.js
 
-Normally, all writes to the queue are serialized based on the write-lock acquisition. Each time `ExcerptAppender#writingDocument()` is called, the appender tries to acquire the write-lock on the queue. If not free, it waits until the write-lock is unlocked, and in turn locks the queue for itself. This may degrade the performance whenever there is significant contention.
+Normally, all writes to the queue are serialized based on the write-lock acquisition.
+Each time `ExcerptAppender#writingDocument()` is called, the appender tries to acquire the write-lock on the queue.
+If not free, it waits until the write-lock is unlocked, and in turn locks the queue for itself.
+This may degrade the performance whenever there is significant contention.
 
-To mitigate this issue, Chronicle queue supports _double-buffering_ which to avoid stopping appenders from making progress. Instead of waiting whenever the write-lock cannot be acquired, the appender returns immediately with a context pointing to a secondary buffer. This defers the lock acquisition until `context.close()` is called (normally with try-with-resources pattern it is at the end of the try block). Hence, users are allowed to go ahead with writing data, and then essentially perform a `memcpy` on the serialized data (thus reducing cost of serialization).
+To mitigate this issue, Chronicle queue supports _double-buffering_ which to avoid stopping appenders from making progress.
+Instead of waiting whenever the write-lock cannot be acquired, the appender returns immediately with a context pointing to a secondary buffer.
+This defers the lock acquisition until `context.close()` is called (normally with try-with-resources pattern it is at the end of the try block).
+Hence, users are allowed to go ahead with writing data, and then essentially perform a `memcpy` on the serialized data (thus reducing cost of serialization).
 
 Double-buffering is disabled by default, but can be enabled when building the queue:
 
@@ -18,7 +24,8 @@ ChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
     .build()
 ----
 
-IMPORTANT: During a buffered write, `DocumentContext.index()` will throw an `IndexNotAvailableException`. This is because no index is assigned until the buffer is written back to the queue, which happens when the `DocumentContext` is closed.
+IMPORTANT: During a buffered write, `DocumentContext.index()` will throw an `IndexNotAvailableException`.
+This is because no index is assigned until the buffer is written back to the queue, which happens when the `DocumentContext` is closed.
 
 == General Advice on Double Buffering
 Double buffering is only useful if:

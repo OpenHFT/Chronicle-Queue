@@ -5,11 +5,17 @@ author: Julia Gustafsson
 :navtitle: Appending
 :source-highlighter: highlight.js
 
-Chronicle refers to the act of appending (writing) data to a Chronicle Queue, as storing an excerpt. This data could contain any data types, including text, numbers, or serialised blobs. Ultimately, regardless of what it is, all data is stored as a series of bytes.
+Chronicle refers to the act of appending (writing) data to a Chronicle Queue, as storing an excerpt.
+This data could contain any data types, including text, numbers, or serialised blobs.
+Ultimately, regardless of what it is, all data is stored as a series of bytes.
 
-Prior to storing your excerpt, a 4-byte header is reserved by the queue. This header contains, among other things, the length of the data in order for readers to know the size of the blob. Onwards, we refer to this 4-byte header, along with your excerpt, as a link:../../getting-started/pages/glossary.adoc#d[document]. Strictly speaking, Chronicle Queue is used to read and write such documents.
+Prior to storing your excerpt, a 4-byte header is reserved by the queue.
+This header contains, among other things, the length of the data in order for readers to know the size of the blob.
+Onwards, we refer to this 4-byte header, along with your excerpt, as a link:../../getting-started/pages/glossary.adoc#d[document].
+Strictly speaking, Chronicle Queue is used to read and write such documents.
 
-NOTE: A few bits in the header are reserved for a number of internal operations, such as locking, to ensure thread-safety across both processors and threads. For this reason, converting the header to an integer does *not* yield the length of the data blob.
+NOTE: A few bits in the header are reserved for a number of internal operations, such as locking, to ensure thread-safety across both processors and threads.
+For this reason, converting the header to an integer does *not* yield the length of the data blob.
 
 Chronicle Queue uses an link:../../getting-started/pages/glossary.adoc#a[appender] to write to the queue, and a link:../../getting-started/pages/glossary.adoc#t[tailer] to read from the queue.
 
@@ -31,7 +37,10 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The close on the try-with-resources, is the point when the length of the data is written to the header. You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below). You can later use this index to move-to/look up this excerpt. Each Chronicle Queue excerpt has a unique index.
+The close on the try-with-resources, is the point when the length of the data is written to the header.
+You can also use the `DocumentContext` to find out the index that your data has just been assigned (see below).
+You can later use this index to move-to/look up this excerpt.
+Each Chronicle Queue excerpt has a unique index.
 
 [source,Java]
 ----
@@ -41,7 +50,8 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing. The actual code of `writeText(CharSequence text)` looks like this:
+The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing.
+The actual code of `writeText(CharSequence text)` looks like this:
 
 [source,Java]
 ----
@@ -57,7 +67,8 @@ void writeText(CharSequence text) {
 
 So you have a choice of a number of high-level interfaces, down to a low-level API, to raw memory.
 
-This is the highest-level API which hides the fact you are writing to messaging at all. The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
+This is the highest-level API which hides the fact you are writing to messaging at all.
+The benefit is that you can swap calls to the interface with a real component, or an interface to a different protocol.
 
 [source,Java]
 ----
@@ -67,7 +78,9 @@ final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
 riskMonitor.trade(new TradeDetails(now, "GBPUSD", 1.3095, 10e6, Side.Buy, "peter"));
 ----
 
-You can write a "self-describing message". Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
+You can write a "self-describing message".
+Such messages can support schema changes.
+They are also easier to understand when debugging or diagnosing problems.
 
 [source,Java]
 ----
@@ -82,7 +95,8 @@ appender.writeDocument(w -> w.write("trade").marshallable(
 ----
 
 == Writing Raw Data
-You can write "raw data" which is self-describing. The types will always be correct; position is the only indication as to the meaning of those values.
+You can write "raw data" which is self-describing.
+The types will always be correct; position is the only indication as to the meaning of those values.
 
 [source,Java]
 ----
@@ -93,7 +107,8 @@ appender.writeDocument(w -> w
         .getValueOut().text("Hello World"));
 ----
 
-You can write "raw data" which is not self-describing. Your reader must know what this data means, and the types that were used.
+You can write "raw data" which is not self-describing.
+Your reader must know what this data means, and the types that were used.
 
 [source,Java]
 ----
@@ -105,7 +120,8 @@ appender.writeBytes(b -> b
         .writeUtf8("Hello World"));
 ----
 
-Below, the lowest level way to write data is illustrated. You get an address to raw memory and you can write whatever you want.
+Below, the lowest level way to write data is illustrated.
+You get an address to raw memory and you can write whatever you want.
 
 [source,Java]
 ----
@@ -125,7 +141,8 @@ appender.writeBytes(b -> {
 });
 ----
 
-You can print the contents of the queue. You can see the first two, and last two messages store the same data.
+You can print the contents of the queue.
+You can see the first two, and last two messages store the same data.
 
 [source,Java]
 ----
@@ -214,10 +231,11 @@ or
 If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
 
 == Read/Write Proxies
-Chronicle v4.4+ supports the use of proxies to write and read messages. You start by defining an asynchronous `interface`, where all methods have:
+Chronicle v4.4+ supports the use of proxies to write and read messages.
+You start by defining an asynchronous `interface`, where all methods have:
 
-- Arguments which are only inputs
-- No return value or exceptions expected.
+* Arguments which are only inputs
+* No return value or exceptions expected.
 
 .A simple asynchronous interface
 [source, java]

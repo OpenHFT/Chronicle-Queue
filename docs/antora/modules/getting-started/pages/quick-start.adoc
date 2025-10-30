@@ -5,7 +5,8 @@ author: Julia Gustafsson
 :navtitle: Get started with Chronicle Queue
 :source-highlighter: highlight.js
 
-This section helps you get started with Chronicle Queue in a few minutes. The process can be summed up in five steps:
+This section helps you get started with Chronicle Queue in a few minutes.
+The process can be summed up in five steps:
 
 . <<installing_chronicle_queue>>
 . <<creating_a_new_queue>>
@@ -13,7 +14,8 @@ This section helps you get started with Chronicle Queue in a few minutes. The pr
 . <<reading_from_a_queue>>
 . <<cleaning_up>>
 
-The provided guide does not intend to be an exhaustive explanation of these steps but rather provide enough information to get you up and running quickly. Hence, most of the topics are explained in greater depth throughout the Chronicle Queue documentation.
+The provided guide does not intend to be an exhaustive explanation of these steps but rather provide enough information to get you up and running quickly.
+Hence, most of the topics are explained in greater depth throughout the Chronicle Queue documentation.
 
 == Requirements
 Before starting with the set up, make sure your development environment meets the following requirements:
@@ -23,7 +25,8 @@ Before starting with the set up, make sure your development environment meets th
 * Access to the internet to allow Maven or Gradle to download the JARs needed
 
 == Installing Chronicle Queue [[installing_chronicle_queue]]
-The installation is performed by notifying your build tool that the Chronicle Queue dependency is required to compile your source code. Below are instructions for installation using Maven or Gradle.
+The installation is performed by notifying your build tool that the Chronicle Queue dependency is required to compile your source code.
+Below are instructions for installation using Maven or Gradle.
 
 === Maven
 Install Chronicle Queue with Maven by adding the following code in the project's pom.xml-file:
@@ -53,7 +56,8 @@ dependencies {
 Now that the installation is complete it is time to create a first queue and try appending and reading messages from it.
 
 === Creating a New Queue [[creating_a_new_queue]]
-A new Chronicle Queue is obtained from a builder by passing the field `singleBuilder` the path where the queue is to be stored. The example below creates an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
+A new Chronicle Queue is obtained from a builder by passing the field `singleBuilder` the path where the queue is to be stored.
+The example below creates an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
 
 [source, java]
 ----
@@ -69,7 +73,8 @@ ${java.io.tmpdir}/getting-started/{today}.cq4
 ----
 
 === Writing to a Queue [[writing_to_a_queue]]
-Messages are written, or appended, to a queue using an appender. The appender writes messages to the end of the queue only, there is no way to insert messages at a specific location.
+Messages are written, or appended, to a queue using an appender.
+The appender writes messages to the end of the queue only, there is no way to insert messages at a specific location.
 
 Here is how you can append a simple text message containing the text "Hello World!":
 [source, java]
@@ -82,7 +87,9 @@ appender.writeText("Hello World!"); #<2>
 <2> Writes "Hello World!" to the queue
 
 === Reading From a Queue [[reading_from_a_queue]]
-Reading a from a queue is easiest done using a tailer, namely `ExcerptTailer`. The term _tailing_ stems from reading from the queue's tail, i.e. the end of the queue. However, you are not limited to only read from the end of the queue using the tailer.
+Reading a from a queue is easiest done using a tailer, namely `ExcerptTailer`.
+The term _tailing_ stems from reading from the queue's tail, i.e. the end of the queue.
+However, you are not limited to only read from the end of the queue using the tailer.
 
 Here is how it is used to read the "Hello World" message that was just written to the queue:
 
@@ -110,7 +117,8 @@ Chronicle Queue stores its data off-heap, therefore it is recommended that you c
 queue.close();
 ----
 
-IMPORTANT: No data will be lost when closing the queue. This procedure only cleans up resources that were used at runtime.
+IMPORTANT: No data will be lost when closing the queue.
+This procedure only cleans up resources that were used at runtime.
 
 === Putting It All Together
 
