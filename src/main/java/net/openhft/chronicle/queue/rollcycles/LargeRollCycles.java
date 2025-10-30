@@ -36,10 +36,10 @@ public enum LargeRollCycles implements RollCycle {
     /**
      * Constructs a LargeRollCycle with the given parameters.
      *
-     * @param format          The format string used for rolling files
-     * @param lengthInMillis  The duration of each cycle in milliseconds
-     * @param indexCount      The number of index entries
-     * @param indexSpacing    The spacing between indexed entries
+     * @param format         The format string used for rolling files
+     * @param lengthInMillis The duration of each cycle in milliseconds
+     * @param indexCount     The number of index entries
+     * @param indexSpacing   The spacing between indexed entries
      */
     LargeRollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this.format = format;

@@ -31,9 +31,9 @@ public interface CycleCalculator {
     /**
      * Calculates the current cycle based on the provided {@link RollCycle}, {@link TimeProvider}, and an offset in milliseconds.
      *
-     * @param rollCycle     The roll cycle that defines the periodicity of the data rolls
-     * @param timeProvider  The time provider that supplies the current time
-     * @param offsetMillis  The time offset in milliseconds, typically used for adjusting the cycle calculation
+     * @param rollCycle    The roll cycle that defines the periodicity of the data rolls
+     * @param timeProvider The time provider that supplies the current time
+     * @param offsetMillis The time offset in milliseconds, typically used for adjusting the cycle calculation
      * @return The current cycle as an integer, calculated according to the given roll cycle and time
      */
     int currentCycle(RollCycle rollCycle, TimeProvider timeProvider, long offsetMillis);

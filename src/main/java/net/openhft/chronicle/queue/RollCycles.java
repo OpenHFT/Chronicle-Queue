@@ -17,7 +17,10 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.rollcycles.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -90,6 +93,7 @@ public enum RollCycles implements RollCycle {
     RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this(format, lengthInMillis, indexCount, indexSpacing, 0);
     }
+
     RollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing, int defaultEpoch) {
         this.format = format;
         this.lengthInMillis = lengthInMillis;

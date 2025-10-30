@@ -1263,8 +1263,8 @@ public interface MyInterface {
 }
 
 public class DTO extends SelfDescribingMarshallable {
-    private int age;
-    private String name;
+private int age;
+private String name;
 }
 
 Then you can call `ChronicleWriterMain -d queue doit x.yaml` with either (or both) of the below Yamls:
@@ -1873,4 +1873,4 @@ For comparison see http://kafka.apache.org/documentation.html[Kafka Documentatio
 * https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle[Chronicle support on Google Groups]
 
 == Chronicle Software Release Notes
-https://chronicle.software/release-notes[Leave your e-mail] to get information about the latest releases and patches to stay up-to-date. 
+https://chronicle.software/release-notes[Leave your e-mail] to get information about the latest releases and patches to stay up-to-date.

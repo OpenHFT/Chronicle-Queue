@@ -32,10 +32,10 @@ public enum LegacyRollCycles implements RollCycle {
     /**
      * Constructs a LegacyRollCycle with the given parameters.
      *
-     * @param format          The format string used for rolling files
-     * @param lengthInMillis  The duration of each cycle in milliseconds
-     * @param indexCount      The number of index entries
-     * @param indexSpacing    The spacing between indexed entries
+     * @param format         The format string used for rolling files
+     * @param lengthInMillis The duration of each cycle in milliseconds
+     * @param indexCount     The number of index entries
+     * @param indexSpacing   The spacing between indexed entries
      */
     LegacyRollCycles(String format, int lengthInMillis, int indexCount, int indexSpacing) {
         this.format = format;

@@ -32,7 +32,7 @@ import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
-import net.openhft.chronicle.queue.util.*;
+import net.openhft.chronicle.queue.util.MicroTouched;
 import net.openhft.chronicle.wire.*;
 import net.openhft.chronicle.wire.domestic.InternalWire;
 import org.jetbrains.annotations.NotNull;
@@ -699,7 +699,7 @@ class StoreAppender extends AbstractCloseable
      * Opens a new write context for appending data, setting up the necessary parameters such as
      * the header, write position, and metadata flag.
      *
-     * @param metaData  indicates if the context is for metadata
+     * @param metaData   indicates if the context is for metadata
      * @param safeLength the maximum length of data that can be safely written
      */
     private void openContext(final boolean metaData, final long safeLength) {
@@ -825,8 +825,8 @@ class StoreAppender extends AbstractCloseable
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
      * the queue file and cause data loss.
      *
-     * @param index               Index to append at
-     * @param bytes               The excerpt bytes
+     * @param index Index to append at
+     * @param bytes The excerpt bytes
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
@@ -1067,9 +1067,9 @@ class StoreAppender extends AbstractCloseable
      * and position are properly set. This method is used to manage the position of data within the
      * queue.
      *
-     * @param position        the position to set
-     * @param startOfMessage  the starting position of the message in the bytes
-     * @param bytes           the {@link Bytes} instance associated with the current wire
+     * @param position       the position to set
+     * @param startOfMessage the starting position of the message in the bytes
+     * @param bytes          the {@link Bytes} instance associated with the current wire
      */
     void position0(final long position, final long startOfMessage, Bytes<?> bytes) {
         this.positionOfHeader = position;

@@ -83,7 +83,7 @@ class StoreTailer extends AbstractCloseable
     /**
      * Constructs a StoreTailer to read from the provided queue with the given store pool.
      *
-     * @param queue the queue to be read
+     * @param queue     the queue to be read
      * @param storePool the pool that manages WireStore instances
      */
     StoreTailer(@NotNull SingleChronicleQueue queue, WireStorePool storePool) {
@@ -93,8 +93,8 @@ class StoreTailer extends AbstractCloseable
     /**
      * Constructs a StoreTailer with the option to provide an index updater.
      *
-     * @param queue the queue to be read
-     * @param storePool the pool that manages WireStore instances
+     * @param queue        the queue to be read
+     * @param storePool    the pool that manages WireStore instances
      * @param indexUpdater optional index updater for reading from specific positions
      */
     StoreTailer(@NotNull SingleChronicleQueue queue, WireStorePool storePool, IndexUpdater indexUpdater) {
@@ -228,8 +228,7 @@ class StoreTailer extends AbstractCloseable
     /**
      * Provides a string representation of the StoreTailer, showing its current state.
      *
-     * @return A string describing the StoreTailer, including the current index sequence,
-     *         index cycle, store, and queue.
+     * @return A string describing the StoreTailer, including the current index sequence, index cycle, store, and queue.
      */
     @NotNull
     @Override
@@ -350,7 +349,7 @@ class StoreTailer extends AbstractCloseable
      *
      * @param includeMetaData Whether metadata should be included in the document
      * @return true if a document is found, otherwise false
-     * @throws StreamCorruptedException If the wire data is corrupted
+     * @throws StreamCorruptedException      If the wire data is corrupted
      * @throws UnrecoverableTimeoutException If the operation times out while trying to access the queue
      */
     private boolean next0(final boolean includeMetaData) throws StreamCorruptedException {
@@ -575,8 +574,8 @@ class StoreTailer extends AbstractCloseable
      * Processes the current cycle's data and metadata.
      *
      * @param includeMetaData Whether metadata should be included in the document
-     * @param wire The wire object representing the current cycle
-     * @param bytes The byte buffer containing the data
+     * @param wire            The wire object representing the current cycle
+     * @param bytes           The byte buffer containing the data
      * @return true if a valid document is found, otherwise false
      * @throws EOFException If the end of the file is reached
      */
@@ -1029,7 +1028,7 @@ class StoreTailer extends AbstractCloseable
      *
      * @param lastCycle The last cycle to approximate the last entry for.
      * @return The index of the last entry in the specified cycle, or the index of the last entry in the queue.
-     * @throws StreamCorruptedException if there is a corruption in the data stream.
+     * @throws StreamCorruptedException  if there is a corruption in the data stream.
      * @throws MissingStoreFileException if the store file for the specified cycle is missing.
      */
     private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException, MissingStoreFileException {
@@ -1699,9 +1698,9 @@ class StoreTailer extends AbstractCloseable
         /**
          * Updates the state after successfully looking up an index.
          *
-         * @param movedToIndex  The index moved to.
-         * @param direction     The direction of the movement.
-         * @param readPosition  The read position at the new index.
+         * @param movedToIndex The index moved to.
+         * @param direction    The direction of the movement.
+         * @param readPosition The read position at the new index.
          */
         void onSuccessfulLookup(final long movedToIndex,
                                 final TailerDirection direction,
@@ -1714,9 +1713,9 @@ class StoreTailer extends AbstractCloseable
         /**
          * Updates the state after successfully scanning to an index.
          *
-         * @param movedToIndex  The index moved to.
-         * @param direction     The direction of the movement.
-         * @param readPosition  The read position at the new index.
+         * @param movedToIndex The index moved to.
+         * @param direction    The direction of the movement.
+         * @param readPosition The read position at the new index.
          */
         void onSuccessfulScan(final long movedToIndex,
                               final TailerDirection direction,
@@ -1739,10 +1738,10 @@ class StoreTailer extends AbstractCloseable
          * Determines if the last index move can be reused based on proximity to the target index
          * and if the state and direction match.
          *
-         * @param index       The target index.
-         * @param state       The current tailer state.
-         * @param direction   The direction of movement.
-         * @param queue       The ChronicleQueue instance.
+         * @param index     The target index.
+         * @param state     The current tailer state.
+         * @param direction The direction of movement.
+         * @param queue     The ChronicleQueue instance.
          * @return True if the last move can be reused, false otherwise.
          */
         private boolean indexIsCloseToAndAheadOfLastIndexMove(final long index,
@@ -1760,11 +1759,11 @@ class StoreTailer extends AbstractCloseable
         /**
          * Checks if the last index move can be reused based on the current state and index.
          *
-         * @param index       The target index.
-         * @param state       The current tailer state.
-         * @param direction   The direction of movement.
-         * @param queue       The ChronicleQueue instance.
-         * @param wire        The current wire.
+         * @param index     The target index.
+         * @param state     The current tailer state.
+         * @param direction The direction of movement.
+         * @param queue     The ChronicleQueue instance.
+         * @param wire      The current wire.
          * @return True if the last index move can be reused, false otherwise.
          */
         private boolean canReuseLastIndexMove(final long index,

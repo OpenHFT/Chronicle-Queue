@@ -1304,8 +1304,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     /**
      * test that if we make EPOC the current time, then the cycle is == 0
-     * <p>
-     * @
      */
     @Test
     public void testEPOC() {

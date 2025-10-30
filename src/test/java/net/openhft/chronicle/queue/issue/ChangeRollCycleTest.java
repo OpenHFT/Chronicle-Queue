@@ -75,8 +75,8 @@ public class ChangeRollCycleTest {
                     appender3.writeText("World");
 
                     if (readOnly && !OS.isWindows())
-                           assertEquals("Roll cycle should match WEEKLY for read-only mode",
-RollCycles.WEEKLY, q3.rollCycle());
+                        assertEquals("Roll cycle should match WEEKLY for read-only mode",
+                                RollCycles.WEEKLY, q3.rollCycle());
                 }
 
                 // If the tailer is read-only, the roll cycle cannot not be changed
@@ -88,8 +88,8 @@ RollCycles.WEEKLY, q3.rollCycle());
 
                 if (readOnly)
                     assertEquals("Roll cycle should match WEEKLY for read-only mode",
-                                RollCycles.WEEKLY,
-                                q1.rollCycle());
+                            RollCycles.WEEKLY,
+                            q1.rollCycle());
 
                 assertEquals("Second message should match", "World", tailer.readText());
 

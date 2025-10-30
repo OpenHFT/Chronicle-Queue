@@ -191,8 +191,9 @@ public enum BinarySearch {
                             } else if (cmp > 0) {
                                 highSeqNum = midSeqNumber - 1;
                                 break;
-                            } else
+                            } else {
                                 return dc.index(); // key found
+                            }
                         } catch (NotComparableException e) {
                             // We reached the upper bound, eliminate the top half of the range
                             if (rollCycle.toSequenceNumber(dc.index()) == highSeqNum) {

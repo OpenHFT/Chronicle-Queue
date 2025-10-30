@@ -34,7 +34,10 @@ import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
-import net.openhft.chronicle.threads.*;
+import net.openhft.chronicle.threads.MediumEventLoop;
+import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.threads.YieldingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -510,8 +513,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     /**
      * Sets the message initializer and header reader for configuring message headers.
      *
-     * @param messageInitializer   the initializer to set up the message
-     * @param messageHeaderReader  the reader for the message header
+     * @param messageInitializer  the initializer to set up the message
+     * @param messageHeaderReader the reader for the message header
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder messageHeader(Updater<Bytes<?>> messageInitializer,

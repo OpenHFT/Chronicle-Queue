@@ -64,11 +64,11 @@ public final class FileUtil {
      *
      * @param baseDir containing queue file removal candidates
      * @return a Stream of roll Queue files that are likely removable
-     *         from the given {@code baseDir} without affecting any Queue
-     *         process that is currently active in the given {@code baseDir}
-     *         reading data sequentially
+     * from the given {@code baseDir} without affecting any Queue
+     * process that is currently active in the given {@code baseDir}
+     * reading data sequentially
      * @throws UnsupportedOperationException if this operation is not
-     *         supported for the current platform (e.g. Windows).
+     *                                       supported for the current platform (e.g. Windows).
      */
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
@@ -82,7 +82,7 @@ public final class FileUtil {
      *
      * @return a {@link Map} of the absolute paths to all the open files on the system, mapped to the PID holding the file open
      * @throws UnsupportedOperationException if getAllOpenFiles is not supported by the operating system
-     * @throws IOException if an error occurs while traversing filesystem metadata for open files
+     * @throws IOException                   if an error occurs while traversing filesystem metadata for open files
      */
     public static Map<String, String> getAllOpenFiles() throws IOException {
         return InternalFileUtil.getAllOpenFiles();
@@ -92,9 +92,9 @@ public final class FileUtil {
      * Returns if the provided {@code file} has the Chronicle Queue file
      * suffix. The current file suffix is ".cq4".
      *
-     * @param     file to check
-     * @return    if the provided {@code file} has the ChronicleQueue file
-     *            suffix
+     * @param file to check
+     * @return if the provided {@code file} has the ChronicleQueue file
+     * suffix
      */
     public static boolean hasQueueSuffix(@NotNull File file) {
         return InternalFileUtil.hasQueueSuffix(file);
@@ -107,10 +107,10 @@ public final class FileUtil {
      * If the open state of the given {@code file} can not be determined, {@code true }
      * is returned.
      *
-     * @param    file to check
-     * @return   if the given {@code file } is used by any process
-     * @throws   UnsupportedOperationException if this operation is not
-     *           supported for the current platform (e.g. Windows).
+     * @param file to check
+     * @return if the given {@code file } is used by any process
+     * @throws UnsupportedOperationException if this operation is not
+     *                                       supported for the current platform (e.g. Windows).
      */
     public static FileState state(@NotNull File file) {
         return InternalFileUtil.state(file);
