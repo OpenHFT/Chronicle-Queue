@@ -1,0 +1,56 @@
+/*
+ * Copyright 2016-2025 chronicle.software
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.openhft.chronicle.queue;
+
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WireType;
+import org.junit.Test;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.Assert.*;
+
+public class ChronicleWriterMainCliTest extends QueueTestCommon {
+
+    @Test
+    public void mainWritesYamlFilesToQueue() throws Exception {
+        final Path queueDir = getTmpDir().toPath();
+        final Path payload = Files.createTempFile("writer-cli", ".yaml");
+        Files.write(payload, "!int 42\n".getBytes(StandardCharsets.UTF_8));
+
+        ChronicleWriterMain.main(new String[] {
+                "-d", queueDir.toString(),
+                "-m", "value",
+                payload.toString()
+        });
+
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+            final ExcerptTailer tailer = queue.createTailer();
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
+                assertEquals(42, dc.wire().read("value").int32());
+            }
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent());
+            }
+        }
+    }
+}
