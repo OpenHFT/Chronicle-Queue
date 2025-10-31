@@ -86,14 +86,26 @@ public final class PretouchUtil {
         }
 
         /**
-         * Creates a basic {@link Pretoucher} for the specified {@link SingleChronicleQueue}.
+         * Creates a basic no-op {@link Pretoucher} for OSS builds.
          *
-         * @param queue The {@link SingleChronicleQueue} instance
-         * @return A basic {@link Pretoucher} instance
+         * In community (non-enterprise) environments there is no pretoucher implementation;
+         * returning a no-op avoids recursion via ChronicleQueue#createPretoucher()'s default
+         * method, which delegates back to PretouchUtil and would otherwise cause a
+         * StackOverflowError.
          */
         @Override
         public Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
-            return queue.createPretoucher();
+            return new Pretoucher() {
+                @Override
+                public void execute() {
+                    // intentionally no-op in OSS fallback
+                }
+
+                @Override
+                public void close() {
+                    // intentionally no-op
+                }
+            };
         }
     }
 }
