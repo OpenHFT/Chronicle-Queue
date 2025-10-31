@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2016 chronicle.software
+  ~ Copyright 2016-2025 chronicle.software
   ~
-  ~ Licensed under the *Apache License, Version 2.0* (the "License");
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
   ~ You may obtain a copy of the License at
   ~
@@ -14,8 +14,8 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -27,14 +27,17 @@
 
     <artifactId>chronicle-queue</artifactId>
     <version>5.27ea11-SNAPSHOT</version>
-    <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
+    <packaging>bundle</packaging>
+
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
-        <additionalparam>-Xdoclint:none</additionalparam>
         <sonar.organization>openhft</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
+        <jacoco.line.coverage>0.80</jacoco.line.coverage>
+        <jacoco.branch.coverage>0.70</jacoco.branch.coverage>
     </properties>
 
     <dependencyManagement>
@@ -46,6 +49,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
@@ -57,7 +61,6 @@
     </dependencyManagement>
 
     <dependencies>
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>assertions-${zero.cost.assertions}</artifactId>
@@ -195,43 +198,43 @@
 
     <repositories>
         <repository>
-            <id>third-party-release</id>
-            <name>ThirdParty Repository</name>
-            <url>
-                https://nexus.chronicle.software/content/repositories/thirdparty/
-            </url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-        <repository>
-            <id>chronicle-enterprise-snapshots</id>
-            <name>Snapshot Repository</name>
-            <url>
-                https://nexus.chronicle.software/content/repositories/snapshots
-            </url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
+            <id>chronicle-enterprise-snapshots</id>
+            <name>Snapshot Repository</name>
+            <url>https://nexus.chronicle.software/content/repositories/snapshots</url>
         </repository>
         <repository>
-            <id>chronicle-enterprise-release</id>
-            <url>
-                https://nexus.chronicle.software/content/repositories/releases
-            </url>
             <releases>
                 <enabled>true</enabled>
             </releases>
+            <id>chronicle-enterprise-release</id>
+            <url>https://nexus.chronicle.software/content/repositories/releases</url>
         </repository>
     </repositories>
 
     <build>
-
         <plugins>
+            <plugin>
+                <groupId>com.github.ekryd.sortpom</groupId>
+                <artifactId>sortpom-maven-plugin</artifactId>
+                <version>3.0.1</version>
+                <configuration>
+                    <nrOfIndentSpace>4</nrOfIndentSpace>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>sort</goal>
+                        </goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>net.openhft</groupId>
                 <artifactId>binary-compatibility-enforcer-plugin</artifactId>
-
                 <executions>
                     <execution>
                         <phase>verify</phase>
@@ -259,16 +262,6 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <forkCount>1</forkCount>
-                    <!--                    <reuseForks>false</reuseForks>-->
-                    <runOrder>hourly</runOrder>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <executions>
                     <execution>
@@ -279,6 +272,16 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>1</forkCount>
+                    <!--                    <reuseForks>false</reuseForks>-->
+                    <runOrder>hourly</runOrder>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -301,6 +304,37 @@
                     <execution>
                         <goals>
                             <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>4.1</version>
+
+                <configuration>
+                    <header>license_header.txt</header>
+                    <properties>
+                        <currentYear>2025</currentYear>
+                    </properties>
+                    <headerDefinitions>
+                        <headerDefinition>license_header_def.xml</headerDefinition>
+                    </headerDefinitions>
+                    <excludes>
+                        <exclude>**/*.versionsBackup</exclude>
+                        <exclude>LICENSE</exclude>
+                        <exclude>src/test/resources/**</exclude>
+                        <exclude>src/main/resources/**</exclude>
+                        <exclude>src/main/config/**</exclude>
+                    </excludes>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -497,6 +531,13 @@
         </profile>
         <profile>
             <id>sonar</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <jacoco.line.coverage>0.73</jacoco.line.coverage>
+                <jacoco.branch.coverage>0.62</jacoco.branch.coverage>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -506,28 +547,54 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco-maven-plugin.version}</version>
                         <executions>
                             <execution>
+                                <id>prepare-agent</id>
                                 <goals>
                                     <goal>prepare-agent</goal>
                                 </goals>
                             </execution>
                             <execution>
                                 <id>report</id>
-                                <phase>prepare-package</phase>
                                 <goals>
                                     <goal>report</goal>
                                 </goals>
+                                <phase>verify</phase>
+                            </execution>
+                            <execution>
+                                <id>check</id>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <phase>verify</phase>
+                                <configuration>
+                                    <rules>
+                                        <rule>
+                                            <element>BUNDLE</element>
+                                            <limits>
+                                                <limit>
+                                                    <counter>LINE</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>${jacoco.line.coverage}</minimum>
+                                                </limit>
+                                                <limit>
+                                                    <counter>BRANCH</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>${jacoco.branch.coverage}</minimum>
+                                                </limit>
+                                            </limits>
+                                        </rule>
+                                    </rules>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
                 </plugins>
             </build>
         </profile>
-
         <profile>
             <id>run-benchmarks</id>
-            <properties />
             <build>
                 <plugins>
                     <plugin>
@@ -670,5 +737,4 @@
         </developerConnection>
         <tag>develop</tag>
     </scm>
-
 </project>
