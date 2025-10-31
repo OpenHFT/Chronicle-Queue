@@ -53,7 +53,11 @@ public class ChronicleHistoryReaderMainTest {
 
     @After
     public void tearDown() {
-        System.setSecurityManager(null); // Restore the default security manager after each test
+        // On Java 17+, SecurityManager is deprecated/disabled and setSecurityManager will throw
+        // UnsupportedOperationException. Only restore when supported.
+        if (Jvm.majorVersion() < 17) {
+            System.setSecurityManager(null);
+        }
     }
 
     @Test
