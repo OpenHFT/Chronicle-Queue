@@ -22,14 +22,21 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.27ea1</version>
-        <relativePath />
+        <relativePath></relativePath>
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
     <version>5.27ea11-SNAPSHOT</version>
+    <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
-    <packaging>bundle</packaging>
+
+    <scm>
+        <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
+        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</developerConnection>
+        <tag>develop</tag>
+        <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
+    </scm>
 
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
@@ -215,6 +222,22 @@
     </repositories>
 
     <build>
+        <resources>
+            <resource>
+                <filtering>true</filtering>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>**/queue.pom.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <filtering>false</filtering>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>**/queue.pom.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>com.github.ekryd.sortpom</groupId>
@@ -237,10 +260,10 @@
                 <artifactId>binary-compatibility-enforcer-plugin</artifactId>
                 <executions>
                     <execution>
-                        <phase>verify</phase>
                         <goals>
                             <goal>enforcer</goal>
                         </goals>
+                        <phase>verify</phase>
                         <configuration>
                             <referenceVersion>5.27ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
@@ -290,8 +313,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}
-                        </Bundle-SymbolicName>
+                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>OpenHFT :: ${project.artifactId}</Bundle-Name>
                         <Export-Package>net.openhft.chronicle.queue.*</Export-Package>
                     </instructions>
@@ -325,6 +347,7 @@
                     <excludes>
                         <exclude>**/*.versionsBackup</exclude>
                         <exclude>LICENSE</exclude>
+                        <exclude>docs/antora/**</exclude>
                         <exclude>src/test/resources/**</exclude>
                         <exclude>src/main/resources/**</exclude>
                         <exclude>src/main/config/**</exclude>
@@ -459,22 +482,6 @@
                 </executions>
             </plugin>
         </plugins>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-                <includes>
-                    <include>**/queue.pom.properties</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>false</filtering>
-                <excludes>
-                    <exclude>**/queue.pom.properties</exclude>
-                </excludes>
-            </resource>
-        </resources>
 
     </build>
 
@@ -490,11 +497,11 @@
             <id>bundled-nexus-staging</id>
             <repositories>
                 <repository>
-                    <id>chronicle-enterprise-release</id>
-                    <url>https://nexus.chronicle.software/content/repositories/releases</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
+                    <id>chronicle-enterprise-release</id>
+                    <url>https://nexus.chronicle.software/content/repositories/releases</url>
                 </repository>
             </repositories>
         </profile>
@@ -514,10 +521,10 @@
                         <artifactId>maven-shade-plugin</artifactId>
                         <executions>
                             <execution>
-                                <phase>package</phase>
                                 <goals>
                                     <goal>shade</goal>
                                 </goals>
+                                <phase>package</phase>
                                 <configuration>
                                     <shadedArtifactAttached>true</shadedArtifactAttached>
                                     <shadedClassifierName>all</shadedClassifierName>
@@ -541,6 +548,17 @@
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <ci.sonar>true</ci.sonar>
+                            </systemPropertyVariables>
+                            <!-- preserve any argLine set by JaCoCo -->
+                            <argLine>${argLine}</argLine>
+                        </configuration>
+                    </plugin>
+                    <plugin>
                         <groupId>org.sonarsource.scanner.maven</groupId>
                         <artifactId>sonar-maven-plugin</artifactId>
                     </plugin>
@@ -554,6 +572,11 @@
                                 <goals>
                                     <goal>prepare-agent</goal>
                                 </goals>
+                                <configuration>
+                                    <excludes>
+                                        <exclude>net/openhft/chronicle/queue/impl/single/AppenderFileHandleLeakTest*</exclude>
+                                    </excludes>
+                                </configuration>
                             </execution>
                             <execution>
                                 <id>report</id>
@@ -608,111 +631,102 @@
                         <executions>
                             <execution>
                                 <id>ByteArrayJLBHBenchmark</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark</commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>MethodReaderBenchmark</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderBenchmark
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderBenchmark</commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>MethodReaderSkipBenchmark</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderSkipBenchmark
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderSkipBenchmark</commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>QueueContendedWritesJLBHBenchmark</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark</commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>QueueLargeMessageJLBHBenchmark</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark</commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>QueueSingleThreadedJLBHBenchmark</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark</commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>InternalAppenderJLBH</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH</commandlineArgs>
                                 </configuration>
                             </execution>
                             <!-- QueueMultiThreadedJLBHBenchmark was moved to QE -->
                             <execution>
                                 <id>RollCycleMultiThreadStressTest</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressTest
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressTest</commandlineArgs>
                                 </configuration>
                             </execution>
                             <execution>
                                 <id>RollCycleMultiThreadStressReadOnlyTest</id>
-                                <phase>test</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
+                                <phase>test</phase>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressReadOnlyTest
-                                    </commandlineArgs>
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressReadOnlyTest</commandlineArgs>
                                 </configuration>
                             </execution>
                         </executions>
@@ -729,12 +743,4 @@
             </build>
         </profile>
     </profiles>
-
-    <scm>
-        <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
-        <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
-        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
-        </developerConnection>
-        <tag>develop</tag>
-    </scm>
 </project>

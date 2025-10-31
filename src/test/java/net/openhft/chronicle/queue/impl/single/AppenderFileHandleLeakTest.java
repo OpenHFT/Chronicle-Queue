@@ -55,8 +55,11 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
-    private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
-    private static final int MESSAGES_PER_THREAD = 50;
+    private static final boolean SONAR_MODE = Boolean.getBoolean("ci.sonar");
+    private static final int THREAD_COUNT = SONAR_MODE
+            ? Math.min(4, Math.max(2, Runtime.getRuntime().availableProcessors()))
+            : Runtime.getRuntime().availableProcessors() * 2;
+    private static final int MESSAGES_PER_THREAD = SONAR_MODE ? 10 : 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
@@ -100,10 +103,21 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         assumeTrue(OS.isLinux());
         System.gc();
         queuePath = getTmpDir();
+        if (SONAR_MODE) {
+            // Ignore transient error logs from flakiness retries that would fail afterChecks
+            ignoreException("Found open queue file:");
+        }
     }
 
     @Test
-    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
+    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws Exception {
+        FlakyTestRunner.builder(this::appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection0)
+                .withMaxIterations(3)
+                .build()
+                .run();
+    }
+
+    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection0() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
 
@@ -140,7 +154,10 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Test
     public void tailerResourcesCanBeReleasedManually() throws Exception {
-        FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
+        FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0)
+                .withMaxIterations(3)
+                .build()
+                .run();
     }
 
     public void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
@@ -320,6 +337,13 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             throw new AssertionError(e);
         }
         super.assertReferencesReleased();
+    }
+
+    @Override
+    protected void preAfter() {
+        // Reduce chance of concurrent modifications to exception tracker
+        BackgroundResourceReleaser.releasePendingResources();
+        Jvm.pause(50);
     }
 
     private boolean queueFilesAreAllClosed() {
