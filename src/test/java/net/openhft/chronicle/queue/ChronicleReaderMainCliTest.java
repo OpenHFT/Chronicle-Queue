@@ -46,5 +46,18 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         final String out = capture.toString();
         assertTrue("Expected output to contain written text", out.contains("hello"));
     }
-}
 
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidContentBasedLimiterClassThrows() {
+        final java.io.File dir = getTmpDir();
+        ChronicleReaderMain main = new ChronicleReaderMain();
+        main.run(new String[]{"-d", dir.getAbsolutePath(), "-cbl", "not.a.RealClass"});
+    }
+
+    @Test(expected = ClassNotFoundException.class)
+    public void invalidBinarySearchComparatorClassThrows() {
+        final java.io.File dir = getTmpDir();
+        ChronicleReaderMain main = new ChronicleReaderMain();
+        main.run(new String[]{"-d", dir.getAbsolutePath(), "-b", "not.a.RealClass"});
+    }
+}
