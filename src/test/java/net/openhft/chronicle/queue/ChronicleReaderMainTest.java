@@ -39,15 +39,24 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
 
             String[] args = {"-d", tempDir.toString()};
 
-            // Capture System.out and System.err
-            ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-            ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(outContent));
-            System.setErr(new PrintStream(errContent));
+            // Capture System.out and System.err using try-with-resources
+            PrintStream originalOut = System.out;
+            PrintStream originalErr = System.err;
+            try (ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+                 ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+                 PrintStream outPs = new PrintStream(outContent);
+                 PrintStream errPs = new PrintStream(errContent)) {
+                System.setOut(outPs);
+                System.setErr(errPs);
 
-            ChronicleReaderMain.main(args);  // Run the main method with valid args
+                ChronicleReaderMain.main(args);  // Run the main method with valid args
 
-            assertTrue("Expected valid arguments to run without issues.", true);
+                assertTrue("Expected valid arguments to run without issues.", true);
+            } finally {
+                // Reset System.out and System.err
+                System.setOut(originalOut);
+                System.setErr(originalErr);
+            }
 
             // Clean up: delete the temporary directory
             File dir = tempDir.toFile();
@@ -57,10 +66,6 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
 
         } catch (Exception e) {
             fail("No exception should be thrown with valid arguments: " + e.getMessage());
-        } finally {
-            // Reset System.out and System.err
-            System.setOut(System.out);
-            System.setErr(System.err);
         }
     }
 
@@ -94,6 +99,6 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
     public void namedTailerWithReadOnlyQueueShouldThrow() {
         // create an empty queue dir and request a named tailer; default reader is read-only
         java.io.File dir = getTmpDir();
-        ChronicleReaderMain.main(new String[]{"-d", dir.getAbsolutePath(), "--named", "myTailer"});
+        ChronicleReaderMain.main(new String[]{"-d", dir.getAbsolutePath(), "-named", "myTailer"});
     }
 }
