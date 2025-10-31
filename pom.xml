@@ -351,6 +351,7 @@
                     <excludes>
                         <exclude>**/*.versionsBackup</exclude>
                         <exclude>LICENSE</exclude>
+                        <exclude>**/*.adoc</exclude>
                         <exclude>docs/antora/**</exclude>
                         <exclude>src/test/resources/**</exclude>
                         <exclude>src/main/resources/**</exclude>
