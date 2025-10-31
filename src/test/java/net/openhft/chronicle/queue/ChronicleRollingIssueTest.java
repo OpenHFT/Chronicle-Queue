@@ -122,8 +122,8 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
             }
             try {
                 IOTools.deleteDirWithFiles(path, 2);
-            } catch (IORuntimeException todoFixOnWindows) {
-
+            } catch (IORuntimeException e) {
+                Jvm.warn().on(ChronicleRollingIssueTest.class, "Failed to clean up test directory", e);
             }
         }
     }
