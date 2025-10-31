@@ -564,8 +564,13 @@
                             <systemPropertyVariables>
                                 <ci.sonar>true</ci.sonar>
                             </systemPropertyVariables>
-                            <!-- preserve any argLine set by JaCoCo and add JPMS flags + coverage marker -->
-                            <argLine>${argLine} ${jvm.requiredArgs} -Djvm.coverage=true</argLine>
+                            <!--
+                              Use a dedicated property injected by JaCoCo to avoid
+                              timing/order issues with ${argLine} resolution.
+                              JaCoCo prepares ${surefireArgLine}; keep it first and
+                              append parent JPMS flags and a coverage marker.
+                            -->
+                            <argLine>${surefireArgLine} ${jvm.requiredArgs} -Djvm.coverage=true</argLine>
                         </configuration>
                     </plugin>
                     <plugin>
@@ -583,6 +588,11 @@
                                     <goal>prepare-agent</goal>
                                 </goals>
                                 <configuration>
+                                    <!--
+                                      Inject agent into a dedicated property consumed by Surefire.
+                                      This prevents ${argLine} from being flattened too early.
+                                    -->
+                                    <propertyName>surefireArgLine</propertyName>
                                     <excludes>
                                         <exclude>net/openhft/chronicle/queue/impl/single/AppenderFileHandleLeakTest*</exclude>
                                     </excludes>

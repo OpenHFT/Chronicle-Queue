@@ -17,10 +17,14 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.Test;
 
 import java.io.File;
+import java.time.LocalDate;
+import java.time.temporal.WeekFields;
+import java.util.Locale;
 
 import static org.junit.Assert.*;
 
@@ -62,6 +66,44 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
         final Long afterEviction = cache.toLong(baseFile);
         assertEquals(initial, afterEviction);
+    }
+
+    @Test
+    public void parseWeeklyFormatValid() {
+        final File dir = getTmpDir();
+        final RollingResourcesCache cache = new RollingResourcesCache(
+                RollCycles.WEEKLY,
+                0,
+                name -> new File(dir, name + ".cq4"),
+                file -> file.getName().replaceFirst("\\.cq4$", "")
+        );
+
+        final String name = "2025W01"; // week-based year and week
+        final int parsed = cache.parseCount(name);
+
+        final WeekFields wf = WeekFields.of(Locale.getDefault());
+        final LocalDate ld = LocalDate.now()
+                .withYear(2025)
+                .with(wf.weekOfYear(), 1)
+                .with(wf.dayOfWeek(), 1);
+        final int expected = Math.toIntExact(ld.toEpochDay());
+
+        assertEquals(expected, parsed);
+        // Re-parsing should use lastParseCount cache
+        assertEquals(parsed, cache.parseCount(name));
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void parseInvalidFormatThrows() {
+        final File dir = getTmpDir();
+        final RollingResourcesCache cache = new RollingResourcesCache(
+                TestRollCycles.TEST_SECONDLY,
+                0,
+                name -> new File(dir, name + ".cq4"),
+                file -> file.getName().replaceFirst("\\.cq4$", "")
+        );
+
+        cache.parseCount("not-a-valid-name");
     }
 
     private RollingResourcesCache newCache(File dir) {

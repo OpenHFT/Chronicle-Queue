@@ -89,4 +89,11 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
         assertNotNull(options.getOption("cbl"));  // Content-based limiter
         assertNotNull(options.getOption("named"));  // Named tailer ID
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void namedTailerWithReadOnlyQueueShouldThrow() {
+        // create an empty queue dir and request a named tailer; default reader is read-only
+        java.io.File dir = getTmpDir();
+        ChronicleReaderMain.main(new String[]{"-d", dir.getAbsolutePath(), "--named", "myTailer"});
+    }
 }
