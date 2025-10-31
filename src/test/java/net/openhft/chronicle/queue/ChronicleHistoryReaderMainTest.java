@@ -15,18 +15,47 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.*;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.file.Path;
+import java.security.Permission;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReaderMainTest {
+
+    private static class NoExitSecurityManager extends SecurityManager {
+        @Override
+        public void checkPermission(Permission perm) {
+            // allow anything
+        }
+
+        @Override
+        public void checkExit(int status) {
+            throw new SecurityException("System exit attempted with status: " + status);
+        }
+    }
+
+    @Before
+    public void setUp() {
+        // SecurityManager is effectively disabled from JDK 17 onwards
+        assumeTrue(Jvm.majorVersion() < 17);
+        System.setSecurityManager(new NoExitSecurityManager());
+    }
+
+    @After
+    public void tearDown() {
+        System.setSecurityManager(null);
+    }
 
     @Test
     public void testRunExecutesChronicleHistoryReader() {
@@ -113,20 +142,14 @@ public class ChronicleHistoryReaderMainTest {
 
     @Test
     public void testParseCommandLineHelpOption() {
-        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
-            @Override
-            protected void printHelpAndExit(Options options, int status, String message) {
-                assertEquals(0, status);  // Ensure help is printed with status 0 (success)
-                throw new ThreadDeath();  // Exit without calling System.exit()
-            }
-        };
+        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         String[] args = {"-h"};
 
         try {
             main.run(args);  // Should trigger the help message and exit with 0
-            fail("Expected ThreadDeath to be thrown");
-        } catch (ThreadDeath e) {
-            // expected
+            fail("Expected SecurityException due to System.exit(0)");
+        } catch (SecurityException e) {
+            assertTrue(e.getMessage().contains("System exit attempted with status: 0"));
         }
     }
 
@@ -148,18 +171,13 @@ public class ChronicleHistoryReaderMainTest {
 
     @Test
     public void testPrintHelpAndExit() {
-        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
-            @Override
-            protected void printHelpAndExit(Options options, int status, String message) {
-                assertEquals(0, status);
-                throw new ThreadDeath();
-            }
-        };
+        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         Options options = main.options();
         try {
             main.printHelpAndExit(options, 0, "Optional message");
-            fail("Expected ThreadDeath to be thrown");
-        } catch (ThreadDeath ignored) {
+            fail("Expected SecurityException due to System.exit(0)");
+        } catch (SecurityException e) {
+            assertTrue(e.getMessage().contains("System exit attempted with status: 0"));
         }
     }
 }
