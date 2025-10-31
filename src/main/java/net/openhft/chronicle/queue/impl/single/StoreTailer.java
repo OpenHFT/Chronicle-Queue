@@ -593,6 +593,8 @@ class StoreTailer extends AbstractCloseable
                 break;
             case EOF:
                 throw EOF_EXCEPTION;
+            default:
+                throw new IllegalStateException("Unknown header type");
         }
 
         inACycleFound(bytes);
@@ -924,6 +926,8 @@ class StoreTailer extends AbstractCloseable
             case END_OF_FILE:
                 state = END_OF_CYCLE;
                 break;
+            default:
+                throw new IllegalStateException("Unknown ScanResult: " + scanResult);
         }
 
         return scanResult;

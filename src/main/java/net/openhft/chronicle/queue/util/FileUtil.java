@@ -55,11 +55,15 @@ public final class FileUtil {
      *
      * <pre>{@code
      *     for (File file : removableFileCandidates(baseDir).collect(Collectors.toList())) {
-     *         if (!file.delete()) {
+     *         try {
+     *             java.nio.file.Files.delete(file.toPath());
+     *         } catch (java.io.IOException e) {
+     *             // Stop at first failure to preserve order guarantees
      *             break;
      *         }
      *     }
-     * }</pre>
+     * }
+     * </pre>
      *
      * @param baseDir containing queue file removal candidates
      * @return a Stream of roll Queue files that are likely removable
