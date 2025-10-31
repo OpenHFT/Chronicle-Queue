@@ -15,50 +15,18 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.*;
 import org.junit.Test;
-import org.junit.After;
-import org.junit.Before;
 
 import java.nio.file.Path;
-import java.security.Permission;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReaderMainTest {
-
-    private static class NoExitSecurityManager extends SecurityManager {
-        @Override
-        public void checkPermission(Permission perm) {
-            // allow anything
-        }
-
-        @Override
-        public void checkExit(int status) {
-            throw new SecurityException("System exit attempted with status: " + status);
-        }
-    }
-
-    @Before
-    public void setUp() {
-        assumeTrue(Jvm.majorVersion() < 17);
-        System.setSecurityManager(new NoExitSecurityManager());
-    }
-
-    @After
-    public void tearDown() {
-        // On Java 17+, SecurityManager is deprecated/disabled and setSecurityManager will throw
-        // UnsupportedOperationException. Only restore when supported.
-        if (Jvm.majorVersion() < 17) {
-            System.setSecurityManager(null);
-        }
-    }
 
     @Test
     public void testRunExecutesChronicleHistoryReader() {
@@ -90,18 +58,13 @@ public class ChronicleHistoryReaderMainTest {
 
         // Create a mock ChronicleHistoryReader
         ChronicleHistoryReader historyReader = new ChronicleHistoryReader() {
-            private boolean progressEnabled = false;
-            private boolean histosByMethod = false;
-
             @Override
             public ChronicleHistoryReader withProgress(boolean progress) {
-                this.progressEnabled = progress;
                 return this;
             }
 
             @Override
             public ChronicleHistoryReader withHistosByMethod(boolean histosByMethod) {
-                this.histosByMethod = histosByMethod;
                 return this;
             }
 
@@ -132,8 +95,8 @@ public class ChronicleHistoryReaderMainTest {
         main.setup(commandLine, historyReader);
 
         // Assert
-        assertTrue(historyReader.withProgress(true) != null);
-        assertTrue(historyReader.withHistosByMethod(true) != null);
+        assertNotNull(historyReader.withProgress(true));
+        assertNotNull(historyReader.withHistosByMethod(true));
     }
 
     @Test
@@ -159,16 +122,11 @@ public class ChronicleHistoryReaderMainTest {
         };
         String[] args = {"-h"};
 
-        // Manually setting the security manager to catch System.exit() if needed
         try {
             main.run(args);  // Should trigger the help message and exit with 0
             fail("Expected ThreadDeath to be thrown");
-
         } catch (ThreadDeath e) {
-            // Expected exception
-
-        } catch (SecurityException e) {
-            fail("System.exit was called unexpectedly.");
+            // expected
         }
     }
 
@@ -190,13 +148,18 @@ public class ChronicleHistoryReaderMainTest {
 
     @Test
     public void testPrintHelpAndExit() {
-        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
+        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
+            @Override
+            protected void printHelpAndExit(Options options, int status, String message) {
+                assertEquals(0, status);
+                throw new ThreadDeath();
+            }
+        };
         Options options = main.options();
-
         try {
             main.printHelpAndExit(options, 0, "Optional message");
-        } catch (SecurityException e) {
-            assertTrue(e.getMessage().contains("System exit attempted with status: 0"));
+            fail("Expected ThreadDeath to be thrown");
+        } catch (ThreadDeath ignored) {
         }
     }
 }

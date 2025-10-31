@@ -378,8 +378,11 @@ public interface ChronicleQueue extends Closeable {
      * The value returned is always a power of two.
      *
      * @return the Delta Checkpoint Interval for this ChronicleQueue
+     * @deprecated This configuration is no longer used by the queue implementation and will
+     * be removed in a future release. There is no direct replacement; callers should avoid
+     * depending on this value and rely on default queue behavior instead.
      */
-    @Deprecated(/* to be removed in x.29 */)
+    @Deprecated
     default int deltaCheckpointInterval() {
         return 64;
     }
