@@ -248,14 +248,6 @@
                 <configuration>
                     <nrOfIndentSpace>4</nrOfIndentSpace>
                 </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>sort</goal>
-                        </goals>
-                        <phase>verify</phase>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>net.openhft</groupId>
