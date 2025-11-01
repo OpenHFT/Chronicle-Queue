@@ -5,10 +5,11 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
-import org.apache.commons.cli.*;
-import org.junit.Test;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 import java.nio.file.Path;
 import java.security.Permission;
@@ -35,13 +36,14 @@ public class ChronicleHistoryReaderMainTest {
 
     @Before
     public void setUp() {
+        // SecurityManager is effectively disabled from JDK 17 onwards
         assumeTrue(Jvm.majorVersion() < 17);
         System.setSecurityManager(new NoExitSecurityManager());
     }
 
     @After
     public void tearDown() {
-        System.setSecurityManager(null); // Restore the default security manager after each test
+        System.setSecurityManager(null);
     }
 
     @Test
@@ -74,18 +76,13 @@ public class ChronicleHistoryReaderMainTest {
 
         // Create a mock ChronicleHistoryReader
         ChronicleHistoryReader historyReader = new ChronicleHistoryReader() {
-            private boolean progressEnabled = false;
-            private boolean histosByMethod = false;
-
             @Override
             public ChronicleHistoryReader withProgress(boolean progress) {
-                this.progressEnabled = progress;
                 return this;
             }
 
             @Override
             public ChronicleHistoryReader withHistosByMethod(boolean histosByMethod) {
-                this.histosByMethod = histosByMethod;
                 return this;
             }
 
@@ -116,8 +113,8 @@ public class ChronicleHistoryReaderMainTest {
         main.setup(commandLine, historyReader);
 
         // Assert
-        assertTrue(historyReader.withProgress(true) != null);
-        assertTrue(historyReader.withHistosByMethod(true) != null);
+        assertNotNull(historyReader.withProgress(true));
+        assertNotNull(historyReader.withHistosByMethod(true));
     }
 
     @Test
@@ -176,9 +173,9 @@ public class ChronicleHistoryReaderMainTest {
     public void testPrintHelpAndExit() {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         Options options = main.options();
-
         try {
             main.printHelpAndExit(options, 0, "Optional message");
+            fail("Expected SecurityException due to System.exit(0)");
         } catch (SecurityException e) {
             assertTrue(e.getMessage().contains("System exit attempted with status: 0"));
         }

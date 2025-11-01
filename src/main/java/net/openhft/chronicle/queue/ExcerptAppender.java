@@ -132,5 +132,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * Used by replication sinks on startup to cover off any edge cases where the replicated EOF was not received/applied
      * Can also be used on any appender, but this is not currently done automatically
      */
-    default void normaliseEOFs() { }
+    default void normaliseEOFs() {
+        // Intentionally no-op: optional hook for ensuring EOF markers on rolled files
+    }
 }

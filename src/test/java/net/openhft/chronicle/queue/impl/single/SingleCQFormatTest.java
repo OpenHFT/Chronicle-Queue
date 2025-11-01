@@ -382,7 +382,6 @@ public class SingleCQFormatTest extends QueueTestCommon {
             testQueue(queue);
             fail();
         } catch (Exception e) {
-            // e.printStackTrace();
             assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required",
                     e.toString());
         }

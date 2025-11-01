@@ -79,7 +79,7 @@ public class MessageReaderWriterTest extends QueueTestCommon {
     static class Message1 extends SelfDescribingMarshallable {
         String text;
 
-        public Message1(String text) {
+        Message1(String text) {
             this.text = text;
         }
     }
@@ -87,7 +87,7 @@ public class MessageReaderWriterTest extends QueueTestCommon {
     static class Message2 extends SelfDescribingMarshallable {
         long number;
 
-        public Message2(long number) {
+        Message2(long number) {
             this.number = number;
         }
     }
@@ -95,7 +95,7 @@ public class MessageReaderWriterTest extends QueueTestCommon {
     static class MessageProcessor implements MessageListener {
         private final MessageListener writer2;
 
-        public MessageProcessor(MessageListener writer2) {
+        MessageProcessor(MessageListener writer2) {
             this.writer2 = writer2;
         }
 

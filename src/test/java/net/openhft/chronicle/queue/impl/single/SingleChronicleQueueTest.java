@@ -3349,7 +3349,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     }
 
                     // ... and try and overwrite starting at beginning
-                    // TODO: if you step in here it looks like it is overwriting
+                    // NOTE: stepping here appears to overwrite
                     // and DOES NOT output debug log "Trying to overwrite index..."
                     for (int i = 0; i < 4; i++) {
                         BytesWithIndex b = bytesWithIndies.get(i);

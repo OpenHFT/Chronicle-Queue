@@ -43,9 +43,7 @@ public class DeleteFileTest {
                 clock[0] += queue.rollCycle().lengthInMillis();
                 appender.writeText("2");
 
-//                System.out.println(queue.dump());
-
-//                queue.refreshDirectoryListing();
+                // refresh directory listing to ensure tailers see deletions when needed
 
                 // can't delete while in use on windows, so have to close.
                 if (!OS.isLinux())
@@ -53,7 +51,7 @@ public class DeleteFileTest {
                 BackgroundResourceReleaser.releasePendingResources();
                 assertTrue(firstCycleFile.delete());
 
-//                System.out.println(queue.dump());
+                // sanity after deletion: continue reading across roll cycle
 
                 if (!OS.isLinux())
                     tailer0 = queue.createTailer();

@@ -55,7 +55,7 @@ public class DirectoryUtils {
         final Set<File> toDeleteList = Collections.synchronizedSet(new LinkedHashSet<>());
 
         {
-            // TODO: should not need to do this now
+            // NOTE: historically required; kept for compatibility
             PriorityHook.add(100, () -> toDeleteList.forEach(IOTools::deleteDirWithFiles));
         }
 

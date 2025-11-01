@@ -61,12 +61,12 @@ public class ExcerptCommonTest extends QueueTestCommon {
 
         @Override
         public void singleThreadedCheckReset() {
-
+            // no-op in stub: nothing to reset in this test
         }
 
         @Override
         public void singleThreadedCheckDisabled(boolean singleThreadedCheckDisabled) {
-
+            // no-op in stub: single threaded check not relevant in this test
         }
     }
 
@@ -103,7 +103,9 @@ public class ExcerptCommonTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
             excerpt.sync(); // Would test actual sync if implemented
-            // No assertion needed for this default method
+            // Verify no state change and queue remains the same
+            assertEquals(queue, excerpt.queue());
+            assertEquals(123, excerpt.sourceId());
         }
     }
 }

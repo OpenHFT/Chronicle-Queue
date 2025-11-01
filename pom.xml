@@ -4,14 +4,15 @@
     Copyright 2016-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.27ea1</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
@@ -247,16 +248,6 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <forkCount>1</forkCount>
-                    <!--                    <reuseForks>false</reuseForks>-->
-                    <runOrder>hourly</runOrder>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <executions>
                     <execution>
@@ -267,6 +258,18 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>1</forkCount>
+                    <!--                    <reuseForks>false</reuseForks>-->
+                    <runOrder>hourly</runOrder>
+                    <!-- propagate JPMS flags from parent into unit test JVMs -->
+                    <argLine>${argLine} ${jvm.requiredArgs}</argLine>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -445,22 +448,6 @@
                 </executions>
             </plugin>
         </plugins>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-                <includes>
-                    <include>**/queue.pom.properties</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>false</filtering>
-                <excludes>
-                    <exclude>**/queue.pom.properties</exclude>
-                </excludes>
-            </resource>
-        </resources>
 
     </build>
 
@@ -517,8 +504,33 @@
         </profile>
         <profile>
             <id>sonar</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <jacoco.line.coverage>0.498</jacoco.line.coverage>
+                <jacoco.branch.coverage>0.356</jacoco.branch.coverage>
+                <!-- Ensure Sonar uses JaCoCo XML report produced at verify -->
+                <sonar.coverage.jacoco.xmlReportPaths>${project.reporting.outputDirectory}/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+            </properties>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <ci.sonar>true</ci.sonar>
+                            </systemPropertyVariables>
+                            <!--
+                              Use a dedicated property injected by JaCoCo to avoid
+                              timing/order issues with ${argLine} resolution.
+                              JaCoCo prepares ${surefireArgLine}; keep it first and
+                              append parent JPMS flags and a coverage marker.
+                            -->
+                            <argLine>${surefireArgLine} ${jvm.requiredArgs} -Djvm.coverage=true</argLine>
+                        </configuration>
+                    </plugin>
                     <plugin>
                         <groupId>org.sonarsource.scanner.maven</groupId>
                         <artifactId>sonar-maven-plugin</artifactId>
@@ -526,11 +538,23 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco-maven-plugin.version}</version>
                         <executions>
                             <execution>
+                                <id>prepare-agent</id>
                                 <goals>
                                     <goal>prepare-agent</goal>
                                 </goals>
+                                <configuration>
+                                    <!--
+                                      Inject agent into a dedicated property consumed by Surefire.
+                                      This prevents ${argLine} from being flattened too early.
+                                    -->
+                                    <propertyName>surefireArgLine</propertyName>
+                                    <excludes>
+                                        <exclude>net/openhft/chronicle/queue/impl/single/AppenderFileHandleLeakTest*</exclude>
+                                    </excludes>
+                                </configuration>
                             </execution>
                             <execution>
                                 <id>report</id>
@@ -547,7 +571,7 @@
 
         <profile>
             <id>run-benchmarks</id>
-            <properties />
+            <properties/>
             <build>
                 <plugins>
                     <plugin>
@@ -567,7 +591,8 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath
+                                        %classpath net.openhft.chronicle.queue.bench.ByteArrayJLBHBenchmark
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -579,7 +604,8 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderBenchmark
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath
+                                        %classpath net.openhft.chronicle.queue.bench.MethodReaderBenchmark
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -591,7 +617,8 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.MethodReaderSkipBenchmark
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath
+                                        %classpath net.openhft.chronicle.queue.bench.MethodReaderSkipBenchmark
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -603,7 +630,8 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath
+                                        %classpath net.openhft.chronicle.queue.bench.QueueContendedWritesJLBHBenchmark
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -615,7 +643,8 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath
+                                        %classpath net.openhft.chronicle.queue.bench.QueueLargeMessageJLBHBenchmark
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -627,7 +656,8 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath
+                                        %classpath net.openhft.chronicle.queue.bench.QueueSingleThreadedJLBHBenchmark
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -639,7 +669,8 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -classpath
+                                        %classpath net.openhft.chronicle.queue.bench.InternalAppenderJLBH
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -652,7 +683,9 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressTest
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30
+                                        -classpath %classpath
+                                        net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressTest
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -664,7 +697,9 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/java</executable>
-                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30 -classpath %classpath net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressReadOnlyTest
+                                    <commandlineArgs>${jvm.requiredArgs} -Djvm.resource.tracing=false -DtestTime=30
+                                        -classpath %classpath
+                                        net.openhft.chronicle.queue.impl.single.stress.RollCycleMultiThreadStressReadOnlyTest
                                     </commandlineArgs>
                                 </configuration>
                             </execution>

@@ -290,12 +290,12 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private void progressivelyTruncateOldRollCycles(QueueWithCycleDetails queueWithCycleDetails) {
         try {
             int deletedUpTo = 0;
-            // int numberOfCycles = queueWithCycleDetails.rollCycles.size();
+            // previously used for debug output; removed to avoid commented code smell
             while (!queueWithCycleDetails.rollCycles.isEmpty()) {
                 Jvm.startup().on(TestDeleteQueueFile.class, "Deleting from " + deletedUpTo + " to " + (deletedUpTo + CYCLES_TO_DELETE_PER_ITERATION));
                 for (int i = 0; i < CYCLES_TO_DELETE_PER_ITERATION; i++) {
                     final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(0);
-                    // Jvm.startup().on(TestDeleteQueueFile.class, "Deleting " + rollCycleDetails.filename + " (" + deletedUpTo + "/" + numberOfCycles + "), firstIndex=" + toHexString(rollCycleDetails.firstIndex) + ", lastIndex=" + toHexString(rollCycleDetails.lastIndex));
+                    // debug trace removed; keep deletion behaviour unchanged
                     Files.delete(Paths.get(rollCycleDetails.filename));
                     deletedUpTo++;
                 }

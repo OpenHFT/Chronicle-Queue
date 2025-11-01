@@ -143,7 +143,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     static class StubChronicleQueue implements ChronicleQueue {
         @Override
         public void close() {
-            // Implementation for abstract method close()
+            // no-op in stub: this queue is a lightweight test double
         }
 
         @Override
@@ -178,6 +178,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
 
         @Override
         public void clear() {
+            // no-op in stub: clearing not required for test scenarios
         }
 
         @Override
@@ -216,14 +217,17 @@ public class ChronicleQueueTest extends QueueTestCommon {
 
         @Override
         public void lastIndexReplicated(long lastIndex) {
+            // no-op in stub: replication not exercised in this test
         }
 
         @Override
         public void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated) {
+            // no-op in stub: replication not exercised in this test
         }
 
         @Override
         public void refreshDirectoryListing() {
+            // no-op in stub: directory listing not needed for this test
         }
 
         @Override

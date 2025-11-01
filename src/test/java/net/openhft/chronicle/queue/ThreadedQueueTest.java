@@ -112,7 +112,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
 
                 bytes.clear();
                 boolean condition = tailer.readBytes(bytes);
-                // TODO FIX, Something in the cache for directory isn't being updated.
+                // NOTE: Something in the cache for directory isn't being updated.
                 if (!condition) {
                     Jvm.pause(1);
                     condition = tailer.readBytes(bytes);

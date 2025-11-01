@@ -633,6 +633,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     break;
                 case EOF:
                     throw new AssertionError("EOF should have been handled");
+                default:
+                    throw new AssertionError("Unknown headerType: " + headerType);
             }
 
             // If the current position matches the target, return the index

@@ -38,14 +38,13 @@ public class IndexTest extends QueueTestCommon {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                // {WireType.TEXT}, // TODO Add CAS to LongArrayReference.
+                // {WireType.TEXT}, // TEXT mode not supported here due to missing CAS in LongArrayReference
                 {WireType.BINARY}
         });
     }
 
     @Test
-    public void test() throws IOException {
-
+    public void test() {
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
