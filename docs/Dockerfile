@@ -1,3 +1,7 @@
+#
+# Copyright 2016-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
+#
+
 FROM node:alpine AS base
 RUN apk --update add git
 RUN npm install -g gitlab:antora/xref-validator

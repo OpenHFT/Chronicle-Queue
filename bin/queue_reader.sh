@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# Copyright 2016-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
+#
+
 
 SCRIPT_DIR=$(dirname "$0")
 PROJECT_DIR="$SCRIPT_DIR/.."
