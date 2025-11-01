@@ -24,7 +24,7 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.27ea1</version>
-        <relativePath></relativePath>
+        <relativePath/>
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
@@ -542,10 +542,6 @@
                 <jacoco.branch.coverage>0.356</jacoco.branch.coverage>
                 <!-- Ensure Sonar uses JaCoCo XML report produced at verify -->
                 <sonar.coverage.jacoco.xmlReportPaths>${project.reporting.outputDirectory}/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-                <!-- Pick up token from environment when running under aggregators -->
-                <sonar.token>${env.SONAR_TOKEN}</sonar.token>
-                <!-- Backward compatibility with older Sonar scanners -->
-                <sonar.login>${env.SONAR_TOKEN}</sonar.login>
             </properties>
             <build>
                 <plugins>
