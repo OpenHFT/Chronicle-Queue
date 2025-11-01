@@ -38,6 +38,8 @@ and also supports random-access seek.
 
 link:https://player.vimeo.com/video/201989439[Why Use Chronicle Queue Between Microservices?]
 
+A number of relevant system properties are listed in link:docs/systemProperties.adoc[systemProperties.adoc].
+
 == What Is Chronicle Queue?
 
 You could consider a Chronicle Queue to be similar to a low latency broker-less durable/persisted topic that can contain messages of different types and sizes.
