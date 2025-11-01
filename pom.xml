@@ -333,21 +333,20 @@
                 <version>4.1</version>
 
                 <configuration>
-                    <header>license_header.txt</header>
-                    <properties>
-                        <currentYear>2025</currentYear>
-                    </properties>
-                    <headerDefinitions>
-                        <headerDefinition>license_header_def.xml</headerDefinition>
-                    </headerDefinitions>
+                    <!-- One-line header; no newlines -->
+                    <inlineHeader>Copyright 2016-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0</inlineHeader>
+                    <!-- Force single-line // style for Java so the result is literally one line -->
+                    <mapping>
+                        <java>DOUBLESLASH_STYLE</java>
+                    </mapping>
                     <excludes>
-                        <exclude>**/*.versionsBackup</exclude>
                         <exclude>LICENSE</exclude>
                         <exclude>**/*.adoc</exclude>
                         <exclude>docs/antora/**</exclude>
                         <exclude>src/test/resources/**</exclude>
                         <exclude>src/main/resources/**</exclude>
                         <exclude>src/main/config/**</exclude>
+                        <exclude>**/*.versionsBackup</exclude>
                     </excludes>
                 </configuration>
 
