@@ -137,16 +137,18 @@ public class ExcerptAppenderTest extends QueueTestCommon {
     @Test
     public void testPretouch() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
+        long before = appender.lastIndexAppended();
         appender.pretouch();
-
-        // No assertion needed as pretouch() is a no-op in the default implementation
+        // Verify no side-effect on default no-op implementation
+        assertEquals(before, appender.lastIndexAppended());
     }
 
     @Test
     public void testNormaliseEOFs() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
+        long before = appender.lastIndexAppended();
         appender.normaliseEOFs();
-
-        // No assertion needed as normaliseEOFs() is a no-op in the default implementation
+        // Verify no side-effect on default no-op implementation
+        assertEquals(before, appender.lastIndexAppended());
     }
 }
