@@ -45,7 +45,6 @@ public class IndexTest extends QueueTestCommon {
 
     @Test
     public void test() {
-
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
