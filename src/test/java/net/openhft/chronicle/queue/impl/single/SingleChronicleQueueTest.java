@@ -2518,7 +2518,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    private String expectedMultipleAppenders() {
+    protected String expectedMultipleAppenders() {
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -3234,7 +3234,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    private SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
+    protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 
@@ -3309,7 +3309,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    private SingleChronicleQueueBuilder binary(@NotNull File file) {
+    protected SingleChronicleQueueBuilder binary(@NotNull File file) {
         return builder(file, WireType.BINARY_LIGHT);
     }
 

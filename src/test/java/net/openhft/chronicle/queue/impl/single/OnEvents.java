@@ -4,6 +4,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 @FunctionalInterface
-interface OnEvents {
+public interface OnEvents {
     void onEvent(String event);
 }

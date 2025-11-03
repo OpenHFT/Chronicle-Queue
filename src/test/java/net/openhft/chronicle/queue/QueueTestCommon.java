@@ -5,11 +5,11 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.internal.JvmExceptionTracker;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
+import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
@@ -31,9 +31,12 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static net.openhft.chronicle.core.onoes.LogLevel.DEBUG;
+import static net.openhft.chronicle.core.onoes.LogLevel.PERF;
 import static org.junit.Assert.fail;
 
 public class QueueTestCommon {
+    private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
     private final List<File> tmpDirs = new ArrayList<>();
 
@@ -149,7 +152,15 @@ public class QueueTestCommon {
 
     @Before
     public void recordExceptions() {
-        exceptionTracker = JvmExceptionTracker.create(false);
+        Map<ExceptionKey, Integer> recordedExceptions = Jvm.recordExceptions(false);
+        exceptionTracker = ExceptionTracker.create(
+                ExceptionKey::message,
+                ExceptionKey::throwable,
+                Jvm::resetExceptionHandlers,
+                recordedExceptions,
+                key -> IGNORED_LOG_LEVELS.contains(key.level()),
+                key -> key.level() + " " + key.clazz().getSimpleName() + " " + key.message()
+        );
         if (OS.isWindows())
             ignoreException("Read-only mode is not supported on Windows® platforms, defaulting to read/write");
         for (String msg : Arrays.asList(

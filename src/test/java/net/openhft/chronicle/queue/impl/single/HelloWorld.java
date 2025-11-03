@@ -3,6 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-interface HelloWorld {
+public interface HelloWorld {
     void hello(String s);
 }
