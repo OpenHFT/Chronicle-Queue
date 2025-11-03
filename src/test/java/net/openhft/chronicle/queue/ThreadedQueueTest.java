@@ -21,7 +21,7 @@ import static org.junit.Assert.*;
 
 public class ThreadedQueueTest extends QueueTestCommon {
 
-    public static final int REQUIRED_COUNT = 10;
+    private static final int REQUIRED_COUNT = 10;
 
     @Override
     @Before

@@ -63,7 +63,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         runWithTimeParameters(DAILY, 1);
     }
 
-    public void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) throws ParseException {
+    private void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) throws ParseException {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
 

@@ -91,7 +91,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         }
     }
 
-    protected boolean hasEOFAtEndOfFile(final File file) {
+    private boolean hasEOFAtEndOfFile(final File file) {
 
         try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                 .path(file).build()) {

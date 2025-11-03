@@ -16,11 +16,11 @@ import java.nio.file.Paths;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 
-public class BackwardsTailerJmhState {
+class BackwardsTailerJmhState {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerToEndPerfAcceptanceTest.class);
 
-    protected ExcerptTailer tailer;
+    private ExcerptTailer tailer;
     private File queuePath;
     private SingleChronicleQueue queue;
 

@@ -12,9 +12,9 @@ import java.nio.file.Paths;
 
 public final class HugetlbfsTestUtil {
 
-    public static final String HUGETLBFS_PATH_PROPERTY = "chronicle.queue.tests.hugetlbfsPath";
+    private static final String HUGETLBFS_PATH_PROPERTY = "chronicle.queue.tests.hugetlbfsPath";
 
-    public static final String HUGETLBFS_PATH = Jvm.getProperty(HUGETLBFS_PATH_PROPERTY, "/mnt/huge");
+    private static final String HUGETLBFS_PATH = Jvm.getProperty(HUGETLBFS_PATH_PROPERTY, "/mnt/huge");
 
     private HugetlbfsTestUtil() {
     }
@@ -37,7 +37,7 @@ public final class HugetlbfsTestUtil {
      *
      * @return The value of {@link #HUGETLBFS_PATH} if it exists, otherwise null.
      */
-    public static String hugetlbfsPath() {
+    private static String hugetlbfsPath() {
         if (new File(HUGETLBFS_PATH).exists()) {
             return HUGETLBFS_PATH;
         } else {

@@ -39,7 +39,7 @@ public class DirectoryUtils {
         return tmpDir;
     }
 
-    public static String uniqueId() {
+    private static String uniqueId() {
         long l;
         try {
             l = MappedUniqueTimeProvider.INSTANCE.currentTimeMicros();

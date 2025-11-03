@@ -24,12 +24,12 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
  */
 public class IndexingTestCommon extends QueueTestCommon {
 
-    protected SetTimeProvider timeProvider;
-    protected SingleChronicleQueue queue;
-    protected StoreAppender appender;
-    protected List<Closeable> closeables;
-    protected ExcerptTailer tailer;
-    protected File queuePath;
+    SetTimeProvider timeProvider;
+    SingleChronicleQueue queue;
+    StoreAppender appender;
+    private List<Closeable> closeables;
+    ExcerptTailer tailer;
+    private File queuePath;
 
     @BeforeEach
     public void before() {
@@ -49,7 +49,7 @@ public class IndexingTestCommon extends QueueTestCommon {
         IOTools.deleteDirWithFiles(queuePath);
     }
 
-    protected SingleChronicleQueue createQueueInstance() {
+    private SingleChronicleQueue createQueueInstance() {
         return SingleChronicleQueueBuilder.builder()
                 .path(queuePath)
                 .timeProvider(timeProvider)
@@ -57,14 +57,14 @@ public class IndexingTestCommon extends QueueTestCommon {
                 .build();
     }
 
-    protected RollCycle rollCycle() {
+    RollCycle rollCycle() {
         return TestRollCycles.TEST_SECONDLY;
     }
 
     /**
      * @return indexing object for this queue that exposes common indexing operations.
      */
-    public Indexing indexing(SingleChronicleQueue queue) {
+    Indexing indexing(SingleChronicleQueue queue) {
         SingleChronicleQueueStore store = store(queue);
         return store.indexing;
     }
@@ -72,7 +72,7 @@ public class IndexingTestCommon extends QueueTestCommon {
     /**
      * @return gets the store for the last cycle of the queue.
      */
-    public SingleChronicleQueueStore store(SingleChronicleQueue queue) {
+    private SingleChronicleQueueStore store(SingleChronicleQueue queue) {
         SingleChronicleQueueStore store = queue.storeForCycle(queue.lastCycle(), queue.epoch(), false, null);
         closeables.add(store);
         return store;

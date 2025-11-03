@@ -54,43 +54,43 @@ public class LongRunTestMain {
         private long posixTimestamp;
         private CharSequence message;
 
-        public long getSessionId() {
+        long getSessionId() {
             return sessionId;
         }
 
-        public void setSessionId(long sessionId) {
+        void setSessionId(long sessionId) {
             this.sessionId = sessionId;
         }
 
-        public int getLogLevel() {
+        int getLogLevel() {
             return logLevel;
         }
 
-        public void setLogLevel(int logLevel) {
+        void setLogLevel(int logLevel) {
             this.logLevel = logLevel;
         }
 
-        public int getSecurityLevel() {
+        int getSecurityLevel() {
             return securityLevel;
         }
 
-        public void setSecurityLevel(int securityLevel) {
+        void setSecurityLevel(int securityLevel) {
             this.securityLevel = securityLevel;
         }
 
-        public long getPosixTimestamp() {
+        long getPosixTimestamp() {
             return posixTimestamp;
         }
 
-        public void setPosixTimestamp(long posixTimestamp) {
+        void setPosixTimestamp(long posixTimestamp) {
             this.posixTimestamp = posixTimestamp;
         }
 
-        public CharSequence getMessage() {
+        CharSequence getMessage() {
             return message;
         }
 
-        public void setMessage(CharSequence message) {
+        void setMessage(CharSequence message) {
             this.message = message;
         }
     }
@@ -103,7 +103,7 @@ public class LongRunTestMain {
             this.maxMessageSize = maxMessageSize;
         }
 
-        public void setMarshallable(final TLogEntry logEntry) {
+        void setMarshallable(final TLogEntry logEntry) {
             this.logEntry = logEntry;
         }
 

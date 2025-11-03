@@ -38,7 +38,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         doTest(false);
     }
 
-    void doTest(boolean buffered) throws InterruptedException {
+    private void doTest(boolean buffered) throws InterruptedException {
         File name = getTmpDir();
 
         AtomicLong counter = new AtomicLong();

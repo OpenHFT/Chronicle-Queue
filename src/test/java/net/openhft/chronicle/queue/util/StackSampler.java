@@ -37,7 +37,7 @@ public class StackSampler {
      * periodic intervals. This method is internally used by the background
      * thread created in the constructor.
      */
-    void sampling() {
+    private void sampling() {
         while (!Thread.currentThread().isInterrupted()) {
             Thread t = thread;
             if (t != null) {

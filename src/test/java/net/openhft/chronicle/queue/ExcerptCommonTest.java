@@ -16,14 +16,14 @@ import static org.junit.Assert.assertNull;
  */
 public class ExcerptCommonTest extends QueueTestCommon {
 
-    static final String TEST_QUEUE = OS.getTarget() + "/ExcerptCommonTest";
+    private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptCommonTest";
 
     class ExcerptCommonImpl implements ExcerptCommon<ExcerptCommonImpl> {
         private final int sourceId;
         private final ChronicleQueue queue;
         private final File currentFile;
 
-        public ExcerptCommonImpl(int sourceId, ChronicleQueue queue, File currentFile) {
+        ExcerptCommonImpl(int sourceId, ChronicleQueue queue, File currentFile) {
             this.sourceId = sourceId;
             this.queue = queue;
             this.currentFile = currentFile;

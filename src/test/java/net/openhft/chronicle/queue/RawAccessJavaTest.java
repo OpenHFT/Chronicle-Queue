@@ -14,12 +14,12 @@ import static org.junit.Assert.assertEquals;
 // For use with C++ RawAccessJava. Called from C++
 public class RawAccessJavaTest extends QueueTestCommon {
 
-    final long QUEUE_HEADER_SIZE = 4;
-    final long RAW_SIZE_PREFIX = 4;
+    private final long QUEUE_HEADER_SIZE = 4;
+    private final long RAW_SIZE_PREFIX = 4;
 
-    final long COUNT = 10;
+    private final long COUNT = 10;
 
-    boolean assert_from_cpp() {
+    private boolean assert_from_cpp() {
         String env = System.getProperty("chronicle.test.env");
         return env != null && env.equals("from-cpp");
     }

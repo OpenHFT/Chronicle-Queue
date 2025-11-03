@@ -95,7 +95,7 @@ class IndexingToEndTest extends IndexingTestCommon {
         return lastIndexAppended;
     }
 
-    public static Stream<TailerDirection> tailerDirections() {
+    private static Stream<TailerDirection> tailerDirections() {
         return Stream.of(TailerDirection.NONE, TailerDirection.FORWARD, TailerDirection.BACKWARD);
     }
 

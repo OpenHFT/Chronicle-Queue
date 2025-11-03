@@ -415,7 +415,7 @@ public class StoreTailerTest extends QueueTestCommon {
 
         abstract void doOnSecondThread(ExcerptTailer tailer);
 
-        public void run() throws InterruptedException {
+        void run() throws InterruptedException {
             try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build()) {
                 BlockingQueue<ExcerptTailer> tq = new LinkedBlockingQueue<>();
                 Thread t = new Thread(() -> {

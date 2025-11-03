@@ -37,7 +37,7 @@ public class QueueTestCommon {
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
     private final List<File> tmpDirs = new ArrayList<>();
 
-    protected ThreadDump threadDump;
+    private ThreadDump threadDump;
     protected boolean finishedNormally;
     protected ExceptionTracker<ExceptionKey> exceptionTracker;
 
@@ -76,7 +76,7 @@ public class QueueTestCommon {
     // *************************************************************************
     //
     // *************************************************************************
-    static AtomicLong counter = new AtomicLong();
+    private static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
     private long freeSpace;
 
@@ -142,7 +142,7 @@ public class QueueTestCommon {
         threadDump = new ThreadDump();
     }
 
-    public void checkThreadDump() {
+    private void checkThreadDump() {
         if (threadDump != null)
             threadDump.assertNoNewThreads();
     }
@@ -167,15 +167,15 @@ public class QueueTestCommon {
         }
     }
 
-    public void ignoreException(String message) {
+    protected void ignoreException(String message) {
         exceptionTracker.ignoreException(message);
     }
 
-    public void expectException(String message) {
+    protected void expectException(String message) {
         exceptionTracker.expectException(message);
     }
 
-    public void ignoreException(Predicate<ExceptionKey> predicate, String description) {
+    protected void ignoreException(Predicate<ExceptionKey> predicate, String description) {
         exceptionTracker.ignoreException(predicate, description);
     }
 
@@ -183,7 +183,7 @@ public class QueueTestCommon {
         exceptionTracker.expectException(predicate, description);
     }
 
-    public void checkExceptions() {
+    private void checkExceptions() {
         exceptionTracker.checkExceptions();
     }
 

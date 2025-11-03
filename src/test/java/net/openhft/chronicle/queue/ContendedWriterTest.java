@@ -181,7 +181,7 @@ public class ContendedWriterTest extends QueueTestCommon {
     private class StartAndMonitor {
         Histogram histo = new Histogram();
 
-        public StartAndMonitor(ChronicleQueue queue, String name, int writePauseMs, int sleepBetweenMillis) {
+        StartAndMonitor(ChronicleQueue queue, String name, int writePauseMs, int sleepBetweenMillis) {
             final SlowToSerialiseAndDeserialise object = new SlowToSerialiseAndDeserialise(writePauseMs);
             Thread thread = new Thread(() -> {
                 try (final ExcerptAppender appender = queue.createAppender()) {

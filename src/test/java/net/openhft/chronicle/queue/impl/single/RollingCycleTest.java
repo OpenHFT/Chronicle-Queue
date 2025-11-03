@@ -30,7 +30,7 @@ import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class RollingCycleTest extends QueueTestCommon {
-    protected final boolean named;
+    private final boolean named;
 
     public RollingCycleTest(boolean named) {
         this.named = named;
@@ -299,7 +299,7 @@ public class RollingCycleTest extends QueueTestCommon {
         long _value2;
         long _value3;
 
-        public TestBytesMarshallable(int i) {
+        TestBytesMarshallable(int i) {
             final Random rand = new Random(i);
             _name = "name_" + rand.nextInt();
             _value1 = rand.nextLong();

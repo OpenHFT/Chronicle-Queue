@@ -63,9 +63,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     private static final long TIMES = (4L << 20L);
     @NotNull
-    protected final WireType wireType;
-    protected final boolean named;
-    protected final Bytes<?> appenderListenerDump = Bytes.allocateElasticOnHeap(256);
+    private final WireType wireType;
+    private final boolean named;
+    private final Bytes<?> appenderListenerDump = Bytes.allocateElasticOnHeap(256);
 
     public SingleChronicleQueueTest(@NotNull WireType wireType, boolean named) {
         this.wireType = wireType;
@@ -167,7 +167,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected String expectedForTestAppend() {
+    private String expectedForTestAppend() {
         return "" +
                 "idx: 4a0400000000\n" +
                 "# position: 784, header: 0\n" +
@@ -235,7 +235,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected String expectedForTestTextReadWrite() {
+    private String expectedForTestTextReadWrite() {
         return "" +
                 "idx: 4a0400000000\n" +
                 "# position: 784, header: 0\n" +
@@ -433,7 +433,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected String expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet() {
+    private String expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet() {
         return "" +
                 "idx: 0\n" +
                 "# position: 784, header: 0\n" +
@@ -699,7 +699,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         );
     }
 
-    void doTestCheckIndex(@NotNull BiConsumer<ExcerptAppender, Integer> writeTo) {
+    private void doTestCheckIndex(@NotNull BiConsumer<ExcerptAppender, Integer> writeTo) {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
@@ -1698,7 +1698,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    protected String queueLockForTestReentrant() {
+    private String queueLockForTestReentrant() {
         return "";
     }
 
@@ -1920,7 +1920,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected String expectedMetaDataTest2() {
+    private String expectedMetaDataTest2() {
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
             return "" +
                     "--- !!meta-data #binary\n" +
@@ -2041,7 +2041,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    void readForward(@NotNull ChronicleQueue chronicle, int entries) {
+    private void readForward(@NotNull ChronicleQueue chronicle, int entries) {
         try (ExcerptTailer forwardTailer = chronicle.createTailer(named ? "named" : null)
                 .direction(TailerDirection.FORWARD)
                 .toStart()) {
@@ -2064,7 +2064,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    void readBackward(@NotNull ChronicleQueue chronicle, int entries) {
+    private void readBackward(@NotNull ChronicleQueue chronicle, int entries) {
         ExcerptTailer backwardTailer = chronicle.createTailer(named ? "named" : null)
                 .direction(TailerDirection.BACKWARD)
                 .toEnd();
@@ -2518,7 +2518,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected String expectedMultipleAppenders() {
+    private String expectedMultipleAppenders() {
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
             return "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -3234,7 +3234,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
+    private SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 
@@ -3295,7 +3295,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected SingleChronicleQueueBuilder builderWithAppendListener(@NotNull File file, @NotNull WireType wireType) {
+    private SingleChronicleQueueBuilder builderWithAppendListener(@NotNull File file, @NotNull WireType wireType) {
         appenderListenerDump.clear();
         return SingleChronicleQueueBuilder.builder(file, wireType)
                 .rollCycle(TEST4_DAILY)
@@ -3309,7 +3309,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected SingleChronicleQueueBuilder binary(@NotNull File file) {
+    private SingleChronicleQueueBuilder binary(@NotNull File file) {
         return builder(file, WireType.BINARY_LIGHT);
     }
 
@@ -3722,7 +3722,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             readMarshallable(wire);
         }
 
-        public MyMarshable() {
+        MyMarshable() {
         }
     }
 
@@ -3730,7 +3730,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         private BytesStore<?, ?> bytes;
         private long index;
 
-        public BytesWithIndex(Bytes<?> bytes, long index) {
+        BytesWithIndex(Bytes<?> bytes, long index) {
             this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);
             this.index = index;
         }

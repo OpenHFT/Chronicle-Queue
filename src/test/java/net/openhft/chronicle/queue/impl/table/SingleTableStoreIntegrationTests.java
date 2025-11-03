@@ -87,7 +87,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         assertEquals(1, context.newQueueInstance().tableStoreGet(key));
     }
 
-    public class TestContext implements Closeable {
+    class TestContext implements Closeable {
 
         private final File queuePath = getTmpDir();
         private final List<SingleChronicleQueue> queues = new ArrayList<>();
@@ -95,7 +95,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         /**
          * @return A fresh Queue instance pointing at the same path as all other queue instances for this test context.
          */
-        public SingleChronicleQueue newQueueInstance() {
+        SingleChronicleQueue newQueueInstance() {
             SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
             queues.add(queue);
             return queue;

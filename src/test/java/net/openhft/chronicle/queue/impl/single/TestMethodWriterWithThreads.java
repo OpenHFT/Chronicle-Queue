@@ -134,7 +134,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
     }
 
     @NotNull
-    protected SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
+    private SingleChronicleQueueBuilder builder(@NotNull File file, @NotNull WireType wireType) {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 

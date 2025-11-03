@@ -28,7 +28,7 @@ import static org.junit.Assume.assumeFalse;
 
 public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
-    static final String BASE_PATH = OS.getTarget() + "/singleChronicleQueueBuilderTest";
+    private static final String BASE_PATH = OS.getTarget() + "/singleChronicleQueueBuilderTest";
 
     @AfterClass
     public static void afterClass() {

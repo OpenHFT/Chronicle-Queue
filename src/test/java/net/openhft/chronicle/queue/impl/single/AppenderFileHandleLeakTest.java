@@ -130,7 +130,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
     }
 
-    public void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
+    private void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
         requestGcCycle();
         Thread.sleep(100);
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
@@ -216,7 +216,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                 .run();
     }
 
-    public void appenderShouldOnlyKeepCurrentRollCycleOpen() {
+    private void appenderShouldOnlyKeepCurrentRollCycleOpen() {
         AtomicLong timeProvider = new AtomicLong(1661323015000L);
         try (ChronicleQueue queue = createQueue(timeProvider::get);
              final ExcerptAppender appender = queue.createAppender()) {
@@ -237,7 +237,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                 .run();
     }
 
-    public void tailerShouldOnlyKeepCurrentRollCycleOpen() {
+    private void tailerShouldOnlyKeepCurrentRollCycleOpen() {
         final long startTime = 1661323015000L;
         AtomicLong timeProvider = new AtomicLong(startTime);
         final int messageCount = 10;

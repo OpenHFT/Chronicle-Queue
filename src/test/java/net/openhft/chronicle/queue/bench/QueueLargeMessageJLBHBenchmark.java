@@ -24,8 +24,8 @@ public class QueueLargeMessageJLBHBenchmark implements JLBHTask {
     private static final int MSG_LENGTH = Integer.getInteger("length", 1_000_000);
     private static final String PATH = System.getProperty("path", "replica");
     private static final boolean MSG_DIRECT = Jvm.getBoolean("direct");
-    static byte[] bytesArr = new byte[MSG_LENGTH];
-    static Bytes<?> bytesArr2 = Bytes.allocateDirect(MSG_LENGTH);
+    private static byte[] bytesArr = new byte[MSG_LENGTH];
+    private static Bytes<?> bytesArr2 = Bytes.allocateDirect(MSG_LENGTH);
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;

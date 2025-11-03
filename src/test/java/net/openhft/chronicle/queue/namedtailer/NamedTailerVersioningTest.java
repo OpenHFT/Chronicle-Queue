@@ -149,7 +149,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         }
     }
 
-    public void copyFolder(Path src, Path dest) throws IOException {
+    private void copyFolder(Path src, Path dest) throws IOException {
         try (Stream<Path> stream = Files.walk(src)) {
             stream.forEach(source -> copy(source, dest.resolve(src.relativize(source))));
         }

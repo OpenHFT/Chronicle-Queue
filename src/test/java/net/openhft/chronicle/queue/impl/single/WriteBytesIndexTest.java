@@ -63,7 +63,7 @@ public class WriteBytesIndexTest extends QueueTestCommon {
         }
     }
 
-    static ChronicleQueue createQueue(File path) {
+    private static ChronicleQueue createQueue(File path) {
         return SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
                 .rollCycle(TEST4_SECONDLY)

@@ -116,11 +116,11 @@ public class StoreAppenderTest extends QueueTestCommon {
         private Semaphore waitingToAcquire;
         private Semaphore waitingAfterInterrupt;
 
-        public BlockedWriter(SingleChronicleQueue queue) {
+        BlockedWriter(SingleChronicleQueue queue) {
             this.queue = queue;
         }
 
-        public void makeSuccessfulWrite() {
+        void makeSuccessfulWrite() {
             waitingToAcquire = new Semaphore(0);
             waitingAfterInterrupt = new Semaphore(0);
             t = new Thread(this::makeInterruptedWriteAttemptThenTryAgain);
@@ -129,7 +129,7 @@ public class StoreAppenderTest extends QueueTestCommon {
             waitForThreads(waitingToAcquire);
         }
 
-        public void makeInterruptedAttemptToWrite() {
+        void makeInterruptedAttemptToWrite() {
             waitingToAcquire.release(1);
             // Wait till the lock() call has been made
             Jvm.pause(10);
@@ -137,7 +137,7 @@ public class StoreAppenderTest extends QueueTestCommon {
             waitForThreads(waitingAfterInterrupt);
         }
 
-        public void makePostInterruptAttemptToWrite() throws InterruptedException {
+        void makePostInterruptAttemptToWrite() throws InterruptedException {
             waitingAfterInterrupt.release();
             t.join();
         }
@@ -164,18 +164,18 @@ public class StoreAppenderTest extends QueueTestCommon {
         private final SingleChronicleQueue queue;
         private final Semaphore inWritingDocument = new Semaphore(0);
 
-        public BlockingWriter(SingleChronicleQueue queue) {
+        BlockingWriter(SingleChronicleQueue queue) {
             this.queue = queue;
         }
 
-        public void blockWrites() {
+        void blockWrites() {
             t = new Thread(this::acquireWritingDocumentThenBlock);
             t.setName("blocking-writer");
             t.start();
             waitForThreads(inWritingDocument);
         }
 
-        public void unblockWrites() throws InterruptedException {
+        void unblockWrites() throws InterruptedException {
             inWritingDocument.release(1);
             t.join();
             t = null;

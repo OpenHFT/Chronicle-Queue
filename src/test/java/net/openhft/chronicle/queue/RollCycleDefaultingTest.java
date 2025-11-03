@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 
 public class RollCycleDefaultingTest extends QueueTestCommon {
 
-    static final String BASE_PATH = OS.getTarget() + "/rollCycleDefaultingTest";
+    private static final String BASE_PATH = OS.getTarget() + "/rollCycleDefaultingTest";
 
     @Test
     public void alias() {

@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
 public class WriteBytesTest extends QueueTestCommon {
-    final Bytes<?> outgoingBytes = Bytes.elasticByteBuffer();
+    private final Bytes<?> outgoingBytes = Bytes.elasticByteBuffer();
     private final byte[] incomingMsgBytes = new byte[100];
     private final byte[] outgoingMsgBytes = new byte[100];
 
@@ -1050,12 +1050,12 @@ public class WriteBytesTest extends QueueTestCommon {
         }
     }
 
-    public boolean postOneMessage(@NotNull ExcerptAppender appender) {
+    private boolean postOneMessage(@NotNull ExcerptAppender appender) {
         appender.writeBytes(outgoingBytes);
         return true;
     }
 
-    public int fetchOneMessage(@NotNull ExcerptTailer tailer, @NotNull byte[] using) {
+    private int fetchOneMessage(@NotNull ExcerptTailer tailer, @NotNull byte[] using) {
         try (DocumentContext dc = tailer.readingDocument()) {
             return !dc.isPresent() ? -1 : dc.wire().bytes().read(using);
         }

@@ -18,7 +18,7 @@ public class SidedPrice extends SelfDescribingMarshallable {
     }
 
     @NotNull
-    public SidedPrice init(String symbol, long timestamp, Side side, double price, double quantity) {
+    private SidedPrice init(String symbol, long timestamp, Side side, double price, double quantity) {
         this.symbol = symbol;
         this.timestamp = timestamp;
         this.side = side;

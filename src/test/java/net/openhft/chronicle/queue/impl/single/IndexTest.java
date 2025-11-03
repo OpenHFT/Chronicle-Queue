@@ -108,7 +108,7 @@ public class IndexTest extends QueueTestCommon {
         }
     }
 
-    public void accessHexEquals(long index0, long indexA) {
+    private void accessHexEquals(long index0, long indexA) {
         assertEquals(Long.toHexString(index0) + " != " + Long.toHexString(indexA), index0, indexA);
     }
 }

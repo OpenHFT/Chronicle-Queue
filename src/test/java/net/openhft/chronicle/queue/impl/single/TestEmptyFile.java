@@ -21,7 +21,7 @@ import java.nio.file.Path;
 import static org.junit.Assert.assertFalse;
 
 public class TestEmptyFile {
-    Path tmpDir = DirectoryUtils.tempDir(TestEmptyFile.class.getSimpleName()).toPath();
+    private Path tmpDir = DirectoryUtils.tempDir(TestEmptyFile.class.getSimpleName()).toPath();
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Before

@@ -203,7 +203,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         return file.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX))[0];
     }
 
-    public void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
+    private void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(file.getAbsolutePath()), true);
         bytes.readLimit(bytes.realCapacity());
@@ -211,7 +211,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         bytes.releaseLast();
     }
 
-    void doTestWritingTwentyMessagesTinyIndex(int spacing, String expected) throws FileNotFoundException {
+    private void doTestWritingTwentyMessagesTinyIndex(int spacing, String expected) throws FileNotFoundException {
         @NotNull File dir = getTmpDir();
         dir.mkdir();
 
@@ -545,7 +545,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         appendMode = 0;
     }
 
-    public void appendMessage(@NotNull ExcerptAppender appender, long expectedIndex, String msg) {
+    private void appendMessage(@NotNull ExcerptAppender appender, long expectedIndex, String msg) {
         switch (appendMode) {
             case 1:
                 appender.writeDocument(w -> w.write("msg").text(msg));

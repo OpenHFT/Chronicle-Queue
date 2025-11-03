@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 public class RollCycleMultiThreadTest extends QueueTestCommon {
 
-    public static final RollCycle ROLL_CYCLE = TEST_DAILY;
+    private static final RollCycle ROLL_CYCLE = TEST_DAILY;
 
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {

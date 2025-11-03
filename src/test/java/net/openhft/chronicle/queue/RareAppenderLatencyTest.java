@@ -132,7 +132,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected String getText() {
+    private String getText() {
         final StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 10; i++) sb.append(UUID.randomUUID());
         return sb.toString();

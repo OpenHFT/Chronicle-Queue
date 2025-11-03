@@ -5,7 +5,7 @@ package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
-public class OrderIdea extends SelfDescribingMarshallable {
+class OrderIdea extends SelfDescribingMarshallable {
     final String symbol;
     final Side side;
     final double limitPrice;

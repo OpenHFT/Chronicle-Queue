@@ -249,7 +249,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         deleteFileFromUnderTailerTest(10, 8);
     }
 
-    public void deleteFileFromUnderTailerTest(int numberOfCycles, int currentCycleIndex) throws IOException {
+    private void deleteFileFromUnderTailerTest(int numberOfCycles, int currentCycleIndex) throws IOException {
         assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(numberOfCycles, null)) {
@@ -467,7 +467,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    public void tailingThroughDeletedCyclesWillRefreshThenRetry(Function<QueueWithCycleDetails, SingleChronicleQueue> queueCreator) throws IOException {
+    private void tailingThroughDeletedCyclesWillRefreshThenRetry(Function<QueueWithCycleDetails, SingleChronicleQueue> queueCreator) throws IOException {
         assumeFalse(OS.isWindows());
         expectException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
 

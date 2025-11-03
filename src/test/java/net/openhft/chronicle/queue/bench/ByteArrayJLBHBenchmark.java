@@ -12,8 +12,8 @@ public class ByteArrayJLBHBenchmark implements JLBHTask {
     private static final int MSG_THROUGHPUT = Integer.getInteger("throughput", 100_000_000);
     private static final int MSG_LENGTH = Integer.getInteger("length", 1_000_000);
     private static int iterations;
-    static byte[] bytesArr1 = new byte[MSG_LENGTH];
-    static byte[] bytesArr3 = new byte[MSG_LENGTH];
+    private static byte[] bytesArr1 = new byte[MSG_LENGTH];
+    private static byte[] bytesArr3 = new byte[MSG_LENGTH];
     private JLBH jlbh;
 
     static {

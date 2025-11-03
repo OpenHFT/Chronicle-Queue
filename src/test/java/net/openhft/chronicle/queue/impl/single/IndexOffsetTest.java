@@ -10,8 +10,8 @@ import org.junit.Test;
 
 public class IndexOffsetTest extends QueueTestCommon {
 
-    static final SCQIndexing indexing = new SCQIndexing(WireType.BINARY, 1 << 17, 1 << 6);
-    static final SCQIndexing indexing2 = new SCQIndexing(WireType.BINARY, 1 << 7, 1 << 3);
+    private static final SCQIndexing indexing = new SCQIndexing(WireType.BINARY, 1 << 17, 1 << 6);
+    private static final SCQIndexing indexing2 = new SCQIndexing(WireType.BINARY, 1 << 7, 1 << 3);
 
     @Test
     public void testFindExcerpt2() {

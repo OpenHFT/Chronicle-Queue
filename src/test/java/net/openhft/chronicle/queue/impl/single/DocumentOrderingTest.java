@@ -36,7 +36,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         }
     }
 
-    Thread thread;
+    private Thread thread;
 
     @Override
     @Before
@@ -236,7 +236,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         executorService.shutdownNow();
     }
 
-    public void expectCounterVaueOne(Future<RecordInfo> otherDocumentWriter) throws InterruptedException, ExecutionException, TimeoutException {
+    private void expectCounterVaueOne(Future<RecordInfo> otherDocumentWriter) throws InterruptedException, ExecutionException, TimeoutException {
         try {
             assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
         } catch (TimeoutException e) {

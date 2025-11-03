@@ -3,7 +3,7 @@
  */
 package net.openhft.chronicle.queue.bench;
 
-public class BenchmarkUtils {
+class BenchmarkUtils {
 
     /**
      * {@link Thread#join()} a thread and deal with interrupted exception

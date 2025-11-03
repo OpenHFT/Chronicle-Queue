@@ -23,8 +23,8 @@ import static org.junit.Assert.assertEquals;
 
 public class TailerTest extends QueueTestCommon {
 
-    public static final Path QUEUE_PATH = Paths.get(OS.getTarget() + "/host-1/queue/broker_out");
-    public static final int OFFSET = 3;
+    private static final Path QUEUE_PATH = Paths.get(OS.getTarget() + "/host-1/queue/broker_out");
+    private static final int OFFSET = 3;
 
     @Before
     @After

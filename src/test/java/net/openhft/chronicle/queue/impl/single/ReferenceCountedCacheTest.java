@@ -26,9 +26,9 @@ import static org.junit.Assert.assertTrue;
 
 class ReferenceCountedCacheTest extends QueueTestCommon {
 
-    public static final int MAX_THREADS_TO_RUN = 6;
-    public static final int MIN_THREADS_TO_RUN = 3;
-    public static final int NUM_RESOURCES = 50;
+    private static final int MAX_THREADS_TO_RUN = 6;
+    private static final int MIN_THREADS_TO_RUN = 3;
+    private static final int NUM_RESOURCES = 50;
     private AtomicInteger createdCount;
     private AtomicInteger releasedCount;
     private ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> cache;
@@ -101,7 +101,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
         private final Random random;
         private final Reservation[] reservations;
 
-        public ReferenceGetter(int numResources, ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> referenceId, AtomicBoolean running) {
+        ReferenceGetter(int numResources, ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> referenceId, AtomicBoolean running) {
             this.numResources = numResources;
             this.cache = referenceId;
             this.running = running;
@@ -137,17 +137,17 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
         private final ReferenceCounted referenceCounted;
         private final ReferenceOwner referenceOwner;
 
-        public Reservation(ReferenceCounted referenceCounted) {
+        Reservation(ReferenceCounted referenceCounted) {
             this.referenceOwner = ReferenceOwner.temporary("reservation");
             this.referenceCounted = referenceCounted;
             referenceCounted.reserve(referenceOwner);
         }
 
-        public void release() {
+        void release() {
             this.referenceCounted.release(referenceOwner);
         }
 
-        public void assertNotReleased() {
+        void assertNotReleased() {
             final int referenceCount = this.referenceCounted.refCount();
             assertTrue("Expected reference count of at least 2, got " + referenceCount, referenceCount > 1);
         }
@@ -155,7 +155,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
 
     private class TestReferenceCounted extends AbstractReferenceCounted implements ReferenceOwner, Closeable {
 
-        public TestReferenceCounted() {
+        TestReferenceCounted() {
             createdCount.incrementAndGet();
         }
 

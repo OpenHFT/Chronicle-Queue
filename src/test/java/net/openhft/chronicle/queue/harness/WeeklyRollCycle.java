@@ -27,11 +27,11 @@ public class WeeklyRollCycle implements RollCycle {
 
     public static final WeeklyRollCycle INSTANCE = new WeeklyRollCycle("yyyyDDD", (int) TimeUnit.DAYS.toMillis(7L), 16384, 16);
 
-    final String format;
-    final int length;
-    final RollCycleArithmetic arithmetic;
+    private final String format;
+    private final int length;
+    private final RollCycleArithmetic arithmetic;
 
-    WeeklyRollCycle(String format, int length, int indexCount, int indexSpacing) {
+    private WeeklyRollCycle(String format, int length, int indexCount, int indexSpacing) {
         this.format = format;
         this.length = length;
         arithmetic = RollCycleArithmetic.of(indexCount, indexSpacing);

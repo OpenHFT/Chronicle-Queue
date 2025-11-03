@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 @Fork(value = 1, warmups = 1)
 @State(Scope.Benchmark)
-public class BackwardsTailerToEndBoundaryJmhBenchmarkEndSpacingMinusOne {
+class BackwardsTailerToEndBoundaryJmhBenchmarkEndSpacingMinusOne {
 
     private BackwardsTailerJmhState state = new BackwardsTailerJmhState();
 

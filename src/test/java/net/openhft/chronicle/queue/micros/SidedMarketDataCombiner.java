@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class SidedMarketDataCombiner implements SidedMarketDataListener {
-    final MarketDataListener mdListener;
-    final Map<String, TopOfBookPrice> priceMap = new TreeMap<>();
+    private final MarketDataListener mdListener;
+    private final Map<String, TopOfBookPrice> priceMap = new TreeMap<>();
 
     public SidedMarketDataCombiner(MarketDataListener mdListener) {
         this.mdListener = mdListener;

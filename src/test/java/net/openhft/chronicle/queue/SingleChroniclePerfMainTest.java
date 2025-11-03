@@ -25,14 +25,14 @@ import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class SingleChroniclePerfMainTest extends QueueTestCommon {
-    static final int count = 1_000_000;
-    static final int size = 4 << 10;
+    private static final int count = 1_000_000;
+    private static final int size = 4 << 10;
     // blackholes to avoid code elimination.
-    static int s32;
-    static long s64;
-    static float f32;
-    static double f64;
-    static String s;
+    private static int s32;
+    private static long s64;
+    private static float f32;
+    private static double f64;
+    private static String s;
 
     static {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "INFO");
@@ -47,7 +47,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         }
     }
 
-    static void doPerfTest(TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws IOException {
+    private static void doPerfTest(TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws IOException {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);
         String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
@@ -88,7 +88,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         IOTools.deleteDirWithFiles(file, 3);
     }
 
-    static void writeMany(Bytes<?> bytes, int size) {
+    private static void writeMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
             bytes.writeInt(i); // 4 bytes
             bytes.writeFloat(i); // 4 bytes
@@ -98,7 +98,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         }
     }
 
-    static void readMany(Bytes<?> bytes, int size) {
+    private static void readMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
             s32 = bytes.readInt(); // 4 bytes
             f32 = bytes.readFloat(); // 4 bytes

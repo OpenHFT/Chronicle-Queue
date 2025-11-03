@@ -287,7 +287,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
     }
 
-    public void doTestToLong(RollCycle rollCycle, long epoch, long cycle, Long expectedLong) {
+    private void doTestToLong(RollCycle rollCycle, long epoch, long cycle, Long expectedLong) {
         RollingResourcesCache cache =
                 new RollingResourcesCache(rollCycle, epoch, File::new, File::getName);
 

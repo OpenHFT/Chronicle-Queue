@@ -33,7 +33,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
     private File inputQueueDir;
     private File middleQueueDir;
     private File outputQueueDir;
-    protected final boolean named;
+    private final boolean named;
 
     public MessageHistoryTest(boolean named) {
         this.named = named;

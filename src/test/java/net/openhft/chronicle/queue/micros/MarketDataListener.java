@@ -4,6 +4,6 @@
 package net.openhft.chronicle.queue.micros;
 
 @FunctionalInterface
-public interface MarketDataListener {
+interface MarketDataListener {
     void onTopOfBookPrice(TopOfBookPrice price);
 }

@@ -83,11 +83,11 @@ public class ProxyTest extends QueueTestCommon {
                 "}\n", result.toString());
     }
 
-    public interface TestMessageListener {
+    interface TestMessageListener {
         void onMessage(ProxyTest.Message message);
     }
 
-    public static class Message extends SelfDescribingMarshallable {
+    static class Message extends SelfDescribingMarshallable {
 
         private final StringBuilder message = new StringBuilder();
 

@@ -29,7 +29,7 @@ public class OnReleaseTest extends QueueTestCommon {
         FlakyTestRunner.builder(this::onRelease0).build().run();
     }
 
-    public void onRelease0() {
+    private void onRelease0() {
         String path = OS.getTarget() + "/onRelease-" + Time.uniqueId();
         SetTimeProvider stp = new SetTimeProvider();
         AtomicInteger writeRoll = new AtomicInteger();

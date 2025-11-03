@@ -57,7 +57,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         testInternalWriteBytes(5, false);
     }
 
-    public void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
+    private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
         /**
@@ -135,7 +135,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         private final Path destinationDir;
         private final int copyId;
 
-        public QueueCopier(Path sourceDir, Path destinationDir, int copyId) {
+        QueueCopier(Path sourceDir, Path destinationDir, int copyId) {
             this.sourceDir = sourceDir;
             this.destinationDir = destinationDir;
             this.copyId = copyId;

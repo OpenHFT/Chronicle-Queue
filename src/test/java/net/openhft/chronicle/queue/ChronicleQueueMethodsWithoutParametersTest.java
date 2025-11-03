@@ -44,7 +44,7 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
         }
     }
 
-    public interface SomeListener {
+    interface SomeListener {
 
         void methodWithoutParams();
 
@@ -53,8 +53,8 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
 
     public static class SomeManager implements SomeListener {
 
-        public boolean methodWithoutParamsInvoked = false;
-        public boolean methodWithOneParamInvoked = false;
+        boolean methodWithoutParamsInvoked = false;
+        boolean methodWithOneParamInvoked = false;
 
         @Override
         public void methodWithoutParams() {

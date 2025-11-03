@@ -15,13 +15,13 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 
 public class QueueWriteJitterMain {
-    public static final String PROFILE_OF_THE_THREAD = "profile of the thread";
+    private static final String PROFILE_OF_THE_THREAD = "profile of the thread";
 
-    static int runTime = Integer.getInteger("runTime", 600); // seconds
-    static int size = Integer.getInteger("size", 128); // bytes
-    static int sampleTime = Integer.getInteger("sampleTime", 30); // micro-seconds
-    static volatile boolean running = true;
-    static volatile long writeStarted = Long.MAX_VALUE;
+    private static int runTime = Integer.getInteger("runTime", 600); // seconds
+    private static int size = Integer.getInteger("size", 128); // bytes
+    private static int sampleTime = Integer.getInteger("sampleTime", 30); // micro-seconds
+    private static volatile boolean running = true;
+    private static volatile long writeStarted = Long.MAX_VALUE;
 
     static {
         System.setProperty("jvm.safepoint.enabled", "true");
@@ -32,7 +32,7 @@ public class QueueWriteJitterMain {
         new QueueWriteJitterMain().run();
     }
 
-    protected void run() {
+    private void run() {
         MappedFile.warmup();
 
         String path = "test-q-" + Time.uniqueId();
@@ -121,7 +121,7 @@ public class QueueWriteJitterMain {
         }
     }
 
-    protected ChronicleQueue createQueue(String path) {
+    private ChronicleQueue createQueue(String path) {
         return SingleChronicleQueueBuilder.single(path).testBlockSize().build();
     }
 }

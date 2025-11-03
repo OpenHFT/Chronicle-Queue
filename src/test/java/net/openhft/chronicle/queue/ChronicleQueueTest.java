@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @SuppressWarnings("deprecation")
 public class ChronicleQueueTest extends QueueTestCommon {
 
-    static final String PATH_NAME = OS.getTarget() + "/test-path";
+    private static final String PATH_NAME = OS.getTarget() + "/test-path";
 
     @AfterClass
     public static void cleanup() {

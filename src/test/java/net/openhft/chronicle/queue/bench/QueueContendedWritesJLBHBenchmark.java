@@ -24,7 +24,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 
 @SuppressWarnings("try")
 public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
-    public static final int ITERATIONS = 100_000;
+    private static final int ITERATIONS = 100_000;
     private static final String PATH = System.getProperty("path", "replica");
     private SingleChronicleQueue queue;
     private ExcerptTailer tailer;
@@ -105,7 +105,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
         writerThread2.start();
     }
 
-    long written = 0;
+    private long written = 0;
 
     @Override
     public void run(long startTimeNS) {
@@ -136,8 +136,8 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     }
 
     private static class Datum extends SelfDescribingMarshallable {
-        public long ts = 0;
-        public String username;
+        long ts = 0;
+        String username;
         public byte[] filler0 = new byte[128];
         public byte[] filler1 = new byte[128];
         public byte[] filler2 = new byte[128];

@@ -32,7 +32,7 @@ public class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
     private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
-    long lastCycle;
+    private long lastCycle;
 
     @Test
     public void missingCyclesToEndTest() {

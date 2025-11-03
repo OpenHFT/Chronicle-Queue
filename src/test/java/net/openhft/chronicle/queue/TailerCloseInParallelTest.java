@@ -27,16 +27,16 @@ import static org.junit.Assume.assumeTrue;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
 public class TailerCloseInParallelTest extends QueueTestCommon {
-    static String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
+    private static String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
 
-    static final int size = 1 << 10;
+    private static final int size = 1 << 10;
     // blackholes to avoid code elimination.
-    static int s32;
-    static long s64;
-    static float f32;
-    static double f64;
-    static String s;
-    static Random random = new Random();
+    private static int s32;
+    private static long s64;
+    private static float f32;
+    private static double f64;
+    private static String s;
+    private static Random random = new Random();
 
     @Override
     @Before
@@ -70,7 +70,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    static void doPerfTest(String file, TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws InterruptedException {
+    private static void doPerfTest(String file, TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws InterruptedException {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);
         try (ChronicleQueue chronicle = single(file).testBlockSize().rollCycle(RollCycles.FIVE_MINUTELY).build();
@@ -132,7 +132,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         }
     }
 
-    static void writeMany(Bytes<?> bytes, int size) {
+    private static void writeMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
             bytes.writeInt(i); // 4 bytes
             bytes.writeFloat(i); // 4 bytes
@@ -142,7 +142,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         }
     }
 
-    static void readMany(Bytes<?> bytes, int size) {
+    private static void readMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
             s32 = bytes.readInt(); // 4 bytes
             f32 = bytes.readFloat(); // 4 bytes

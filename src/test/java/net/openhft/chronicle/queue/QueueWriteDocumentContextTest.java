@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 public class QueueWriteDocumentContextTest extends QueueTestCommon {
 
-    static void writeThreeKeys(MarshallableOut wire) {
+    private static void writeThreeKeys(MarshallableOut wire) {
         try (DocumentContext dc0 = wire.acquireWritingDocument(false)) {
             for (int i = 0; i < 3; i++) {
                 try (DocumentContext dc = wire.acquireWritingDocument(false)) {
@@ -33,7 +33,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         }
     }
 
-    static void writeThreeChainedKeys(MarshallableOut wire) {
+    private static void writeThreeChainedKeys(MarshallableOut wire) {
         for (int i = 0; i < 3; i++) {
             try (WriteDocumentContext dc = (WriteDocumentContext) wire.acquireWritingDocument(false)) {
                 dc.wire().write("key").int32(i);
@@ -204,7 +204,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
     }
 
     @NotNull
-    protected SingleChronicleQueue createQueue(String s) {
+    private SingleChronicleQueue createQueue(String s) {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(tempDir(s))
                 .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))

@@ -36,7 +36,7 @@ public class InternalAppenderJLBH implements JLBHTask {
     private Bytes<?> payload;
     private JLBH jlbh;
 
-    public InternalAppenderJLBH(RollCycle rollCycle) {
+    private InternalAppenderJLBH(RollCycle rollCycle) {
         this.rollCycle = rollCycle;
     }
 

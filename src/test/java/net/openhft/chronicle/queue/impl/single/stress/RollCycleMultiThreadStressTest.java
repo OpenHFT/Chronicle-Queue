@@ -41,30 +41,30 @@ import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
-    final long SLEEP_PER_WRITE_NANOS;
-    final int TEST_TIME;
-    final int ROLL_EVERY_MS;
-    final int DELAY_READER_RANDOM_MS;
-    final int DELAY_WRITER_RANDOM_MS;
-    final int CORES;
-    final Random random;
+    private final long SLEEP_PER_WRITE_NANOS;
+    private final int TEST_TIME;
+    private final int ROLL_EVERY_MS;
+    private final int DELAY_READER_RANDOM_MS;
+    private final int DELAY_WRITER_RANDOM_MS;
+    private final int CORES;
+    private final Random random;
     final int NUMBER_OF_INTS;
-    final boolean PRETOUCH;
-    final boolean READERS_READ_ONLY;
+    private final boolean PRETOUCH;
+    private final boolean READERS_READ_ONLY;
     final boolean DUMP_QUEUE;
-    final boolean SHARED_WRITE_QUEUE;
-    final boolean DOUBLE_BUFFER;
-    final int WARMUP;
-    final SetTimeProvider timeProvider = new SetTimeProvider();
-    final Histogram combinedHisto = new Histogram();
-    PretoucherThread pretoucherThread = null;
+    private final boolean SHARED_WRITE_QUEUE;
+    private final boolean DOUBLE_BUFFER;
+    private final int WARMUP;
+    private final SetTimeProvider timeProvider = new SetTimeProvider();
+    private final Histogram combinedHisto = new Histogram();
+    private PretoucherThread pretoucherThread = null;
     private ChronicleQueue sharedWriterQueue;
 
     public RollCycleMultiThreadStressTest() {
         this(StressTestType.VANILLA);
     }
 
-    protected RollCycleMultiThreadStressTest(StressTestType type) {
+    RollCycleMultiThreadStressTest(StressTestType type) {
         SLEEP_PER_WRITE_NANOS = Jvm.getLong("writeLatency", 30_000L);
         TEST_TIME = Jvm.getInteger("testTime", 15);
         ROLL_EVERY_MS = Jvm.getInteger("rollEvery", 300);
@@ -90,7 +90,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         }
     }
 
-    static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
+    private static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
         boolean allReadersComplete = true;
 
         for (Reader reader : readers) {
@@ -106,7 +106,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         new RollCycleMultiThreadStressTest().run();
     }
 
-    static void shutdownAll(int waitSecs, ExecutorService... ess) throws InterruptedException {
+    private static void shutdownAll(int waitSecs, ExecutorService... ess) throws InterruptedException {
         for (ExecutorService es : ess)
             es.shutdownNow();
 
@@ -136,7 +136,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    protected void run() throws InterruptedException {
+    void run() throws InterruptedException {
         stress0();
 
         TeamCityHelper.histo(getClass().getSimpleName() + ".end-to-end", combinedHisto, System.out);
@@ -303,7 +303,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         IOTools.deleteDirWithFiles(file);
     }
 
-    protected ReaderCheckingStrategy getReaderCheckingStrategy() {
+    ReaderCheckingStrategy getReaderCheckingStrategy() {
         return new DefaultReaderCheckingStrategy();
     }
 
@@ -315,7 +315,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     @NotNull
-    SingleChronicleQueueBuilder queueBuilder(File path) {
+    private SingleChronicleQueueBuilder queueBuilder(File path) {
         return SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)

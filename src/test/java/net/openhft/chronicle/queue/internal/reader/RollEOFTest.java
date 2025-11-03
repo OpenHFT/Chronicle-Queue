@@ -48,7 +48,7 @@ public class RollEOFTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
     @Nullable
-    static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
+    private static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
         final StringBuilder eventName = new StringBuilder();
         wire.readEventName(eventName);
         if (eventName.toString().equals(MetaDataKeys.header.name())) {

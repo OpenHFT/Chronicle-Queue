@@ -104,7 +104,7 @@ public class OrderManagerTest extends QueueTestCommon {
         FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
 
-    public void testWithQueueHistory0() {
+    private void testWithQueueHistory0() {
         File queuePath = new File(OS.getTarget(), "testWithQueueHistory-" + Time.uniqueId());
         File queuePath2 = new File(OS.getTarget(), "testWithQueueHistory-down-" + Time.uniqueId());
         try {

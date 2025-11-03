@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 @RequiredForClient
 public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
 
-    volatile long lastWrittenIndex = Long.MIN_VALUE;
+    private volatile long lastWrittenIndex = Long.MIN_VALUE;
 
     @Override
     @Before

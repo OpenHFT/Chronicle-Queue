@@ -22,7 +22,7 @@ import static org.junit.Assert.*;
  */
 public class ExcerptAppenderTest extends QueueTestCommon {
 
-    static final String TEST_QUEUE = OS.getTarget() + "/ExcerptAppenderTest";
+    private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptAppenderTest";
 
     class ExcerptAppenderImpl implements ExcerptAppender {
 

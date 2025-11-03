@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class OrderManager implements MarketDataListener, OrderIdeaListener {
-    final OrderListener orderListener;
-    final Map<String, TopOfBookPrice> priceMap = new TreeMap<>();
-    final Map<String, OrderIdea> ideaMap = new TreeMap<>();
+    private final OrderListener orderListener;
+    private final Map<String, TopOfBookPrice> priceMap = new TreeMap<>();
+    private final Map<String, OrderIdea> ideaMap = new TreeMap<>();
 
     public OrderManager(OrderListener orderListener) {
         this.orderListener = orderListener;

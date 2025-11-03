@@ -33,7 +33,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
 
     @SuppressWarnings("unchecked")
     @BeforeEach
-    public void beforeEach() throws NoSuchFieldException, IllegalAccessException {
+    void beforeEach() throws NoSuchFieldException, IllegalAccessException {
         Field fileStoreCacheMap = DiskSpaceMonitor.class.getDeclaredField("fileStoreCacheMap");
         fileStoreCacheMap.setAccessible(true);
         monitoredPaths = (Map<String, FileStore>) fileStoreCacheMap.get(DiskSpaceMonitor.INSTANCE);

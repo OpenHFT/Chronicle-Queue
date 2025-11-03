@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 
 public class EmptyRollCycleTest extends QueueTestCommon {
 
-    public static final String EMPTY_ROLL_CYCLE_NAME = "19700101-0020X.cq4";
+    private static final String EMPTY_ROLL_CYCLE_NAME = "19700101-0020X.cq4";
     private Path dataDirectory;
 
     @Before
