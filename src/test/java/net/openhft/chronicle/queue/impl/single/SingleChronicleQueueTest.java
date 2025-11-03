@@ -63,7 +63,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     private static final long TIMES = (4L << 20L);
     @NotNull
-    private final WireType wireType;
+    protected final WireType wireType;
     protected final boolean named;
     private final Bytes<?> appenderListenerDump = Bytes.allocateElasticOnHeap(256);
 
