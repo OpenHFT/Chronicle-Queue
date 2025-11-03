@@ -64,7 +64,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     private static final long TIMES = (4L << 20L);
     @NotNull
     private final WireType wireType;
-    private final boolean named;
+    protected final boolean named;
     private final Bytes<?> appenderListenerDump = Bytes.allocateElasticOnHeap(256);
 
     public SingleChronicleQueueTest(@NotNull WireType wireType, boolean named) {
@@ -1920,7 +1920,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
-    private String expectedMetaDataTest2() {
+    protected String expectedMetaDataTest2() {
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
             return "" +
                     "--- !!meta-data #binary\n" +

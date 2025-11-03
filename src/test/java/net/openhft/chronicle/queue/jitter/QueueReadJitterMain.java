@@ -33,7 +33,7 @@ public class QueueReadJitterMain {
         new QueueReadJitterMain().run();
     }
 
-    private void run() {
+    public void run() {
         MappedFile.warmup();
 
         String path = "test-q-" + Time.uniqueId();
