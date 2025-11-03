@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -63,6 +64,7 @@ public class NormaliseEOFsTest extends QueueTestCommon {
 
     @After
     public void cleanupQueueData() {
+        BackgroundResourceReleaser.releasePendingResources();
         IOTools.deleteDirWithFilesOrThrow(QUEUE_PATH);
     }
 

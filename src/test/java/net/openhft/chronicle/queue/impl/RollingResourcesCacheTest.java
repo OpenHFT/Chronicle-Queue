@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
+import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.Test;
 
 import java.io.File;
@@ -17,7 +18,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
 
 public class RollingResourcesCacheTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;
@@ -91,6 +93,59 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         final String expectedFileName = formatter.format(instant);
         assertEquals(expectedFileName, cache.resourceFor(cycle).text);
         assertEquals(cycle, cache.parseCount(expectedFileName));
+    }
+
+
+    @Test
+    public void resourceLookupIsCached() {
+        final File dir = getTmpDir();
+        final RollingResourcesCache cache = newCache(dir);
+
+        final RollingResourcesCache.Resource first = cache.resourceFor(0);
+        final RollingResourcesCache.Resource repeat = cache.resourceFor(0);
+        final RollingResourcesCache.Resource next = cache.resourceFor(1);
+
+        assertSame("Expected identical instance for cached cycle", first, repeat);
+        assertNotSame("Different cycle should produce a new resource", first, next);
+
+        final int firstCount = cache.parseCount(first.text);
+        final int cachedCount = cache.parseCount(first.text);
+        assertEquals(firstCount, cachedCount);
+    }
+
+    @Test
+    public void toLongCachesAndClearsWhenFull() {
+        final File dir = getTmpDir();
+        final RollingResourcesCache cache = newCache(dir);
+
+        final RollingResourcesCache.Resource base = cache.resourceFor(0);
+        final File baseFile = new File(dir, base.text + ".cq4");
+        final Long initial = cache.toLong(baseFile);
+        assertNotNull(initial);
+
+        // Populate with enough unique entries to trigger cache eviction logic
+        for (int i = 1; i < 40; i++) {
+            final RollingResourcesCache.Resource resource = cache.resourceFor(i);
+            final File file = new File(dir, resource.text + ".cq4");
+            assertNotNull(cache.toLong(file));
+        }
+
+        final Long afterEviction = cache.toLong(baseFile);
+        assertEquals(initial, afterEviction);
+    }
+
+    @Test
+    public void parseWeeklyFormatValid() {
+        // round-trip property: resourceFor(cycle).text parses back to the same cycle
+        final RollingResourcesCache weeklyCache = new RollingResourcesCache(
+                WeeklyRollCycle.INSTANCE, 0, File::new, File::getName);
+        int base = (int) (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(1));
+        for (int i = 0; i < 50; i++) {
+            int cycle = base + i;
+            String name = weeklyCache.resourceFor(cycle).text;
+            int parsed = weeklyCache.parseCount(name);
+            assertEquals(cycle, parsed);
+        }
     }
 
     @Test
@@ -293,5 +348,15 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
         RollingResourcesCache.Resource resource = cache.resourceFor(cycle);
         assertEquals(expectedLong, cache.toLong(resource.path));
+    }
+
+
+    private RollingResourcesCache newCache(File dir) {
+        return new RollingResourcesCache(
+                TestRollCycles.TEST_SECONDLY,
+                0,
+                name -> new File(dir, name + ".cq4"),
+                file -> file.getName().replaceFirst("\\.cq4$", "")
+        );
     }
 }
