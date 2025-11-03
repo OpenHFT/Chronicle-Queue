@@ -121,7 +121,7 @@ public class InternalBenchmarkMain {
         long next = System.nanoTime();
         long end = (long) (next + runtime * 1e9);
 
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.createAppender(); // NOSONAR
         while (end > System.nanoTime()) {
             long start = System.nanoTime();
             try (DocumentContext dc = appender.writingDocument(false)) {

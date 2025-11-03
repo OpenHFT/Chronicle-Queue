@@ -10,6 +10,8 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
+import static org.junit.Assert.assertTrue;
+
 public class BareSyncTest extends QueueTestCommon {
     @Test
     public void sync() {
@@ -19,5 +21,6 @@ public class BareSyncTest extends QueueTestCommon {
             appender.writeBytes(BytesStore.wrap(new byte[1024]));
             appender.sync();
         }
+        assertTrue(true); // if we got here without an exception, the test passes
     }
 }

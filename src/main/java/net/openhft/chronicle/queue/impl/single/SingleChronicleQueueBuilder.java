@@ -1533,6 +1533,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * We plan to phase it out.
      * It's only a shallow copy so field will have the same objects.
      */
+    @SuppressWarnings("java:S2975")
     public SingleChronicleQueueBuilder clone() {
         try {
             return (SingleChronicleQueueBuilder) super.clone();

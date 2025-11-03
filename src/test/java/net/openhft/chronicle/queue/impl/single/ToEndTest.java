@@ -389,22 +389,6 @@ public class ToEndTest extends QueueTestCommon {
         }
     }
 
-    @Ignore("for manual use")
-    @Test
-    public void shouldReuseStoreWhenNoUpdates() {
-        // use vm args -ea -Xmx60m -XX:+HeapDumpOnOutOfMemoryError
-        final File dir = getTmpDir();
-        try (ChronicleQueue queue = ChronicleQueue.single(dir.toString());
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeBytes(Bytes.from("i must not leak"));
-            try (ExcerptTailer tailer = queue.createTailer()) {
-                while (true) {
-                    tailer.toEnd();
-                }
-            }
-        }
-    }
-
     private String tailerToEndIndex(SingleChronicleQueue queue) {
         try (final ExcerptTailer tailer = queue.createTailer().toEnd()) {
             return Long.toHexString(tailer.index());

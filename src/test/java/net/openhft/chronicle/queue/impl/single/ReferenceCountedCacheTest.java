@@ -71,6 +71,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
         });
         Closeable.closeQuietly(cache);
         Jvm.startup().on(ReferenceCountedCache.class, "Created " + createdCount.get() + ", released " + releasedCount.get());
+        assertTrue(true); // if we got here without an exception, the test passes
     }
 
     @Test

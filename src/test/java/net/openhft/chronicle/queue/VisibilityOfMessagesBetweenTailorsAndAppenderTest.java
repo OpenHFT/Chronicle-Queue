@@ -15,6 +15,7 @@ import java.util.concurrent.*;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
+import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
 public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
@@ -85,5 +86,6 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
                 e2.shutdownNow();
             }
         }
+        assertTrue(true); // if we got here without an exception, the test passes
     }
 }

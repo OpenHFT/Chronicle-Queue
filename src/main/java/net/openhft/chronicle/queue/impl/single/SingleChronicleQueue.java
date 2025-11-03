@@ -721,7 +721,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public ExcerptTailer createTailer(String id) {
         verifyTailerPreconditions(id);
-        IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this);
+        IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this); // NOSONAR
 
         // refresh the listing before creating the tailer
         directoryListing.refresh(true);

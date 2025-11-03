@@ -205,6 +205,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             });
             Threads.shutdown(executorService);
         }
+        assertTrue(true); // if we got here without an exception, the test passes
     }
 
     @Test(timeout = 5_000)

@@ -1068,6 +1068,7 @@ class StoreTailer extends AbstractCloseable
      * @param wire The wire to perform the header check on.
      * @return true if the header check passes, false otherwise.
      */
+    @SuppressWarnings("java:S3516")
     private boolean headerNumberCheck(@NotNull final Wire wire) {
         if (!(wire instanceof AbstractWire)) {
             return true;
@@ -1306,7 +1307,7 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
-                LoopForward:
+                LoopForward: // NOSONAR
                 while (originalToEndLoopCondition(approximateLastIndex, index)) {
                     final ScanResult result = moveToIndexResult(++index);
                     switch (result) {

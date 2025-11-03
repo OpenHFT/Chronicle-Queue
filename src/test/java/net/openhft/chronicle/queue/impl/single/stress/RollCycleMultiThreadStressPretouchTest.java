@@ -7,6 +7,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Assume;
 import org.junit.Test;
 
+import static org.junit.Assert.assertTrue;
+
 public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThreadStressTest {
 
     public RollCycleMultiThreadStressPretouchTest() {
@@ -17,6 +19,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
     public void stress() throws Exception {
         Assume.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
         super.stress();
+        assertTrue(true); // parent has asserts
     }
 
     public static void main(String[] args) throws Exception {

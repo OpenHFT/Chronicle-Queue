@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
 @RequiredForClient
@@ -122,7 +123,7 @@ public class RollCyclesTest extends QueueTestCommon {
             String currentName = formatter.format(currentDate);
             if (lastName != null) {
                 if (lastName.compareTo(currentName) > 0) {
-                    throw new AssertionError(format("RollCycle.%s name for %s is lexicographically greater than that for %s, this breaks the contract (%s > %s)",
+                    fail(format("RollCycle.%s name for %s is lexicographically greater than that for %s, this breaks the contract (%s > %s)",
                             cycle, lastDate, currentDate, lastName, currentName));
                 }
             }

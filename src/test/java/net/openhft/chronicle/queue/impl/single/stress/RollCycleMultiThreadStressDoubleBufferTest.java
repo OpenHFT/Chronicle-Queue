@@ -25,11 +25,6 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
         super(StressTestType.DOUBLEBUFFER);
     }
 
-    @Test
-    public void stress() throws Exception {
-        super.stress();
-    }
-
     @Before
     public void setUp() {
         queueDumped = new AtomicBoolean(false);

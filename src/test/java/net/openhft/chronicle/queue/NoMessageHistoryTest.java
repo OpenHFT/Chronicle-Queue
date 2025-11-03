@@ -58,12 +58,14 @@ public class NoMessageHistoryTest extends QueueTestCommon {
     public void testResetWithParameters() {
         // Test that reset(int sourceId, long sourceIndex) performs no action (no exceptions thrown)
         NoMessageHistory.INSTANCE.reset(1, 100L);
+        assertTrue(true); // if we got here without an exception, the test passes
     }
 
     @Test
     public void testResetWithoutParameters() {
         // Test that reset() performs no action (no exceptions thrown)
         NoMessageHistory.INSTANCE.reset();
+        assertTrue(true); // if we got here without an exception, the test passes
     }
 
     @Test

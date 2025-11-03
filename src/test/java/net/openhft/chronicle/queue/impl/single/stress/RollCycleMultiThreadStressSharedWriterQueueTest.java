@@ -11,11 +11,6 @@ public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMu
         super(StressTestType.SHAREDWRITEQ);
     }
 
-    @Test
-    public void stress() throws Exception {
-        super.stress();
-    }
-
     public static void main(String[] args) throws Exception {
         new RollCycleMultiThreadStressSharedWriterQueueTest().run();
     }

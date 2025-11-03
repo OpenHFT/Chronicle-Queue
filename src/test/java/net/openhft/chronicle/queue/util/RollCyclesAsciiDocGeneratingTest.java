@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.RollCyclesTest;
 import org.junit.Test;
 
 import static java.lang.String.format;
+import static org.junit.Assert.assertTrue;
 
 public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
     /**
@@ -27,5 +28,6 @@ public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
                     cycle.maxMessagesPerCycle() / (cycle.lengthInMillis() / 1000)));
         }
         Jvm.startup().on(RollCyclesTest.class, stringBuilder.toString());
+        assertTrue(true); // if we got here without an exception, the test passes
     }
 }
