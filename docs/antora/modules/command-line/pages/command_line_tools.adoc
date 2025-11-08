@@ -199,6 +199,9 @@ usage: ChronicleReaderMain
  -w <wire-type>       Control output i.e. JSON
 ----
 
+The `-n` option accepts both decimal and hexadecimal indexes, making it easy to replay specific offsets.
+When `-r` is provided you can also add `-g` to include the queue's `MessageHistory` records in the output.
+
 == ChronicleWriterMain
 
 `ChronicleWriterMain` can be used to write to a queue, using a method writer to write the contents of files provided.
@@ -223,6 +226,8 @@ usage: ChronicleWriterMain
  -i <interface>   Interface to write via
  -m <method>      Method name
 ----
+
+Multiple YAML documents can be supplied on the same command line; they are written to the queue in the order supplied so you can batch up related method calls.
 
 == DumpMain
 

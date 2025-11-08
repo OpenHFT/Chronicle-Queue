@@ -158,7 +158,10 @@ Created /tmp/chronicle-queue-tools.tar
 
 The resulting `tar` file can be copied to another location, and expanded.
 Once unpacked, invoke the `queue_reader.sh` script in order to execute the
-`InternalChronicleReader` utility:
+`InternalChronicleReader` utility. Recent releases honour the same options as the Maven runner:
+- pass `-n <index>` (decimal or hex) to resume reading from a specific index
+- use `-l` to flatten multi-line payloads into a single line for easier log scraping
+- combine `-r <interface>` with `-g` to include `MessageHistory` alongside MethodWriter traffic
 
 [source,bash]
 ....
