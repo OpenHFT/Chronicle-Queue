@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
 @RequiredForClient
 public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
@@ -35,20 +37,43 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     @Ignore("long running test")
     @Test(timeout = 60000)
     public void testUnbuffered() throws InterruptedException {
-        doTest(false);
+        doTest(false, 50_000);
     }
 
-    private void doTest(boolean buffered) throws InterruptedException {
+    @Test
+    public void testConcurrentShortRun() throws InterruptedException {
+        doTest(false, 1_000);
+    }
+
+    @Test
+    public void testBufferedShortRun() throws InterruptedException {
+        assumeBufferingAvailable();
+        doTest(BufferMode.Asynchronous, false, false, 1_000);
+    }
+
+    @Test
+    public void testBufferedHeapBytes() throws InterruptedException {
+        assumeBufferingAvailable();
+        doTest(BufferMode.Asynchronous, true, true, 512);
+    }
+
+    private void doTest(boolean buffered, long runs) throws InterruptedException {
+        doTest(buffered ? BufferMode.Asynchronous : BufferMode.None, false, false, runs);
+    }
+
+    private void doTest(@NotNull BufferMode bufferMode,
+                        boolean tailerHeapBytes,
+                        boolean appenderHeapBytes,
+                        long runs) throws InterruptedException {
         File name = getTmpDir();
 
         AtomicLong counter = new AtomicLong();
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
-            Bytes<?> bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
-            try (ChronicleQueue rqueue = SingleChronicleQueueBuilder.builder(name, WireType.FIELDLESS_BINARY)
-                    .rollCycle(SMALL_DAILY)
-                    .testBlockSize()
-                    .build()) {
+            Bytes<?> bytes = tailerHeapBytes
+                    ? Bytes.allocateElasticOnHeap(BYTES_LENGTH)
+                    : NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
+            try (ChronicleQueue rqueue = buildQueue(name, bufferMode)) {
 
                 ExcerptTailer tailer = rqueue.createTailer();
 
@@ -59,6 +84,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                     }
                 }
             } finally {
+                bytes.releaseLast();
                 if (rlock != null) {
                     rlock.release();
                 }
@@ -66,18 +92,13 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
             }
         }, "tailer thread");
 
-        long runs = 50_000;
-
         Thread appenderThread = new Thread(() -> {
             AffinityLock wlock = AffinityLock.acquireLock();
-            try (ChronicleQueue wqueue = SingleChronicleQueueBuilder.builder(name, WireType.FIELDLESS_BINARY)
-                    .rollCycle(SMALL_DAILY)
-                    .testBlockSize()
-                    .writeBufferMode(buffered ? BufferMode.Asynchronous : BufferMode.None)
-                    .build();
+            Bytes<?> bytes = appenderHeapBytes
+                    ? Bytes.allocateElasticOnHeap(BYTES_LENGTH)
+                    : Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
+            try (ChronicleQueue wqueue = buildQueue(name, bufferMode);
                  ExcerptAppender appender = wqueue.createAppender()) {
-
-                Bytes<?> bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
                 for (int i = 0; i < runs; i++) {
@@ -91,6 +112,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                     next += INTERVAL_US * 1000;
                 }
             } finally {
+                bytes.releaseLast();
                 if (wlock != null) {
                     wlock.release();
                 }
@@ -116,5 +138,30 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
         assertEquals(runs, counter.get());
 
+    }
+
+    private ChronicleQueue buildQueue(File path, boolean buffered) {
+        return buildQueue(path, buffered ? BufferMode.Asynchronous : BufferMode.None);
+    }
+
+    private ChronicleQueue buildQueue(File path, BufferMode bufferMode) {
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.builder(path, WireType.FIELDLESS_BINARY)
+                .rollCycle(SMALL_DAILY)
+                .testBlockSize()
+                .writeBufferMode(bufferMode);
+        try {
+            return builder.build();
+        } catch (IllegalStateException ise) {
+            if (bufferMode == BufferMode.Asynchronous && ise.getMessage() != null
+                    && ise.getMessage().contains("Chronicle Queue Enterprise")) {
+                return builder.writeBufferMode(BufferMode.None).build();
+            }
+            throw ise;
+        }
+    }
+
+    private static void assumeBufferingAvailable() {
+        assumeTrue("BufferMode.Asynchronous requires Chronicle Queue Enterprise",
+                SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
     }
 }

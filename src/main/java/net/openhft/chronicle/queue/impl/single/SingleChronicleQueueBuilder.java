@@ -724,6 +724,18 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
+     * Applies the supplied {@link QueueOffsetSpec} to this builder.
+     *
+     * @param spec the offset specification to apply
+     * @return this builder for chaining
+     */
+    public SingleChronicleQueueBuilder queueOffsetSpec(@NotNull QueueOffsetSpec spec) {
+        this.queueOffsetSpec = spec;
+        spec.apply(this);
+        return this;
+    }
+
+    /**
      * Returns the metadata store for the queue.
      *
      * @return the {@link TableStore} containing the queue's metadata

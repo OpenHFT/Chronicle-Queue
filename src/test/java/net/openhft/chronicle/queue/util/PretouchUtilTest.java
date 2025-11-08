@@ -34,4 +34,19 @@ public class PretouchUtilTest extends QueueTestCommon {
             // Pretoucher is enterprise-only; ensure factory is initialised and does not throw creating event handler.
         }
     }
+
+    @Test
+    public void eventHandlerActionOnClosedQueueDoesNotThrow() {
+        ignoreException("Pretoucher is only supported");
+        final File dir = getTmpDir();
+        EventHandler handler;
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
+            handler = PretouchUtil.createEventHandler(q);
+        }
+        try {
+            handler.action();
+        } catch (net.openhft.chronicle.core.threads.InvalidEventHandlerException ignored) {
+            // acceptable outcome when the queue is already closed
+        }
+    }
 }

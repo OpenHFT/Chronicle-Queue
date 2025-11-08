@@ -149,6 +149,47 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void namedTailerCanRewindToStart() {
+        File queuePath = getTmpDir();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer("replicated:rewind")) {
+
+            for (int i = 0; i < 3; i++) {
+                appender.writeText("msg-" + i);
+            }
+            assertEquals("msg-0", tailer.readText());
+            assertEquals("msg-1", tailer.readText());
+
+            tailer.toStart();
+            assertEquals("msg-0", tailer.readText());
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath);
+        }
+    }
+
+    @Test
+    public void namedTailerCanMoveToStoredIndexAfterRestart() {
+        File queuePath = getTmpDir();
+        long[] indexes = new long[4];
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+             ExcerptAppender appender = queue.createAppender()) {
+            for (int i = 0; i < indexes.length; i++) {
+                appender.writeText("payload-" + i);
+                indexes[i] = appender.lastIndexAppended();
+            }
+        }
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+             ExcerptTailer tailer = queue.createTailer("replicated:resumer")) {
+            assertTrue("moveToIndex should succeed", tailer.moveToIndex(indexes[2]));
+            assertEquals("payload-2", tailer.readText());
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath);
+        }
+    }
+
     private void copyFolder(Path src, Path dest) throws IOException {
         try (Stream<Path> stream = Files.walk(src)) {
             stream.forEach(source -> copy(source, dest.resolve(src.relativize(source))));

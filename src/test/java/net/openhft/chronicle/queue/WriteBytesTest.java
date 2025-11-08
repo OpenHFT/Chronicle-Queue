@@ -17,10 +17,12 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
 public class WriteBytesTest extends QueueTestCommon {
@@ -1047,6 +1049,87 @@ public class WriteBytesTest extends QueueTestCommon {
             } catch (IORuntimeException e) {
                 // ignored
             }
+        }
+    }
+
+    @Test
+    public void testWriteBytesWithDirectBufferReuse() {
+        File dir = getTmpDir();
+        try (ChronicleQueue queue = binary(dir)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+
+            Bytes<?> directPayload = Bytes.allocateDirect(128).unchecked(true);
+            Bytes<?> readBuffer = Bytes.elasticByteBuffer();
+            try {
+                for (int i = 0; i < 3; i++) {
+                    directPayload.clear();
+                    directPayload.writeUtf8("direct-entry-" + i);
+                    directPayload.readPositionRemaining(0, directPayload.writePosition());
+                    appender.writeBytes(directPayload);
+
+                    assertTrue("entry " + i + " should be readable", tailer.readBytes(readBuffer));
+                    assertEquals("direct-entry-" + i, readBuffer.readUtf8());
+                    readBuffer.clear();
+                }
+            } finally {
+                directPayload.releaseLast();
+                readBuffer.releaseLast();
+            }
+        } finally {
+            try {
+                IOTools.deleteDirWithFiles(dir, 2);
+            } catch (IORuntimeException e) {
+                // ignored
+            }
+        }
+    }
+
+    @Test
+    public void testRollCycleCapacityConsistency() {
+        File dir = getTmpDir();
+        SetTimeProvider timeProvider = new SetTimeProvider("2024/01/01T00:00:00")
+                .autoIncrement(0, TimeUnit.MILLISECONDS);
+        try (ChronicleQueue queue = binary(dir)
+                .rollCycle(TEST4_DAILY)
+                .timeProvider(timeProvider)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+
+            long initialCapacity;
+            try (DocumentContext dc = appender.writingDocument()) {
+                Bytes<?> bytes = dc.wire().bytes();
+                initialCapacity = bytes.bytesStore().capacity();
+                bytes.writeUtf8("cycle-1");
+            }
+            assertNextUtf8(tailer, "cycle-1");
+
+            timeProvider.advanceMillis(TEST4_DAILY.lengthInMillis());
+            long postRollCapacity;
+            try (DocumentContext dc = appender.writingDocument()) {
+                Bytes<?> bytes = dc.wire().bytes();
+                postRollCapacity = bytes.bytesStore().capacity();
+                bytes.writeUtf8("cycle-2");
+            }
+            assertEquals("Wire buffer capacity should remain stable across rolls", initialCapacity, postRollCapacity);
+            assertNextUtf8(tailer, "cycle-2");
+        } finally {
+            try {
+                IOTools.deleteDirWithFiles(dir, 2);
+            } catch (IORuntimeException e) {
+                // ignored
+            }
+        }
+    }
+
+    private static void assertNextUtf8(ExcerptTailer tailer, String expected) {
+        try (DocumentContext dc = tailer.readingDocument()) {
+            assertTrue("Document should be present for " + expected, dc.isPresent());
+            assertEquals(expected, dc.wire().bytes().readUtf8());
         }
     }
 

@@ -4,12 +4,17 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
+import java.io.File;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 // For use with C++ RawAccessJava. Called from C++
 public class RawAccessJavaTest extends QueueTestCommon {
@@ -102,6 +107,80 @@ public class RawAccessJavaTest extends QueueTestCommon {
                     bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
                 }
             }
+        }
+    }
+
+    @Test
+    public void testLengthPrefixValidationWithoutCppInterop() {
+        File dir = getTmpDir();
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
+             ExcerptAppender appender = cq.createAppender();
+             ExcerptTailer tailer = cq.createTailer()) {
+
+            writeInteropPayload(appender);
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
+                Bytes<?> bytes = dc.wire().bytes();
+                bytes.readSkip(-QUEUE_HEADER_SIZE);
+                int header = bytes.readInt();
+                int totalLength = Wires.lengthOf(header);
+                int payloadLength = bytes.readInt();
+                assertEquals("Length prefix should match payload content",
+                        totalLength - RAW_SIZE_PREFIX, payloadLength);
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(dir, 2);
+        }
+    }
+
+    private void writeInteropPayload(ExcerptAppender appender) {
+        try (DocumentContext dc = appender.writingDocument()) {
+            Bytes<?> bytes = dc.wire().bytes();
+            long start = bytes.writePosition();
+            bytes.writeSkip(RAW_SIZE_PREFIX);
+            bytes.writeByte((byte) 0xab);
+            bytes.writeShort((short) 12);
+            bytes.writeInt(123);
+            bytes.writeLong(123456789L);
+            bytes.writeFloat(1.234f);
+            bytes.writeDouble(123.456);
+            bytes.writeChar('a');
+            bytes.write8bit("Hello World");
+            long end = bytes.writePosition();
+            bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
+        }
+    }
+
+    @Test
+    public void testZeroLengthInteropPayloadIsReadable() {
+        File dir = getTmpDir();
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
+             ExcerptAppender appender = cq.createAppender();
+             ExcerptTailer tailer = cq.createTailer()) {
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                Bytes<?> bytes = dc.wire().bytes();
+                long start = bytes.writePosition();
+                bytes.writeSkip(RAW_SIZE_PREFIX);
+                long end = bytes.writePosition();
+                bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
+            }
+            appender.writeText("follow-up");
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
+                Bytes<?> bytes = dc.wire().bytes();
+                bytes.readSkip(-QUEUE_HEADER_SIZE);
+                bytes.readInt(); // header
+                int payloadLength = bytes.readInt();
+                assertEquals(0, payloadLength);
+                assertEquals(0, bytes.readRemaining());
+            }
+
+            assertEquals("follow-up", tailer.readText());
+        } finally {
+            IOTools.deleteDirWithFiles(dir, 2);
         }
     }
 }

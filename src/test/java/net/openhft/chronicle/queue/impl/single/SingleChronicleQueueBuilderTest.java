@@ -7,12 +7,16 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -21,6 +25,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static org.junit.Assert.*;
@@ -194,5 +200,68 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     public void drainerPriorityIsSetByDefault() {
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single();
         assertNotNull(builder.drainerPriority()); // priority may change from CONCURRENT in future
+    }
+
+    @Test
+    public void builderAppliesCoreOverridesForLoggerConfigs() {
+        final File tmpDir = getTmpDir();
+        final int blockSize = 512 << 10;
+        final long requestedBufferCapacity = 64 << 10;
+        final RollCycle rollCycle = TestRollCycles.TEST_SECONDLY;
+        final int sourceId = 7;
+        final WireType wireType = WireType.BINARY_LIGHT;
+        final List<String> messages = Arrays.asList("first log entry", "second log entry");
+
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(tmpDir)
+                .blockSize(blockSize)
+                .bufferCapacity(requestedBufferCapacity)
+                .rollCycle(rollCycle)
+                .sourceId(sourceId)
+                .wireType(wireType);
+        final long expectedBlockSize = builder.blockSize();
+        final long expectedBufferCapacity = builder.bufferCapacity();
+
+        try (SingleChronicleQueue queue = builder.build()) {
+            assertQueueOverrides(queue, expectedBlockSize, expectedBufferCapacity, rollCycle, wireType, sourceId);
+
+            try (ExcerptAppender appender = queue.acquireAppender()) {
+                messages.forEach(appender::writeText);
+            }
+
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                for (String expected : messages) {
+                    assertEquals(expected, tailer.readText());
+                }
+            }
+        }
+
+        try (SingleChronicleQueue reopened = SingleChronicleQueueBuilder.single(tmpDir)
+                .wireType(wireType)
+                .sourceId(sourceId)
+                .rollCycle(rollCycle)
+                .build();
+             ExcerptTailer tailer = reopened.createTailer()) {
+            assertEquals("Roll cycle should be read from metadata", rollCycle, reopened.rollCycle());
+            assertEquals("SourceId should be read from metadata", sourceId, reopened.sourceId());
+
+            for (String expected : messages) {
+                assertEquals(expected, tailer.readText());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(tmpDir);
+        }
+    }
+
+    private static void assertQueueOverrides(SingleChronicleQueue queue,
+                                             long expectedBlockSize,
+                                             long expectedBufferCapacity,
+                                             RollCycle expectedRollCycle,
+                                             WireType expectedWireType,
+                                             int expectedSourceId) {
+        assertEquals(expectedBlockSize, queue.blockSize());
+        assertEquals(expectedBufferCapacity, queue.bufferCapacity());
+        assertEquals(expectedRollCycle, queue.rollCycle());
+        assertEquals(expectedWireType, queue.wireType());
+        assertEquals(expectedSourceId, queue.sourceId());
     }
 }
