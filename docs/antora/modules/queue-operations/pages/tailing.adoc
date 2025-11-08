@@ -218,6 +218,8 @@ They can both be run from the command line in a number of ways described below.
 
 == DumpMain
 
+TIP: The canonical CLI reference for `DumpMain` lives at xref:command-line:command_line_tools.adoc#_dumpmain[]. Use it to double-check flags before scripting automation.
+
 If you have a project pom file that includes the Chronicle-Queue artifact, you can read a `cq4` file with the following command:
 
 [source,shell script]
@@ -301,6 +303,8 @@ $ ./bin/dump_queue.sh <file path>
 The second tool for logging the contents of the chronicle queue is the `ChronicleReaderMain` (in the Chronicle Queue project).
 As mentioned above, it is able to perform several operations beyond printing the file content to the console.
 For example, it can be used to tail a queue to detect whenever new messages are added (rather like $tail -f).
+
+TIP: See xref:command-line:command_line_tools.adoc#_chroniclereadermain[] for the latest switch list, including the `-g` MessageHistory toggle introduced for MethodReader output.
 
 Below is the command line interface used to configure `ChronicleReaderMain`:
 

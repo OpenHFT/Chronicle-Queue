@@ -202,6 +202,10 @@ Missing required options: m, d
  -i <interface>   Interface to write via
  -m <method>      Method name
 
+Multiple YAML files can be passed in one invocation of `ChronicleWriterMain`; they are written sequentially so you can batch related method calls without spawning a new JVM for each payload.
+
+TIP: Refer to xref:command-line:command_line_tools.adoc#_chroniclewritermain[] for the full CLI reference, including the Maven and shell-script entry points.
+
 If you want to write to the below "doit" method
 
 [source,java]
