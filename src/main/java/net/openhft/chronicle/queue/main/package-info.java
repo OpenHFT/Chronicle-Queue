@@ -1,10 +1,6 @@
 //
 // Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
 //
-
-/*
- * Copyright 2016-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
- */
 /**
  * This package and any and all sub-packages contains utility classes for this Chronicle library.
  * <p>
