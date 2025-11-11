@@ -1,6 +1,6 @@
-//
-// Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
-//
+/*
+ * Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
+ */
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -273,7 +273,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
          *
          * Given we can't guarantee a GC happens, I wonder if this test can ever not be flaky
          *
-         * See https://docs.oracle.com/javase/8/docs/api/java/nio/MappedByteBuffer.html
+         * See https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/MappedByteBuffer.html
          */
         GcControls.waitForGcCycle();
         final String currentRollCycleName = ROLL_CYCLE_FORMATTER.format(Instant.ofEpochMilli(timestamp)) + ".cq4";

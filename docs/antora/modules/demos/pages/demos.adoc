@@ -29,7 +29,7 @@ See runnable demos in link:https://github.com/OpenHFT/Chronicle-Queue-Demo[https
 //
 //image::gitpack.png[]
 //
-//Ensure you have the JDK for Java 8, you could use http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html[this].
+//Ensure you have the JDK for Java 8, you could use https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html[this].
 //
 //Open Intelij or your https://en.wikipedia.org/wiki/Integrated_development_environment[IDE], or https://www.jetbrains.com/idea/download/#section=windows[install Intelij] first if you haven't already.
 //Intelij is used for this tutorial.

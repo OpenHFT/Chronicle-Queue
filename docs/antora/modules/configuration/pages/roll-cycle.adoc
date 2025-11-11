@@ -170,7 +170,7 @@ Timezone rolling is set using the configuration method `rollTime(LocalTime rollT
 It is provided an instance of `LocalTime.of(int hour, int minute)` describing at what hour and minute of the day to roll, relative to the given time zone.
 If no time zone is provided, the default is UTC.
 
-NOTE: Read more about the available ZoneId's link:https://docs.oracle.com/javase/8/docs/api/java/util/TimeZone.html[here].
+NOTE: Read more about the available ZoneId's link:https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/TimeZone.html[here].
 
 Below is an example of a queue that performs daily rolls at 5 PM, London time:
 

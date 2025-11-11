@@ -1871,7 +1871,7 @@ For comparison see http://kafka.apache.org/documentation.html[Kafka Documentatio
 
 ==== Online support
 
-* http://stackoverflow.com/tags/chronicle/info[Chronicle support on StackOverflow]
+* https://stackoverflow.com/tags/chronicle/info[Chronicle support on StackOverflow]
 * https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle[Chronicle support on Google Groups]
 
 == Chronicle Software Release Notes
