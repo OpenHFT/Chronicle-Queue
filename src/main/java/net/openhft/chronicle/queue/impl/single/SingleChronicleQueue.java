@@ -1430,7 +1430,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 mappedBytes.singleThreadedCheckDisabled(true);
                 mappedBytes.chunkCount(chunkCount);
 
-//                pauseUnderload();
+                //                pauseUnderload();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
                     Jvm.warn().on(getClass(), new Exception("Creating cycle which is not the current cycle"));

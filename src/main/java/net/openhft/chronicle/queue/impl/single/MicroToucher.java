@@ -55,6 +55,7 @@ public class MicroToucher {
                 if (bs.inside(nextPage, 8))
                     touchPage(nextPage, bs);
             } catch (Throwable ignored) {
+                // ignored - best effort touching
             }
             return true;
         }
@@ -72,7 +73,7 @@ public class MicroToucher {
         final long lastPage = this.lastPageToSync;
         final long start = this.lastPageSynced;
         final long length = Math.min(8 << 20, lastPage - start);
-//        System.out.println("len "+length);
+        //        System.out.println("len "+length);
         if (length < 8 << 20)
             return;
 
@@ -95,9 +96,9 @@ public class MicroToucher {
     private void sync(BytesStore<?, ?> bytes, long start, long length) {
         if (!bytes.inside(start, length))
             return;
-//        long a = System.nanoTime();
+        //        long a = System.nanoTime();
         PosixAPI.posix().msync(bytes.addressForRead(start), length, MSyncFlag.MS_ASYNC);
-//        System.out.println("sync took " + (System.nanoTime() - a) / 1000);
+        //        System.out.println("sync took " + (System.nanoTime() - a) / 1000);
     }
 
     /**

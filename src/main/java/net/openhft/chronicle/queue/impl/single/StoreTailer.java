@@ -847,9 +847,9 @@ class StoreTailer extends AbstractCloseable
         if (cycle < 0)
             return NOT_REACHED;
         final RollCycle rollCycle = queue.rollCycle();
-//        if (Jvm.isResourceTracing()) {
-//            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
-//        }
+        //        if (Jvm.isResourceTracing()) {
+        //            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+        //        }
 
         // moves to the expected cycle
         if (!cycle(cycle))
@@ -878,9 +878,9 @@ class StoreTailer extends AbstractCloseable
         final RollCycle rollCycle = queue.rollCycle();
         final int cycle = rollCycle.toCycle(index);
         final long sequenceNumber = rollCycle.toSequenceNumber(index);
-//        if (Jvm.isResourceTracing()) {
-//            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
-//        }
+        //        if (Jvm.isResourceTracing()) {
+        //            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+        //        }
 
         // moves to the expected cycle
         if (!cycle(cycle))
@@ -1445,6 +1445,8 @@ class StoreTailer extends AbstractCloseable
                     seq -= seq % rollCycle.defaultIndexSpacing();
                 }
                 break;
+            default:
+                throw new IllegalStateException("Unsupported direction " + direction);
         }
         index0(rollCycle.toIndex(cycle, seq));
 

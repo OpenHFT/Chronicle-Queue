@@ -257,12 +257,12 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
             messageSink.accept("No data");
             return;
         }
-        int counter = 0;
         messageSink.accept("Timings below in " + timeUnit.name());
         final StringBuilder sb = new StringBuilder("sourceId        ");
         histos.forEach((id, histogram) -> sb.append(String.format("%12s ", id)));
         messageSink.accept(sb.toString());
         messageSink.accept("count:  " + count());
+        int counter = 0;
         messageSink.accept("50:     " + percentiles(counter++));
         messageSink.accept("90:     " + percentiles(counter++));
         messageSink.accept("99:     " + percentiles(counter++));

@@ -94,24 +94,24 @@ public class InternalBenchmarkMain {
         Histogram loopTime = new Histogram();
 
         Thread reader = new Thread(() -> {
-//            try (ChronicleQueue queue2 = createQueue(path))
+            //            try (ChronicleQueue queue2 = createQueue(path))
             ExcerptTailer tailer = queue.createTailer().toEnd();
             long endLoop = System.nanoTime();
             while (running) {
                 loopTime.sample((double) (System.nanoTime() - endLoop));
                 Jvm.safepoint();
 
-//                    readerLoopTime = System.nanoTime();
-//                    if (readerLoopTime - readerEndLoopTime > 1000)
-//                        System.out.println("r " + (readerLoopTime - readerEndLoopTime));
-//                try {
+                //                    readerLoopTime = System.nanoTime();
+                //                    if (readerLoopTime - readerEndLoopTime > 1000)
+                //                        System.out.println("r " + (readerLoopTime - readerEndLoopTime));
+                //                try {
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
-//                } finally {
-//                        readerEndLoopTime = System.nanoTime();
-//                }
+                //                } finally {
+                //                        readerEndLoopTime = System.nanoTime();
+                //                }
                 Jvm.safepoint();
                 endLoop = System.nanoTime();
             }
@@ -129,14 +129,14 @@ public class InternalBenchmarkMain {
             }
             long written = System.nanoTime();
             long time = written - start;
-//                System.out.println(time);
+            //                System.out.println(time);
             writeTime.sample(time);
 
             long diff = writeTime.totalCount() - readTime.totalCount();
             Thread.yield();
             if (diff >= 200) {
-//                long rlt = readerLoopTime;
-//                long delay = System.nanoTime() - rlt;
+                //                long rlt = readerLoopTime;
+                //                long delay = System.nanoTime() - rlt;
                 System.out.println("diff=" + diff /* +" delay= " + delay*/);
                 StringBuilder sb = new StringBuilder();
                 sb.append("Reader: profile of the thread");
@@ -156,7 +156,7 @@ public class InternalBenchmarkMain {
         pretoucher.interrupt();
         reader.interrupt();
         running = false;
-//        monitor.interrupt();
+        //        monitor.interrupt();
 
         System.out.println("Loop times " + loopTime.toMicrosFormat());
         System.out.println("messageSize " + messageSize);

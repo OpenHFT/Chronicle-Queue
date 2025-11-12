@@ -37,19 +37,19 @@ public final class InternalPingPongMain {
         System.setProperty("jvm.safepoint.enabled", "true");
     }
 
-    /**
-     * Main method to run the ping-pong benchmark.
-     *
-     * @param args Command-line arguments (not used in this benchmark)
-     */
-    public static void main(String[] args) {
-        System.out.println(
-//                "-Dthroughput=" + throughput
-                " -Druntime=" + runtime
-                        + " -Dpath=" + basePath);
-        MappedFile.warmup();
+        /**
+         * Main method to run the ping-pong benchmark.
+         *
+         * @param args Command-line arguments (not used in this benchmark)
+         */
+        public static void main(String[] args) {
+            System.out.println(
+                    // "-Dthroughput=" + throughput
+                    " -Druntime=" + runtime
+                            + " -Dpath=" + basePath);
+            MappedFile.warmup();
 
-        pingPong(64);
+            pingPong(64);
     }
 
     /**

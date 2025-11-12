@@ -216,7 +216,7 @@ public final class InternalFileUtil {
      */
     private static class ProcFdWalker extends SimpleFileVisitor<Path> {
 
-        private final static int PID_PATH_INDEX = 1; // where is the pid for process holding file open represented in path?
+        private static final int PID_PATH_INDEX = 1; // where is the pid for process holding file open represented in path?
         private final Map<String, String> openFiles = new HashMap<>();
 
         @Override
