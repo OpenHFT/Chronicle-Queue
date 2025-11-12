@@ -266,8 +266,8 @@
                     <forkCount>1</forkCount>
                     <!--                    <reuseForks>false</reuseForks>-->
                     <runOrder>hourly</runOrder>
-                    <!-- propagate JPMS flags from parent into unit test JVMs along with jacoco agent -->
-                    <argLine>${surefireArgLine} ${jvm.requiredArgs}</argLine>
+                    <!-- propagate JPMS flags from parent into unit test JVMs -->
+                    <argLine>${argLine} ${jvm.requiredArgs}</argLine>
                 </configuration>
             </plugin>
 
