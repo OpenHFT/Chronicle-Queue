@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -75,7 +76,8 @@ public class CycleNotFoundTest extends QueueTestCommon {
                     Assert.assertFalse(dc.isPresent());
                 }
             } finally {
-                // System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
+                Jvm.debug().on(CycleNotFoundTest.class,
+                        "Tailer " + Thread.currentThread().getName() + " processed " + count + " messages");
             }
         };
 

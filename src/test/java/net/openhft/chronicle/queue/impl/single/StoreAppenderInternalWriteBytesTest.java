@@ -60,12 +60,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
-        /**
-         final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
-         final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
-         IOTools.deleteDirWithFiles(sourceDir.toFile());
-         IOTools.deleteDirWithFiles(destinationDir.toFile());
-         */
 
         populateSourceQueue(sourceDir);
 

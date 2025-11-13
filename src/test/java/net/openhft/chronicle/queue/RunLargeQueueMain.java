@@ -14,7 +14,7 @@ import net.openhft.chronicle.bytes.SyncMode;
  * This example writes and reads messages using a Chronicle Queue with specified
  * file and message sizes. Performance metrics for both operations are logged.
  * <p>
- * Usage: java -Dfile.size=<size_in_gb> -Dmsg.size=<message_size_in_bytes> RunLargeQueueMain [queue_path]
+ * Usage: {@code java -Dfile.size=<size_in_gb> -Dmsg.size=<message_size_in_bytes> RunLargeQueueMain [queue_path]}
  */
 public enum RunLargeQueueMain {
     ; // no instances allowed

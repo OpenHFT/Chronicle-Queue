@@ -62,7 +62,7 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
         @Override
         public void checkDocument(DocumentContext dc, ExcerptTailer tailer, RollingChronicleQueue queue,
                                   int lastTailerCycle, int lastQueueCycle, int expected, ValueIn valueIn) {
-            for (int i = 0; i < NUMBER_OF_INTS; i++) {
+            for (int i = 0; i < numberOfInts; i++) {
                 int v = valueIn.int32();
                 if (i == 0 && v != expected) {
                     if (!unexpectedValues.remove(expected)) {
@@ -81,7 +81,7 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
             Jvm.debug().on(getClass(), "Out-of-order count: " + outOfOrderCount);
             if (skippedValue.size() > 0 || unexpectedValues.size() > 0) {
                 Jvm.error().on(getClass(), "Skipped " + skippedValue + ", Unexpected " + unexpectedValues);
-                if (DUMP_QUEUE && !queueDumped.getAndSet(true)) {
+                if (dumpQueue && !queueDumped.getAndSet(true)) {
                     InternalDumpMain.dump(queue.file(), System.out, Long.MAX_VALUE);
                 }
             }

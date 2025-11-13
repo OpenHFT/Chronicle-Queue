@@ -370,6 +370,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
 
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            assertNotNull(ignored);
         }
     }
 
@@ -3227,6 +3228,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                      builder(new File(""), wireType).
                              testBlockSize().build()) {
 
+            assertNotNull(ignored);
         }
 
         assertTrue(new File(QUEUE_METADATA_FILE).delete());
@@ -3533,16 +3535,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         Assume.assumeTrue("this test is slow and does not depend on wire type", wireType == WireType.BINARY);
 
         long now = System.currentTimeMillis();
-        long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000;
-        long ONE_DAY_IN_MILLIS = ONE_HOUR_IN_MILLIS * 24;
-        long midnight = now - (now % ONE_DAY_IN_MILLIS);
+        long oneHourInMillis = 60 * 60 * 1000;
+        long oneDayInMillis = oneHourInMillis * 24;
+        long midnight = now - (now % oneDayInMillis);
         AtomicLong clock = new AtomicLong(now);
 
         StringBuilder builder = new StringBuilder();
         boolean passed = doMappedSegmentUnmappedRollTest(clock, builder);
         passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight), builder);
         for (int i = 1; i < 3; i += 1)
-            passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * ONE_HOUR_IN_MILLIS)), builder);
+            passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * oneHourInMillis)), builder);
 
         if (!passed) {
             fail(builder.toString());

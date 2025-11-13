@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.IllegalIndexException;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
@@ -89,6 +90,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
         try {
             IOTools.deleteDirWithFiles(tmp, 2);
         } catch (IORuntimeException ignored) {
+            Jvm.warn().on(CreateAtIndexTest.class, "Failed to delete " + tmp, ignored);
         }
     }
 

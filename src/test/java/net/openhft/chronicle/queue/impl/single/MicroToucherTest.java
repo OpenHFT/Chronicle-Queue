@@ -47,6 +47,7 @@ public class MicroToucherTest extends QueueTestCommon {
                         Jvm.pause(25);
                     }
                 } catch (ClosedIllegalStateException expected) {
+                    Jvm.debug().on(MicroToucherTest.class, "MicroTouch loop closed", expected);
                 }
             });
             msync.setDaemon(true);

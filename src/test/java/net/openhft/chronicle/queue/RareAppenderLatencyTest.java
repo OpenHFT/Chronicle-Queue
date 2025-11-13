@@ -33,8 +33,8 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
  * it last appended.
  */
 public class RareAppenderLatencyTest extends QueueTestCommon {
-    private final static int HEAVY_MSGS = 1_000_000;
-    private final static int RARE_MSGS = 50;
+    private static final int HEAVY_MSGS = 1_000_000;
+    private static final int RARE_MSGS = 50;
 
     private ExecutorService appenderES;
 
