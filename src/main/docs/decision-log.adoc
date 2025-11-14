@@ -1,0 +1,149 @@
+= Chronicle Queue - Decision Log
+:toc:
+:lang: en-GB
+:source-highlighter: rouge
+
+This document records component-specific architectural and operational decisions for Chronicle Queue.
+Identifiers follow the Nine-Box pattern `<Scope>-<Tag>-NNN`; numbers are unique within the `CQ` scope.
+Entries cross-reference the queue documentation under `docs/` and any future `project-requirements.adoc` catalogue.
+
+== Decision Index
+
+* link:#CQ-FN-101[CQ-FN-101 Queue File Format and Roll-Cycle Model]
+* link:#CQ-FN-102[CQ-FN-102 Appender and Tailer Concurrency Model]
+* link:#CQ-NF-P-201[CQ-NF-P-201 Durability, Flush Policy and Recovery]
+* link:#CQ-NF-S-301[CQ-NF-S-301 Encryption Responsibility and Boundary]
+* link:#CQ-NF-O-401[CQ-NF-O-401 Retention and Roll File Cleanup]
+
+[[CQ-FN-101]]
+== CQ-FN-101 Queue File Format and Roll-Cycle Model
+
+Context::
+* Chronicle Queue is used for long-lived, high-throughput messaging and logging where queues may span many files and days of data.
+* The on-disk format and roll-cycle policy must support efficient append and tail operations, random access by index, and reasonable recovery characteristics after process or machine failure.
+* Existing documentation in `docs/How_it_works.adoc` and `docs/managing_roll_files_directly.adoc` describes roll files, index structures, and how readers and writers interact with them.
+Decision Statement::
+* Chronicle Queue stores data in append-only roll files organised by a roll-cycle policy (for example daily or hourly). Each roll file contains data blocks and index metadata that support fast sequential and random access.
+* The default roll-cycle is chosen to balance file size, index density and operational convenience, and is stable across minor releases to maintain compatibility.
+* Roll-cycle configuration is exposed via builders so applications can choose appropriate periods without altering the core file format.
+Alternatives Considered::
+* Single monolithic queue file::
+** Pros: conceptually simple; no roll logic.
+** Cons: unbounded file growth makes recovery and compaction harder; I/O becomes less predictable; more expensive to archive or move old data.
+* Size-based roll-only model::
+** Pros: more directly reflects on-disk capacity constraints.
+** Cons: harder to align files with operational boundaries (for example trading days); complicates time-based retention policies; may produce many small files during bursts.
+Rationale for Decision::
+* A time-based roll-cycle aligns naturally with operational concepts such as trading days and log-rotation windows while providing predictable file naming and archiving behaviour.
+* Keeping the on-disk format append-only with index metadata in the same roll files simplifies random access and recovery.
+Impact & Consequences::
+* Operational tooling and runbooks build on the roll-cycle convention for monitoring disk usage, archiving and replay.
+* Changing the default roll-cycle is considered a significant behaviour change and must be documented clearly whenever it occurs.
+Notes/Links::
+* link:../../docs/How_it_works.adoc[How it works]
+* link:../../docs/managing_roll_files_directly.adoc[Managing roll files directly]
+
+[[CQ-FN-102]]
+== CQ-FN-102 Appender and Tailer Concurrency Model
+
+Context::
+* Chronicle Queue supports multiple producers and consumers in the same JVM and across processes, with strict ordering guarantees within a queue.
+* The concurrency model for `ExcerptAppender` and `ExcerptTailer` must be explicit so that applications avoid unsafe sharing patterns that compromise ordering or data integrity.
+Decision Statement::
+* Chronicle Queue guarantees that appends from a single `ExcerptAppender` are sequential and durable in append order.
+* The recommended pattern is one appender per active writer thread; sharing an appender between threads requires external synchronisation and is discouraged in latency-sensitive code.
+* Tailers (`ExcerptTailer`) provide forward-only reading by index; multiple tailers may read from the same queue concurrently, but each tailer’s position is independent.
+Alternatives Considered::
+* Fully thread-safe appenders with internal locking::
+** Pros: simpler API for casual use.
+** Cons: introduces locking overhead and contention in hot paths; hides cost and contention from callers; does not remove the need to reason about ordering semantics.
+* Per-queue global appender and tailer pools managed by the library::
+** Pros: centralised management.
+** Cons: makes lifetime and ownership obscure; increases risk of misuse and difficult-to-debug races.
+Rationale for Decision::
+* Encouraging one appender per writer thread is consistent with Chronicle’s performance goals and avoids hidden synchronisation in the core API.
+* Independent tailers make it easy to build fan-out consumers and replay tools without affecting each other’s positions.
+Impact & Consequences::
+* Application code must be explicit about how appenders are shared; violations may manifest as increased latency or, if external concurrency control is incorrect, undefined behaviour.
+* Documentation in `README.adoc` and `docs/How_it_works.adoc` should continue to emphasise recommended patterns (for example appender-per-thread and explicit tailer lifecycle).
+Notes/Links::
+* link:../../README.adoc[Chronicle Queue README]
+* link:../../docs/How_it_works.adoc[How it works]
+
+[[CQ-NF-P-201]]
+== CQ-NF-P-201 Durability, Flush Policy and Recovery
+
+Context::
+* Users rely on Chronicle Queue for durable logging and message persistence and need clarity on when data is considered committed.
+* Flushing every write to disk maximises durability but can severely impact throughput and latency, especially on spinning disks or busy volumes.
+* Recovery behaviour after process or machine failure must be predictable and documented.
+Decision Statement::
+* Chronicle Queue treats messages as committed once they are appended to the memory-mapped region and the corresponding index entry is written; operating system policies govern when data reaches physical media.
+* The API and configuration allow callers to choose between more aggressive flushing (for example explicit fsync or metadata updates) and higher throughput with batched flushes.
+* On restart, Chronicle Queue rebuilds any necessary in-memory state from the on-disk roll files and indexes, treating incomplete trailing writes conservatively.
+Alternatives Considered::
+* Always fsync on every append::
+** Pros: strongest durability semantics within a single host.
+** Cons: unacceptable performance overhead for many real-world Chronicle deployments; latency spikes tied to storage behaviour.
+* Never expose explicit flush or fsync options::
+** Pros: simpler surface area.
+** Cons: prevents latency-insensitive applications from opting into stronger durability; makes trade-offs implicit rather than explicit.
+Rationale for Decision::
+* Delegating fine-grained flush behaviour to configuration keeps Chronicle Queue flexible enough for both low-latency and durability-focused use cases.
+* A clear statement of when messages are considered committed helps users design correct upstream and downstream failure handling.
+Impact & Consequences::
+* Operational runbooks must describe the chosen flush and durability profile for each deployment.
+* Tests and examples should cover common configurations (for example high-throughput versus fsync-heavy modes) and document their trade-offs.
+Notes/Links::
+* link:../../docs/performance.adoc[Performance]
+* link:../../docs/How_it_works.adoc[How it works]
+
+[[CQ-NF-S-301]]
+== CQ-NF-S-301 Encryption Responsibility and Boundary
+
+Context::
+* Encryption of queue contents is an enterprise feature documented under `docs/encryption.adoc` and related portal pages.
+* The open-source Chronicle Queue module must remain clear about which security responsibilities it fulfils and which are delegated to enterprise extensions or surrounding infrastructure.
+Decision Statement::
+* The core Chronicle Queue module does not implement at-rest encryption itself; it focuses on the queueing and persistence model.
+* Encryption, key management and associated compliance controls are provided in the enterprise offerings and in external infrastructure, as described in the encryption documentation.
+Alternatives Considered::
+* Embed full encryption support into the core open-source module::
+** Pros: single artefact with built-in encryption.
+** Cons: increases complexity and surface area; limits flexibility over algorithms and key management; complicates licensing boundaries.
+* Leave all encryption concerns entirely out of Chronicle documentation::
+** Pros: keeps the core module minimal.
+** Cons: risks confusion about where encryption is expected to be implemented; weakens traceability for regulated users.
+Rationale for Decision::
+* Keeping encryption in the enterprise tier preserves a clear separation of concerns and aligns with Chronicle’s product structure while still documenting expectations for secure deployments.
+Impact & Consequences::
+* Users of the open-source module must rely on either the enterprise extension or external encryption at the filesystem or volume level when at-rest encryption is required.
+* Documentation must continue to signpost that encryption is an enterprise feature and link to the relevant guidance.
+Notes/Links::
+* link:../../docs/encryption.adoc[Encryption overview]
+
+[[CQ-NF-O-401]]
+== CQ-NF-O-401 Retention and Roll File Cleanup
+
+Context::
+* Long-running queues can generate large numbers of roll files; without retention policies, disks will eventually fill.
+* Operators need predictable ways to manage retention windows and reclaim space without violating application correctness.
+Decision Statement::
+* Chronicle Queue treats retention and cleanup as operational concerns layered on top of the append-only file format.
+* The core library exposes the information needed to implement retention (for example roll file naming, directory structure and indices), while higher-level tools or operational scripts perform actual deletion and archival.
+Alternatives Considered::
+* Built-in automatic deletion of old roll files in the core library::
+** Pros: no external tooling required for simple use cases.
+** Cons: dangerous for regulated or audit-sensitive workloads; hard to encode all possible retention policies; risk of accidental data loss.
+* No documented guidance on retention::
+** Pros: smallest code and doc footprint.
+** Cons: increases operational risk; makes it harder for users to design safe retention strategies.
+Rationale for Decision::
+* Delegating deletion and archival to explicit operational processes reduces the chance of unexpected data loss and allows retention policies to be tailored to each deployment.
+Impact & Consequences::
+* Operational documentation and examples should include retention patterns (for example time-based purge scripts) and note the risks involved.
+* Monitoring should track disk usage and roll file counts to detect misconfigured or missing retention.
+Notes/Links::
+* link:../../docs/How_it_works.adoc[How it works]
+* link:../../docs/FAQ.adoc[FAQ]
+
