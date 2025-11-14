@@ -1,4 +1,6 @@
 = Chronicle Queue Performance
+:lang: en-GB
+:source-highlighter: rouge
 
 [NOTE]
 ====

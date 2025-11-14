@@ -1,12 +1,11 @@
 = Managing Roll Files Directly
 Per Minborg
-:toc: macro
+:toc:
 :toclevels: 3
 :css-signature: demo
-:toc-placement: macro
 :icons: font
-
-toc::[]
+:lang: en-GB
+:source-highlighter: rouge
 
 This document describes how roll files can be managed directly via Java.
 One example of direct management would be to remove old unused roll files.

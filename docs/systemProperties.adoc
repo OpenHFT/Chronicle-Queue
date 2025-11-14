@@ -1,5 +1,8 @@
-== System Properties
+= Chronicle Queue System Properties
+:lang: en-GB
 :source-highlighter: rouge
+
+== System Properties
 Below, a number of relevant System Properties are listed.
 
 NOTE: With `getBoolean`, returns if a System Property with the provided {@code systemPropertyKey} either exists, is set to "yes" or is set to "true", see

@@ -1,4 +1,5 @@
 = Chronicle Queue Enterprise Replication
+:lang: en-GB
 :source-highlighter: rouge
 
 [NOTE]
