@@ -1,4 +1,5 @@
 == System Properties
+:source-highlighter: rouge
 Below, a number of relevant System Properties are listed.
 
 NOTE: With `getBoolean`, returns if a System Property with the provided {@code systemPropertyKey} either exists, is set to "yes" or is set to "true", see

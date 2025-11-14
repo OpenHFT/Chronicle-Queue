@@ -7,6 +7,7 @@ Neil Clifford
 :icons: font
 
 toc::[]
+:source-highlighter: rouge
 
 This document describes Chronicle Queue utility programs that have been created to help in the maintenance of your Chronicle Queue environment.
 

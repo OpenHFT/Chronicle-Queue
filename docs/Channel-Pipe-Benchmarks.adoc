@@ -1,5 +1,6 @@
 = Chronicle-Channel
 Peter Lawrey
+:lang: en-GB
 
 Support for distributed Channels based on Queue
 

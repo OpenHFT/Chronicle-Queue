@@ -1,4 +1,5 @@
 = Chronicle Queue Pre-toucher
+:source-highlighter: rouge
 
 [NOTE]
 ====

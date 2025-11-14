@@ -170,12 +170,12 @@ Chronicle recommends lots of high-speed RAM.
 This is because Chronicle uses the page cache and RAM is in effect a cache to the disk.
 There are two cases where having a high-speed disk will give you a real benefit:
 
-==== 1. Data rate
+==== Data rate
 
 If the rate of data that you are writing exceeds the disk write speed.
 In most applications this is unlikely to occur.
 
-==== 2. Page cache miss
+==== Page cache miss
 
 For Chronicle queues which write and read messages lineally across memory, we mitigate this situation with the use of the Chronicle pre-toucher.
 The pre-toucher ensures that the page is loaded into the page cache before being written into the queue.
