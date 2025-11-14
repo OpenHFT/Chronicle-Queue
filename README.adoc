@@ -5,6 +5,7 @@ Peter Lawrey, Rob Austin
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+:lang: en-GB
 
 Chronicle Queue is a broker-less, off-heap Java library for ultra-low-latency, persisted messaging at millions of events/sec.
 
@@ -39,6 +40,7 @@ and also supports random-access seek.
 link:https://player.vimeo.com/video/201989439[Why Use Chronicle Queue Between Microservices?]
 
 A number of relevant system properties are listed in link:docs/systemProperties.adoc[systemProperties.adoc].
+High-level architectural and operational choices are recorded in link:src/main/docs/decision-log.adoc[decision-log.adoc].
 
 == What Is Chronicle Queue?
 

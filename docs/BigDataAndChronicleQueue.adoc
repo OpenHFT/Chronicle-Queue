@@ -1,6 +1,8 @@
 = Big Data and Chronicle Queue
-:source-highlighter: rouge
 Peter Lawrey
+:toc:
+:lang: en-GB
+:source-highlighter: rouge
 
 == The Big Question
 
