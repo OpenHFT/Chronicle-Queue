@@ -45,11 +45,6 @@ public class ExcerptCommonTest extends QueueTestCommon {
         }
 
         @Override
-        public void sync() {
-            // Sync implementation
-        }
-
-        @Override
         public void close() {
             // Close resources if necessary
         }

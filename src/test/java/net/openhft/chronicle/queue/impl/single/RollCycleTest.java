@@ -341,13 +341,8 @@ public class RollCycleTest extends QueueTestCommon {
         }
 
         @Override
-        public void onAcquired(int cycle, File file) {
-            // System.out.println("Acquiring " + file);
-        }
-
-        @Override
         public void onReleased(int cycle, File file) {
-            // System.out.println("Releasing " + file);
+            // no-op
         }
     }
 }

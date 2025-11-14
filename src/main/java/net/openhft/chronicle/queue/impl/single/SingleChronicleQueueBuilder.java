@@ -149,6 +149,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * ========================
      */
 
+    @SuppressWarnings("EmptyMethod")
     public static void addAliases() {
         // static initialiser.
     }
