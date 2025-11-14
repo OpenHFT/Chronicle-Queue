@@ -36,7 +36,7 @@ All this can be done without expensive network sniffing/recording systems.
 === What was the library originally designed for?
 
 The original design was for a low-latency trading system which required persistence of everything in, and out, for a complete record of what happened, when, and for deterministic testing.
-The target round-trip time for persisting the request, processing, and persisting the response, was `1` micro-second.
+The target round-trip time for persisting the request, processing, and persisting the response, was `1` µs.
 
 Key principles are:
 
@@ -121,7 +121,7 @@ Chronicle Map is likely to be a better choice for this requirement.
 === What is the performance like?
 
 Single Chronicle Queue (single file per cycle) supports sub-microsecond latencies.
-If you use Wire, the typical latencies tend to be around one micro-second.
+If you use Wire, the typical latencies tend to be around 1 µs.
 You can still use raw writing of bytes if you need maximum performance.
 
 === With a tight reader loop, I see 100% utilization. Will there be processing capability left for anything else?
@@ -145,15 +145,15 @@ We plan to have a mode which reduces virtual memory use; even if it is a little 
 
 ===  How fast is fast?
 
-Chronicle Queue is designed to persist messages, and replay them in micro-second time.
-Simple messages take as low as `0.4` micro-seconds.
-Complex messages might take `10` micro-seconds to write and read.
+Chronicle Queue is designed to persist messages, and replay them in microsecond time.
+Simple messages take as low as `0.4` µs.
+Complex messages might take `10` µs to write and read.
 Also Chronicle Queue is designed to sustain millions of inserts and updates per second.
 For bursts of up to `10%` of your main memory, you can sustain rates of `1 - 3` GB/second written.
 
 For example,l a laptop with `8` GB of memory might handle bursts of `800` MB at a rate of `1` GB per second.
 A server with `64` GB of memory might handle a burst of `6.5` GB at a rate of `3` GB per second.
-If your key system is not measuring latency in micro-seconds, and throughput in thousands-per-second, then it is not that fast.
+If your key system is not measuring latency in µs, and throughput in thousands-per-second, then it is not that fast.
 
 === How does it scale?
 

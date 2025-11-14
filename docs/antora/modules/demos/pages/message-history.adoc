@@ -74,7 +74,7 @@ WARNING: Illegal reflective access by net.openhft.compiler.MyJavaFileManager (fi
 
 The microsecond timestamps are based on wall clock, however the nanosecond time stamps are based on the uptime of the machine.
 
-To decode this, you need to take the first nano-second time stamp and adjust further timestamps as deltas on the micro-second timestamp.
+To decode this, you need to take the first nanosecond time stamp and adjust further timestamps as deltas on the µs timestamp.
 
 The `DumpOutMain` writes the decoded messages as well as the bytes representing the first message.
 
