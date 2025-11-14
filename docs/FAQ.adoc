@@ -2,6 +2,8 @@
 :pp: ++
 :toc: manual
 :toclevels: 1
+:lang: en-GB
+:source-highlighter: rouge
 :css-signature: demo
 :toc-placement: preamble
 :icons: font

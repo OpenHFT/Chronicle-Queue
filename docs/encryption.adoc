@@ -1,4 +1,6 @@
-= Chroncicle Queue Encryption
+= Chronicle Queue Encryption
+:lang: en-GB
+:source-highlighter: rouge
 
 [NOTE]
 ====
