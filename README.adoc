@@ -48,12 +48,12 @@ You could consider a Chronicle Queue to be similar to a low latency broker-less 
 Chronicle Queue is a distributed unbounded persisted queue that:
 
 * supports asynchronous RMI and Publish/Subscribe interfaces with microsecond latencies.
-* passes messages between JVMs in under a microsecond
-* passes messages between JVMs on different machines via replication in under 10 microseconds
+* passes messages between JVMs in under 1 µs
+* passes messages between JVMs on different machines via replication in under 10 µs
 (<<Chronicle Queue Enterprise Edition,Enterprise feature>>)
 * provides stable, soft real-time latencies into the millions of messages per second for a single thread to one queue; with total ordering of every event.
 
-When publishing 40-byte messages, a high percentage of the time we achieve latencies under 1 microsecond.
+When publishing 40-byte messages, a high percentage of the time we achieve latencies under 1 µs.
 The 99th percentile latency is the worst 1 in 100, and the 99.9th percentile is the worst 1 in 1000 latency.
 
 .Latency to send/receive on the same machine.
@@ -104,8 +104,8 @@ As Chronicle Queue stores all saved data in memory-mapped files, this has a triv
 Chronicle put significant effort into achieving very low latency.
 In other products which focus on support of web applications, latencies of less than 40 milliseconds are fine as they are faster than you can see; for example, the frame rate of cinema is 24 Hz, or about 40 ms.
 
-Chronicle Queue aims to achieve latencies of under 40 microseconds for 99% to 99.99% of the time.
-Using Chronicle Queue without replication, we support applications with latencies below 40 microseconds end-to-end across multiple services.
+Chronicle Queue aims to achieve latencies of under 40 µs for 99% to 99.99% of the time.
+Using Chronicle Queue without replication, we support applications with latencies below 40 µs end-to-end across multiple services.
 Often the 99% latency of Chronicle Queue is entirely dependent on the choice of operating system and hard disk sub-system.
 
 ==== Compression
@@ -191,7 +191,7 @@ Again, Chronicle Queue can support millions of events per-second, per-server, an
 
 ==== Latency sensitive micro-services
 
-Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine in the order of magnitude of 1 microsecond; as well as between machines with a typical latency of 10 microseconds for modest throughputs of a few hundred thousands.
+Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine in the order of magnitude of 1 µs; as well as between machines with a typical latency of 10 µs for modest throughputs of a few hundred thousands.
 Chronicle Queue supports throughputs of millions of events per second, with stable microsecond latencies.
 
 See https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronicle Queue in Microservices]
@@ -203,7 +203,7 @@ All the information about the state of those components can be reproduced extern
 This significantly reduces the need for additional logging.
 However, any logging you do need can be recorded in great detail.
 This makes enabling `DEBUG` logging in production practical.
-This is because the cost of logging is very low; less than 10 microseconds.
+This is because the cost of logging is very low; less than 10 µs.
 Logs can be replicated centrally for log consolidation.
 Chronicle Queue is being used to store 100+ TB of data, which can be replayed from any point in time.
 
@@ -1791,7 +1791,7 @@ net.openhft.chronicle.queue.jitter.QueueReadJitterMain
 
 This code can be considered as a basic stack sampler profiler.
 This is assuming you base your code on the `net.openhft.chronicle.core.threads.EventLoop`, you can periodically sample the stacks to find a stall.
-It is recommended to not reduce the sample rate below 50 microseconds as this will produce too much noise
+It is recommended to not reduce the sample rate below 50 µs as this will produce too much noise
 
 It is likely to give you finer granularity than a typical profiler.
 As it is based on a statistical approach of where the stalls are, it takes many samples, to see which code has the highest grouping ( in other words the highest stalls ) and will output a trace that looks like the following :
@@ -1831,17 +1831,17 @@ we will often add a `net.openhft.chronicle.core.Jvm.safepoint` into the code bec
 
 * Results:
 
-In the test described above, the typical latency varied between 14 and 40 microseconds.
-The 99 percentile varied between 17 and 56 microseconds depending on the throughput being tested.
-Notably, the 99.93% latency varied between 21 microseconds and 41 milliseconds, a factor of 2000.
+In the test described above, the typical latency varied between 14 and 40 µs.
+The 99 percentile varied between 17 and 56 µs depending on the throughput being tested.
+Notably, the 99.93% latency varied between 21 µs and 41 ms, a factor of 2000.
 
 .Possible throughput results depending on acceptable latencies
 |===
 | Acceptable Latency | Throughput
-| < 30 microseconds 99.3% of the time | 7 million message per second
-| < 20 microseconds 99.9% of the time | 20 million messages per second
+| < 30 µs 99.3% of the time | 7 million message per second
+| < 20 µs 99.9% of the time | 20 million messages per second
 | < 1 milliseconds 99.9% of the time | 50 million messages per second
-| < 60 microseconds 99.3% of the time | 80 million message per second
+| < 60 µs 99.3% of the time | 80 million message per second
 |===
 
 === More Benchmarks
@@ -1854,7 +1854,7 @@ link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/pe
 
 Chronicle Queue is designed to out-perform its rivals such as Kafka.
 Chronicle Queue supports over an order-of-magnitude of greater throughput, together with an order-of-magnitude of lower latency, than Apache Kafka.
-While Kafka is faster than many of the alternatives, it doesn't match Chronicle Queue's ability to support throughputs of over a million events per second, while simultaneously achieving latencies of 1 to 20 microseconds.
+While Kafka is faster than many of the alternatives, it doesn't match Chronicle Queue's ability to support throughputs of over a million events per second, while simultaneously achieving latencies of 1 to 20 µs.
 
 Chronicle Queue handles more volume from a single thread to a single partition.
 This avoids the need for the complexity, and the downsides, of having partitions.
