@@ -1514,10 +1514,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         Instant hourly = Instant.parse("2018-02-12T00:59:59.999Z");
         Instant minutely = Instant.parse("2018-02-12T00:00:59.999Z");
 
-        Date epochHourlyFirstCycle = Date.from(hourly);
-        Date epochMinutelyFirstCycle = Date.from(minutely);
-        Date epochHourlySecondCycle = Date.from(hourly.plusMillis(1));
-        Date epochMinutelySecondCycle = Date.from(minutely.plusMillis(1));
+        final Date epochHourlyFirstCycle = Date.from(hourly);
+        final Date epochMinutelyFirstCycle = Date.from(minutely);
+        final Date epochHourlySecondCycle = Date.from(hourly.plusMillis(1));
+        final Date epochMinutelySecondCycle = Date.from(minutely.plusMillis(1));
 
         doTestEpochMove(epochHourlyFirstCycle.getTime(), MINUTELY);
         doTestEpochMove(epochHourlySecondCycle.getTime(), MINUTELY);

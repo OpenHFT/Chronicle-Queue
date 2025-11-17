@@ -161,7 +161,7 @@ public class PartialUpdateTest extends QueueTestCommon {
             int currentCycle = RollCycles.FAST_DAILY.toCycle(appender.lastIndexAppended());
             try (SingleChronicleQueueStore secondRollCycle = queue.storeForCycle(currentCycle, 0, false, null)) {
                 assertNotNull(secondRollCycle);
-                long previousWritePosition = secondRollCycle.writePosition();
+                final long previousWritePosition = secondRollCycle.writePosition();
                 long previousSequence = secondRollCycle.lastSequenceNumber(tailer);
                 printLastWritePositionAndSequence("before append last excerpt", tailer, secondRollCycle);
                 assertEquals(1, previousSequence);
@@ -194,7 +194,7 @@ public class PartialUpdateTest extends QueueTestCommon {
             int currentCycle = RollCycles.FAST_DAILY.toCycle(appender.lastIndexAppended());
             try (SingleChronicleQueueStore secondRollCycle = queue.storeForCycle(currentCycle, 0, false, null)) {
                 assertNotNull(secondRollCycle);
-                long previousWritePosition = secondRollCycle.writePosition();
+                final long previousWritePosition = secondRollCycle.writePosition();
                 long previousSequence = secondRollCycle.lastSequenceNumber(tailer);
                 printLastWritePositionAndSequence("before append last excerpt", tailer, secondRollCycle);
                 assertEquals(1, previousSequence);

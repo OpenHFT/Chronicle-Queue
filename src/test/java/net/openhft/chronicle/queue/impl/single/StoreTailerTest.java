@@ -231,7 +231,7 @@ public class StoreTailerTest extends QueueTestCommon {
                     tailer.readText();
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
                 tailer.readText();
@@ -256,7 +256,7 @@ public class StoreTailerTest extends QueueTestCommon {
                     readMethodCall(tailer);
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
                 assertEquals("Testing2", readMethodCall(tailer));
@@ -279,7 +279,7 @@ public class StoreTailerTest extends QueueTestCommon {
                     tailer.readText();
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
                 ((AbstractCloseable) tailer).singleThreadedCheckReset();
                 tailer.readText();
@@ -305,7 +305,7 @@ public class StoreTailerTest extends QueueTestCommon {
                     readMethodCall(tailer);
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
                 ((AbstractCloseable) tailer).singleThreadedCheckReset();
                 assertEquals("Testing2", readMethodCall(tailer));

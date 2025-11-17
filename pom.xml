@@ -414,6 +414,19 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Module specific Checkstyle wiring (reuse global rules) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <configLocation>${checkstyle.config.location}</configLocation>
+                    <failOnViolation>true</failOnViolation>
+                    <logViolationsToConsole>true</logViolationsToConsole>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <violationSeverity>${checkstyle.violationSeverity}</violationSeverity>
+                </configuration>
+            </plugin>
         </plugins>
 
     </build>
@@ -463,6 +476,36 @@
                                     <shadedClassifierName>all</shadedClassifierName>
                                     <createDependencyReducedPom>false</createDependencyReducedPom>
                                 </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>module-quality</id>
+            <activation>
+                <jdk>[11,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>4.9.8.1</version>
+                        <configuration>
+                            <effort>Max</effort>
+                            <threshold>Low</threshold>
+                            <includeTests>true</includeTests>
+                            <failOnError>true</failOnError>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>spotbugs-main</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>spotbugs</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>

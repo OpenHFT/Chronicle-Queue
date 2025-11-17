@@ -224,7 +224,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             }
             Jvm.pause(5);
         }
-        long timeToWriteMillis = System.currentTimeMillis() - startTime;
+        final long timeToWriteMillis = System.currentTimeMillis() - startTime;
 
         final StringBuilder writerExceptions = new StringBuilder();
         writers.stream().filter(w -> w.exception != null).forEach(w -> {

@@ -56,7 +56,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             queue.refreshDirectoryListing();
 
-            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            final RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             assertEquals(toHexString(secondCycle.firstIndex), toHexString(queue.firstIndex()));
             assertEquals(toHexString(secondCycle.lastIndex), toHexString(queue.lastIndex()));
 
@@ -75,7 +75,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
-            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            final RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
 
             ExcerptTailer tailer = queue.createTailer();
@@ -101,7 +101,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
-            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            final RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
 
             ExcerptTailer tailer = queue.createTailer();
@@ -126,7 +126,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
-            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            final RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
 
             ExcerptTailer tailer = queue.createTailer();
@@ -152,7 +152,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
-            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            final RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
 
             ExcerptTailer tailer = queue.createTailer();
@@ -177,7 +177,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
-            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            final RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
 
             ExcerptTailer tailer = queue.createTailer();

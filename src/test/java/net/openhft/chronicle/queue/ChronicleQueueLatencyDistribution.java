@@ -115,11 +115,9 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
     }
 
     protected void runTest(@NotNull ChronicleQueue queue, int throughput) throws InterruptedException {
-/*
-        Jvm.setExceptionHandlers(PrintExceptionHandler.ERR,
-                PrintExceptionHandler.OUT,
-                PrintExceptionHandler.OUT);
-*/
+        // Jvm.setExceptionHandlers(PrintExceptionHandler.ERR,
+        //         PrintExceptionHandler.OUT,
+        //         PrintExceptionHandler.OUT);
 
         Histogram histogramCo = new Histogram();
         Histogram histogramIn = new Histogram();
@@ -171,22 +169,19 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                                 // if (count % 1_000_000 == 0) System.out.println("read  " + count);
                             }
                         }
-/*
-                        if (SAMPLING) {
-                            StackTraceElement[] stack = sampler.getAndReset();
-                            if (stack != null) {
-                                if (!stack[0].getClassName().equals(name) &&
-                                        !stack[0].getClassName().equals("java.lang.Thread")) {
-                                    StringBuilder sb = new StringBuilder();
-                                    Jvm.trimStackTrace(sb, stack);
-                                   // System.out.println(sb);
-                                }
-                            } else if (!found) {
-                                Thread.yield();
-                            }
-                        }
-                        */
-
+                        // if (SAMPLING) {
+                        //     StackTraceElement[] stack = sampler.getAndReset();
+                        //     if (stack != null) {
+                        //         if (!stack[0].getClassName().equals(name) &&
+                        //                 !stack[0].getClassName().equals("java.lang.Thread")) {
+                        //             StringBuilder sb = new StringBuilder();
+                        //             Jvm.trimStackTrace(sb, stack);
+                        //             // System.out.println(sb);
+                        //         }
+                        //     } else if (!found) {
+                        //         Thread.yield();
+                        //     }
+                        // }
                     } catch (Exception e) {
                         break;
                     }

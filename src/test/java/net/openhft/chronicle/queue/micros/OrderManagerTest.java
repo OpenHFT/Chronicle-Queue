@@ -75,7 +75,7 @@ public class OrderManagerTest extends QueueTestCommon {
                 orderManager.onOrderIdea(new OrderIdea("EURUSD", Side.Buy, 1.1165, 1e6)); // expected to trigger
             }
 
-// what we expect to happen
+            // what we expect to happen
             OrderListener listener = createMock(OrderListener.class);
             listener.onOrder(new Order("EURUSD", Side.Buy, 1.1167, 1_000_000));
             replay(listener);
@@ -197,8 +197,8 @@ public class OrderManagerTest extends QueueTestCommon {
                     combiner.onSidedPrice(new SidedPrice("EURUSD3", 123456789100L, Side.Sell, 1.1173, 2.5e6));
                     combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
                 }
-            }
-//            DumpQueueMain.dump(queuePath.getAbsolutePath());
+                }
+            // DumpQueueMain.dump(queuePath.getAbsolutePath());
 
             for (int i = 0; i < 10; i++) {
                 // read one message at a time

@@ -48,7 +48,7 @@ public enum RunLargeQueueMain {
 
             // Main write-read performance loop
             for (int t = 1; t <= FILE_SIZE; t++) {
-                long writeStart = System.currentTimeMillis();
+                final long writeStart = System.currentTimeMillis();
 
                 // Write 1 GB of data in chunks
                 for (int i = 0; i < 1_000_000_000; i += MSG_SIZE) {

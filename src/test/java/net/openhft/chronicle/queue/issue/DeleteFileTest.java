@@ -57,7 +57,7 @@ public class DeleteFileTest {
                     tailer0 = queue.createTailer();
 
                 // a tailer created at the start with a different queue to the appender but not used until after the file was deleted.
-                String twoA2 = tailerA2.readText();
+                final String twoA2 = tailerA2.readText();
 
                 // before this delay, the tailer with the same queue as the appender is still using the cached directory listing.
                 clock[0] += delay;

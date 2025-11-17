@@ -80,7 +80,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
-//            assertFalse(hasEOFAtEndOfFile(file1));
+            // assertFalse(hasEOFAtEndOfFile(file1));
 
             writer2.accept(appender);
 
@@ -244,14 +244,13 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .testBlockSize()
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
-
             for (int i = 0; i < strings.length; ++i) {
                 try (DocumentContext dc = appender.writingDocument(meta[i])) {
                     dc.wire().write("key").text(strings[i]);
                 }
                 stp.advanceMillis(millis);
             }
-//            System.out.println(queue.dump());
+            // System.out.println(queue.dump());
 
             // read all (meta + data)
             List<String> allReads = readKeyed(queue, true);
