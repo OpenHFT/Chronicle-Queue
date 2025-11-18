@@ -673,7 +673,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             storeFilePath = new File(QUEUE_METADATA_FILE);
         } else {
             storeFilePath = new File(path, QUEUE_METADATA_FILE);
-            path.mkdirs();
+            if (!path.exists() && !path.mkdirs() && !path.exists()) {
+                Jvm.warn().on(getClass(), "Unable to create queue directory " + path.getAbsolutePath());
+            }
         }
         return storeFilePath;
     }

@@ -53,7 +53,16 @@ public class InternalDumpMain {
      */
     public static void dump(@NotNull String path) throws FileNotFoundException {
         File path2 = new File(path);
-        PrintStream out = FILE == null ? System.out : new PrintStream(FILE);
+        PrintStream out;
+        if (FILE == null) {
+            out = System.out;
+        } else {
+            try {
+                out = new PrintStream(FILE, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException("UTF-8 encoding not supported", e);
+            }
+        }
         long upperLimit = Long.MAX_VALUE;
         dump(path2, out, upperLimit);
     }
@@ -74,8 +83,7 @@ public class InternalDumpMain {
                             : (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX);
             File[] files = path.listFiles(filter);
             if (files == null) {
-                err.println("Directory not found " + path);
-                System.exit(1);
+                throw new IllegalArgumentException("Directory not found " + path);
             }
 
             Arrays.sort(files);

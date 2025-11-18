@@ -18,7 +18,17 @@ import java.io.File;
 @FunctionalInterface
 public interface StoreFileListener {
     @Deprecated(/* use StoreFileListener.noOp() instead, to be removed in x.29 */)
-    StoreFileListener NO_OP = StoreFileListeners.NO_OP;
+    StoreFileListener NO_OP = new StoreFileListener() {
+        @Override
+        public boolean isActive() {
+            return false;
+        }
+
+        @Override
+        public void onReleased(int cycle, File file) {
+            // no-op
+        }
+    };
 
     /**
      * @return a no-op StoreFileListener, which does nothing when files are acquired or released.

@@ -478,7 +478,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
 
-            ExcerptTailer tailer = queue.createTailer();
+            final ExcerptTailer tailer = queue.createTailer();
 
             // delete the store files
             Files.delete(Paths.get(firstCycle.filename));

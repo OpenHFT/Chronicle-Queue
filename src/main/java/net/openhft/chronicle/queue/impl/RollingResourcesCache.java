@@ -171,5 +171,15 @@ public class RollingResourcesCache {
             this.path = path;
             this.parentPath = path.getParentFile();
         }
+
+        @Override
+        public String toString() {
+            return "Resource{" +
+                    "millis=" + millis +
+                    ", text='" + text + '\'' +
+                    ", path=" + path +
+                    ", parentPath=" + parentPath +
+                    '}';
+        }
     }
 }

@@ -170,6 +170,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
                 "lock=" + lock +
                 ", path=" + path +
                 ", lockKey='" + lockKey + '\'' +
+                ", tableStore=" + tableStore +
                 '}';
     }
 }

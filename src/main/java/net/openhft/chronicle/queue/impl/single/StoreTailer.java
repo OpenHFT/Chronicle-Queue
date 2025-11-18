@@ -1109,13 +1109,13 @@ class StoreTailer extends AbstractCloseable
         final Wire wire2 = wireType.apply(bytes);
         wire2.usePadding(s.dataVersion() > 0);
         final Wire wire = readAnywhere(wire2);
-        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
+        assert !QueueSystemProperties.checkIndex() || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
 
         final Wire wireForIndexOld = wireForIndex;
         wireForIndex = readAnywhere(wireType.apply(s.bytes()));
-        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wireForIndex);
+        assert !QueueSystemProperties.checkIndex() || headerNumberCheck(wireForIndex);
         assert wire != wireForIndexOld;
 
         if (wireForIndexOld != null) {
@@ -1637,9 +1637,9 @@ class StoreTailer extends AbstractCloseable
     /**
      * Returns the current store, initializing it if necessary.
      *
-     * @return The current {@link SingleChronicleQueueStore}.
+     * @return The current {@link SingleChronicleQueueStore}, or {@code null} if no store is available.
      */
-    @NotNull
+    @Nullable
     private SingleChronicleQueueStore store() {
         if (store == null)
             if (!cycle(cycle()))

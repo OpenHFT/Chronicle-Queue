@@ -77,13 +77,13 @@ public class PartialUpdateTest extends QueueTestCommon {
     @BeforeClass
     public static void disableCheckIndexAssertions() {
         // This turns off assertions, so we see what would happen in the real world
-        originalCheckIndexValue = QueueSystemProperties.CHECK_INDEX;
-        QueueSystemProperties.CHECK_INDEX = false;
+        originalCheckIndexValue = QueueSystemProperties.checkIndex();
+        QueueSystemProperties.setCheckIndex(false);
     }
 
     @AfterClass
     public static void restoreCheckIndexAssertions() {
-        QueueSystemProperties.CHECK_INDEX = originalCheckIndexValue;
+        QueueSystemProperties.setCheckIndex(originalCheckIndexValue);
     }
 
     @Test

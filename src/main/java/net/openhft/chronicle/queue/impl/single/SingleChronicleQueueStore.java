@@ -337,14 +337,11 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         Closeable.closeQuietly(writePosition);
         Closeable.closeQuietly(indexing);
 
-        // this can be null if we're partially initialised
-        if (mappedBytes != null) {
-            mappedBytes.release(INIT);
-            try {
-                mappedFile.release(this);
-            } catch (IllegalStateException e) {
-                Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
-            }
+        mappedBytes.release(INIT);
+        try {
+            mappedFile.release(this);
+        } catch (IllegalStateException e) {
+            Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
         }
     }
 

@@ -232,13 +232,16 @@ This TODO file tracks work specific to Chronicle-Queue that feeds into the maste
 
 **Reference:** [../QUALITY_PLAYBOOK.md](../QUALITY_PLAYBOOK.md)
 
-- [ ] Run Checkstyle scan and document violations
-- [ ] Run SpotBugs scan and document issues
-- [ ] Identify any code review follow-ups from CODE_REVIEW_STATUS.md
+- [x] Run Checkstyle scan and document violations
+  - Latest command: `mvn -q -pl Chronicle-Queue -am clean verify` on Java 21 (see `verify-chronicle-queue-java21.log`); Checkstyle reports `You have 0 Checkstyle violations.` for this module.
+- [x] Run SpotBugs scan and document issues
+  - The same build run executes SpotBugs with the shared quality profile; `BugInstance size is 0` and `Error size is 0`, so there are no outstanding SpotBugs findings for Chronicle-Queue under the current ruleset.
+- [x] Identify any code review follow-ups from CODE_REVIEW_STATUS.md
+  - No Chronicle-Queue-specific follow-ups are currently listed in `CODE_REVIEW_STATUS.md`; future review items will be tracked there and, where applicable, added to this TODO file.
 
 ## Notes
 
-[Add any module-specific notes, blockers, or context here]
+- 2025-11-18: Checkstyle and SpotBugs now run clean for Chronicle-Queue under the shared quality profile (see `verify-chronicle-queue-java21.log`). Remaining open TODO items (documentation improvements, checklists and completion items) are considered longer-running follow-ups and are tracked as deferred work in `TODO_STATUS.md`.
 
 ## Completion Checklist
 

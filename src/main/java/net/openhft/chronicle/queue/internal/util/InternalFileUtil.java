@@ -122,6 +122,9 @@ public final class InternalFileUtil {
      *                                       supported for the current platform (e.g. Windows).
      */
     public static FileState state(@NotNull File file) {
+        if (!getAllOpenFilesIsSupportedOnOS()) {
+            return stateWindows(file);
+        }
         try {
             return state(file, getAllOpenFiles());
         } catch (IOException e) {
