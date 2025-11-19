@@ -73,25 +73,25 @@ Principles:
 === Functional Requirements (QUEUE-FN-*)
 
 * `QUEUE-FN-001` (append-only durability):
-  * tests should append messages, close the queue, reopen it and verify that all acknowledged messages are present in order;
-  * crash-recovery tests may simulate abrupt termination between appends and reopen the queue to ensure no partial messages are exposed.
+** tests should append messages, close the queue, reopen it and verify that all acknowledged messages are present in order;
+** crash-recovery tests may simulate abrupt termination between appends and reopen the queue to ensure no partial messages are exposed.
 * `QUEUE-FN-002` (tailers with independent positions):
-  * tests should create multiple tailers over the same queue, advance them independently and confirm that each sees the expected sequence of messages.
+** tests should create multiple tailers over the same queue, advance them independently and confirm that each sees the expected sequence of messages.
 * `QUEUE-FN-003` (random access by index):
-  * tests should store indices at which key messages were written, then seek back to them and verify that the right messages are returned.
+** tests should store indices at which key messages were written, then seek back to them and verify that the right messages are returned.
 * `QUEUE-FN-004` and `QUEUE-FN-005` (builder configuration and Wire integration):
-  * tests should exercise different builder configurations and use Chronicle-Wire marshalling over queues for end-to-end verification.
+** tests should exercise different builder configurations and use Chronicle-Wire marshalling over queues for end-to-end verification.
 
 === Non-Functional Requirements (QUEUE-NF-*)
 
 * `QUEUE-NF-P-*` (performance):
-  * benchmark tests should report median and tail latencies and throughput, and compare them against documented targets;
-  * where possible, tests should be run under realistic load and hardware configurations.
+** benchmark tests should report median and tail latencies and throughput, and compare them against documented targets;
+** where possible, tests should be run under realistic load and hardware configurations.
 * `QUEUE-NF-S-*` (security-related behaviour):
-  * tests should verify that corruption is not introduced by out-of-bounds writes and that queue structures can be opened and scanned safely, relying on Chronicle-Bytes safety guarantees;
-  * additional tests should validate the documented encryption boundary by ensuring that applying external or application-level encryption does not break queue semantics.
+** tests should verify that corruption is not introduced by out-of-bounds writes and that queue structures can be opened and scanned safely, relying on Chronicle-Bytes safety guarantees;
+** additional tests should validate the documented encryption boundary by ensuring that applying external or application-level encryption does not break queue semantics.
 * `QUEUE-NF-O-*` (operability):
-  * tests should confirm that system properties in `docs/systemProperties.adoc` have the documented effects (for example enabling warnings or consistency checks).
+** tests should confirm that system properties in `docs/systemProperties.adoc` have the documented effects (for example enabling warnings or consistency checks).
 
 == Resource Management and Leak Detection
 
@@ -108,9 +108,9 @@ When implementing new features or changing existing behaviour:
 
 * identify the affected requirements in `project-requirements.adoc` and, where appropriate, add or update requirement entries;
 * design tests that:
-  * exercise normal behaviour and edge cases;
-  * cover interactions with roll cycles and indexing;
-  * validate behaviour across restart and under concurrent access where relevant;
+** exercise normal behaviour and edge cases;
+** cover interactions with roll cycles and indexing;
+** validate behaviour across restart and under concurrent access where relevant;
 * keep unit tests fast and deterministic; move long-running scenarios into dedicated integration or performance tests.
 
 Tests should be kept as self-documenting as possible, with clear method names and minimal inline commentary that explains non-obvious invariants or requirements.

@@ -4,9 +4,6 @@ Peter Lawrey
 :lang: en-GB
 :source-highlighter: rouge
 
-//removed the link as web page is not available
-//image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
-
 High-level decisions around file format, concurrency, durability, encryption, and retention are recorded in link:../src/main/docs/decision-log.adoc[decision-log.adoc].
 
 == How Chronicle Works
@@ -27,7 +24,8 @@ Chronicle behaves like a management interface over off-heap memory, so that you 
 
 Chronicle uses `RandomAccessFiles` while managing memory, and this choice brings a great deal of possibilities.
 Random access files permit non-sequential, or random, access to a files contents.
-To access a file randomly, you open the file, seek a particular location, and then read from, or write to, that file. `RandomAccessFiles` can be seen as large C-type byte arrays that allows you to access any random index directly using pointers.
+To access a file randomly, you open the file, seek a particular location, and then read from, or write to, that file.
+`RandomAccessFiles` can be seen as large C-type byte arrays that allows you to access any random index directly using pointers.
 File portions can be used as `ByteBuffers` if the portion is mapped into memory.
 
 === What is the effect of page faults when we have a huge Chronicle and not enough RAM ?

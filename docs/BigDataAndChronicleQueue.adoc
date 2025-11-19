@@ -15,9 +15,6 @@ Every reader sees every message, and a reader can join at any time and still see
 We assume that you can read/scan through messages fast enough that, even if you are not interested in most messages, it will still be fast enough.
 These are not consumers as such, and messages do not disappear after reading them.
 
-//removed the link as the web page is not available
-//image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
-
 Retaining every message has a number of advantages:
 
 * a message can be replayed as many times as is needed.
@@ -95,17 +92,20 @@ It can outperform many data storage solutions written in `C`.
 You might be wondering, how is this possible given that well written `C` is usually faster than Java.
 
 You need a degree of protection between your application and your data storage to minimise the risk of corruption.
-As `Java` uses a `JVM`, it already has an abstraction layer, and a degree of protection. If an application throws an exception, this does not mean the data structure is corrupted.
+As `Java` uses a `JVM`, it already has an abstraction layer, and a degree of protection.
+If an application throws an exception, this does not mean the data structure is corrupted.
 To get a degree of isolation in `C`, many data storage solutions use `TCP`.
 The overhead of using `TCP`, even over loopback, can exceed the benefit of using `C`, and the throughput/latencies of Chronicle Queue can be `10x` greater by being able to use the data in-process.
 Chronicle Queue supports sharing of the data structure in memory for multiple JVMs, avoiding the need to use TCP to share data.
 
 === What does the data structure look like?
 
-One of our key objectives is transparency. We have worked hard to make sure you can see exactly what has been written to this data structure.
+One of our key objectives is transparency.
+We have worked hard to make sure you can see exactly what has been written to this data structure.
 
 We use `YAML` as this is a format which is designed to be readable.
-`JSON` and `XML`, we see, as a subset of `Javascript` and `SGML`, and not as readable. We support `JSON` for messaging with browsers.
+`JSON` and `XML`, we see, as a subset of `Javascript` and `SGML`, and not as readable.
+We support `JSON` for messaging with browsers.
 For performance reasons we use a binary form of `YAML`, which can be automatically translated to `YAML` for viewing.
 
 .Order class extends SelfDescribingMarshallable for helper methods

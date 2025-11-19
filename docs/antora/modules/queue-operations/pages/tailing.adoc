@@ -196,29 +196,19 @@ If this is prevented by an error, the same message will be read on each restart.
 
 == Command Line Tools - Reading and Writing a Chronicle Queue
 
-Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
-
-[source,text]
-----
-\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
-ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
-���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-�����������������������������������������������������������������
-----
+Chronicle Queue stores its data in binary format, with a file extension of `cq4`.
 
 This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.
 This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
 
-You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`. `DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue.
+You can dump the queue to the terminal using `net.openhft.chronicle.queue.main.DumpMain` or `net.openhft.chronicle.queue.ChronicleReaderMain`.
+`DumpMain` performs a simple dump to the terminal while `ChronicleReaderMain` handles more complex operations, e.g. tailing a queue.
 They can both be run from the command line in a number of ways described below.
 
 == DumpMain
 
-TIP: The canonical CLI reference for `DumpMain` lives at xref:command-line:command_line_tools.adoc#_dumpmain[]. Use it to double-check flags before scripting automation.
+TIP: The canonical CLI reference for `DumpMain` lives at xref:command-line:command_line_tools.adoc#dumpmain[].
+Use it to double-check flags before scripting automation.
 
 If you have a project pom file that includes the Chronicle-Queue artifact, you can read a `cq4` file with the following command:
 
