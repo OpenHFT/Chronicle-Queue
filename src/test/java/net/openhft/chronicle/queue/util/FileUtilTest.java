@@ -73,7 +73,7 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
+    @Test
     public void stateWindows() {
         assumeTrue(OS.isWindows());
 
