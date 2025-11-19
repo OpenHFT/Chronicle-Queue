@@ -57,7 +57,7 @@ public class ThroughputPerfMain {
         long start = System.nanoTime();
         long count = 0;
         nbs = BytesStore.nativeStoreWithFixedCapacity(SIZE);
-        AffinityLock lock = AffinityLock.acquireCore();
+        final AffinityLock lock = AffinityLock.acquireCore();
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSizeMB << 20)
@@ -74,7 +74,7 @@ public class ThroughputPerfMain {
 
         nbs.releaseLast();
         long mid = System.nanoTime();
-        long time1 = mid - start;
+        final long time1 = mid - start;
 
         Bytes<?> bytes = Bytes.allocateElasticDirect(SIZE);
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
@@ -91,7 +91,7 @@ public class ThroughputPerfMain {
         }
         bytes.releaseLast();
         long end = System.nanoTime();
-        long time2 = end - mid;
+        final long time2 = end - mid;
         lock.close();
 
         System.out.println("-Dtime=" + TIME +

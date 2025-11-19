@@ -1,3 +1,7 @@
+ = Chronicle Queue Data and Telemetry Disclaimer
+:lang: en-GB
+:source-highlighter: rouge
+
 == Data
 
 This product uses Google Analytics, a web analytics service provided by Google, Inc.("Google").

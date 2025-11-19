@@ -19,10 +19,10 @@ import static org.junit.Assert.assertTrue;
 // For use with C++ RawAccessJava. Called from C++
 public class RawAccessJavaTest extends QueueTestCommon {
 
-    private final long QUEUE_HEADER_SIZE = 4;
-    private final long RAW_SIZE_PREFIX = 4;
+    private final long queueHeaderSize = 4;
+    private final long rawSizePrefix = 4;
 
-    private final long COUNT = 10;
+    private final long messageCount = 10;
 
     private boolean assert_from_cpp() {
         String env = System.getProperty("chronicle.test.env");
@@ -30,7 +30,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void Tailer() {
+    public void tailerInterop() {
         if (!assert_from_cpp())
             return;
 
@@ -41,19 +41,19 @@ public class RawAccessJavaTest extends QueueTestCommon {
 
             ExcerptTailer tailer = cq.createTailer();
 
-            for (int i = 0; i < COUNT; ++i) {
+            for (int i = 0; i < messageCount; ++i) {
                 try (DocumentContext dc = tailer.readingDocument()) {
 
                     Bytes<?> bytes = dc.wire().bytes();
 
-                    bytes.readSkip(-QUEUE_HEADER_SIZE);
+                    bytes.readSkip(-queueHeaderSize);
                     int header = bytes.readInt();
 
                     // document length, inc 4-byte length
                     int length = Wires.lengthOf(header);
 
                     // actual length of data
-                    int data_length = bytes.readInt();
+                    int dataLength = bytes.readInt();
 
                     assertEquals(bytes.readByte(), (byte) 0xab);
                     assertEquals(bytes.readShort(), (short) 12);
@@ -72,7 +72,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void Appender() {
+    public void appenderInterop() {
         if (!assert_from_cpp())
             return;
 
@@ -83,14 +83,14 @@ public class RawAccessJavaTest extends QueueTestCommon {
 
              ExcerptAppender appender = cq.createAppender()) {
 
-            for (int i = 0; i < COUNT; ++i) {
+            for (int i = 0; i < messageCount; ++i) {
                 try (DocumentContext dc = appender.writingDocument()) {
 
                     Bytes<?> bytes = dc.wire().bytes();
 
                     // will contain the size of the blob
                     long start = bytes.writePosition();
-                    bytes.writeSkip(RAW_SIZE_PREFIX);
+                    bytes.writeSkip(rawSizePrefix);
 
                     {
                         bytes.writeByte((byte) 0xab);
@@ -104,7 +104,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
                     }
 
                     long end = bytes.writePosition();
-                    bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
+                    bytes.writeInt(start, (int) (end - start - rawSizePrefix));
                 }
             }
         }
@@ -122,12 +122,12 @@ public class RawAccessJavaTest extends QueueTestCommon {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
                 Bytes<?> bytes = dc.wire().bytes();
-                bytes.readSkip(-QUEUE_HEADER_SIZE);
+                bytes.readSkip(-queueHeaderSize);
                 int header = bytes.readInt();
                 int totalLength = Wires.lengthOf(header);
                 int payloadLength = bytes.readInt();
                 assertEquals("Length prefix should match payload content",
-                        totalLength - RAW_SIZE_PREFIX, payloadLength);
+                        totalLength - rawSizePrefix, payloadLength);
             }
         } finally {
             IOTools.deleteDirWithFiles(dir, 2);
@@ -138,7 +138,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
         try (DocumentContext dc = appender.writingDocument()) {
             Bytes<?> bytes = dc.wire().bytes();
             long start = bytes.writePosition();
-            bytes.writeSkip(RAW_SIZE_PREFIX);
+            bytes.writeSkip(rawSizePrefix);
             bytes.writeByte((byte) 0xab);
             bytes.writeShort((short) 12);
             bytes.writeInt(123);
@@ -148,7 +148,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
             bytes.writeChar('a');
             bytes.write8bit("Hello World");
             long end = bytes.writePosition();
-            bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
+            bytes.writeInt(start, (int) (end - start - rawSizePrefix));
         }
     }
 
@@ -162,16 +162,16 @@ public class RawAccessJavaTest extends QueueTestCommon {
             try (DocumentContext dc = appender.writingDocument()) {
                 Bytes<?> bytes = dc.wire().bytes();
                 long start = bytes.writePosition();
-                bytes.writeSkip(RAW_SIZE_PREFIX);
+                bytes.writeSkip(rawSizePrefix);
                 long end = bytes.writePosition();
-                bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
+                bytes.writeInt(start, (int) (end - start - rawSizePrefix));
             }
             appender.writeText("follow-up");
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
                 Bytes<?> bytes = dc.wire().bytes();
-                bytes.readSkip(-QUEUE_HEADER_SIZE);
+                bytes.readSkip(-queueHeaderSize);
                 bytes.readInt(); // header
                 int payloadLength = bytes.readInt();
                 assertEquals(0, payloadLength);

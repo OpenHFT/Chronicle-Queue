@@ -176,7 +176,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
             // StoreFileListener#onAcquired() is called on the background resource releaser thread
             BackgroundResourceReleaser.releasePendingResources();
-            int acquiredBefore = storeFileListener.acquiredCounts.size();
+            final int acquiredBefore = storeFileListener.acquiredCounts.size();
             storeFileListener.reset();
 
             final ExcerptTailer tailer = queue.createTailer();

@@ -6,7 +6,9 @@ package net.openhft.chronicle.queue.internal.writer;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
 import static net.openhft.chronicle.queue.ChronicleReaderMain.addOption;
@@ -72,7 +74,7 @@ public class ChronicleWriterMain {
      * @param message Optional message to display before the help
      */
     private void printHelpAndExit(final Options options, int status, String message) {
-        final PrintWriter writer = new PrintWriter(System.out);
+        final PrintWriter writer = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
         new HelpFormatter().printHelp(
                 writer,
                 180,
@@ -85,7 +87,8 @@ public class ChronicleWriterMain {
                 true
         );
         writer.flush();
-        System.exit(status);
+        String errorMessage = message == null ? "Usage requested" : message;
+        throw new IllegalArgumentException(errorMessage);
     }
 
     /**

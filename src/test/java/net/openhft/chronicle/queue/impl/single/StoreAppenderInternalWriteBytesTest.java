@@ -60,12 +60,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
-        /**
-         final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
-         final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
-         IOTools.deleteDirWithFiles(sourceDir.toFile());
-         IOTools.deleteDirWithFiles(destinationDir.toFile());
-         */
 
         populateSourceQueue(sourceDir);
 
@@ -100,7 +94,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     private void assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
         try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
              final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
-//            System.out.println(destinationQueue.dump());
+            // System.out.println(destinationQueue.dump());
             /*
              * Normalise destination EOFs first
              *
@@ -143,7 +137,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         @Override
         public void run() {
-//            LOGGER.info("Starting copier...");
+            // LOGGER.info("Starting copier...");
             try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
                  final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
@@ -173,17 +167,15 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                                 assertEquals(Long.toHexString(index), Long.toHexString(dtIndex));
                         }
                         prev.clear().append(buffer);
-//                        if (false && index %17 == 0) {
                         try (final ChronicleQueue dq = createQueue(destinationDir, null);
                              final ExcerptAppender da = dq.createAppender()) {
                             assumeNotNull(dq);
                             assumeNotNull(da);
                         }
-                        //                      }
                     }
                 }
             }
-//            LOGGER.info("Copier finished");
+            // LOGGER.info("Copier finished");
         }
     }
 

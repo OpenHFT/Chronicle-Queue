@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -74,7 +75,7 @@ public class OrderManagerTest extends QueueTestCommon {
                 orderManager.onOrderIdea(new OrderIdea("EURUSD", Side.Buy, 1.1165, 1e6)); // expected to trigger
             }
 
-// what we expect to happen
+            // what we expect to happen
             OrderListener listener = createMock(OrderListener.class);
             listener.onOrder(new Order("EURUSD", Side.Buy, 1.1167, 1_000_000));
             replay(listener);
@@ -95,6 +96,7 @@ public class OrderManagerTest extends QueueTestCommon {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
             } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to clean queue path " + queuePath, e);
             }
         }
     }
@@ -168,6 +170,7 @@ public class OrderManagerTest extends QueueTestCommon {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to clean queues", e);
             }
         }
     }
@@ -194,8 +197,8 @@ public class OrderManagerTest extends QueueTestCommon {
                     combiner.onSidedPrice(new SidedPrice("EURUSD3", 123456789100L, Side.Sell, 1.1173, 2.5e6));
                     combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
                 }
-            }
-//            DumpQueueMain.dump(queuePath.getAbsolutePath());
+                }
+            // DumpQueueMain.dump(queuePath.getAbsolutePath());
 
             for (int i = 0; i < 10; i++) {
                 // read one message at a time
@@ -228,11 +231,13 @@ public class OrderManagerTest extends QueueTestCommon {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
             } catch (Exception ignore) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath, ignore);
             }
 
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception ignore) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath2, ignore);
             }
         }
     }

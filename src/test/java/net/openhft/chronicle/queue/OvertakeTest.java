@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.Closeable;
@@ -27,18 +28,18 @@ public class OvertakeTest extends QueueTestCommon {
 
     private String path;
 
-    private long a_index;
+    private long appendedIndex;
 
     private int messages = 500;
 
     private static long doReadBad(@NotNull ExcerptTailer tailer, int expected, boolean additionalClose) {
         int[] i = {0};
-        long t_index = 0;
+        long tailIndex = 0;
         while (true) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (!dc.isPresent())
                     break;
-                t_index = tailer.index();
+                tailIndex = tailer.index();
 
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
@@ -51,7 +52,7 @@ public class OvertakeTest extends QueueTestCommon {
             }
         }
         assertEquals(expected, i[0]);
-        return t_index;
+        return tailIndex;
     }
 
     @Before
@@ -70,7 +71,7 @@ public class OvertakeTest extends QueueTestCommon {
                         }
                 ));
             }
-            a_index = appender.lastIndexAppended();
+            appendedIndex = appender.lastIndexAppended();
         }
     }
 
@@ -88,13 +89,13 @@ public class OvertakeTest extends QueueTestCommon {
                 .build()) {
             ExcerptTailer tailer = tailer_queue.createTailer();
             tailer = tailer.toStart();
-            long t_index;
-            t_index = doReadBad(tailer, messages, false);
-            assertEquals(a_index, t_index);
+            long tailIndex;
+            tailIndex = doReadBad(tailer, messages, false);
+            assertEquals(appendedIndex, tailIndex);
             tailer = tailer_queue.createTailer();
             tailer = tailer.toStart();
-            t_index = doReadBad(tailer, messages, true);
-            assertEquals(a_index, t_index);
+            tailIndex = doReadBad(tailer, messages, true);
+            assertEquals(appendedIndex, tailIndex);
         }
     }
 
@@ -103,6 +104,7 @@ public class OvertakeTest extends QueueTestCommon {
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception ignored) {
+            Jvm.warn().on(OvertakeTest.class, "Failed to delete queue directory " + path, ignored);
         }
     }
 
@@ -112,7 +114,7 @@ public class OvertakeTest extends QueueTestCommon {
         ExecutorService execService = Executors.newFixedThreadPool(2,
                 new NamedThreadFactory("test"));
         SynchronousQueue<Long> sync = new SynchronousQueue<>();
-        long t_index;
+        long tailIndex;
 
         MyAppender myapp = new MyAppender(sync);
         Future<Long> f = execService.submit(myapp);
@@ -120,12 +122,12 @@ public class OvertakeTest extends QueueTestCommon {
                 .testBlockSize()
                 .writeBufferMode(BufferMode.None)
                 .build()) {
-            t_index = 0;
-            MyTailer mytailer = new MyTailer(tailer_queue, t_index, sync);
+            tailIndex = 0;
+            MyTailer mytailer = new MyTailer(tailer_queue, tailIndex, sync);
             Future<Long> f2 = execService.submit(mytailer);
-            t_index = f2.get(10, TimeUnit.SECONDS);
-            a_index = f.get(10, TimeUnit.SECONDS);
-            assertEquals(a_index, t_index);
+            tailIndex = f2.get(10, TimeUnit.SECONDS);
+            appendedIndex = f.get(10, TimeUnit.SECONDS);
+            assertEquals(appendedIndex, tailIndex);
         }
         execService.shutdown();
         execService.awaitTermination(1, TimeUnit.SECONDS);
@@ -154,7 +156,7 @@ public class OvertakeTest extends QueueTestCommon {
                 sync.put(index);
                 Long fromReader = sync.take();
                 if (index != fromReader) {
-                    // System.out.println("Writer:Not the same:" + index + " vs. " + fromReader);
+                    Jvm.warn().on(MyAppender.class, "Writer index mismatch " + index + " vs. " + fromReader);
                 }
                 for (int i = 0; i < 50; i++) {
                     appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
@@ -186,13 +188,13 @@ public class OvertakeTest extends QueueTestCommon {
             Long fromWriter = sync.take();
             long index = doReadBad(tailer, messages + 50, false);
             if (index != fromWriter) {
-                // System.out.println("Reader:1 Not the same:" + index + " vs. " + fromWriter);
+                Jvm.warn().on(MyTailer.class, "Reader phase1 mismatch " + index + " vs. " + fromWriter);
             }
             sync.put(index);
             fromWriter = sync.take();
             index = doReadBad(tailer, 50, false);
             if (index != fromWriter) {
-                // System.out.println("Reader:2 Not the same:" + index + " vs. " + fromWriter);
+                Jvm.warn().on(MyTailer.class, "Reader phase2 mismatch " + index + " vs. " + fromWriter);
             }
             return index;
         }

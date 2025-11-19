@@ -213,17 +213,17 @@ public class ToEndTest extends QueueTestCommon {
 
                     checkOneFile(baseDir);
 
-                    ExcerptTailer tailer = queue.createTailer();
-                    checkOneFile(baseDir);
+                        ExcerptTailer tailer = queue.createTailer();
+                        checkOneFile(baseDir);
 
-                    ExcerptTailer tailer2 = queue.createTailer();
-                    checkOneFile(baseDir);
+                        final ExcerptTailer tailer2 = queue.createTailer();
+                        checkOneFile(baseDir);
 
-                    tailer.toEnd();
-                    checkOneFile(baseDir);
+                        tailer.toEnd();
+                        checkOneFile(baseDir);
 
-                    tailer2.toEnd();
-                    checkOneFile(baseDir);
+                        tailer2.toEnd();
+                        checkOneFile(baseDir);
                 }
             }
             System.gc();
@@ -379,7 +379,7 @@ public class ToEndTest extends QueueTestCommon {
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             writeExcerptToQueue(queue);
             String lastWriteIndexBefore = lastWriteIndex(queue);
-            String tailerToEndIndexBefore = tailerToEndIndex(queue);
+            final String tailerToEndIndexBefore = tailerToEndIndex(queue);
 
             timeProvider.advanceMicros(FIVE_SECONDS);
             writeMetadataToQueue(queue);

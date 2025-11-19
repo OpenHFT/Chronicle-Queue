@@ -1,0 +1,122 @@
+= Chronicle Queue Project Requirements
+:doctype: book
+:toc:
+:sectnums:
+:lang: en-GB
+:source-highlighter: rouge
+
+// Legend
+// Requirement identifiers follow the company Nine-Box taxonomy:
+// <Scope>-<Tag>-NNN where
+// Scope  = QUEUE (Chronicle Queue)
+// Tag    = FN | NF-P | NF-S | NF-O | TEST | DOC | OPS | RISK
+// NNN    = sequential number with three digits
+// All text is British English and ISO-8859-1 only, per AGENTS.md.
+
+== Scope
+
+Chronicle Queue is the log-structured messaging and journalling layer for the Chronicle stack.
+These requirements define the core behavioural contracts, performance envelopes and operational obligations that Chronicle Queue must meet to be accepted into the Chronicle Software code-base.
+
+They are complementary to:
+
+* link:architecture-overview.adoc[architecture-overview.adoc] - describes the design and data flows.
+* link:decision-log.adoc[decision-log.adoc] - records key architectural and operational decisions (`CQ-*` identifiers).
+* link:../../docs/How_it_works.adoc[How it works] and link:../../docs/FAQ.adoc[FAQ.adoc] - provide additional narrative detail.
+
+== Functional Requirements
+
+[cols="1,5,4",options="header"]
+|===
+|ID |Description |Verification
+|[[QUEUE-FN-001]]QUEUE-FN-001 |Provide an append-only queue abstraction that durably persists all successfully appended messages to disk-backed roll files in index order, without reordering or silent loss under normal operation. |Unit and integration tests append and tail messages across roll boundaries, asserting ordering and durability; crash-recovery tests reopen queues and verify no acknowledged messages are lost.
+|[[QUEUE-FN-002]]QUEUE-FN-002 |Expose forward-only reader views (`ExcerptTailer`) that can read messages sequentially from the start, end or a stored index, with each tailer maintaining an independent position. |Tests create multiple tailers over the same queue and verify that advancing one tailer does not affect the position or behaviour of others; position persistence tests reopen named tailers and continue from the previous index.
+|[[QUEUE-FN-003]]QUEUE-FN-003 |Support random access by logical index, allowing a tailer to seek to a given index and resume sequential reading from there using the embedded tiered index structures. |Indexing tests write batches of messages, record selected indices and then seek back to each index, asserting that the expected message is returned within bounded time.
+|[[QUEUE-FN-004]]QUEUE-FN-004 |Provide builder-based configuration (`SingleChronicleQueueBuilder`) for core queue properties including path, wire type, roll cycle, block size and index density (index count/spacing). |Builder tests construct queues with different combinations of configuration options and verify that resulting directories, roll cycles and index layouts match expectations; misconfiguration tests assert that invalid combinations are rejected.
+|[[QUEUE-FN-005]]QUEUE-FN-005 |Integrate with Chronicle-Wire to allow messages to be written and read as marshalled objects, method calls or text/binary payloads over the same underlying queue files. |End-to-end tests use `MethodWriter`/`MethodReader` over a queue to send and receive strongly-typed messages, asserting correctness across restart; additional tests cover text and binary payloads with the same file format.
+|===
+
+== Non-Functional Requirements - Performance
+
+[cols="1,5,4",options="header"]
+|===
+|ID |Requirement |Benchmark Target
+|[[QUEUE-NF-P-001]]QUEUE-NF-P-001 |For simple messages on the same host, Chronicle Queue should support sub-microsecond median latency for append-plus-tail operations under typical hardware conditions. |Micro-benchmarks (and JLBH harnesses where applicable) measure append + read latency for representative message sizes and report median and tail latencies; results are documented in `docs/performance.adoc` and kept within agreed budgets.
+|[[QUEUE-NF-P-002]]QUEUE-NF-P-002 |Support sustained throughput in the millions of messages per second per writer thread on modern x86-64 servers without excessive tail latency growth, assuming adequate storage bandwidth. |Throughput benchmarks run under sustained load with one and multiple writer threads, capturing messages-per-second and latency percentiles; results compared against historical baselines and documented in performance reports.
+|[[QUEUE-NF-P-003]]QUEUE-NF-P-003 |Maintain predictable seek and scan times when using the tiered index to jump to arbitrary indices within roll files, avoiding unbounded linear scans for typical access patterns. |Index benchmarks measure time to seek to random indices across large queues; regression tests assert that seek times remain within agreed thresholds as queue size grows.
+|===
+
+== Non-Functional Requirements - Security
+
+[cols="1,5,4",options="header"]
+|===
+|ID |Requirement |Verification
+|[[QUEUE-NF-S-001]]QUEUE-NF-S-001 |Ensure that queue file operations rely on Chronicle-Bytes bounds-checked accessors and avoid unchecked direct memory writes that could corrupt adjacent data or metadata. |Code reviews confirm that write paths use safe `Bytes` APIs; fuzz and stress tests append malformed or extreme data and verify queue integrity and recoverability.
+|[[QUEUE-NF-S-002]]QUEUE-NF-S-002 |Document the encryption responsibility boundary: Chronicle Queue must not silently encrypt or decrypt data at rest; instead, it must allow callers to layer encryption via filesystem tools or Marshallable payloads and clearly describe this in documentation. |`decision-log.adoc` entry `CQ-NF-S-301` describes the boundary; security review and FAQ sections cross-reference this requirement; tests validate that enabling encryption at surrounding layers does not break queue semantics.
+|===
+
+== Non-Functional Requirements - Operability
+
+[cols="1,5,4",options="header"]
+|===
+|ID |Requirement |Verification
+|[[QUEUE-NF-O-001]]QUEUE-NF-O-001 |Expose configuration and tuning knobs via documented system properties for key behaviours such as roll-cycle checks, interrupt handling, scan latency reporting and cache sizes. |`docs/systemProperties.adoc` lists all relevant properties with defaults and descriptions; unit tests and integration tests confirm that toggling properties affects behaviour as expected.
+|[[QUEUE-NF-O-002]]QUEUE-NF-O-002 |Support time-based roll cycles and predictable roll-file naming so that operational tooling can implement retention, archival and backup without modifying the core library. |`decision-log.adoc` entry `CQ-FN-101` documents the roll-cycle model; operational runbooks demonstrate retention scripts or tooling; tests cover behaviour across roll boundaries and after manual removal of old roll files.
+|[[QUEUE-NF-O-003]]QUEUE-NF-O-003 |Provide sufficient diagnostics (logging, metrics and optional consistency checks) to detect slow appenders, expensive scans and indexing anomalies without impacting hot-path latency when disabled. |System-property-driven features such as slow appender warnings and linear scan reporting are covered by tests that deliberately trigger warnings; performance tests compare overhead with features enabled vs disabled.
+|===
+
+== Traceability and Future Work
+
+This document captures the initial functional and non-functional requirement set for Chronicle Queue.
+Each requirement includes a brief description of how it is verified; `testing-strategy.adoc` describes the corresponding unit, integration and performance testing patterns in more detail.
+
+=== Requirements-to-tests mapping
+
+The table below links each currently documented requirement identifier to representative unit or integration tests from the Chronicle Queue test suite (as packaged in `chronicle-queue-*-tests.jar`).
+It is not exhaustive but provides reviewers with concrete entry points for verification.
+
+[cols="1,3,4",options="header"]
+|===
+|Requirement ID |Representative tests |Notes
+
+|QUEUE-FN-001
+|`ExcerptAppenderTest`, `ChronicleQueueTwoThreadsTest`
+|Exercise append-only behaviour, durability across reopen and ordering guarantees when writing and tailing messages, including multi-threaded writer scenarios.
+
+|QUEUE-FN-002
+|`TailerDirectionTest`, `VisibilityOfMessagesBetweenTailorsAndAppenderTest`
+|Cover forward and backward tailing behaviour and verify that independent tailers maintain their own positions over the same queue data.
+
+|QUEUE-FN-003
+|`ChronicleQueueIndexTest`, `CreateAtIndexTest`
+|Validate tiered index creation and random access by index, including seeking to stored indices and reading back the expected messages.
+
+|QUEUE-FN-004
+|`RollCyclesTest`, `RollCycleDefaultingTest`, `ChronicleAppenderCycleTest`
+|Exercise builder configuration for roll cycles and related properties, checking that roll file naming, cycling and defaulting behaviour match expectations.
+
+|QUEUE-FN-005
+|`ChronicleQueueMethodsWithoutParametersTest`, `DtoBytesMarshallableTest`, `ProxyTest`
+|Verify Chronicle Wire integration using method writers/readers and marshalled DTOs over queue files, including proxy-based service interfaces.
+
+|QUEUE-NF-P-001, QUEUE-NF-P-002, QUEUE-NF-P-003
+|`SingleChroniclePerfMainTest`, `RareAppenderLatencyTest`, `MoveToCycleMultiThreadedStressTest`
+|Provide micro-benchmarks and stress tests that measure append-plus-tail latency, sustained throughput and index seek characteristics under load.
+
+|QUEUE-NF-S-001, QUEUE-NF-S-002
+|`IncompleteMessageTest`, `ReaderResizesFileTest`, `DeleteFileTest`
+|Exercise behaviour in the presence of truncated data, file resizing and deletion scenarios, helping to validate bounds checking and recovery expectations.
+
+|QUEUE-NF-O-001, QUEUE-NF-O-002, QUEUE-NF-O-003
+|`DumpQueueMainTest`, `ChronicleReaderMainTest`, `DumpMainTest`, `InternalDumpMainTest`
+|Cover operational tooling and diagnostics, ensuring that queue contents can be inspected, dumped and scanned using documented command-line entry points.
+|===
+
+For the requirements explicitly listed in this document (the `QUEUE-FN-*` and `QUEUE-NF-*` identifiers above), there is at least one representative test or benchmark, so functional and non-functional traceability for this set is effectively 100 per cent.
+When new requirements are added, corresponding entries should be appended to this table and to `testing-strategy.adoc` to keep that traceability complete.
+
+Future work should:
+
+* expand the requirements catalogue as new behaviours are formalised;
+* continue to link `QUEUE-*` identifiers from architecture and decision documents (for example in `architecture-overview.adoc` and `decision-log.adoc`);
+* add explicit `TEST` and `OPS` requirements describing regression suites and operational runbooks once they are stabilised, and keep the mapping between key `QUEUE-*` requirements and representative test classes in sync with the evolving test suite.

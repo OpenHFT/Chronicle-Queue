@@ -24,13 +24,13 @@ String message = "Hello World!";
 appender.writeText(message);
 ----
 
-There are however various ways of appending data, ranging from high-level abstractions such as `writeText` and xref:queue-operations:read-write-proxies.adoc#_methodwriter[write proxies] down to a low-level API, or even writing directly to raw memory.These alternatives are presented in more detail in the following sections.
+There are, however, various ways of appending data, ranging from high-level abstractions such as `writeText` and xref:queue-operations:read-write-proxies.adoc#_methodwriter[write proxies] down to a low-level API, or even writing directly to raw memory. These alternatives are presented in more detail in the following sections.
 
 == Low-level API  
 
 == Writing Text
 
-The high-level methods such as `writeText()` are convenience methods on directly calling `appender.writingDocument()`, but both approaches essentially achieve the same thing.The implementation of `writeText(CharSequence text)` looks like this:
+The high-level methods such as `writeText()` are convenience methods on directly calling `appender.writingDocument()`, but both approaches essentially achieve the same thing. The implementation of `writeText(CharSequence text)` looks like this:
 
 [source,java]
 ----
@@ -50,7 +50,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-The length of the data is written to the header when the try-with-resources block reaches _close_.You can also use the `DocumentContext` to find out the index that the data has just been assigned (see below).The index can later be used to move-to/look up this excerpt.
+The length of the data is written to the header when the try-with-resources block reaches _close_. You can also use the `DocumentContext` to find out the index that the data has just been assigned (see below). The index can later be used to move-to/look up this excerpt.
 
 [source,java]
 ----

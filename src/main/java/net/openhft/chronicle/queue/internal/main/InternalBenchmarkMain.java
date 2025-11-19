@@ -35,10 +35,6 @@ public class InternalBenchmarkMain {
     static int throughput = Integer.getInteger("throughput", 250); // MB/s
     static int runtime = Integer.getInteger("runtime", 300); // seconds
     static String basePath = System.getProperty("path", OS.TMP);
-    static volatile long readerLoopTime = 0;
-    static volatile long readerEndLoopTime = 0;
-    static int counter = 0;
-
     static {
         System.setProperty("jvm.safepoint.enabled", "true");
     }
@@ -94,24 +90,17 @@ public class InternalBenchmarkMain {
         Histogram loopTime = new Histogram();
 
         Thread reader = new Thread(() -> {
-//            try (ChronicleQueue queue2 = createQueue(path))
             ExcerptTailer tailer = queue.createTailer().toEnd();
             long endLoop = System.nanoTime();
             while (running) {
                 loopTime.sample((double) (System.nanoTime() - endLoop));
                 Jvm.safepoint();
 
-//                    readerLoopTime = System.nanoTime();
-//                    if (readerLoopTime - readerEndLoopTime > 1000)
-//                        System.out.println("r " + (readerLoopTime - readerEndLoopTime));
-//                try {
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
-//                } finally {
-//                        readerEndLoopTime = System.nanoTime();
-//                }
+
                 Jvm.safepoint();
                 endLoop = System.nanoTime();
             }
@@ -177,14 +166,6 @@ public class InternalBenchmarkMain {
      */
     private static void runInner(Histogram transportTime, Histogram readTime, ExcerptTailer tailer) {
         Jvm.safepoint();
-        /*if (tailer.peekDocument()) {
-            if (counter++ < 1000) {
-                Jvm.safepoint();
-                return;
-            }
-        }*/
-        Jvm.safepoint();
-        counter = 0;
         try (DocumentContext dc = tailer.readingDocument(false)) {
             Jvm.safepoint();
             if (!dc.isPresent()) {

@@ -48,6 +48,7 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
 
             //noinspection StatementWithEmptyBody
             while (methodReader.readOne()) {
+                continue;
             }
             Assert.assertEquals(2, msgCounter.get());
         } finally {

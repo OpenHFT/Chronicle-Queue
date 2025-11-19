@@ -16,21 +16,21 @@ It is a distributed, unbounded, and persisted queue that:
 
 * supports asynchronous RMI and Publish/Subscribe interfaces with microsecond latencies.
 
-* passes messages between JVMs in under a microsecond (in optimised examples).
+* passes messages between JVMs in under 1 µs (in optimised examples).
 
-* passes messages between JVMs on different machines via replication in under 10 microseconds (in optimised examples).
+* passes messages between JVMs on different machines via replication in under 10 µs (in optimised examples).
 
 * provides stable, soft, real-time latencies into the millions of messages per second for a single thread to one queue; with total ordering of every event.
 
 == Efficiency
 
-Chronicle Queue aims to achieve latencies of under 40 microseconds for 99% to 99.99% of the time.
-Without replication, Chronicle Queue delivers latencies below 40 microseconds end-to-end across multiple services.
+Chronicle Queue aims to achieve latencies of under 40 µs for 99% to 99.99% of the time.
+Without replication, Chronicle Queue delivers latencies below 40 µs end-to-end across multiple services.
 Often the 99% latency is entirely dependent on the choice of operating system and hard disk sub-system.
 
 === Benchmarks
 
-When publishing 40-byte messages, a high percentage of the Chronicle Queue yields latencies under 1 microsecond.
+When publishing 40-byte messages, a high percentage of the Chronicle Queue yields latencies under 1 µs.
 In the tables below, the 99th percentile latency is the worst 1 in 100, and the 99.9th percentile is the worst 1 in 1000 latency.
 
 .Latency to send/receive on the same machine.

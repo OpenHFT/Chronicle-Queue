@@ -390,10 +390,12 @@ public class ChronicleReader implements Reader {
     public ChronicleReader asMethodReader(@NotNull String methodReaderInterface) {
         if (methodReaderInterface.isEmpty()) {
             entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType);
-        } else try {
+        } else {
+            try {
             this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {
             throw Jvm.rethrow(e);
+        }
         }
         return this;
     }

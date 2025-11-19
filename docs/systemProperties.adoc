@@ -1,3 +1,8 @@
+= Chronicle Queue System Properties
+:toc:
+:lang: en-GB
+:source-highlighter: rouge
+
 == System Properties
 Below, a number of relevant System Properties are listed.
 

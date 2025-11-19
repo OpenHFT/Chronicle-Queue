@@ -41,20 +41,20 @@ import static org.junit.Assert.assertTrue;
 
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
-    private final long SLEEP_PER_WRITE_NANOS;
-    private final int TEST_TIME;
-    private final int ROLL_EVERY_MS;
-    private final int DELAY_READER_RANDOM_MS;
-    private final int DELAY_WRITER_RANDOM_MS;
-    private final int CORES;
+    private final long sleepPerWriteNanos;
+    private final int testTime;
+    private final int rollEveryMs;
+    private final int delayReaderRandomMs;
+    private final int delayWriterRandomMs;
+    private final int cores;
     private final Random random;
-    final int NUMBER_OF_INTS;
-    private final boolean PRETOUCH;
-    private final boolean READERS_READ_ONLY;
-    final boolean DUMP_QUEUE;
-    private final boolean SHARED_WRITE_QUEUE;
-    private final boolean DOUBLE_BUFFER;
-    private final int WARMUP;
+    final int numberOfInts;
+    private final boolean pretouch;
+    private final boolean readersReadOnly;
+    final boolean dumpQueue;
+    private final boolean sharedWriteQueue;
+    private final boolean doubleBuffer;
+    private final int warmup;
     private final SetTimeProvider timeProvider = new SetTimeProvider();
     private final Histogram combinedHisto = new Histogram();
     private PretoucherThread pretoucherThread = null;
@@ -65,24 +65,24 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     RollCycleMultiThreadStressTest(StressTestType type) {
-        SLEEP_PER_WRITE_NANOS = Jvm.getLong("writeLatency", 30_000L);
-        TEST_TIME = Jvm.getInteger("testTime", 15);
-        ROLL_EVERY_MS = Jvm.getInteger("rollEvery", 300);
-        DELAY_READER_RANDOM_MS = Jvm.getInteger("delayReader", 1);
-        DELAY_WRITER_RANDOM_MS = Jvm.getInteger("delayWriter", 1);
-        CORES = Jvm.getInteger("cores", Runtime.getRuntime().availableProcessors());
+        sleepPerWriteNanos = Jvm.getLong("writeLatency", 30_000L);
+        testTime = Jvm.getInteger("testTime", 15);
+        rollEveryMs = Jvm.getInteger("rollEvery", 300);
+        delayReaderRandomMs = Jvm.getInteger("delayReader", 1);
+        delayWriterRandomMs = Jvm.getInteger("delayWriter", 1);
+        cores = Jvm.getInteger("cores", Runtime.getRuntime().availableProcessors());
         random = new Random(99);
-        NUMBER_OF_INTS = Jvm.getInteger("numberInts", 18); // 1060 / 4;
-        PRETOUCH = (type == StressTestType.PRETOUCH || type == StressTestType.PRETOUCH_EA);
+        numberOfInts = Jvm.getInteger("numberInts", 18); // 1060 / 4;
+        pretouch = (type == StressTestType.PRETOUCH || type == StressTestType.PRETOUCH_EA);
         if (type == StressTestType.PRETOUCH_EA)
             System.setProperty("SingleChronicleQueueExcerpts.earlyAcquireNextCycle", "true");
-        READERS_READ_ONLY = type == StressTestType.READONLY;
-        DUMP_QUEUE = false;
-        SHARED_WRITE_QUEUE = type == StressTestType.SHAREDWRITEQ;
-        DOUBLE_BUFFER = type == StressTestType.DOUBLEBUFFER;
-        WARMUP = Jvm.getInteger("warmup", 20_000);
+        readersReadOnly = type == StressTestType.READONLY;
+        dumpQueue = false;
+        sharedWriteQueue = type == StressTestType.SHAREDWRITEQ;
+        doubleBuffer = type == StressTestType.DOUBLEBUFFER;
+        warmup = Jvm.getInteger("warmup", 20_000);
 
-        if (TEST_TIME > 15) {
+        if (testTime > 15) {
             AbstractReferenceCounted.disableReferenceTracing();
             if (Jvm.isResourceTracing()) {
                 throw new IllegalStateException("This test will run out of memory - change your system properties");
@@ -147,7 +147,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         File file = DirectoryUtils.tempDir("stress");
         // System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
-        final int numThreads = CORES;
+        final int numThreads = cores;
         final int numWriters = numThreads / 4 + 1;
         // leave one core for other threads
         final int numReaders = (numThreads - numWriters) - 1;
@@ -160,23 +160,23 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         final AtomicInteger wrote = new AtomicInteger();
         final double expectedPerSecond = Jvm.isArm() ? 3e7 : Jvm.isAzulZing() ? 3e8 : 1e9;
-        final int expectedNumberOfMessages = (int) (TEST_TIME * expectedPerSecond / SLEEP_PER_WRITE_NANOS) * Math.max(1, numWriters / 2);
+        final int expectedNumberOfMessages = (int) (testTime * expectedPerSecond / sleepPerWriteNanos) * Math.max(1, numWriters / 2);
         Jvm.perf().on(getClass(), String.format("Running test with %d writers and %d readers (%d cores), sleep %dns expecting %d messages%n",
-                numWriters, numReaders, CORES, SLEEP_PER_WRITE_NANOS, expectedNumberOfMessages));
+                numWriters, numReaders, cores, sleepPerWriteNanos, expectedNumberOfMessages));
 
         final List<Future<Throwable>> results = new ArrayList<>();
         final List<Reader> readers = new ArrayList<>();
         final List<Writer> writers = new ArrayList<>();
 
-        if (READERS_READ_ONLY)
+        if (readersReadOnly)
             try (ChronicleQueue queue = createQueue(file)) {
                 assertNotNull(queue);
             }
 
-        if (SHARED_WRITE_QUEUE)
+        if (sharedWriteQueue)
             sharedWriterQueue = createQueue(file);
 
-        if (PRETOUCH) {
+        if (pretouch) {
             pretoucherThread = new PretoucherThread(file);
             executorServicePretouch.submit(pretoucherThread);
             ignoreException("touchPage failed");
@@ -193,17 +193,17 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             results.add(executorServiceWrite.submit(writer));
         }
 
-        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + (Jvm.isArm() ? 20 : 5)) + queueBuilder(file).timeoutMS();
+        final long maxWritingTime = TimeUnit.SECONDS.toMillis(testTime + (Jvm.isArm() ? 20 : 5)) + queueBuilder(file).timeoutMS();
         long startTime = System.currentTimeMillis();
         final long giveUpWritingAt = startTime + maxWritingTime;
-        long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
+        long nextRollTime = System.currentTimeMillis() + rollEveryMs, nextCheckTime = System.currentTimeMillis() + 5_000;
         long now;
         while ((now = System.currentTimeMillis()) < giveUpWritingAt) {
             if (wrote.get() >= expectedNumberOfMessages)
                 break;
             if (now > nextRollTime) {
                 timeProvider.advanceMillis(1000);
-                nextRollTime += ROLL_EVERY_MS;
+                nextRollTime += rollEveryMs;
             }
             if (now > nextCheckTime) {
                 String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
@@ -224,7 +224,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             }
             Jvm.pause(5);
         }
-        long timeToWriteMillis = System.currentTimeMillis() - startTime;
+        final long timeToWriteMillis = System.currentTimeMillis() - startTime;
 
         final StringBuilder writerExceptions = new StringBuilder();
         writers.stream().filter(w -> w.exception != null).forEach(w -> {
@@ -319,7 +319,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         return SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()
                 .timeProvider(timeProvider)
-                .doubleBuffer(DOUBLE_BUFFER)
+                .doubleBuffer(doubleBuffer)
                 .rollCycle(TEST_SECONDLY);
     }
 
@@ -367,7 +367,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         @Override
         public void checkDocument(DocumentContext dc, ExcerptTailer tailer, RollingChronicleQueue queue,
                                   int lastTailerCycle, int lastQueueCycle, int expected, ValueIn valueIn) {
-            for (int i = 0; i < NUMBER_OF_INTS; i++) {
+            for (int i = 0; i < numberOfInts; i++) {
                 int v = valueIn.int32();
                 if (v != expected) {
                     // System.out.println(dc.wire());
@@ -381,7 +381,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                                 "), queue cycle at last read: " + lastQueueCycle +
                                 " (current: " + queue.cycle() + ")";
                     }
-                    if (DUMP_QUEUE)
+                    if (dumpQueue)
                         DumpMain.dump(queue.file(), System.out, Long.MAX_VALUE);
                     throw new AssertionError(failureMessage);
                 }
@@ -423,7 +423,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         @Override
         public Throwable call() {
             SingleChronicleQueueBuilder builder = queueBuilder(path);
-            if (READERS_READ_ONLY)
+            if (readersReadOnly)
                 builder.readOnly(true);
             long last = System.currentTimeMillis();
             try (RollingChronicleQueue queue = builder.build();
@@ -431,7 +431,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
                 int lastTailerCycle = -1;
                 int lastQueueCycle = -1;
-                Jvm.pause(random.nextInt(DELAY_READER_RANDOM_MS));
+                Jvm.pause(random.nextInt(delayReaderRandomMs));
                 tailer.toStart();
                 while (lastRead != expectedNumberOfMessages - 1) {
                     if (Thread.currentThread().isInterrupted())
@@ -450,7 +450,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
                         final ValueIn valueIn = dc.wire().getValueIn();
                         final long documentAcquireTimestamp = valueIn.int64();
-                        if (lastRead > WARMUP)
+                        if (lastRead > warmup)
                             endToEndHisto.sampleNanos(System.nanoTime() - documentAcquireTimestamp);
                         if (documentAcquireTimestamp == 0L) {
                             throw new AssertionError("No timestamp");
@@ -493,14 +493,14 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         public Throwable call() {
             ChronicleQueue queue = writerQueue(path);
             try (final ExcerptAppender appender = queue.createAppender()) {
-                Jvm.pause(random.nextInt(DELAY_WRITER_RANDOM_MS));
+                Jvm.pause(random.nextInt(delayWriterRandomMs));
                 final long startTime = System.nanoTime();
                 int loopIteration = 0;
                 while (true) {
                     final int value = write(appender);
                     if (currentThread().isInterrupted())
                         return null;
-                    while (System.nanoTime() < (startTime + (loopIteration * SLEEP_PER_WRITE_NANOS))) {
+                    while (System.nanoTime() < (startTime + (loopIteration * sleepPerWriteNanos))) {
                         if (currentThread().isInterrupted())
                             return null;
                         // spin
@@ -541,7 +541,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 ValueOut valueOut = writingDocument.wire().getValueOut();
                 valueOut.int64(documentAcquireTimestamp);
                 // make the message longer
-                for (int i = 0; i < NUMBER_OF_INTS; i++) {
+                for (int i = 0; i < numberOfInts; i++) {
                     valueOut.int32(value);
                 }
                 writingDocument.wire().padToCacheAlign();

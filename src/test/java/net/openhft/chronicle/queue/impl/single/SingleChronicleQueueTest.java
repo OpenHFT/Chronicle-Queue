@@ -370,6 +370,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
 
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            assertNotNull(ignored);
         }
     }
 
@@ -1513,10 +1514,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         Instant hourly = Instant.parse("2018-02-12T00:59:59.999Z");
         Instant minutely = Instant.parse("2018-02-12T00:00:59.999Z");
 
-        Date epochHourlyFirstCycle = Date.from(hourly);
-        Date epochMinutelyFirstCycle = Date.from(minutely);
-        Date epochHourlySecondCycle = Date.from(hourly.plusMillis(1));
-        Date epochMinutelySecondCycle = Date.from(minutely.plusMillis(1));
+        final Date epochHourlyFirstCycle = Date.from(hourly);
+        final Date epochMinutelyFirstCycle = Date.from(minutely);
+        final Date epochHourlySecondCycle = Date.from(hourly.plusMillis(1));
+        final Date epochMinutelySecondCycle = Date.from(minutely.plusMillis(1));
 
         doTestEpochMove(epochHourlyFirstCycle.getTime(), MINUTELY);
         doTestEpochMove(epochHourlySecondCycle.getTime(), MINUTELY);
@@ -2791,7 +2792,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             long[] indexs = new long[10];
             for (int i = 0; i < indexs.length; i++) {
-                // System.out.println(".");
                 try (DocumentContext writingContext = appender.writingDocument()) {
                     writingContext.wire().write().text("some-text-" + i);
                     indexs[i] = writingContext.index();
@@ -2807,7 +2807,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             for (int lower = 0; lower < indexs.length; lower++) {
                 for (int upper = lower; upper < indexs.length; upper++) {
-                    // System.out.println("lower=" + lower + ",upper=" + upper);
                     assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
                             indexs[upper]));
                 }
@@ -3223,10 +3222,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             return;
         }
 
+        expectException("Using the current directory for the queue");
         try (final ChronicleQueue ignored =
                      builder(new File(""), wireType).
                              testBlockSize().build()) {
 
+            assertNotNull(ignored);
         }
 
         assertTrue(new File(QUEUE_METADATA_FILE).delete());
@@ -3533,16 +3534,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         Assume.assumeTrue("this test is slow and does not depend on wire type", wireType == WireType.BINARY);
 
         long now = System.currentTimeMillis();
-        long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000;
-        long ONE_DAY_IN_MILLIS = ONE_HOUR_IN_MILLIS * 24;
-        long midnight = now - (now % ONE_DAY_IN_MILLIS);
+        long oneHourInMillis = 60 * 60 * 1000;
+        long oneDayInMillis = oneHourInMillis * 24;
+        long midnight = now - (now % oneDayInMillis);
         AtomicLong clock = new AtomicLong(now);
 
         StringBuilder builder = new StringBuilder();
         boolean passed = doMappedSegmentUnmappedRollTest(clock, builder);
         passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight), builder);
         for (int i = 1; i < 3; i += 1)
-            passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * ONE_HOUR_IN_MILLIS)), builder);
+            passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * oneHourInMillis)), builder);
 
         if (!passed) {
             fail(builder.toString());

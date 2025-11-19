@@ -84,19 +84,17 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
             int count2 = 0;
             while (count2 < threads * messages) {
                 Map<String, Object> map = tailer.readMap();
-                long index = tailer.index();
-                if (map != null) {
-                    count2++;
-                } else if (index >= 0) {
-                    if (TEST_SECONDLY.toCycle(lastIndex) != TEST_SECONDLY.toCycle(index)) {
-/*
-                       // System.out.println("Wrote: " + count
-                                + " read: " + count2
-                                + " index: " + Long.toHexString(index));
-*/
-                        lastIndex = index;
+                    long index = tailer.index();
+                    if (map != null) {
+                        count2++;
+                    } else if (index >= 0) {
+                        if (TEST_SECONDLY.toCycle(lastIndex) != TEST_SECONDLY.toCycle(index)) {
+                            // System.out.println("Wrote: " + count
+                            //         + " read: " + count2
+                            //         + " index: " + Long.toHexString(index));
+                            lastIndex = index;
+                        }
                     }
-                }
                 if (System.currentTimeMillis() > start + 60000) {
                     throw new AssertionError("Wrote: " + count
                             + " read: " + count2

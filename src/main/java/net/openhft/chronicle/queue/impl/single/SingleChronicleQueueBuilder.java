@@ -149,6 +149,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * ========================
      */
 
+    @SuppressWarnings("EmptyMethod")
     public static void addAliases() {
         // static initialiser.
     }
@@ -200,6 +201,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
             result.path(file.getParentFile());
         } else {
+            if ("".equals(file.toString())) {
+                Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                        "Using the current directory for the queue. It is recommended to specify a dedicated directory.");
+                file = new File(".");
+            }
             result.path(file);
         }
         return result;
@@ -672,7 +678,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             storeFilePath = new File(QUEUE_METADATA_FILE);
         } else {
             storeFilePath = new File(path, QUEUE_METADATA_FILE);
-            path.mkdirs();
+            if (!path.exists() && !path.mkdirs() && !path.exists()) {
+                Jvm.warn().on(getClass(), "Unable to create queue directory " + path.getAbsolutePath());
+            }
         }
         return storeFilePath;
     }

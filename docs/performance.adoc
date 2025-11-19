@@ -1,11 +1,13 @@
 = Chronicle Queue Performance
+:lang: en-GB
+:source-highlighter: rouge
 
 [NOTE]
 ====
-Contents moved to link:http://portal.chronicle.software[]
+This content has moved to link:https://portal.chronicle.software[].
 ====
 
-Chronicle Queue, Chronicle Queue Enterprise, and Chronicle Queue Zero are all high performance queues that can be used in a variety of solutions.
-For detailed performance tuning and performance test results visit link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/performance.html[]
+Chronicle Queue, Chronicle Queue Enterprise, and Chronicle Queue Zero are all high-performance queues that can be used in a variety of solutions.
+For detailed performance tuning guidance and test results, visit link:https://portal.chronicle.software/docs/queue/chronicle-queue/performance/performance.html[].
 
-<<../ReadMe.adoc#,Back to ReadMe>>
+<<../README.adoc#,Back to Chronicle Queue>>

@@ -1,7 +1,9 @@
 = Migrating Chronicle Logger to Queue V4
 Peter Lawrey
+:lang: en-GB
+:source-highlighter: rouge
 
-These are the steps which were taken to migrate Chornicle Logger from using Chronicle Queue v3 to v4.
+These are the steps which were taken to migrate Chronicle Logger from using Chronicle Queue v3 to v4.
 
 === Update the artifactId
 
