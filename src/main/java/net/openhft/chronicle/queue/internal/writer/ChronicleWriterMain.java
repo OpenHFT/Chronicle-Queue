@@ -88,7 +88,8 @@ public class ChronicleWriterMain {
         );
         writer.flush();
         String errorMessage = message == null ? "Usage requested" : message;
-        throw new IllegalArgumentException(errorMessage);
+        System.err.println(errorMessage);
+        System.exit(status);
     }
 
     /**
