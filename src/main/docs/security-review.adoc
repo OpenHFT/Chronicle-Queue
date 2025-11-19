@@ -8,6 +8,18 @@
 
 This document summarises the main security considerations for Chronicle Queue.
 It complements the security-related requirements in `project-requirements.adoc` (`QUEUE-NF-S-*`, `QUEUE-NF-O-*`) and the architectural decisions recorded in `decision-log.adoc` (for example `CQ-NF-S-301` and `CQ-NF-O-401`).
+It is aligned with the shared standards in `Chronicle-Quality-Rules/src/main/docs/security-review.adoc` and `Chronicle-Quality-Rules/src/main/docs/architectural-standards.adoc`.
+
+== Trust Zone and Responsibilities
+
+Chronicle Queue operates in the *Core (Zone B)* as defined in `Chronicle-Quality-Rules/src/main/docs/architectural-standards.adoc`.
+In this role it assumes that:
+
+* untrusted inputs have been validated at the edge (for example by Chronicle-Network and Chronicle-Wire);
+* authentication and authorisation decisions are enforced by services and applications built on top of the queue;
+* this module is responsible for preserving integrity, ordering and durability of messages once accepted.
+
+The remainder of this document describes how Chronicle Queue fulfils those Core responsibilities and where it deliberately relies on the wider platform (for example for encryption, identity and access management).
 
 == Scope and Threat Model
 
@@ -62,6 +74,10 @@ When integrating Chronicle Queue into security-sensitive systems:
 * document which queues contain sensitive data and how the underlying volumes are protected;
 * ensure that any application-level encryption or signing is applied before messages reach the queue;
 * avoid relying on queue file names or directory structures as the sole means of access control.
+
+Chronicle Queue does not currently apply cryptographic hashing to queue contents or roll files.
+Where deployments require additional integrity guarantees (for example signed payloads or checksummed archives), those concerns should be addressed at the application or storage layer.
+Cryptographic keys must be managed by external key-management systems or application code; they are not embedded in Chronicle Queue itself and queue files should not be used as a long-term store for raw keys.
 
 == Off-Heap and Memory-Mapped Storage (QUEUE-NF-S-001)
 
@@ -150,6 +166,18 @@ When changing configuration surfaces or adding new dependencies:
 * avoid introducing dependencies that bring in heavy reflection or deserialisation frameworks without a clear need;
 * ensure the build pipeline continues to run static analysis and dependency checks.
 
+== Vulnerability Management and Static Analysis
+
+Chronicle Queue participates in the wider Chronicle vulnerability-management process described in the root-level compliance and quality playbooks.
+In particular:
+
+* static analysis (Checkstyle and SpotBugs) is wired via the shared quality configuration from `root-parent-pom` and `Chronicle-Quality-Rules`;
+* Java 21 quality builds for this module are required to be clean for both tools before changes are merged;
+* dependency vulnerability scanning (for example CVE checks) is performed at the repository level and tracked in central compliance artefacts rather than in this document alone.
+
+Module-specific follow-ups (for example reviewing new SpotBugs findings or analysing security-related GitHub issues) are recorded in `TODO.md` and summarised in `TODO_STATUS.md`.
+Any future suppressions of static-analysis findings in this module should be justified with a short comment and, where relevant, a note in this security review.
+
 == Summary and Future Work
 
 Chronicle Queue’s security posture is characterised by:
@@ -166,4 +194,3 @@ Further improvements may include:
 * a more formal threat model for deployments that expose queues to partially untrusted producers;
 * additional fuzz and stress testing around index structures and roll-cycle transitions;
 * richer guidance for combining Chronicle Queue with Chronicle-Network and external security controls in regulated environments.
-

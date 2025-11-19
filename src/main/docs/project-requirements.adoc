@@ -68,9 +68,55 @@ They are complementary to:
 == Traceability and Future Work
 
 This document captures the initial functional and non-functional requirement set for Chronicle Queue.
+Each requirement includes a brief description of how it is verified; `testing-strategy.adoc` describes the corresponding unit, integration and performance testing patterns in more detail.
+
+=== Requirements-to-tests mapping
+
+The table below links each currently documented requirement identifier to representative unit or integration tests from the Chronicle Queue test suite (as packaged in `chronicle-queue-*-tests.jar`).
+It is not exhaustive but provides reviewers with concrete entry points for verification.
+
+[cols="1,3,4",options="header"]
+|===
+|Requirement ID |Representative tests |Notes
+
+|QUEUE-FN-001
+|`ExcerptAppenderTest`, `ChronicleQueueTwoThreadsTest`
+|Exercise append-only behaviour, durability across reopen and ordering guarantees when writing and tailing messages, including multi-threaded writer scenarios.
+
+|QUEUE-FN-002
+|`TailerDirectionTest`, `VisibilityOfMessagesBetweenTailorsAndAppenderTest`
+|Cover forward and backward tailing behaviour and verify that independent tailers maintain their own positions over the same queue data.
+
+|QUEUE-FN-003
+|`ChronicleQueueIndexTest`, `CreateAtIndexTest`
+|Validate tiered index creation and random access by index, including seeking to stored indices and reading back the expected messages.
+
+|QUEUE-FN-004
+|`RollCyclesTest`, `RollCycleDefaultingTest`, `ChronicleAppenderCycleTest`
+|Exercise builder configuration for roll cycles and related properties, checking that roll file naming, cycling and defaulting behaviour match expectations.
+
+|QUEUE-FN-005
+|`ChronicleQueueMethodsWithoutParametersTest`, `DtoBytesMarshallableTest`, `ProxyTest`
+|Verify Chronicle Wire integration using method writers/readers and marshalled DTOs over queue files, including proxy-based service interfaces.
+
+|QUEUE-NF-P-001, QUEUE-NF-P-002, QUEUE-NF-P-003
+|`SingleChroniclePerfMainTest`, `RareAppenderLatencyTest`, `MoveToCycleMultiThreadedStressTest`
+|Provide micro-benchmarks and stress tests that measure append-plus-tail latency, sustained throughput and index seek characteristics under load.
+
+|QUEUE-NF-S-001, QUEUE-NF-S-002
+|`IncompleteMessageTest`, `ReaderResizesFileTest`, `DeleteFileTest`
+|Exercise behaviour in the presence of truncated data, file resizing and deletion scenarios, helping to validate bounds checking and recovery expectations.
+
+|QUEUE-NF-O-001, QUEUE-NF-O-002, QUEUE-NF-O-003
+|`DumpQueueMainTest`, `ChronicleReaderMainTest`, `DumpMainTest`, `InternalDumpMainTest`
+|Cover operational tooling and diagnostics, ensuring that queue contents can be inspected, dumped and scanned using documented command-line entry points.
+|===
+
+For the requirements explicitly listed in this document (the `QUEUE-FN-*` and `QUEUE-NF-*` identifiers above), there is at least one representative test or benchmark, so functional and non-functional traceability for this set is effectively 100 per cent.
+When new requirements are added, corresponding entries should be appended to this table and to `testing-strategy.adoc` to keep that traceability complete.
+
 Future work should:
 
-* Expand the requirements catalogue as new behaviours are formalised.
-* Link `QUEUE-*` identifiers from architecture and decision documents (for example in `architecture-overview.adoc` and `decision-log.adoc`).
-* Add explicit `TEST` and `OPS` requirements describing regression suites and operational runbooks once they are stabilised.
-
+* expand the requirements catalogue as new behaviours are formalised;
+* continue to link `QUEUE-*` identifiers from architecture and decision documents (for example in `architecture-overview.adoc` and `decision-log.adoc`);
+* add explicit `TEST` and `OPS` requirements describing regression suites and operational runbooks once they are stabilised, and keep the mapping between key `QUEUE-*` requirements and representative test classes in sync with the evolving test suite.
