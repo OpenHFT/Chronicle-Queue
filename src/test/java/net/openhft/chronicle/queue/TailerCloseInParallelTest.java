@@ -27,7 +27,7 @@ import static org.junit.Assume.assumeTrue;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
 public class TailerCloseInParallelTest extends QueueTestCommon {
-    private static String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
+    private static final String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
 
     private static final int size = 1 << 10;
     // blackholes to avoid code elimination.
@@ -36,7 +36,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
     private static float f32;
     private static double f64;
     private static String s;
-    private static Random random = new Random();
+    private static final Random random = new Random();
 
     @Override
     @Before

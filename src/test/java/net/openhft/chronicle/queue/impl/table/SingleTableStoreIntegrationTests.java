@@ -102,7 +102,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         }
 
         @Override
-        public void close() throws IOException {
+        public void close() {
             queues.forEach(net.openhft.chronicle.core.io.Closeable::closeQuietly);
             IOTools.deleteDirWithFiles(queuePath);
         }

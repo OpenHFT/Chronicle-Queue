@@ -135,8 +135,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
             long start = System.nanoTime();
             tailer.toEnd();
             long stop = System.nanoTime();
-            long elapsed = stop - start;
-            return elapsed;
+            return stop - start;
 
         } finally {
             IOTools.deleteDirWithFiles(path);

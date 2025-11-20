@@ -110,7 +110,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
     }
 
     private void assertMapped(File queuePath) {
-        String path = queuePath.getAbsolutePath().toString();
+        String path = queuePath.getAbsolutePath();
         assertTrue(monitoredPaths.containsKey(path), () -> "Expected that the following queue path should be monitored by the disk space monitor, but it was not. Path: " + path);
     }
 }

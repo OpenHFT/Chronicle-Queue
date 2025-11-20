@@ -23,8 +23,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class EmptyRollCycleTest extends QueueTestCommon {
 
@@ -116,7 +115,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
                         assertTrue(readingDocument.isPresent());
                     }
                 }
-                assertEquals(false, tailer.readingDocument().isPresent());
+                assertFalse(tailer.readingDocument().isPresent());
             }
         } finally {
             start.destroy();

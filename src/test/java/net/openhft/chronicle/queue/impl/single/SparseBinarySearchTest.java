@@ -63,7 +63,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         runWithTimeParameters(DAILY, 1);
     }
 
-    private void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) throws ParseException {
+    private void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
 
@@ -129,8 +129,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
                 }
 
                 if (myDataO1.key >= 0 && myDataO2.key >= 0) {
-                    final int compare = Integer.compare(myDataO1.key, myDataO2.key);
-                    return compare;
+                    return Integer.compare(myDataO1.key, myDataO2.key);
                 } else {
                     throw NotComparableException.INSTANCE;
                 }

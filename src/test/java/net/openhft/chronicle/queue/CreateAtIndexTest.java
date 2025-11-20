@@ -89,8 +89,8 @@ public class CreateAtIndexTest extends QueueTestCommon {
 
         try {
             IOTools.deleteDirWithFiles(tmp, 2);
-        } catch (IORuntimeException ignored) {
-            Jvm.warn().on(CreateAtIndexTest.class, "Failed to delete " + tmp, ignored);
+        } catch (IORuntimeException e) {
+            Jvm.warn().on(CreateAtIndexTest.class, "Failed to delete " + tmp, e);
         }
     }
 

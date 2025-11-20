@@ -35,7 +35,7 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void test() throws InterruptedException {
+    public void test() {
         File path = new File(getTmpDir(), "enum_test_" + enumType);
 
         try (SingleChronicleQueue chronicle = SingleChronicleQueueBuilder.builder().path(path)

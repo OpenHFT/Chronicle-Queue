@@ -47,7 +47,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         }
     }
 
-    private static void doPerfTest(TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws IOException {
+    private static void doPerfTest(TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);
         String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();

@@ -11,6 +11,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -45,12 +46,9 @@ public class TailerDirectionTest extends QueueTestCommon {
      * @return index position of the entry
      */
     private long appendEntry(@NotNull final ExcerptAppender appender, String msg) {
-        DocumentContext dc = appender.writingDocument();
-        try {
+        try (DocumentContext dc = appender.writingDocument()) {
             dc.wire().write().text(msg);
             return dc.index();
-        } finally {
-            dc.close();
         }
     }
 
@@ -61,16 +59,13 @@ public class TailerDirectionTest extends QueueTestCommon {
      * @return entry or null, if no entry available
      */
     private String readNextEntry(@NotNull final ExcerptTailer tailer) {
-        DocumentContext dc = tailer.readingDocument();
-        try {
+        try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.isPresent()) {
                 Object parent = dc.wire().parent();
                 assert parent == tailer;
                 return dc.wire().read().text();
             }
             return null;
-        } finally {
-            dc.close();
         }
     }
 
@@ -144,9 +139,7 @@ public class TailerDirectionTest extends QueueTestCommon {
             tailer.direction(TailerDirection.NONE);
 
             for (int i = 0; i < 10; i++) {
-                excerptAppender.writeDocument(i, (out, value) -> {
-                    out.int32(value);
-                });
+                excerptAppender.writeDocument(i, ValueOut::int32);
             }
 
             DocumentContext document = tailer.readingDocument();

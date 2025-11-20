@@ -25,7 +25,7 @@ import static org.junit.Assert.assertNotNull;
 
 public class OnReleaseTest extends QueueTestCommon {
     @Test
-    public void onRelease() throws Throwable {
+    public void onRelease() {
         FlakyTestRunner.builder(this::onRelease0).build().run();
     }
 

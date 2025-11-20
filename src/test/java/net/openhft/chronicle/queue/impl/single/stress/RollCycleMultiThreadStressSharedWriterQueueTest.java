@@ -3,8 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single.stress;
 
-import org.junit.Test;
-
 public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMultiThreadStressTest {
 
     public RollCycleMultiThreadStressSharedWriterQueueTest() {

@@ -29,7 +29,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
     private static final int READ_THREADS = Math.min(Runtime.getRuntime().availableProcessors(), 10);
     private ChronicleQueue queue;
 
-    private AtomicBoolean shutDown = new AtomicBoolean();
+    private final AtomicBoolean shutDown = new AtomicBoolean();
     private boolean resourceTracing;
 
     @Override

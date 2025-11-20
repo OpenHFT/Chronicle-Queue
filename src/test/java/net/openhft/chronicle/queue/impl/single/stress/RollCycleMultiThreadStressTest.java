@@ -227,9 +227,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         final long timeToWriteMillis = System.currentTimeMillis() - startTime;
 
         final StringBuilder writerExceptions = new StringBuilder();
-        writers.stream().filter(w -> w.exception != null).forEach(w -> {
-            writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n");
-        });
+        writers.stream().filter(w -> w.exception != null).forEach(w -> writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n"));
 
         assertTrue("Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
                 wrote.get() >= expectedNumberOfMessages);
@@ -339,7 +337,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     enum StressTestType {
-        VANILLA, READONLY, PRETOUCH, PRETOUCH_EA, DOUBLEBUFFER, SHAREDWRITEQ;
+        VANILLA, READONLY, PRETOUCH, PRETOUCH_EA, DOUBLEBUFFER, SHAREDWRITEQ
     }
 
     interface ReaderCheckingStrategy {

@@ -33,6 +33,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.ZoneId;
@@ -1392,13 +1394,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         /**
          * Acquires a {@link SingleChronicleQueueStore} for the specified cycle.
-         * If the store doesn't exist and the strategy is {@link CreateStrategy.CREATE}, it will create a new store.
+         * If the store doesn't exist and the strategy is {@link CreateStrategy#CREATE}, it will create a new store.
          *
          * @param cycle          the cycle to acquire the store for
          * @param createStrategy the strategy for creating or reading the store
          * @return the acquired SingleChronicleQueueStore or null if the store doesn't exist and the strategy is not CREATE
-         * @throws IOException      in case of IO errors
-         * @throws TimeoutException if acquiring the store times out
          */
         @Override
         public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
@@ -1488,7 +1488,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     String s = Long.toHexString(pos);
                     System.err.println("pos=" + s);
                     try (BufferedReader br = new BufferedReader(
-                            new InputStreamReader(new FileInputStream("/proc/self/maps"), StandardCharsets.UTF_8))) {
+                            new InputStreamReader(Files.newInputStream(Paths.get("/proc/self/maps")), StandardCharsets.UTF_8))) {
                         for (String line; (line = br.readLine()) != null; )
                             if (line.contains(".cq4"))
                                 System.err.println(line);

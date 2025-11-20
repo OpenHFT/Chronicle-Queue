@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -14,7 +13,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -89,7 +87,7 @@ public class ToEndTest extends QueueTestCommon {
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (dc.isPresent()) {
-                        fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read("msg").int32()));
+                        fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read("msg").int32());
                     }
                 }
 

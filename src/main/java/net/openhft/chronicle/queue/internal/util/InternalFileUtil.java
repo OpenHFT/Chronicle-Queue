@@ -150,7 +150,7 @@ public final class InternalFileUtil {
         assertOsSupported();
         if (!file.exists()) return FileState.NON_EXISTENT;
         final String absolutePath = file.getAbsolutePath();
-        return allOpenFiles.keySet().contains(absolutePath)
+        return allOpenFiles.containsKey(absolutePath)
                 ? FileState.OPEN
                 : FileState.CLOSED;
     }

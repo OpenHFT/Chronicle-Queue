@@ -27,9 +27,10 @@ Before starting with the set up, make sure your development environment meets th
 
 Use an explicit `JAVA_HOME` when building or running tools so the intended JDK is used, for example:
 
-```
+[source]
+----
 env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 PATH=$JAVA_HOME/bin:$PATH mvn clean install
-```
+----
 
 == Installing Chronicle Queue [[installing_chronicle_queue]]
 

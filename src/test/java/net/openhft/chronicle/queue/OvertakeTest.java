@@ -30,7 +30,7 @@ public class OvertakeTest extends QueueTestCommon {
 
     private long appendedIndex;
 
-    private int messages = 500;
+    private final int messages = 500;
 
     private static long doReadBad(@NotNull ExcerptTailer tailer, int expected, boolean additionalClose) {
         int[] i = {0};
@@ -103,8 +103,8 @@ public class OvertakeTest extends QueueTestCommon {
     public void tearDown() {
         try {
             IOTools.deleteDirWithFiles(path, 2);
-        } catch (Exception ignored) {
-            Jvm.warn().on(OvertakeTest.class, "Failed to delete queue directory " + path, ignored);
+        } catch (Exception e) {
+            Jvm.warn().on(OvertakeTest.class, "Failed to delete queue directory " + path, e);
         }
     }
 
@@ -185,7 +185,7 @@ public class OvertakeTest extends QueueTestCommon {
         public Long call() throws InterruptedException {
             ExcerptTailer tailer = queue.createTailer();
             tailer.moveToIndex(startIndex);
-            Long fromWriter = sync.take();
+            long fromWriter = sync.take();
             long index = doReadBad(tailer, messages + 50, false);
             if (index != fromWriter) {
                 Jvm.warn().on(MyTailer.class, "Reader phase1 mismatch " + index + " vs. " + fromWriter);

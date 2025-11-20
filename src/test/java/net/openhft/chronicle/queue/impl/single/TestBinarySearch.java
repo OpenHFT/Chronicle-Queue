@@ -46,7 +46,7 @@ public class TestBinarySearch extends QueueTestCommon {
     }
 
     @Test
-    public void testBinarySearch() throws ParseException {
+    public void testBinarySearch() {
         final SetTimeProvider stp = new SetTimeProvider();
         long time = 0;
         stp.currentTimeMillis(time);
@@ -82,8 +82,7 @@ public class TestBinarySearch extends QueueTestCommon {
                         myDataO2 = dc.wire().getValueIn().typedMarshallable();
                     }
 
-                    final int compare = Integer.compare(myDataO1.key, myDataO2.key);
-                    return compare;
+                    return Integer.compare(myDataO1.key, myDataO2.key);
                 } finally {
                     o1.bytes().readPosition(readPositionO1);
                     o2.bytes().readPosition(readPositionO2);

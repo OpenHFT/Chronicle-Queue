@@ -102,7 +102,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithQueueHistory() throws Throwable {
+    public void testWithQueueHistory() {
         FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
 
@@ -230,14 +230,14 @@ public class OrderManagerTest extends QueueTestCommon {
         } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
-            } catch (Exception ignore) {
-                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath, ignore);
+            } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath, e);
             }
 
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
-            } catch (Exception ignore) {
-                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath2, ignore);
+            } catch (Exception e) {
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath2, e);
             }
         }
     }

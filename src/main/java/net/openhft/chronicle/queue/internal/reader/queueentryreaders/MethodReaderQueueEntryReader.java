@@ -49,7 +49,7 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
                 MessageHistory messageHistory = MessageHistory.get();
                 // this is an attempt to recognise that no MH was read and instead the method reader called reset(...) on it
                 if (messageHistory.sources() != 1 || messageHistory.timings() != 1)
-                    bytes.append(messageHistory + System.lineSeparator());
+                    bytes.append(String.valueOf(messageHistory)).append(System.lineSeparator());
                 return true;
             });
         methodReader = tailer.methodReader(mwb.build());

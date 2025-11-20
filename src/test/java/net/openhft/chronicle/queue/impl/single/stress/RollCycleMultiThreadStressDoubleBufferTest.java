@@ -11,7 +11,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -79,7 +78,7 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
         @Override
         public void postReadCheck(RollingChronicleQueue queue) {
             Jvm.debug().on(getClass(), "Out-of-order count: " + outOfOrderCount);
-            if (skippedValue.size() > 0 || unexpectedValues.size() > 0) {
+            if (!skippedValue.isEmpty() || !unexpectedValues.isEmpty()) {
                 Jvm.error().on(getClass(), "Skipped " + skippedValue + ", Unexpected " + unexpectedValues);
                 if (dumpQueue && !queueDumped.getAndSet(true)) {
                     InternalDumpMain.dump(queue.file(), System.out, Long.MAX_VALUE);

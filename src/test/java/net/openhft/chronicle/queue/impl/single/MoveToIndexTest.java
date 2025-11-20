@@ -66,7 +66,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
             final ExcerptTailer tailer = queue.createTailer();
             final AtomicReference<String> capturedMessage = new AtomicReference<>();
             for (int i = 0; i < 100; i++) {
-                final long randomIndex = indices.get(random.nextInt(messageByIndex.keySet().size()));
+                final long randomIndex = indices.get(random.nextInt(messageByIndex.size()));
                 tailer.moveToIndex(randomIndex);
                 tailer.readDocument(w -> capturedMessage.set((String) w.read("message").object()));
                 assertEquals(messageByIndex.get(randomIndex), capturedMessage.get());

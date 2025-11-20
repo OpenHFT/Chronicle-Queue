@@ -32,7 +32,7 @@ public class QueueContendedWritesJLBHBenchmark implements JLBHTask {
     private NanoSampler concurrent;
     private NanoSampler concurrent2;
     private volatile boolean stopped = false;
-    private AtomicInteger write = new AtomicInteger(0);
+    private final AtomicInteger write = new AtomicInteger(0);
     private final Datum datum = new Datum();
     private final Datum datum2 = new Datum();
     private Thread writerThread1;

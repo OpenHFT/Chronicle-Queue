@@ -164,26 +164,25 @@ public class WriteReadTextTest extends QueueTestCommon {
             final int tmpNumberOfIterations = 5;
 
             for (int l = 0; l < tmpNumberOfIterations; l++) {
-                for (int p = 0; p < problematic.length; p++) {
-                    appender.writeText(problematic[p]);
+                for (String string : problematic) {
+                    appender.writeText(string);
                 }
-                for (int p = 0; p < problematic.length; p++) {
+                for (String s : problematic) {
                     tailer.readText(tmpReadback);
-                    Assert.assertEquals("write/readText", problematic[p], tmpReadback.toString());
+                    Assert.assertEquals("write/readText", s, tmpReadback.toString());
                 }
             }
 
             for (int l = 0; l < tmpNumberOfIterations; l++) {
-                for (int p = 0; p < problematic.length; p++) {
-                    final String tmpText = problematic[p];
+                for (final String tmpText : problematic) {
                     appender.writeDocument(writer -> writer.getValueOut().text(tmpText));
 
                     tailer.readDocument(reader -> reader.getValueIn().textTo(tmpReadback));
                     String actual = tmpReadback.toString();
-                    Assert.assertEquals(problematic[p].length(), actual.length());
+                    Assert.assertEquals(tmpText.length(), actual.length());
                     for (int i = 0; i < actual.length(); i += 1024)
-                        Assert.assertEquals("i: " + i, problematic[p].substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)));
-                    Assert.assertEquals(problematic[p], actual);
+                        Assert.assertEquals("i: " + i, tmpText.substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)));
+                    Assert.assertEquals(tmpText, actual);
                 }
             }
         }

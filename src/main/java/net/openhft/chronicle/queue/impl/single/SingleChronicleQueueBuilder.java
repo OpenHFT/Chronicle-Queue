@@ -79,7 +79,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         Constructor<?> co;
         try {
-            co = ((Class<?>) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
+            co = Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue").getDeclaredConstructors()[0];
             Jvm.setAccessible(co);
         } catch (Exception e) {
             co = null;
@@ -674,7 +674,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     private File metapath() {
         final File storeFilePath;
-        if ("".equals(path.getPath())) {
+        if (path.getPath().isEmpty()) {
             storeFilePath = new File(QUEUE_METADATA_FILE);
         } else {
             storeFilePath = new File(path, QUEUE_METADATA_FILE);

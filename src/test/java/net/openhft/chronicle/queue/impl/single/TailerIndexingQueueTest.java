@@ -65,8 +65,7 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
         try (Stream<Path> list = Files.list(this.path.toPath());
              Stream<Path> list2 = Files.list(this.path.toPath())) {
             final Path firstFile =
-                    list.sorted(Comparator.comparing(Path::toString))
-                            .findFirst()
+                    list.min(Comparator.comparing(Path::toString))
                             .orElseThrow(AssertionError::new);
             list2.filter(p -> !p.equals(firstFile))
                     .forEach(TailerIndexingQueueTest::deleteFile);

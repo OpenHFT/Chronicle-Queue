@@ -19,9 +19,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class QueueReadJitterMain {
     private static final String PROFILE_OF_THE_THREAD = "profile of the thread";
 
-    private static int runTime = Integer.getInteger("runTime", 600); // seconds
-    private static int size = Integer.getInteger("size", 128); // bytes
-    private static int sampleTime = Integer.getInteger("sampleTime", 30); // micro-seconds
+    private static final int runTime = Integer.getInteger("runTime", 600); // seconds
+    private static final int size = Integer.getInteger("size", 128); // bytes
+    private static final int sampleTime = Integer.getInteger("sampleTime", 30); // micro-seconds
     private static volatile boolean running = true;
 
     static {

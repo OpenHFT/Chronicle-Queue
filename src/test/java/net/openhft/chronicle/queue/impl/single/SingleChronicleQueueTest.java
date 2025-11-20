@@ -14,6 +14,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
@@ -245,7 +246,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCleanupDir() throws Throwable {
+    public void testCleanupDir() {
         if (OS.isWindows())
             FlakyTestRunner.builder(this::testCleanupDir0).build().run();
         else
@@ -710,9 +711,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
             int cycle = appender.cycle();
             for (int i = 0; i <= 5; i++) {
-                final int n = i;
 
-                writeTo.accept(appender, n);
+                writeTo.accept(appender, i);
                 assertEquals(cycle + i, appender.cycle());
 
                 try (DocumentContext dc = tailer.readingDocument()) {
@@ -1057,9 +1057,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
-                final int j = i;
                 try (final DocumentContext context = appender.writingDocument()) {
-                    context.wire().write("key").text("value=" + j);
+                    context.wire().write("key").text("value=" + i);
                 }
             }
             long lastIndex = appender.lastIndexAppended();
@@ -1348,9 +1347,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 appender.writeDocument(wire -> wire.write("key").text("value=v"));
                 chronicle.createTailer(named ? "named" : null)
-                        .readDocument(wire -> {
-                            assertEquals("value=v", wire.read("key").text());
-                        });
+                        .readDocument(wire -> assertEquals("value=v", wire.read("key").text()));
             }
         }
     }
@@ -2091,7 +2088,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void testOverreadForwardFromFutureCycleThenReadBackwardTailer() {
-        RollCycle cycle = TEST2_DAILY;
         // when "forwardToFuture" flag is set, go one cycle to the future
         AtomicBoolean forwardToFuture = new AtomicBoolean(false);
         TimeProvider timeProvider = () -> forwardToFuture.get()
@@ -2099,7 +2095,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 : System.currentTimeMillis();
 
         try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .rollCycle(cycle)
+                .rollCycle(TestRollCycles.TEST2_DAILY)
                 .timeProvider(timeProvider)
                 .build();
              ExcerptAppender appender = chronicle.createAppender()) {
@@ -3199,9 +3195,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         try (final ChronicleQueue queue = builder(queueDir, wireType).
                 testBlockSize().build();
              final ExcerptAppender appender = queue.createAppender()) {
-            appender.writeDocument("foo", (v, t) -> {
-                v.text(t);
-            });
+            appender.writeDocument("foo", ValueOut::text);
         }
 
         try (Stream<Path> list = Files.list(queueDir.toPath())) {
@@ -3555,10 +3549,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return clock;
     }
 
-    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException, InterruptedException {
+    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException {
         String time = Instant.ofEpochMilli(clock.get()).toString();
 
-        final Random random = new Random(0xDEADBEEF);
+        final Random random = new Random(0xDEADBEEFL);
         final File queueFolder = getTmpDir();
         try (final ChronicleQueue queue = ChronicleQueue.singleBuilder(queueFolder).
                 timeProvider(clock::get).
@@ -3727,8 +3721,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     private static class BytesWithIndex implements Closeable {
-        private BytesStore<?, ?> bytes;
-        private long index;
+        private final BytesStore<?, ?> bytes;
+        private final long index;
 
         BytesWithIndex(Bytes<?> bytes, long index) {
             this.bytes = Bytes.allocateElasticDirect(bytes.readRemaining()).write(bytes);

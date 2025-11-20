@@ -757,10 +757,11 @@ Java Queue has similar functional requirements which should ultimately use simil
 
 * Supported JDKs: 8 and 21. Run Maven with an explicit `JAVA_HOME` so the compiler and tests use the intended JDK:
 +
-```
+[source]
+----
 env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 PATH=/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin:$PATH mvn clean install | tee build-java8.log
 env JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64 PATH=/usr/lib/jvm/java-1.21.0-openjdk-amd64/bin:$PATH mvn clean install | tee build-java21.log
-```
+----
 * Capture the full log (using `tee` as above) when reporting failures.
 * If you see a `Failed to compile generated method writer` warning, see the next section for additional diagnostics.
 

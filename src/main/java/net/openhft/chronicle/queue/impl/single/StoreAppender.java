@@ -788,7 +788,7 @@ class StoreAppender extends AbstractCloseable
      * @return true if inside a valid header, false otherwise
      */
     private boolean isInsideHeader(Wire wire) {
-        return (wire instanceof AbstractWire) ? ((AbstractWire) wire).isInsideHeader() : true;
+        return !(wire instanceof AbstractWire) || ((AbstractWire) wire).isInsideHeader();
     }
 
     /**
@@ -942,7 +942,7 @@ class StoreAppender extends AbstractCloseable
     /*
      * overridden in delta wire
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "EmptyMethod"})
     void beforeAppend(final Wire wire, final long index) {
     }
 

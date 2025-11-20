@@ -210,7 +210,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Test
     public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
-        FlakyTestRunner.<RuntimeException>builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
+        FlakyTestRunner.builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
                 .run();
@@ -231,7 +231,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Test
     public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
-        FlakyTestRunner.<RuntimeException>builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
+        FlakyTestRunner.builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
                 .run();
@@ -366,16 +366,12 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             builder.append("acquired but not released:\n");
             HashSet<String> keyDiff = new HashSet<>(acquiredCounts.keySet());
             keyDiff.removeAll(releasedCounts.keySet());
-            keyDiff.forEach(k -> {
-                builder.append(k).append("(").append(acquiredCounts.get(k)).append(")\n");
-            });
+            keyDiff.forEach(k -> builder.append(k).append("(").append(acquiredCounts.get(k)).append(")\n"));
             builder.append("released but not acquired:\n");
             keyDiff.clear();
             keyDiff.addAll(releasedCounts.keySet());
             keyDiff.removeAll(acquiredCounts.keySet());
-            keyDiff.forEach(k -> {
-                builder.append(k).append("(").append(releasedCounts.get(k)).append(")\n");
-            });
+            keyDiff.forEach(k -> builder.append(k).append("(").append(releasedCounts.get(k)).append(")\n"));
 
             return builder.toString();
         }

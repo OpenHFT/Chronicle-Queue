@@ -56,7 +56,7 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
      */
     private static void createQueueWithZeroFirstSubIndexValue(SetTimeProvider setTimeProvider, Path path) throws StreamCorruptedException {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, path);
-             ExcerptAppender appender = queue.createAppender();) {
+             ExcerptAppender appender = queue.createAppender()) {
 
             Bytes<Void> bytes = Bytes.allocateElasticDirect();
 

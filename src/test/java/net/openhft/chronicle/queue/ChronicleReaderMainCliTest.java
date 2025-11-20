@@ -13,7 +13,7 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ChronicleReaderMainCliTest extends QueueTestCommon {
 
@@ -79,7 +79,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         final String out = capture.toString();
         assertTrue(out.contains("second"));
         assertTrue(out.contains("third"));
-        assertTrue("Start index should skip earlier entries", !out.contains("first"));
+        assertFalse("Start index should skip earlier entries", out.contains("first"));
     }
 
     @Test
@@ -97,8 +97,8 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         RecordingChronicleReader reader = main.reader;
         assertTrue(reader.executed);
         assertTrue(reader.showHistory);
-        assertTrue(reader.methodReaderInterfaceSnapshot == Runnable.class);
-        assertTrue(reader.wireTypeSnapshot == WireType.TEXT);
+        assertSame(reader.methodReaderInterfaceSnapshot, Runnable.class);
+        assertSame(reader.wireTypeSnapshot, WireType.TEXT);
     }
 
     private static final class TestChronicleReaderMain extends ChronicleReaderMain {

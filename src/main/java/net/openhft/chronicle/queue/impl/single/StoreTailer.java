@@ -928,8 +928,7 @@ class StoreTailer extends AbstractCloseable
      * @return The {@link ScanResult} indicating whether the move was successful or not.
      */
     ScanResult moveToIndexResult(final long index) {
-        final ScanResult scanResult = moveToIndexResult0(index);
-        return scanResult;
+        return moveToIndexResult0(index);
     }
 
     /**
@@ -1307,6 +1306,7 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
+                //noinspection TextLabelInSwitchStatement
                 LoopForward: // NOSONAR
                 while (originalToEndLoopCondition(approximateLastIndex, index)) {
                     final ScanResult result = moveToIndexResult(++index);

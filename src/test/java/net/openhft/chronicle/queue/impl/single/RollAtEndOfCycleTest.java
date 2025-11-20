@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueOut;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,9 +41,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
         try (final SingleChronicleQueue queue = createQueue();
              final ExcerptAppender appender = queue.createAppender()) {
 
-            appender.writeDocument(1, (w, i) -> {
-                w.int32(i);
-            });
+            appender.writeDocument(1, ValueOut::int32);
 
             final ExcerptTailer tailer = queue.createTailer();
             try (final DocumentContext context = tailer.readingDocument()) {
@@ -54,9 +53,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
 
             assertFalse(tailer.readingDocument().isPresent());
 
-            appender.writeDocument(2, (w, i) -> {
-                w.int32(i);
-            });
+            appender.writeDocument(2, ValueOut::int32);
 
             assertQueueFileCount(queue.path.toPath(), 2);
             try (final DocumentContext context = tailer.readingDocument()) {
@@ -84,9 +81,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
         try (final SingleChronicleQueue queue = createQueue();
              final ExcerptAppender appender = queue.createAppender()) {
 
-            appender.writeDocument(1, (w, i) -> {
-                w.int32(i);
-            });
+            appender.writeDocument(1, ValueOut::int32);
 
             final ExcerptTailer tailer = queue.createTailer();
             try (final DocumentContext context = tailer.readingDocument()) {
@@ -97,9 +92,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
 
             assertFalse(tailer.readingDocument().isPresent());
 
-            appender.writeDocument(2, (w, i) -> {
-                w.int32(i);
-            });
+            appender.writeDocument(2, ValueOut::int32);
 
             assertQueueFileCount(queue.path.toPath(), 1);
             try (final DocumentContext context = tailer.readingDocument()) {

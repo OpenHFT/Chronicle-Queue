@@ -75,7 +75,7 @@ public class QueueTestCommon {
         }
     };
 
-    private static AtomicLong counter = new AtomicLong();
+    private static final AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
     private long freeSpace;
 

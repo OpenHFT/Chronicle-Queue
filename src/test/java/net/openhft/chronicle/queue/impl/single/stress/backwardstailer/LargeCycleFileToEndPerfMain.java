@@ -66,12 +66,12 @@ public class LargeCycleFileToEndPerfMain {
     private static void measureToEndPerf(ExcerptTailer tailer, ExcerptAppender appender) {
         line();
         log.info("Measuring single shot tailer.toEnd() performance");
-        log.info("tailer.index()[before]: " + tailer.index());
+        log.info("tailer.index()[before]: {}", tailer.index());
         long start = System.nanoTime();
         tailer.toEnd();
         long elapsed = System.nanoTime() - start;
-        log.info("lastIndexAppended: " + appender.lastIndexAppended());
-        log.info("tailer.index()[after]: " + tailer.index());
+        log.info("lastIndexAppended: {}", appender.lastIndexAppended());
+        log.info("tailer.index()[after]: {}", tailer.index());
         log.info("Elapsed time micros: {}us", TimeUnit.NANOSECONDS.toMicros(elapsed));
         log.info("Elapsed time millis: {}ms", TimeUnit.NANOSECONDS.toMillis(elapsed));
         line();

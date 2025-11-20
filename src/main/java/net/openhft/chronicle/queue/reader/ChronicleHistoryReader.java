@@ -253,7 +253,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     private void printPercentilesSummary() {
         // we should also consider the case where >1 output messages are from 1 incoming
 
-        if (histos.size() == 0) {
+        if (histos.isEmpty()) {
             messageSink.accept("No data");
             return;
         }

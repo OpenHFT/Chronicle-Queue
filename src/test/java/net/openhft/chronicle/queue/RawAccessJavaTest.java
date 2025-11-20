@@ -55,17 +55,17 @@ public class RawAccessJavaTest extends QueueTestCommon {
                     // actual length of data
                     int dataLength = bytes.readInt();
 
-                    assertEquals(bytes.readByte(), (byte) 0xab);
-                    assertEquals(bytes.readShort(), (short) 12);
-                    assertEquals(bytes.readInt(), 123);
-                    assertEquals(bytes.readLong(), 123456789L);
-                    assertEquals(bytes.readFloat(), 1.234f, 1.0e-7);
-                    assertEquals(bytes.readDouble(), 123.456, 1.0e-7);
-                    assertEquals(bytes.readChar(), 'a');
+                    assertEquals((byte) 0xab, bytes.readByte());
+                    assertEquals((short) 12, bytes.readShort());
+                    assertEquals(123, bytes.readInt());
+                    assertEquals(123456789L, bytes.readLong());
+                    assertEquals(1.234f, bytes.readFloat(), 1.0e-7);
+                    assertEquals(123.456, bytes.readDouble(), 1.0e-7);
+                    assertEquals('a', bytes.readChar());
 
                     StringBuilder sb = new StringBuilder();
                     bytes.read8bit(sb);
-                    assertEquals(sb.toString(), "Hello World");
+                    assertEquals("Hello World", sb.toString());
                 }
             }
         }

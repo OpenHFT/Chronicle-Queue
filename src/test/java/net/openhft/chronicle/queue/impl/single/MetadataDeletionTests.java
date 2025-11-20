@@ -87,7 +87,7 @@ class MetadataDeletionTests extends QueueTestCommon {
             assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should not exist");
 
             // Verify that there are 4 cycle files
-            assertEquals(Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length, 4, "There should be 4 cycle files");
+            assertEquals(4, Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length, "There should be 4 cycle files");
 
             // Open again and let's see what we get
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
@@ -140,7 +140,7 @@ class MetadataDeletionTests extends QueueTestCommon {
                 boolean delete = new File(queuePath, "metadata.cq4t").delete();
                 assertTrue(delete, "metadata file should be deleted");
                 assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should not exist");
-                assertEquals(Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length, 4, "There should be 4 cycle files");
+                assertEquals(4, Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length, "There should be 4 cycle files");
 
                 assertEquals("3", tailer.readText());
                 assertEquals(2, tailer.cycle());

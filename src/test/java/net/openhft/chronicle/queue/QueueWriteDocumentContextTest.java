@@ -209,7 +209,6 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                 .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
                 .blockSize(OS.SAFE_PAGE_SIZE);
-        final SingleChronicleQueue queue = builder.build();
-        return queue;
+        return builder.build();
     }
 }

@@ -46,7 +46,8 @@ High-level architectural and operational choices are recorded in link:src/main/d
 
 Chronicle Queue is built and tested against JDK 8 and JDK 21. Use an explicit `JAVA_HOME` to match the target JDK when running Maven:
 
-```
+[source]
+----
 # Java 8
 env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 \
     PATH=/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin:$PATH \
@@ -56,7 +57,7 @@ env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 \
 env JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64 \
     PATH=/usr/lib/jvm/java-1.21.0-openjdk-amd64/bin:$PATH \
     mvn clean install | tee build-java21.log
-```
+----
 
 If you see a warning like `Failed to compile generated method writer - falling back to proxy method writer`, consult the troubleshooting entry in link:docs/FAQ.adoc[FAQ].
 

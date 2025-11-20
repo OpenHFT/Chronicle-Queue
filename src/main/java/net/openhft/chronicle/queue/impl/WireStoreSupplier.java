@@ -49,9 +49,8 @@ public interface WireStoreSupplier {
      * @param currentCycle the current cycle
      * @param direction    the direction (FORWARD or BACKWARD)
      * @return the next available cycle, or -1 if no next cycle exists
-     * @throws ParseException if parsing the cycle fails
      */
-    int nextCycle(int currentCycle, TailerDirection direction) throws ParseException;
+    int nextCycle(int currentCycle, TailerDirection direction);
 
     /**
      * Retrieves a set of cycle numbers within the specified range, inclusive of both the lower and upper cycles.

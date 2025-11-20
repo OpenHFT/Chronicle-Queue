@@ -79,7 +79,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
-    public void testTailerRefCountStableDuringResize() throws IOException {
+    public void testTailerRefCountStableDuringResize() {
         int blockSize = 1 << 12;
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR)
                 .rollCycle(TestRollCycles.TEST4_DAILY)
@@ -121,7 +121,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
-    public void testTailerHoldingDocumentAcrossRollsDoesNotResizeOldCycle() throws IOException {
+    public void testTailerHoldingDocumentAcrossRollsDoesNotResizeOldCycle() {
         File queuePath = new File(QUEUE_DIR, "tailer-hold");
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(0L);

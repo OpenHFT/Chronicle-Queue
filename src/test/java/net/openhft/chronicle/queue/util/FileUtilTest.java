@@ -192,6 +192,6 @@ public class FileUtilTest extends QueueTestCommon {
         out.close();
 
         filesWithPid = FileUtil.getAllOpenFiles();
-        assertFalse(filesWithPid.keySet().contains(temporaryFile.getAbsolutePath()));
+        assertFalse(filesWithPid.containsKey(temporaryFile.getAbsolutePath()));
     }
 }

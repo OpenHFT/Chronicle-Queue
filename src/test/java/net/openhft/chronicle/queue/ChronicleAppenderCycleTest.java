@@ -47,7 +47,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
         }
     }
 
-    private void runTest(String id, Bytes<?> msg) throws IOException {
+    private void runTest(String id, Bytes<?> msg) {
         Path path = IOTools.createTempDirectory(id);
         try {
             CountDownLatch steady = new CountDownLatch(2);
