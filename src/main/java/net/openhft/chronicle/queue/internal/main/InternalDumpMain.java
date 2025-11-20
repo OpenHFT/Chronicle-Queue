@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.util.ExitCodeRuntimeException;
 import net.openhft.chronicle.wire.WireDumper;
 import org.jetbrains.annotations.NotNull;
 
@@ -83,7 +84,7 @@ public class InternalDumpMain {
                             : (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX);
             File[] files = path.listFiles(filter);
             if (files == null) {
-                throw new IllegalArgumentException("Directory not found " + path);
+                throw ExitCodeRuntimeException.orExit(1, "Failed to list files in directory: " + path);
             }
 
             Arrays.sort(files);

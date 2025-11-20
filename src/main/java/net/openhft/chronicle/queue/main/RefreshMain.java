@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.main;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.util.ExitCodeRuntimeException;
 
 import java.io.File;
 
@@ -16,10 +17,10 @@ public final class RefreshMain {
      * @param args the directory
      */
     public static void main(String[] args) {
+
         final File path = new File(args[0]);
         if (!path.isDirectory()) {
-            System.err.println("Path argument must be a queue directory");
-            System.exit(1);
+            throw ExitCodeRuntimeException.orExit(1, "Path argument must be a queue directory");
         }
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).build()) {

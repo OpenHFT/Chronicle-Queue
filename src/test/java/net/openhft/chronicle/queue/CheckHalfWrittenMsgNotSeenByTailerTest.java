@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.util.ExitCodeRuntimeException;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
@@ -57,7 +58,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
 
                 // this will create a half written message, as we are going to system exit
                 if (exit)
-                    System.exit(-1);
+                    throw ExitCodeRuntimeException.orExit(-1, "Exiting to simulate crash during write");
 
                 dc.wire().write("key2").text("hello world 6");
             }

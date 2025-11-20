@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.queue.reader.ContentBasedLimiter;
+import net.openhft.chronicle.queue.util.ExitCodeRuntimeException;
 import net.openhft.chronicle.wire.AbstractTimestampLongConverter;
 import net.openhft.chronicle.wire.WireType;
 import org.apache.commons.cli.*;
@@ -141,7 +142,7 @@ public class ChronicleReaderMain {
                 true
         );
         writer.flush();
-        System.exit(status);
+        throw ExitCodeRuntimeException.orExit(status, message);
     }
 
     /**

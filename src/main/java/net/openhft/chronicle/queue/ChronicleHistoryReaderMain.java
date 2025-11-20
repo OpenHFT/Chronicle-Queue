@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
+import net.openhft.chronicle.queue.util.ExitCodeRuntimeException;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
@@ -142,7 +143,7 @@ public class ChronicleHistoryReaderMain {
                 true
         );
         writer.flush();
-        System.exit(status);
+        throw ExitCodeRuntimeException.orExit(status, message);
     }
 
     /**

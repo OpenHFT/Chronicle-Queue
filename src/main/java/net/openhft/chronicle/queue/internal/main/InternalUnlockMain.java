@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.TableStoreWriteLock;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.util.ExitCodeRuntimeException;
 import net.openhft.chronicle.threads.BusyTimedPauser;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,13 +45,13 @@ public final class InternalUnlockMain {
     private static void unlock(@NotNull String dir) {
         File path = new File(dir);
         if (!path.isDirectory()) {
-            throw new IllegalArgumentException("Path argument must be a queue directory: " + dir);
+            throw ExitCodeRuntimeException.orExit(1, "Path argument must be a queue directory");
         }
 
         File storeFilePath = new File(path, QUEUE_METADATA_FILE);
 
         if (!storeFilePath.exists()) {
-            throw new IllegalStateException("Metadata file not found, nothing to unlock: " + storeFilePath);
+            throw ExitCodeRuntimeException.orExit(1, "Metadata file not found, nothing to unlock");
         }
 
         final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();

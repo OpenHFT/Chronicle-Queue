@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.internal.writer;
 
+import net.openhft.chronicle.queue.util.ExitCodeRuntimeException;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -88,8 +89,7 @@ public class ChronicleWriterMain {
         );
         writer.flush();
         String errorMessage = message == null ? "Usage requested" : message;
-        System.err.println(errorMessage);
-        System.exit(status);
+        throw ExitCodeRuntimeException.orExit(status, errorMessage);
     }
 
     /**
