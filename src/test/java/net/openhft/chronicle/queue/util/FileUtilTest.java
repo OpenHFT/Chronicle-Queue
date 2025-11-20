@@ -73,14 +73,15 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
+    @Test
     public void stateWindows() {
         assumeTrue(OS.isWindows());
 
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
 
-        FileUtil.state(new File("foo"));
+        FileState foo = FileUtil.state(new File("foo"));
+        assertEquals(FileState.NON_EXISTENT, foo);
     }
 
     @Test(timeout = 30_000)
