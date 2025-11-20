@@ -63,9 +63,7 @@ public class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvi
             long index = tailer.toEnd().index();
             // System.out.println("index = " + index);
         } catch (IllegalStateException e) {
-            e.printStackTrace();
-            Assert.fail();
-            System.exit(-1);
+            throw new AssertionError(e);
         }
     }
 
