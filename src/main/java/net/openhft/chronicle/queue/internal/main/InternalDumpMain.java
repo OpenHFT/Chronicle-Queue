@@ -83,7 +83,8 @@ public class InternalDumpMain {
                             : (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX);
             File[] files = path.listFiles(filter);
             if (files == null) {
-                throw new IllegalArgumentException("Directory not found " + path);
+                err.println("Directory not found " + path);
+                System.exit(1);
             }
 
             Arrays.sort(files);

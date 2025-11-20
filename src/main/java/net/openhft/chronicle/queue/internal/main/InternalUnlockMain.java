@@ -44,13 +44,15 @@ public final class InternalUnlockMain {
     private static void unlock(@NotNull String dir) {
         File path = new File(dir);
         if (!path.isDirectory()) {
-            throw new IllegalArgumentException("Path argument must be a queue directory: " + dir);
+            System.err.println("Path argument must be a queue directory");
+            System.exit(1);
         }
 
         File storeFilePath = new File(path, QUEUE_METADATA_FILE);
 
         if (!storeFilePath.exists()) {
-            throw new IllegalStateException("Metadata file not found, nothing to unlock: " + storeFilePath);
+            System.err.println("Metadata file not found, nothing to unlock");
+            System.exit(1);
         }
 
         final TableStore<?> store = SingleTableBuilder.binary(storeFilePath, Metadata.NoMeta.INSTANCE).readOnly(false).build();
