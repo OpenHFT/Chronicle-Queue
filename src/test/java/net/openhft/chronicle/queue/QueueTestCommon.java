@@ -38,11 +38,13 @@ import static org.junit.Assert.fail;
 public class QueueTestCommon {
     private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
+    private static final String METHOD_WRITER_COMPILE_FAIL = "Failed to compile generated method writer";
     private final List<File> tmpDirs = new ArrayList<>();
 
     private ThreadDump threadDump;
     protected boolean finishedNormally;
     protected ExceptionTracker<ExceptionKey> exceptionTracker;
+    private Map<ExceptionKey, Integer> recordedExceptions;
 
     static {
         System.setProperty("queue.check.index", "true");
@@ -146,7 +148,7 @@ public class QueueTestCommon {
 
     @Before
     public void recordExceptions() {
-        Map<ExceptionKey, Integer> recordedExceptions = Jvm.recordExceptions(false);
+        recordedExceptions = Jvm.recordExceptions(false);
         exceptionTracker = ExceptionTracker.create(
                 ExceptionKey::message,
                 ExceptionKey::throwable,
@@ -237,10 +239,36 @@ public class QueueTestCommon {
         if (finishedNormally) {
             assertReferencesReleased();
             checkThreadDump();
+            logMethodWriterDiagnostics();
             checkExceptions();
         }
 
         tearDown();
+    }
+
+    // Emit more context if method-writer codegen falls back to proxy (helps flaky Java 8 runs).
+    private void logMethodWriterDiagnostics() {
+        if (recordedExceptions == null) {
+            return;
+        }
+        recordedExceptions.entrySet().stream()
+                .filter(e -> {
+                    ExceptionKey key = e.getKey();
+                    return key != null && key.message() != null && key.message().contains(METHOD_WRITER_COMPILE_FAIL);
+                })
+                .findFirst()
+                .ifPresent(e -> {
+                    ExceptionKey key = e.getKey();
+                    String diag = String.format(
+                            "Method writer codegen failure captured (count=%d, test=%s, java.version=%s, wire.generator.v2=%s, disableProxyCodegen=%s): %s",
+                            e.getValue(),
+                            testName.getMethodName(),
+                            System.getProperty("java.version"),
+                            System.getProperty("wire.generator.v2"),
+                            System.getProperty("disableProxyCodegen"),
+                            key.message());
+                    Jvm.warn().on(getClass(), diag, key.throwable());
+                });
     }
 
     protected void preAfter() {

@@ -753,4 +753,13 @@ Java Queue has similar functional requirements which should ultimately use simil
 
 '''
 
+=== Debugging method writer codegen fallbacks
+
+If you see warnings such as `Failed to compile generated method writer - falling back to proxy method writer` (often on older JDKs such as 8):
+
+* The tests now log additional context from `QueueTestCommon` when this occurs: test name, `java.version`, `wire.generator.v2`, and `disableProxyCodegen` system properties, plus the original throwable.
+* Reproduce with the focused test on Java 8 to collect a small log: `JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 mvn -Dtest=MessageHistoryTest test -DfailIfNoTests=false`.
+* Review the emitted warning in the test output to see the captured properties; if it repeats reliably, capture the full build log and the warning line for triage.
+* To force newer codegen, set `-Dwire.generator.v2=true`; to opt out of proxy fallback for experiment only, set `-DdisableProxyCodegen=true` (may fail if codegen still misbehaves).
+
 <<../README.adoc#,Back to ReadMe>>
