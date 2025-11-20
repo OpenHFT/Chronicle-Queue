@@ -22,8 +22,14 @@ Hence, most of the topics are explained in greater depth throughout the Chronicl
 Before starting with the set up, make sure your development environment meets the following requirements:
 
 * Maven 3.6.x or later
-* Java 8 update 180+ or later
+* Java 8 update 180+ or later (tests also run on Java 21)
 * Access to the internet to allow Maven or Gradle to download the JARs needed
+
+Use an explicit `JAVA_HOME` when building or running tools so the intended JDK is used, for example:
+
+```
+env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 PATH=$JAVA_HOME/bin:$PATH mvn clean install
+```
 
 == Installing Chronicle Queue [[installing_chronicle_queue]]
 

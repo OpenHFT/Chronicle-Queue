@@ -42,6 +42,24 @@ link:https://player.vimeo.com/video/201989439[Why Use Chronicle Queue Between Mi
 A number of relevant system properties are listed in link:docs/systemProperties.adoc[systemProperties.adoc].
 High-level architectural and operational choices are recorded in link:src/main/docs/decision-log.adoc[decision-log.adoc].
 
+== Building and Testing
+
+Chronicle Queue is built and tested against JDK 8 and JDK 21. Use an explicit `JAVA_HOME` to match the target JDK when running Maven:
+
+```
+# Java 8
+env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 \
+    PATH=/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin:$PATH \
+    mvn clean install | tee build-java8.log
+
+# Java 21
+env JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64 \
+    PATH=/usr/lib/jvm/java-1.21.0-openjdk-amd64/bin:$PATH \
+    mvn clean install | tee build-java21.log
+```
+
+If you see a warning like `Failed to compile generated method writer - falling back to proxy method writer`, consult the troubleshooting entry in link:docs/FAQ.adoc[FAQ].
+
 == What Is Chronicle Queue?
 
 You could consider a Chronicle Queue to be similar to a low latency broker-less durable/persisted topic that can contain messages of different types and sizes.

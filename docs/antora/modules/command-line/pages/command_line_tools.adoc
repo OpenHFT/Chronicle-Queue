@@ -38,6 +38,7 @@ The following command line tools can be used to interact with Chronicle Queue.
 
 Where noted, each command line tool can be invoked via a shell script.
 Command line tools can also be invoked using Maven, assuming a project POM file that includes the Chronicle Queue artifact.
+Set an explicit `JAVA_HOME` (8 or 21) when invoking Maven so the tool runs on the intended JDK.
 For example:
 
 [source,shell script]
