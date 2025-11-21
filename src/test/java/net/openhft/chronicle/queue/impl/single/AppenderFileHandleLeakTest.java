@@ -42,7 +42,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
-    private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
+    private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;

@@ -245,14 +245,16 @@ public class ToEndTest extends QueueTestCommon {
                 .build();
              ExcerptAppender appender = wqueue.createAppender()) {
 
+            long lastCycle = 0;
             for (int i = 0; i < 10; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().getValueOut().text("hi-" + i);
-                    long lastCycle = wqueue.rollCycle().toCycle(dc.index());
+                    lastCycle = wqueue.rollCycle().toCycle(dc.index());
                 }
 
                 stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
             }
+            assert lastCycle > 0;
         }
 
         try (ChronicleQueue rqueue = SingleChronicleQueueBuilder

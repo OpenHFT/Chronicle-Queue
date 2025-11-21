@@ -58,6 +58,8 @@ class StoreAppender extends AbstractCloseable
     private final StoreAppenderContext context;
     private final WireStorePool storePool;
     private final boolean checkInterrupts;
+    @UsedViaReflection
+    private final Finalizer finalizer;
     @Nullable
     SingleChronicleQueueStore store;
     long lastPosition;
@@ -91,7 +93,7 @@ class StoreAppender extends AbstractCloseable
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
         this.context = new StoreAppenderContext();
-        Finalizer finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+        this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
 
         try {
             int lastExistingCycle = queue.lastCycle();
@@ -254,6 +256,7 @@ class StoreAppender extends AbstractCloseable
         wireForIndex = null;
         wire = null;
         bufferWire = null;
+        assert finalizer != null;
     }
 
     /**

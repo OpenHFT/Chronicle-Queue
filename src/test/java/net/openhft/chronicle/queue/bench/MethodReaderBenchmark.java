@@ -7,6 +7,7 @@ import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.NanoSampler;
@@ -263,14 +264,15 @@ public class MethodReaderBenchmark implements JLBHTask {
         }
     }
 
+    @UsedViaReflection
     static class OrderDTO extends SelfDescribingMarshallable {
-        private final char side;
-        private final char ordType;
-        private final String symbol;
-        private final long accountId;
-        private final double orderQty;
-        private final double price;
-        private final long createdTime;
+        private char side;
+        private char ordType;
+        private String symbol;
+        private long accountId;
+        private double orderQty;
+        private double price;
+        private long createdTime;
 
         OrderDTO(Random r) {
             side = (char) r.nextInt();
@@ -283,35 +285,36 @@ public class MethodReaderBenchmark implements JLBHTask {
         }
     }
 
+    @UsedViaReflection
     static class ExecutionReportDTO extends SelfDescribingMarshallable {
-        private final String orderID;
-        private final Bytes<?> clOrdID;
-        private final String execID;
-        private final char execTransType;
-        private final char execType;
-        private final char ordStatus;
-        private final Bytes<?> account;
-        private final char settlmntTyp;
-        private final Bytes<?> securityID;
-        private final String idSource;
-        private final char side;
-        private final double orderQty;
-        private final char ordType;
-        private final double price;
-        private final String currency;
-        private final char timeInForce;
-        private final double lastShares;
-        private final double lastPx;
-        private final String lastMkt;
-        private final double leavesQty;
-        private final double cumQty;
-        private final double avgPx;
-        private final String tradeDate;
+        private String orderID;
+        private Bytes<?> clOrdID;
+        private String execID;
+        private char execTransType;
+        private char execType;
+        private char ordStatus;
+        private Bytes<?> account;
+        private char settlmntTyp;
+        private Bytes<?> securityID;
+        private String idSource;
+        private char side;
+        private double orderQty;
+        private char ordType;
+        private double price;
+        private String currency;
+        private char timeInForce;
+        private double lastShares;
+        private double lastPx;
+        private String lastMkt;
+        private double leavesQty;
+        private double cumQty;
+        private double avgPx;
+        private String tradeDate;
         @LongConversion(MilliTimestampLongConverter.class)
-        private final long transactTime;
-        private final String settlCurrency;
-        private final char handlInst;
-        private final long createdNS;
+        private long transactTime;
+        private String settlCurrency;
+        private char handlInst;
+        private long createdNS;
 
         ExecutionReportDTO(Random r) {
             orderID = nextSymbol(r);
