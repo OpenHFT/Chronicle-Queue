@@ -246,7 +246,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCleanupDir() {
+    public void testCleanupDir() throws Throwable {
         if (OS.isWindows())
             FlakyTestRunner.builder(this::testCleanupDir0).build().run();
         else

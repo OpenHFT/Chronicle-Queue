@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -46,9 +47,8 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
             CustomEntity entity = new CustomEntity();
             IntStream.range(0, 2).forEach(i -> writer.onMessage(entity.enumType(enumType)));
 
-            //noinspection StatementWithEmptyBody
             while (methodReader.readOne()) {
-                continue;
+                Jvm.nanoPause();
             }
             Assert.assertEquals(2, msgCounter.get());
         } finally {
