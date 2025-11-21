@@ -144,11 +144,12 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
     private static void readMany(Bytes<?> bytes, int size) {
         for (int i = 0; i < size; i += 32) {
-            s32 = bytes.readInt(); // 4 bytes
-            f32 = bytes.readFloat(); // 4 bytes
-            s64 = bytes.readLong(); // 8 bytes
-            f64 = bytes.readDouble(); // 8 bytes
-            s = bytes.readUtf8(); // 8 bytes
+            // blackholes to avoid code elimination.
+            int s32 = bytes.readInt(); // 4 bytes
+            float f32 = bytes.readFloat(); // 4 bytes
+            long s64 = bytes.readLong(); // 8 bytes
+            double f64 = bytes.readDouble(); // 8 bytes
+            String s = bytes.readUtf8(); // 8 bytes
             assertEquals("Hello!!", s);
         }
     }

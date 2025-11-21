@@ -97,8 +97,8 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         RecordingChronicleReader reader = main.reader;
         assertTrue(reader.executed);
         assertTrue(reader.showHistory);
-        assertSame(reader.methodReaderInterfaceSnapshot, Runnable.class);
-        assertSame(reader.wireTypeSnapshot, WireType.TEXT);
+        assertSame(Runnable.class, reader.methodReaderInterfaceSnapshot);
+        assertSame(WireType.TEXT, reader.wireTypeSnapshot);
     }
 
     private static final class TestChronicleReaderMain extends ChronicleReaderMain {

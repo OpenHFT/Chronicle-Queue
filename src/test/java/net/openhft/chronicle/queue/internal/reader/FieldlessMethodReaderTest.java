@@ -73,10 +73,8 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
     }
 
     static class CustomEntity extends SelfDescribingMarshallable {
-        private CustomEnumType enumType;
 
         CustomEntity enumType(CustomEnumType enumType) {
-            this.enumType = enumType;
             return this;
         }
     }

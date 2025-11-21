@@ -72,7 +72,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     // visible for testing
     int linearScanCount;
     int linearScanByPositionCount;
-    Collection<Closeable> closeables = new ArrayList<>();
+    final Collection<Closeable> closeables = new ArrayList<>();
     private long lastScannedIndex = -1;
 
     /**

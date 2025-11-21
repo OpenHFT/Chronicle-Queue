@@ -32,9 +32,9 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class InternalBenchmarkMain {
     static volatile boolean running = true;
-    static int throughput = Integer.getInteger("throughput", 250); // MB/s
-    static int runtime = Integer.getInteger("runtime", 300); // seconds
-    static String basePath = System.getProperty("path", OS.TMP);
+    static final int throughput = Integer.getInteger("throughput", 250); // MB/s
+    static final int runtime = Integer.getInteger("runtime", 300); // seconds
+    static final String basePath = System.getProperty("path", OS.TMP);
     static {
         System.setProperty("jvm.safepoint.enabled", "true");
     }

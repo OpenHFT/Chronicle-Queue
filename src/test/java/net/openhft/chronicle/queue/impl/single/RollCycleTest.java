@@ -295,8 +295,8 @@ public class RollCycleTest extends QueueTestCommon {
     }
 
     static class ParallelQueueObserver implements Runnable, StoreFileListener {
-        ChronicleQueue queue;
-        CountDownLatch progressLatch;
+        final ChronicleQueue queue;
+        final CountDownLatch progressLatch;
         volatile int documentsRead;
 
         ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {

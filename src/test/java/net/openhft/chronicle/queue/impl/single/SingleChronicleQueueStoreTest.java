@@ -26,7 +26,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
+    public final TemporaryFolder tmpDir = new TemporaryFolder();
 
     private static void assertExcerptsAreIndexed(final RollingChronicleQueue queue, final long[] indices,
                                                  final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {

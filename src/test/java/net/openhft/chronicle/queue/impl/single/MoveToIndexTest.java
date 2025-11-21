@@ -22,7 +22,7 @@ import static org.junit.Assert.assertFalse;
 
 public final class MoveToIndexTest extends QueueTestCommon {
     @Rule
-    public TemporaryFolder tmpFolder = new TemporaryFolder();
+    public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
     @Test
     public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {

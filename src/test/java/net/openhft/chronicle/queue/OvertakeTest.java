@@ -134,7 +134,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     class MyAppender implements Callable<Long> {
-        SynchronousQueue<Long> sync;
+        final SynchronousQueue<Long> sync;
 
         MyAppender(SynchronousQueue<Long> sync) {
             this.sync = sync;
@@ -171,9 +171,9 @@ public class OvertakeTest extends QueueTestCommon {
 
     class MyTailer implements Callable<Long> {
 
-        ChronicleQueue queue;
-        long startIndex;
-        SynchronousQueue<Long> sync;
+        final ChronicleQueue queue;
+        final long startIndex;
+        final SynchronousQueue<Long> sync;
 
         MyTailer(ChronicleQueue q, long s, SynchronousQueue<Long> sync) {
             queue = q;

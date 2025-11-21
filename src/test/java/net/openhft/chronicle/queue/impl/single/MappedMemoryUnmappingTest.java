@@ -22,7 +22,7 @@ import static org.junit.Assert.fail;
 
 public final class MappedMemoryUnmappingTest extends QueueTestCommon {
     @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    public final TemporaryFolder tmp = new TemporaryFolder();
 
     @Test
     public void shouldUnmapMemoryAsCycleRolls() throws IOException {

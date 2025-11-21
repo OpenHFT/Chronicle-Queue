@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
@@ -85,7 +86,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
     private static final long ONE_DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1L);
     private static final boolean LOG_TEST_DEBUG =
-            Boolean.getBoolean(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
+            Jvm.getBoolean(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
 
     private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
                                                 final Instant instant, final DateTimeFormatter formatter) {

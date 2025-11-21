@@ -76,7 +76,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
 
     static class DtoBytesMarshallable extends BytesInBinaryMarshallable {
 
-        StringBuilder name = new StringBuilder();
+        final StringBuilder name = new StringBuilder();
         int age;
 
         public void readMarshallable(BytesIn<?> bytes) {
@@ -92,7 +92,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
     }
 
     static class DtoAbstractMarshallable extends SelfDescribingMarshallable {
-        StringBuilder name = new StringBuilder();
+        final StringBuilder name = new StringBuilder();
         int age;
 
         public void readMarshallable(BytesIn<?> bytes) {

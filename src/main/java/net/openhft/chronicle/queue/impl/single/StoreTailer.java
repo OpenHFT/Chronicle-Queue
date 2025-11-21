@@ -51,7 +51,6 @@ class StoreTailer extends AbstractCloseable
     private final IndexUpdater indexUpdater;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
-    private final Finalizer finalizer;
     long index; // index of the next read.
     long lastReadIndex; // index of the last read message
     @Nullable
@@ -97,7 +96,7 @@ class StoreTailer extends AbstractCloseable
             } else {
                 moveToIndex(indexUpdater.index().getVolatileValue());
             }
-            finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+            Finalizer finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
             error = false;
 
         } finally {

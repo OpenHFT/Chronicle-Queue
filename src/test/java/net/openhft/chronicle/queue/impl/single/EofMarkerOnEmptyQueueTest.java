@@ -32,7 +32,7 @@ import static org.junit.Assert.assertNotEquals;
 public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     @Rule
-    public TemporaryFolder tmpFolder = new TemporaryFolder();
+    public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
     @Override
     @Before

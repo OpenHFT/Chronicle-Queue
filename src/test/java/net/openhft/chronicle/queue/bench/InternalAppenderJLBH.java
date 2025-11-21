@@ -30,7 +30,6 @@ public class InternalAppenderJLBH implements JLBHTask {
     private static final int WARMUP_ITERATIONS = 50_000;
     private final RollCycle rollCycle;
     private SingleChronicleQueue queue;
-    private SetTimeProvider timeProvider;
     private InternalAppender appender;
     private int sequenceNumber;
     private Bytes<?> payload;
@@ -53,7 +52,7 @@ public class InternalAppenderJLBH implements JLBHTask {
     @Override
     public void init(JLBH jlbh) {
         IOTools.deleteDirWithFiles(QUEUE_PATH);
-        timeProvider = new SetTimeProvider();
+        SetTimeProvider timeProvider = new SetTimeProvider();
         payload = Bytes.from("hello world");
         queue = SingleChronicleQueueBuilder
                 .binary(QUEUE_PATH)
