@@ -209,7 +209,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+    public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() throws Throwable {
         FlakyTestRunner.builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
@@ -230,7 +230,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+    public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() throws Throwable {
         FlakyTestRunner.builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
