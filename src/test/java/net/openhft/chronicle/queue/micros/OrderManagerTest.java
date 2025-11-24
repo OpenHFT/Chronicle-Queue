@@ -102,7 +102,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithQueueHistory() {
+    public void testWithQueueHistory() throws Throwable {
         FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
 
