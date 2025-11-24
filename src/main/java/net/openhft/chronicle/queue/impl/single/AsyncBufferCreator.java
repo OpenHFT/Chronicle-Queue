@@ -25,9 +25,10 @@ public interface AsyncBufferCreator extends ThrowingBiFunction<Long, Integer, By
      * @param size       The size of the buffer to be created.
      * @param maxReaders The maximum number of readers supported by the buffer.
      * @return Throws an {@link UnsupportedOperationException}.
+     * @throws UnsupportedOperationException Always thrown to indicate the method should not be used.
      */
     @Override
-    default @NotNull BytesStore<?, ?> apply(Long size, Integer maxReaders) {
+    default @NotNull BytesStore<?, ?> apply(Long size, Integer maxReaders) throws Exception {
         throw new UnsupportedOperationException("Call the create function instead");
     }
 
@@ -38,6 +39,7 @@ public interface AsyncBufferCreator extends ThrowingBiFunction<Long, Integer, By
      * @param maxReaders The maximum number of readers that can access the buffer.
      * @param file       The file associated with the buffer for storage.
      * @return A {@link BytesStore} instance configured for asynchronous operations.
+     * @throws Exception If any error occurs during buffer creation.
      */
-    @NotNull BytesStore<?, ?> create(long size, int maxReaders, File file);
+    @NotNull BytesStore<?, ?> create(long size, int maxReaders, File file) throws Exception;
 }
