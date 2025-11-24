@@ -360,8 +360,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test(expected = IllegalStateException.class)
     public void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle() {
-        expectException("Overriding roll length from existing metadata");
-
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
