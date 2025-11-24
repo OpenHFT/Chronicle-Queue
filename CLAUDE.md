@@ -276,4 +276,4 @@ Core Chronicle dependencies (from pom.xml):
 - `docs/FAQ.adoc` - Common questions
 - `docs/How_it_works.adoc` - Implementation details
 - `docs/utilities.adoc` - Utility documentation
-- `docs/systemProperties.adoc` - System property reference
+- `src/main/docs/system-properties.adoc` - System property reference

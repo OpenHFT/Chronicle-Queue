@@ -78,5 +78,4 @@ public final class QueueSystemProperties {
     public static void setCheckIndex(boolean enabled) {
         checkIndexEnabled = enabled;
     }
-
 }

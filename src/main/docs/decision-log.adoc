@@ -21,7 +21,7 @@ Entries cross-reference the queue documentation under `docs/` and any future `pr
 Context::
 * Chronicle Queue is used for long-lived, high-throughput messaging and logging where queues may span many files and days of data.
 * The on-disk format and roll-cycle policy must support efficient append and tail operations, random access by index, and reasonable recovery characteristics after process or machine failure.
-* Existing documentation in `docs/How_it_works.adoc` and `docs/managing_roll_files_directly.adoc` describes roll files, index structures, and how readers and writers interact with them.
+* Existing documentation in `../../docs/How_it_works.adoc` and `../../docs/managing_roll_files_directly.adoc` describes roll files, index structures, and how readers and writers interact with them.
 Decision Statement::
 * Chronicle Queue stores data in append-only roll files organised by a roll-cycle policy (for example daily or hourly). Each roll file contains data blocks and index metadata that support fast sequential and random access.
 * The default roll-cycle is chosen to balance file size, index density and operational convenience, and is stable across minor releases to maintain compatibility.
@@ -65,7 +65,7 @@ Rationale for Decision::
 * Independent tailers make it easy to build fan-out consumers and replay tools without affecting each other’s positions.
 Impact & Consequences::
 * Application code must be explicit about how appenders are shared; violations may manifest as increased latency or, if external concurrency control is incorrect, undefined behaviour.
-* Documentation in `README.adoc` and `docs/How_it_works.adoc` should continue to emphasise recommended patterns (for example appender-per-thread and explicit tailer lifecycle).
+* Documentation in `README.adoc` and `../../docs/How_it_works.adoc` should continue to emphasise recommended patterns (for example appender-per-thread and explicit tailer lifecycle).
 Notes/Links::
 * link:../../README.adoc[Chronicle Queue README]
 * link:../../docs/How_it_works.adoc[How it works]
@@ -102,7 +102,7 @@ Notes/Links::
 == CQ-NF-S-301 Encryption Responsibility and Boundary
 
 Context::
-* Encryption of queue contents is an enterprise feature documented under `docs/encryption.adoc` and related portal pages.
+* Encryption of queue contents is an enterprise feature documented under `../../docs/encryption.adoc` and related portal pages.
 * The open-source Chronicle Queue module must remain clear about which security responsibilities it fulfils and which are delegated to enterprise extensions or surrounding infrastructure.
 Decision Statement::
 * The core Chronicle Queue module does not implement at-rest encryption itself; it focuses on the queueing and persistence model.
@@ -146,4 +146,3 @@ Impact & Consequences::
 Notes/Links::
 * link:../../docs/How_it_works.adoc[How it works]
 * link:../../docs/FAQ.adoc[FAQ]
-

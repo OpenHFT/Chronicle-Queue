@@ -725,7 +725,6 @@ class StoreTailer extends AbstractCloseable
                  * that did not exist, that is what this is reporting. If you are using daily rolling,
                  * and writing every day, you should not see this message.
                  */
-
                 Jvm.debug().on(getClass(), "Rolled " + (nextIndexCycle - cycle) + " " + "times to find the " +
                         "next cycle file. This can occur if your appenders have not written " +
                         "anything for a while, leaving the cycle files with a gap.");

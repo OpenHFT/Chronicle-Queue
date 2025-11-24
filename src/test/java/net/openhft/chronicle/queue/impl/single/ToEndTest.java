@@ -267,8 +267,8 @@ public class ToEndTest extends QueueTestCommon {
             ExcerptTailer tailer = rqueue.createTailer();
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
-            //noinspection StatementWithEmptyBody
-            while (tailer.readText() != null) ;
+            while (tailer.readText() != null)
+                Jvm.nanoPause();
 
             assertNull(tailer.readText());
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);

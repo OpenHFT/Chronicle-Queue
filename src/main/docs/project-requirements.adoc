@@ -1,8 +1,8 @@
 = Chronicle Queue Project Requirements
-:doctype: book
 :toc:
 :sectnums:
 :lang: en-GB
+:doctype: book
 :source-highlighter: rouge
 
 // Legend
@@ -41,7 +41,7 @@ They are complementary to:
 [cols="1,5,4",options="header"]
 |===
 |ID |Requirement |Benchmark Target
-|[[QUEUE-NF-P-001]]QUEUE-NF-P-001 |For simple messages on the same host, Chronicle Queue should support sub-microsecond median latency for append-plus-tail operations under typical hardware conditions. |Micro-benchmarks (and JLBH harnesses where applicable) measure append + read latency for representative message sizes and report median and tail latencies; results are documented in `docs/performance.adoc` and kept within agreed budgets.
+|[[QUEUE-NF-P-001]]QUEUE-NF-P-001 |For simple messages on the same host, Chronicle Queue should support sub-microsecond median latency for append-plus-tail operations under typical hardware conditions. |Micro-benchmarks (and JLBH harnesses where applicable) measure append + read latency for representative message sizes and report median and tail latencies; results are documented in `performance.adoc` and kept within agreed budgets.
 |[[QUEUE-NF-P-002]]QUEUE-NF-P-002 |Support sustained throughput in the millions of messages per second per writer thread on modern x86-64 servers without excessive tail latency growth, assuming adequate storage bandwidth. |Throughput benchmarks run under sustained load with one and multiple writer threads, capturing messages-per-second and latency percentiles; results compared against historical baselines and documented in performance reports.
 |[[QUEUE-NF-P-003]]QUEUE-NF-P-003 |Maintain predictable seek and scan times when using the tiered index to jump to arbitrary indices within roll files, avoiding unbounded linear scans for typical access patterns. |Index benchmarks measure time to seek to random indices across large queues; regression tests assert that seek times remain within agreed thresholds as queue size grows.
 |===
@@ -60,7 +60,7 @@ They are complementary to:
 [cols="1,5,4",options="header"]
 |===
 |ID |Requirement |Verification
-|[[QUEUE-NF-O-001]]QUEUE-NF-O-001 |Expose configuration and tuning knobs via documented system properties for key behaviours such as roll-cycle checks, interrupt handling, scan latency reporting and cache sizes. |`docs/systemProperties.adoc` lists all relevant properties with defaults and descriptions; unit tests and integration tests confirm that toggling properties affects behaviour as expected.
+|[[QUEUE-NF-O-001]]QUEUE-NF-O-001 |Expose configuration and tuning knobs via documented system properties for key behaviours such as roll-cycle checks, interrupt handling, scan latency reporting and cache sizes. |`../../docs/system-properties.adoc` lists all relevant properties with defaults and descriptions; unit tests and integration tests confirm that toggling properties affects behaviour as expected.
 |[[QUEUE-NF-O-002]]QUEUE-NF-O-002 |Support time-based roll cycles and predictable roll-file naming so that operational tooling can implement retention, archival and backup without modifying the core library. |`decision-log.adoc` entry `CQ-FN-101` documents the roll-cycle model; operational runbooks demonstrate retention scripts or tooling; tests cover behaviour across roll boundaries and after manual removal of old roll files.
 |[[QUEUE-NF-O-003]]QUEUE-NF-O-003 |Provide sufficient diagnostics (logging, metrics and optional consistency checks) to detect slow appenders, expensive scans and indexing anomalies without impacting hot-path latency when disabled. |System-property-driven features such as slow appender warnings and linear scan reporting are covered by tests that deliberately trigger warnings; performance tests compare overhead with features enabled vs disabled.
 |===

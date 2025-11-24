@@ -68,7 +68,8 @@ public final class InternalPingPongMain {
                 ExcerptTailer tailer = queue.createTailer();
                 while (running.get()) {
                     //noinspection StatementWithEmptyBody
-                    while (readCount.get() == writeCount.get()) ;
+                    while (readCount.get() == writeCount.get())
+                        Jvm.nanoPause();
 
                     long wakeTime = System.nanoTime();
                     while (running.get()) {

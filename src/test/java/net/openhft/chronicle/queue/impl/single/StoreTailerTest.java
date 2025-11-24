@@ -706,5 +706,4 @@ public class StoreTailerTest extends QueueTestCommon {
             assertNull(tailer.currentFile());
         }
     }
-
 }

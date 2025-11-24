@@ -413,7 +413,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @param knownAddress   a know addressForRead ( used as a starting point )
      * @see SCQIndexing#moveToIndex
      */
-
     @NotNull
     private ScanResult linearScan(@NotNull final Wire wire,
                                   final long toIndex,

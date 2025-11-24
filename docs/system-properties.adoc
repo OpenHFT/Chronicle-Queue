@@ -4,13 +4,14 @@
 :source-highlighter: rouge
 
 == System Properties
+
 Below, a number of relevant System Properties are listed.
 
 NOTE: With `getBoolean`, returns if a System Property with the provided {@code systemPropertyKey} either exists, is set to "yes" or is set to "true", see
 https://github.com/OpenHFT/Chronicle-Core/blob/351e79ed593fa656c21b4e5a540a3a5831cd06a3/src/main/java/net/openhft/chronicle/core/Jvm.java#L1184[javadoc].
 
 .System properties
-[cols=4*, options="header"]
+[cols=4*,options="header"]
 |===
 | Property Key | Default | Description | Java Variable Name (Type)
 | chronicle.queue.checkrollcycle | `false` | Setting this property to "yes", "true" or "", prints a warning message every time a roll cycle file is created | _SHOULD_CHECK_CYCLE_ (boolean)

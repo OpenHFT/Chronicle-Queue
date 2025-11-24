@@ -1,9 +1,9 @@
 = Chronicle Queue Security Review
-:doctype: book
 :toc:
-:toclevels: 2
 :sectnums:
 :lang: en-GB
+:toclevels: 2
+:doctype: book
 :source-highlighter: rouge
 
 This document summarises the main security considerations for Chronicle Queue.
@@ -151,7 +151,7 @@ Requirement `QUEUE-NF-O-001` calls for documented configuration knobs, particula
 
 Key aspects:
 
-* `docs/systemProperties.adoc` documents the supported properties, their defaults and their effects;
+* `system-properties.adoc` documents the supported properties, their defaults and their effects;
 * configuration handling is performed using standard Java mechanisms (`System.getProperty` etc.), with no dynamic code loading based on untrusted values;
 * queue code does not fetch remote configurations or execute scripts; it assumes configuration is provided by trusted deployment tooling.
 
@@ -162,7 +162,7 @@ Dependency considerations:
 
 When changing configuration surfaces or adding new dependencies:
 
-* document any new system properties or environment options in `docs/systemProperties.adoc` and, where appropriate, in `project-requirements.adoc`;
+* document any new system properties or environment options in `system-properties.adoc` and, where appropriate, in `project-requirements.adoc`;
 * avoid introducing dependencies that bring in heavy reflection or deserialisation frameworks without a clear need;
 * ensure the build pipeline continues to run static analysis and dependency checks.
 

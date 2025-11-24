@@ -143,11 +143,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     protected SingleChronicleQueueBuilder() {
     }
-    /*
-     * ========================
-     * Builders
-     * ========================
-     */
 
     @SuppressWarnings("EmptyMethod")
     public static void addAliases() {
@@ -1570,7 +1565,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      * @throws IllegalArgumentException if the builders are not from the same class hierarchy
      */
-
     public SingleChronicleQueueBuilder setAllNullFields(@Nullable SingleChronicleQueueBuilder parentBuilder) {
         if (parentBuilder == null)
             return this;

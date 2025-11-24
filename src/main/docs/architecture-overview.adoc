@@ -1,9 +1,9 @@
 = Chronicle Queue Architecture Overview
-:doctype: book
 :toc:
-:toclevels: 3
 :sectnums:
 :lang: en-GB
+:toclevels: 3
+:doctype: book
 :source-highlighter: rouge
 
 This document positions Chronicle Queue within the wider Chronicle stack, describes its core abstractions and data model, and explains how its file format, roll-cycle model, indexing, and concurrency patterns work together to deliver ultra-low-latency, durable messaging.
@@ -202,7 +202,7 @@ Consult the builder Javadoc and implementation for the full set of configuration
 Chronicle Queue exposes several *system properties* that alter runtime behaviour without code changes.
 These are catalogued in:
 
-* link:../../docs/systemProperties.adoc[Chronicle Queue System Properties]
+* link:../../docs/system-properties.adoc[Chronicle Queue System Properties]
 
 Examples include:
 

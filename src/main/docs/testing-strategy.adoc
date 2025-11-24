@@ -1,9 +1,9 @@
 = Chronicle Queue Testing Strategy
-:doctype: book
 :toc:
-:toclevels: 2
 :sectnums:
 :lang: en-GB
+:toclevels: 2
+:doctype: book
 :source-highlighter: rouge
 
 This document describes the testing strategy for Chronicle Queue.
@@ -60,7 +60,7 @@ These are typically implemented as:
 
 * micro-benchmarks using JMH or JLBH harnesses for append-plus-tail microbenchmarks;
 * macro-level tests that write and read larger volumes of data to evaluate sustained throughput and tail latency;
-* experiments documented in `docs/performance.adoc`.
+* experiments documented in `performance.adoc`.
 
 Principles:
 
@@ -91,7 +91,7 @@ Principles:
 ** tests should verify that corruption is not introduced by out-of-bounds writes and that queue structures can be opened and scanned safely, relying on Chronicle-Bytes safety guarantees;
 ** additional tests should validate the documented encryption boundary by ensuring that applying external or application-level encryption does not break queue semantics.
 * `QUEUE-NF-O-*` (operability):
-** tests should confirm that system properties in `docs/systemProperties.adoc` have the documented effects (for example enabling warnings or consistency checks).
+** tests should confirm that system properties in `system-properties.adoc` have the documented effects (for example enabling warnings or consistency checks).
 
 == Resource Management and Leak Detection
 
@@ -114,4 +114,3 @@ When implementing new features or changing existing behaviour:
 * keep unit tests fast and deterministic; move long-running scenarios into dedicated integration or performance tests.
 
 Tests should be kept as self-documenting as possible, with clear method names and minimal inline commentary that explains non-obvious invariants or requirements.
-

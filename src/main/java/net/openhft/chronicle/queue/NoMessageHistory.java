@@ -5,7 +5,13 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.*;
 
-// Is this being used?
+/**
+ * {@link MessageHistory} implementation that records no timing or source information.
+ * <p>
+ * This singleton can be used in code paths where message history is either disabled for
+ * performance reasons or not relevant to the use case. All accessors return sentinel values
+ * and {@link #reset(int, long)} is a no-op.
+ */
 public enum NoMessageHistory implements MessageHistory {
     INSTANCE;
 
