@@ -58,6 +58,7 @@ class StoreAppender extends AbstractCloseable
     private final StoreAppenderContext context;
     private final WireStorePool storePool;
     private final boolean checkInterrupts;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     @UsedViaReflection
     private final Finalizer finalizer;
     @Nullable
@@ -256,7 +257,6 @@ class StoreAppender extends AbstractCloseable
         wireForIndex = null;
         wire = null;
         bufferWire = null;
-        assert finalizer != null;
     }
 
     /**

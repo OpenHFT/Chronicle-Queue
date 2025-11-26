@@ -51,6 +51,7 @@ class StoreTailer extends AbstractCloseable
     private final IndexUpdater indexUpdater;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private final Finalizer finalizer;
     long index; // index of the next read.
     long lastReadIndex; // index of the last read message
@@ -175,7 +176,6 @@ class StoreTailer extends AbstractCloseable
             w0.bytes().release(INIT);
         wireForIndex = null;
         releaseStore();
-        assert finalizer != null;
     }
 
     @Override
