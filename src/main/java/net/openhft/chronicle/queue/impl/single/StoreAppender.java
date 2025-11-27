@@ -357,6 +357,7 @@ class StoreAppender extends AbstractCloseable
      *
      * @param cycle The cycle to be set.
      */
+    @Deprecated(/* to be removed in 2027 */)
     void setCycle(int cycle) {
         if (cycle != this.cycle)
             setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);

@@ -12,6 +12,7 @@ import net.openhft.chronicle.wire.*;
  * performance reasons or not relevant to the use case. All accessors return sentinel values
  * and {@link #reset(int, long)} is a no-op.
  */
+@Deprecated(/* to be removed in 2027, only used in tests */)
 public enum NoMessageHistory implements MessageHistory {
     INSTANCE;
 

@@ -65,6 +65,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             Jvm.getSize("SingleChronicleQueueBuilder.blocksize", OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE),
             OS.is64Bit() && OS.isLinux() ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
 
+    @Deprecated(/* to be removed in 2027 */)
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -516,6 +517,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param rollTime the roll time to set
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime) {
         rollTime(rollTime, rollTimeZone);
         return this;
@@ -732,6 +734,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param spec the offset specification to apply
      * @return this builder for chaining
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public SingleChronicleQueueBuilder queueOffsetSpec(@NotNull QueueOffsetSpec spec) {
         this.queueOffsetSpec = spec;
         spec.apply(this);
@@ -802,6 +805,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param pretouchIntervalMillis the interval in milliseconds between preload operations
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
         this.pretouchIntervalMillis = pretouchIntervalMillis;
         return this;
@@ -1136,6 +1140,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param ringBufferForceCreateReader true to force reader creation, false otherwise
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder ringBufferForceCreateReader(boolean ringBufferForceCreateReader) {
         this.ringBufferForceCreateReader = ringBufferForceCreateReader;
         return this;
@@ -1155,6 +1160,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param ringBufferReopenReader true to reopen readers at the same position, false otherwise
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder ringBufferReopenReader(boolean ringBufferReopenReader) {
         this.ringBufferReopenReader = ringBufferReopenReader;
         return this;
@@ -1217,6 +1223,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param ringBufferPauserSupplier the supplier of {@link Pauser} for the ring buffer
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder ringBufferPauserSupplier(Supplier<Pauser> ringBufferPauserSupplier) {
         this.ringBufferPauserSupplier = ringBufferPauserSupplier;
         return this;
@@ -1538,6 +1545,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param forceDirectoryListingRefreshIntervalMs the interval to set
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public SingleChronicleQueueBuilder forceDirectoryListingRefreshIntervalMs(long forceDirectoryListingRefreshIntervalMs) {
         this.forceDirectoryListingRefreshIntervalMs = forceDirectoryListingRefreshIntervalMs;
         return this;
@@ -1607,6 +1615,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param appenderListener the listener to call when an excerpt is written
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public SingleChronicleQueueBuilder appenderListener(AppenderListener appenderListener) {
         this.appenderListener = appenderListener;
         return this;

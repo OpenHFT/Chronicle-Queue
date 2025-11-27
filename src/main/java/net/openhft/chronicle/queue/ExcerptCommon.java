@@ -39,6 +39,7 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, Si
      * @return the current file being worked on or null if not known.
      */
     @Nullable
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default File currentFile() {
         return null;
     }

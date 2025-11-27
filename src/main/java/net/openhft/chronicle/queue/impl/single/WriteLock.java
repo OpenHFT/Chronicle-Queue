@@ -86,5 +86,6 @@ public interface WriteLock extends Closeable {
      * @param notCurrentProcessConsumer a {@link LongConsumer} that is invoked when the lock is held by another process.
      * @return {@code true} if the current process holds the lock, otherwise {@code false}.
      */
+    @Deprecated(/* to be removed in 2027 */)
     boolean isLockedByCurrentProcess(LongConsumer notCurrentProcessConsumer);
 }

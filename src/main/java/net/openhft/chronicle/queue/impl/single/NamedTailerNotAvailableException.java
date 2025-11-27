@@ -33,6 +33,7 @@ public class NamedTailerNotAvailableException extends IllegalStateException {
      *
      * @return The name of the unavailable tailer.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public String tailerName() {
         return tailerName;
     }
@@ -42,6 +43,7 @@ public class NamedTailerNotAvailableException extends IllegalStateException {
      *
      * @return The {@link Reason} for the failure.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public Reason reason() {
         return reason;
     }

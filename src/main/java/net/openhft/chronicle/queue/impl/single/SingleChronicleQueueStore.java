@@ -129,6 +129,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @return the dumped contents as a string
      */
     @NotNull
+    @Deprecated(/* to be removed in 2027 */)
     public static String dump(@NotNull String directoryFilePath) {
         return ChronicleQueue.singleBuilder(directoryFilePath).build().dump();
     }

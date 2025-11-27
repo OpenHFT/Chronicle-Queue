@@ -78,6 +78,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
     }
 
     @NotNull
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public static <T extends Metadata> SingleTableBuilder<T> binary(@NotNull String file, @NotNull T metadata) {
         return binary(new File(file), metadata);
     }
@@ -178,10 +179,12 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
     }
 
     @NotNull
+    @Deprecated(/* to be removed in 2027 */)
     public File file() {
         return file;
     }
 
+    @Deprecated(/* to be removed in 2027 */)
     public WireType wireType() {
         return wireType;
     }
@@ -191,6 +194,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         return this;
     }
 
+    @Deprecated(/* to be removed in 2027 */)
     public boolean readOnly() {
         return readOnly;
     }

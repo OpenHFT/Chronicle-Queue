@@ -44,6 +44,7 @@ public interface HistoryReader {
      * @param p {@code true} to enable progress reporting, {@code false} otherwise
      * @return The current instance of {@link HistoryReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     HistoryReader withProgress(boolean p);
 
     /**
@@ -68,6 +69,7 @@ public interface HistoryReader {
      * @param ignore The number of messages to ignore
      * @return The current instance of {@link HistoryReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     HistoryReader withIgnore(long ignore);
 
     /**
@@ -76,6 +78,7 @@ public interface HistoryReader {
      * @param measurementWindow The size of the measurement window
      * @return The current instance of {@link HistoryReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     HistoryReader withMeasurementWindow(long measurementWindow);
 
     /**
@@ -84,6 +87,7 @@ public interface HistoryReader {
      * @param offset The offset for summary output
      * @return The current instance of {@link HistoryReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     HistoryReader withSummaryOutput(int offset);
 
     /**
@@ -105,6 +109,7 @@ public interface HistoryReader {
     /**
      * Executes the history reader to process messages from the queue.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     void execute();
 
     /**
@@ -127,6 +132,7 @@ public interface HistoryReader {
      * @return a new history reader that will use
      * the queue located at {@link #withBasePath } provided later
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     static HistoryReader create() {
         return new ChronicleHistoryReader();
     }
@@ -138,6 +144,7 @@ public interface HistoryReader {
      * @return a new history reader that will use
      *         the provided {@code queueSupplier } to provide the queue.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     static HistoryReader create(@NotNull final Supplier<? extends ChronicleQueue> queueSupplier) {
         throw new UnsupportedOperationException("TODO");
     }

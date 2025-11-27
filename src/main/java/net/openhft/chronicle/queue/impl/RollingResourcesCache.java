@@ -168,8 +168,10 @@ public class RollingResourcesCache {
 
     public static final class Resource {
         public final long millis;
+        @Deprecated(/* to be removed in 2027, only used in tests */)
         public final String text;
         public final File path;
+        @Deprecated(/* to be removed in 2027 */)
         public final File parentPath;
         public boolean pathExists;
 

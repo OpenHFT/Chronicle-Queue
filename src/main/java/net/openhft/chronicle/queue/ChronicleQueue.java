@@ -229,6 +229,7 @@ public interface ChronicleQueue extends Closeable {
     /**
      * Removes all the excerpts in the current ChronicleQueue.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     void clear();
 
     /**
@@ -281,6 +282,7 @@ public interface ChronicleQueue extends Closeable {
      * @param toIndex   last index  (inclusive)
      * @throws NullPointerException if the provided {@code writer} is {@code null}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default void dump(@NotNull OutputStream stream, long fromIndex, long toIndex) {
         dump(new OutputStreamWriter(stream, StandardCharsets.UTF_8), fromIndex, toIndex);
     }
@@ -402,6 +404,7 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return the last index that was msync-ed to disk
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default long lastIndexMSynced() {
         return -1;
     }
@@ -428,6 +431,7 @@ public interface ChronicleQueue extends Closeable {
      * @param lastIndexMSynced last msync-ed index
      * @see #lastIndexMSynced()
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default void lastIndexMSynced(long lastIndexMSynced) {
         throw new UnsupportedOperationException();
     }
@@ -449,6 +453,7 @@ public interface ChronicleQueue extends Closeable {
      * @return a new String representation of this ChronicleQueue's last header in YAML-format
      */
     @NotNull
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     String dumpLastHeader();
 
     /**

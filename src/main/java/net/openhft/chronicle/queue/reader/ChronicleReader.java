@@ -268,6 +268,7 @@ public class ChronicleReader implements Reader {
      * @param readOnly {@code true} to enable read-only mode, {@code false} otherwise
      * @return The current instance of {@link ChronicleReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public ChronicleReader withReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
         return this;
@@ -535,6 +536,7 @@ public class ChronicleReader implements Reader {
      * @param pollMethod The polling function to use
      * @return The current instance of {@link ChronicleReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
         this.pollMethod = pollMethod;
         return this;

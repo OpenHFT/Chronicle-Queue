@@ -31,6 +31,7 @@ public final class QueueSystemProperties {
      *
      * @see Jvm#getBoolean(String) for more details on how boolean properties are evaluated.
      */
+    @Deprecated(/* to be removed in 2027 */)
     public static final boolean CHECK_INDEX = checkIndex();
 
     /**
@@ -75,6 +76,7 @@ public final class QueueSystemProperties {
      *
      * @param enabled whether index checking should be enabled
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public static void setCheckIndex(boolean enabled) {
         checkIndexEnabled = enabled;
     }

@@ -69,6 +69,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String SUFFIX = ".cq4";
     public static final String DISCARD_FILE_SUFFIX = ".discard";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
+    @Deprecated(/* to be removed in 2027 */)
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
     public static final String REPLICATED_NAMED_TAILER_PREFIX = "replicated:";
     public static final String INDEX_LOCK_FORMAT = "index.%s.lock";
@@ -530,6 +531,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @return the chunk count
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public long chunkCount() {
         return chunkCount[0];
     }
@@ -631,11 +633,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @return the StoreFileListener
      */
+    @Deprecated(/* to be removed in 2027 */)
     protected StoreFileListener storeFileListener() {
         return storeFileListener;
     }
 
     // used by enterprise CQ
+    @Deprecated(/* to be removed in 2027 */)
     WireStoreSupplier storeSupplier() {
         return storeSupplier;
     }
@@ -648,6 +652,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @SuppressWarnings("deprecation")
     @NotNull
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public ExcerptAppender acquireAppender() {
         return ThreadLocalAppender.acquireThreadLocalAppender(this);
     }
@@ -1092,6 +1097,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return an array of file names in the directory, or null if an error occurs
      */
     @Nullable
+    @Deprecated(/* to be removed in 2027 */)
     String[] getList() {
         return path.list();
     }
@@ -1256,6 +1262,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param storeTailer the StoreTailer to remove
      */
+    @Deprecated(/* to be removed in 2027 */)
     void removeCloseListener(final StoreTailer storeTailer) {
         synchronized (closers) {
             closers.remove(storeTailer);
@@ -1324,6 +1331,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @param key the key for the entry in the table store
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public long tableStoreGet(CharSequence key) {
         LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
         if (longValue == null) return Long.MIN_VALUE;

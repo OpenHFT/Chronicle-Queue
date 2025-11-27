@@ -19,8 +19,6 @@ import static net.openhft.chronicle.queue.ChronicleReaderMain.addOption;
  */
 public class ChronicleWriterMain {
 
-    private static final int HELP_OUTPUT_LINE_WIDTH = 180;
-
     /**
      * Runs the ChronicleWriter based on the provided command-line arguments.
      *

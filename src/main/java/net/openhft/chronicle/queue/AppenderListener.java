@@ -43,5 +43,6 @@ public interface AppenderListener {
      * @param wire representing access to the excerpt that was stored (non-null).
      * @param index in the queue where the except was placed (non-negative)
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     void onExcerpt(@NotNull Wire wire, long index);
 }

@@ -226,6 +226,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *
      * @return the Read After Replica Acknowledged property of this Tailer
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default boolean readAfterReplicaAcknowledged() {
         return false;
     }

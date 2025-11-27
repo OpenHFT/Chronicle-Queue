@@ -20,6 +20,6 @@ public interface ExcerptContext {
     @Nullable
     Wire wireForIndex();
 
+    @Deprecated(/* to be removed in 2027 */)
     long timeoutMS();
-
 }
