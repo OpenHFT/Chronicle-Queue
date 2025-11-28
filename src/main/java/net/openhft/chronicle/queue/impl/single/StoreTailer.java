@@ -40,6 +40,7 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
  * the queue in both forward and backward directions, ensuring efficient retrieval
  * of entries by utilizing the appropriate WireStore and cycle mechanism.
  */
+@SuppressWarnings({"deprecation", "removal"})
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
@@ -1824,7 +1825,7 @@ class StoreTailer extends AbstractCloseable
             if (rollbackIfNeeded())
                 return;
 
-            if (isPresent() && !isMetaData())
+            if (isData())
                 incrementIndex();
 
             super.close();

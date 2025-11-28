@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
 @RequiredForClient
+@SuppressWarnings({"deprecation", "removal"})
 public class CreateAtIndexTest extends QueueTestCommon {
 
     @Test

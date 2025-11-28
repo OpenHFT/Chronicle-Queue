@@ -24,6 +24,7 @@ import java.util.function.LongConsumer;
 
 import static org.junit.Assert.assertFalse;
 
+@SuppressWarnings({"deprecation", "removal"})
 public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     private static final int TOTAL_EVENTS = 100_000;
 

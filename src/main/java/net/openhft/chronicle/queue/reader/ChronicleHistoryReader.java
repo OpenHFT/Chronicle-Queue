@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
  * histograms and timing windows. Various options such as progress reporting, time unit settings, and
  * histogram management are available for customization.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
     private static final int SUMMARY_OUTPUT_UNSET = -999;

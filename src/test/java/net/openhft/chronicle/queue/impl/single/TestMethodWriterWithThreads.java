@@ -37,6 +37,7 @@ import static org.junit.Assume.assumeTrue;
  * check that method writes are thread safe when used with queue.methodWriter
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings({"deprecation", "removal"})
 public class TestMethodWriterWithThreads extends QueueTestCommon {
 
     private static final int AMEND = 1;

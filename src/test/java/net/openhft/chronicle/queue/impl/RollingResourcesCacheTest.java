@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class RollingResourcesCacheTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;
 

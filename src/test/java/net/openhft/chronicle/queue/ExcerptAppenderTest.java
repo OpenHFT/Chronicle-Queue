@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 /**
  * Unit tests for ExcerptAppender interface implementations.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class ExcerptAppenderTest extends QueueTestCommon {
 
     private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptAppenderTest";

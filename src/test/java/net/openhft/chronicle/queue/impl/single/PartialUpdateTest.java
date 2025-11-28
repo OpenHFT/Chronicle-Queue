@@ -22,6 +22,7 @@ import static java.lang.String.format;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings({"deprecation", "removal"})
 public class PartialUpdateTest extends QueueTestCommon {
 
     private static final long LAST_INDEX = RollCycles.FAST_DAILY.toIndex(2, 2);

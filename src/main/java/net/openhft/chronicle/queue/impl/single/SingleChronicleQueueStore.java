@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
  * the file to memory using {@link MappedBytes}. It handles reading and writing data in
  * a queue and supports efficient roll cycles and indexing.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
 
     static {

@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
  * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing a Tailer between threads will lead to errors and unpredictable behaviour.
  */
 @SingleThreaded
+@SuppressWarnings({"deprecation", "removal"})
 public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**

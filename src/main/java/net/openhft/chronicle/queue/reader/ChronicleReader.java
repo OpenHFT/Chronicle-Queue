@@ -44,6 +44,7 @@ import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
  * including tailing (continuous reading of new entries), and allows users to specify inclusion/exclusion
  * filters, start indices, and message processing through customizable plugins.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 

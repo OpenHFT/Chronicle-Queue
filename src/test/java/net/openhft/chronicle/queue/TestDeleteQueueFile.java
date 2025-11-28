@@ -36,7 +36,7 @@ import static java.lang.Long.toHexString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
-@SuppressWarnings("this-escape")
+@SuppressWarnings({"this-escape", "deprecation", "removal"})
 public class TestDeleteQueueFile extends QueueTestCommon {
 
     private static final int NUM_REPEATS = 10;

@@ -19,6 +19,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST2_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class RollingChronicleQueueTest extends QueueTestCommon {
 
     @Test

@@ -22,6 +22,7 @@ import static net.openhft.chronicle.queue.impl.single.StoreTailer.INDEXING_LINEA
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings({"deprecation", "removal"})
 public class IndexTest extends QueueTestCommon {
 
     @NotNull

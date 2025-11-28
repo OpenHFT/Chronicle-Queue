@@ -14,6 +14,7 @@ import java.util.function.LongConsumer;
  * enforced by some other mechanism. All methods are effectively no-ops but return values
  * are chosen so that callers treat the lock as always acquired by the current process.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class NoOpWriteLock implements WriteLock, IgnoresEverything {
 
     @Override

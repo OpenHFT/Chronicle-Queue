@@ -40,6 +40,7 @@ import static net.openhft.chronicle.wire.Wires.*;
  * excerpts to the queue. It manages the cycle of the queue, lock handling, and the state
  * of the wire and store.
  */
+@SuppressWarnings({"deprecation", "removal"})
 class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
 

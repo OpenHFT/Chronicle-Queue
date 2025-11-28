@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class AppenderListenerTest extends QueueTestCommon {
 
     @Test

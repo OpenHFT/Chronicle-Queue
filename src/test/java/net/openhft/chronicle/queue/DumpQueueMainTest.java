@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class DumpQueueMainTest extends QueueTestCommon {
 
     @Test

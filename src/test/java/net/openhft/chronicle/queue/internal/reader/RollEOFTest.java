@@ -43,6 +43,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class RollEOFTest extends QueueTestCommon {
 
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");

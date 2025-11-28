@@ -26,6 +26,7 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class ReaderResizesFileTest {
     private static final File QUEUE_DIR = new File(OS.getTarget(), "ReaderResizesFileTest-" + System.nanoTime());
 

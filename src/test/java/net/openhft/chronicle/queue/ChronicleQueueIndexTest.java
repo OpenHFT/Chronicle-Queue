@@ -27,6 +27,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECOND
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test

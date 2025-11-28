@@ -39,6 +39,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     private final long sleepPerWriteNanos;

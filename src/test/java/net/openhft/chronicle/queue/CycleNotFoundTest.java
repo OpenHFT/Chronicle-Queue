@@ -22,6 +22,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
+@SuppressWarnings({"deprecation", "removal"})
 public class CycleNotFoundTest extends QueueTestCommon {
 
     private static final int NUMBER_OF_TAILERS = 20;

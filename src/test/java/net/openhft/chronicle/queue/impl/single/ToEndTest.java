@@ -26,6 +26,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECOND
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);

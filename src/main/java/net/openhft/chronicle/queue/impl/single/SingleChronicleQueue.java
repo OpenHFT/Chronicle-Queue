@@ -63,7 +63,7 @@ import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
  * It also supports various configurations such as event loop handling, wire types, buffer
  * management, and replication.
  */
-@SuppressWarnings("this-escape")
+@SuppressWarnings({"this-escape", "deprecation", "removal"})
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";

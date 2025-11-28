@@ -59,7 +59,7 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings({"try", "serial"})
+@SuppressWarnings({"try", "serial", "deprecation", "removal"})
 public class SingleChronicleQueueTest extends QueueTestCommon {
 
     private static final long TIMES = (4L << 20L);

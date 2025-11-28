@@ -16,6 +16,7 @@ import java.io.PrintStream;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class DumpMainTest extends QueueTestCommon {
 
     @Test
