@@ -77,18 +77,28 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         assert checkNotAlreadyLocked();
 
         long currentLockValue = 0;
-        TimingPauser tlPauser = pauser.get();
         try {
             currentLockValue = lock.getVolatileValue();
 
-            while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
-                currentLockValue = lockGetCurrentLockValue(tlPauser);
+            if (!lock.compareAndSwapValue(UNLOCKED, PID)) {
+                currentLockValue = retryLockAcquisition();
             }
             checkStoreLockThread();
 
             // success
         } catch (TimeoutException e) {
             handleTimeoutEx(currentLockValue);
+        }
+    }
+
+    private long retryLockAcquisition() throws TimeoutException {
+        TimingPauser tlPauser = pauser.get();
+        try {
+            long currentLockValue;
+            do {
+                currentLockValue = lockGetCurrentLockValue(tlPauser);
+            } while (!lock.compareAndSwapValue(UNLOCKED, PID));
+            return currentLockValue;
         } finally {
             tlPauser.reset();
         }
