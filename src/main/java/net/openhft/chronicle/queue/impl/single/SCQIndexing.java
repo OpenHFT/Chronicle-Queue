@@ -181,6 +181,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
     // Helper method to close a thread-local LongArrayValuesHolder.
     private void closeTL(ThreadLocal<WeakReference<LongArrayValuesHolder>> tl) {
+        if (tl == null)
+            return;
         WeakReference<LongArrayValuesHolder> weakReference = tl.get();
         if (weakReference == null)
             return;

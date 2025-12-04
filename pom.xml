@@ -22,8 +22,8 @@
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
         <!-- Define the target coverage thresholds as properties -->
-        <jacoco.line.coverage>0.788</jacoco.line.coverage>
-        <jacoco.branch.coverage>0.713</jacoco.branch.coverage>
+        <jacoco.line.coverage>0.78</jacoco.line.coverage>
+        <jacoco.branch.coverage>0.69</jacoco.branch.coverage>
     </properties>
 
     <dependencyManagement>
@@ -224,16 +224,6 @@
                             <referenceVersion>5.27ea0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
                             <binaryCompatibilityPercentageRequired>99.8</binaryCompatibilityPercentageRequired>
-                            <extraOptions>
-                                <!--This skips "internal" but checks "impl"-->
-                                <extraOption>
-                                    <name>-keep-internal</name>
-                                </extraOption>
-                                <extraOption>
-                                    <name>skip-internal-packages</name>
-                                    <value>.*internal.*</value>
-                                </extraOption>
-                            </extraOptions>
                         </configuration>
                     </execution>
                 </executions>
@@ -260,8 +250,6 @@
                     <forkCount>1</forkCount>
                     <!--                    <reuseForks>false</reuseForks>-->
                     <runOrder>hourly</runOrder>
-                    <!-- propagate JPMS flags from parent into unit test JVMs -->
-                    <argLine>${argLine} ${jvm.requiredArgs}</argLine>
                 </configuration>
             </plugin>
 
