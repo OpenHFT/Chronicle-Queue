@@ -94,6 +94,7 @@ public enum RollCycles implements RollCycle {
         return VALUES;
     }
 
+    @Override
     public long maxMessagesPerCycle() {
         return maxMessagesPerCycle;
     }

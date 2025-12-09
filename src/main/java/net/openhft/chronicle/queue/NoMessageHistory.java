@@ -51,6 +51,7 @@ public enum NoMessageHistory implements MessageHistory {
         // ignored
     }
 
+    @Override
     public void reset() {
         // no-op
     }

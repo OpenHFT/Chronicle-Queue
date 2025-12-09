@@ -96,8 +96,8 @@ public class ReaderResizesFileTest {
                 }
             });
 
-            BytesStore<?, ?> heldStore = null;
-            long openRefCount = 0;
+            BytesStore<?, ?> heldStore;
+            long openRefCount;
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent(), "Initial document should be present");
                 Bytes<?> tailerBytes = dc.wire().bytes();

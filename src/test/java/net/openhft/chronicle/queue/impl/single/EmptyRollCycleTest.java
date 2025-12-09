@@ -36,6 +36,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(dataDirectory.toFile());
     }
@@ -70,7 +71,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         ignoreException("Renamed un-acquirable segment file");
         createQueueWithEmptyRollCycleAtEnd();
 
-        long indexWritten = -1;
+        long indexWritten;
         // append to the queue
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
                 .rollCycle(RollCycles.TEN_MINUTELY)

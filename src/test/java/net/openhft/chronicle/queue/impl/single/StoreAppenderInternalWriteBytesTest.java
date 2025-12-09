@@ -148,7 +148,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     long index;
                     while (true) {
                         buffer.clear();
-                        index = sourceTailer.index();
                         if (!sourceTailer.readBytes(buffer)) {
                             break;
                         }

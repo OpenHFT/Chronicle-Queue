@@ -64,6 +64,7 @@ public enum TestRollCycles implements RollCycle {
      *
      * @return The maximum number of messages allowed per cycle
      */
+    @Override
     public long maxMessagesPerCycle() {
         return arithmetic.maxMessagesPerCycle();
     }

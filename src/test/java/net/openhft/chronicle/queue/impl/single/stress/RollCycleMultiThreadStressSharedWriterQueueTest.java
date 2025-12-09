@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single.stress;
 
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMultiThreadStressTest {
 
     public RollCycleMultiThreadStressSharedWriterQueueTest() {

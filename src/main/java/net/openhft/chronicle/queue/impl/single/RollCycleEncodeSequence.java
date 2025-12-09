@@ -70,6 +70,7 @@ class RollCycleEncodeSequence implements Sequence {
      * @param forWritePosition The write position, expected to be the end of the queue.
      * @return The sequence number or {@link Sequence#NOT_FOUND_RETRY} if the sequence is not found.
      */
+    @Override
     public long getSequence(long forWritePosition) {
 
         if (writePositionAndSequence == null)
@@ -113,6 +114,7 @@ class RollCycleEncodeSequence implements Sequence {
      * @param index The encoded index.
      * @return The sequence number.
      */
+    @Override
     public long toSequenceNumber(long index) {
         return index & sequenceMask;
     }

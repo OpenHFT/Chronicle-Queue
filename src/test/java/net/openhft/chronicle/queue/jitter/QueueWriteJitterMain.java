@@ -14,6 +14,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 
+@SuppressWarnings("PMD.UnusedAssignment") // writeStarted is read from another thread while being updated
 public class QueueWriteJitterMain {
     private static final String PROFILE_OF_THE_THREAD = "profile of the thread";
 
@@ -82,7 +83,7 @@ public class QueueWriteJitterMain {
             do {
                 if (writeStarted < Long.MAX_VALUE) {
                     // overflow exists loop
-                    while (writeStarted + sampleTime * 1000 > System.nanoTime())
+                    while (writeStarted + sampleTime * 1000L > System.nanoTime())
                         Thread.yield();
 
                     if (writeStarted < Long.MAX_VALUE) {
@@ -102,7 +103,7 @@ public class QueueWriteJitterMain {
                 }
                 Thread.yield();
 
-            } while (System.currentTimeMillis() < start0 + runTime * 1_000);
+            } while (System.currentTimeMillis() < start0 + runTime * 1_000L);
         }
         running = false;
         pretoucher.interrupt();
@@ -114,9 +115,9 @@ public class QueueWriteJitterMain {
         long start1 = System.nanoTime();
         do {
             Thread.yield();
-        } while (System.nanoTime() < start1 + sampleTime * 1000);
+        } while (System.nanoTime() < start1 + sampleTime * 1000L);
         long time1 = System.nanoTime() - start1;
-        if (time1 > sampleTime * 1000 * 10) {
+        if (time1 > (long) sampleTime * 1000 * 10) {
             System.out.println("Time paused = " + time1 / 1000 + " us");
         }
     }

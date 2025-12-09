@@ -35,6 +35,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(path);
     }

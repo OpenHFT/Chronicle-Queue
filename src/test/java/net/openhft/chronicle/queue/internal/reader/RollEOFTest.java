@@ -36,6 +36,7 @@ import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
@@ -75,9 +76,7 @@ public class RollEOFTest extends QueueTestCommon {
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DAY_OF_MONTH, -1);
-            timeProvider.currentTimeMillis(cal.getTimeInMillis());
+            timeProvider.currentTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1));
             createQueueAndWriteData(timeProvider, path);
             assertEquals(1, getNumberOfQueueFiles(path));
 
@@ -106,9 +105,7 @@ public class RollEOFTest extends QueueTestCommon {
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DAY_OF_MONTH, -1);
-            timeProvider.currentTimeMillis(cal.getTimeInMillis());
+            timeProvider.currentTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1));
             createQueueAndWriteData(timeProvider, path);
             assertEquals(1, getNumberOfQueueFiles(path));
 

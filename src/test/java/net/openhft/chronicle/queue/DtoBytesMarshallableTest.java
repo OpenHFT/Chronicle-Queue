@@ -79,12 +79,14 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
         final StringBuilder name = new StringBuilder();
         int age;
 
+        @Override
         public void readMarshallable(BytesIn<?> bytes) {
             age = bytes.readInt();
             name.setLength(0);
             bytes.readUtf8(name);
         }
 
+        @Override
         public void writeMarshallable(BytesOut<?> bytes) {
             bytes.writeInt(age);
             bytes.writeUtf8(name);
@@ -95,12 +97,14 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
         final StringBuilder name = new StringBuilder();
         int age;
 
+        @Override
         public void readMarshallable(BytesIn<?> bytes) {
             age = bytes.readInt();
             name.setLength(0);
             bytes.readUtf8(name);
         }
 
+        @Override
         public void writeMarshallable(BytesOut<?> bytes) {
             bytes.writeInt(age);
             bytes.writeUtf8(name);

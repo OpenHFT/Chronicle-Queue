@@ -95,7 +95,7 @@ public class ToEndTest extends QueueTestCommon {
                 appender.writeDocument(wire -> wire.write("msg").int32(5));
 
                 // roll 5 cycles
-                timeProvider.currentTimeMillis(now += timeIncMs * 5);
+                timeProvider.currentTimeMillis(now + timeIncMs * 5);
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
@@ -297,8 +297,7 @@ public class ToEndTest extends QueueTestCommon {
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(queue.file().getAbsolutePath()));
             writeMetadataToQueue(queue);
-            assertEquals("" +
-                    "--- !!meta-data #binary\n" +
+            assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +

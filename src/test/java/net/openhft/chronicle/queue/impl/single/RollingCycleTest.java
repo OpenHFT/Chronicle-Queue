@@ -66,8 +66,7 @@ public class RollingCycleTest extends QueueTestCommon {
                     appender.writeBytes(new TestBytesMarshallable(i));
                 }
             }
-            String expected = "" +
-                    "--- !!meta-data #binary\n" +
+            String expected = "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -292,6 +291,7 @@ public class RollingCycleTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private static class TestBytesMarshallable implements WriteBytesMarshallable, ReadBytesMarshallable {
         @Nullable
         String name;

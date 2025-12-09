@@ -17,6 +17,7 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
@@ -27,8 +28,8 @@ import static org.junit.Assert.assertTrue;
 public class MethodReaderObjectReuseTest extends QueueTestCommon {
     @Before
     public void resetCounters() {
-        PingDTO.constructionCounter = 0;
-        PingDTO.constructionExpected = 0;
+        PingDTO.constructionCounter.set(0);
+        PingDTO.constructionExpected.set(0);
     }
 
     @Test
@@ -36,17 +37,17 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
-            PingDTO.constructionExpected++;
+            PingDTO.constructionExpected.incrementAndGet();
             PingDTO pdtio = new PingDTO();
-            PingDTO.constructionExpected++;
+            PingDTO.constructionExpected.incrementAndGet();
             Pinger pinger = cq.methodWriter(Pinger.class);
             for (int i = 0; i < 5; i++) {
                 pinger.ping(pdtio);
-                assertEquals(PingDTO.constructionExpected, PingDTO.constructionCounter);
+                assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get());
                 pdtio.bytes.append("hi");
             }
             StringBuilder sb = new StringBuilder();
-            PingDTO.constructionExpected++;
+            PingDTO.constructionExpected.incrementAndGet();
             MethodReader reader = cq.createTailer()
                     .methodReader(
                             (Pinger) pingDTO -> sb.append("ping ").append(pingDTO));
@@ -55,7 +56,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                 continue;
             }
             // moved this assert below the readOne as object may be constructed lazily
-            assertEquals(PingDTO.constructionExpected, PingDTO.constructionCounter);
+            assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get());
             assertEquals("ping !PingDTO {\n" +
                     "  bytes: \"\"\n" +
                     "}\n" +
@@ -81,17 +82,17 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-snapshot-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
-            PingDTO.constructionCounter = 0;
-            PingDTO.constructionExpected = 10;
+            PingDTO.constructionCounter.set(0);
+            PingDTO.constructionExpected.set(10);
             Pinger pinger = cq.methodWriter(Pinger.class);
-            PingDTO.constructionExpected++;
+            PingDTO.constructionExpected.incrementAndGet();
             PingDTO dto = new PingDTO();
             dto.bytes.append("immutable");
             pinger.ping(dto);
             dto.bytes.clear().append("mutated-after-write");
 
             AtomicReference<String> observed = new AtomicReference<>();
-            PingDTO.constructionExpected++;
+            PingDTO.constructionExpected.incrementAndGet();
             MethodReader reader = cq.createTailer().methodReader(
                     (Pinger) pingDTO -> observed.set(pingDTO.bytes.toString()));
             assertTrue(reader.readOne());
@@ -134,11 +135,12 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     }
 
     static class PingDTO extends SelfDescribingMarshallable {
-        static int constructionCounter, constructionExpected;
+        static final AtomicInteger constructionCounter = new AtomicInteger();
+        static final AtomicInteger constructionExpected = new AtomicInteger();
         final Bytes<?> bytes = Bytes.allocateElasticOnHeap();
 
         PingDTO() {
-            if (++constructionCounter > constructionExpected)
+            if (constructionCounter.incrementAndGet() > constructionExpected.get())
                 throw new AssertionError();
         }
     }

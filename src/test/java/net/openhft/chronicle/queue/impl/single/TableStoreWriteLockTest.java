@@ -53,6 +53,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         Closeable.closeQuietly(tableStore);
         IOTools.deleteDirWithFiles(tempDir.toFile());

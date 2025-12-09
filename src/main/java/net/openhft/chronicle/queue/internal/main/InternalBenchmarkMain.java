@@ -127,7 +127,7 @@ public class InternalBenchmarkMain {
 //                long rlt = readerLoopTime;
 //                long delay = System.nanoTime() - rlt;
                 System.out.println("diff=" + diff /* +" delay= " + delay*/);
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder(128);
                 sb.append("Reader: profile of the thread");
                 Jvm.trimStackTrace(sb, reader.getStackTrace());
                 System.out.println(sb);

@@ -371,6 +371,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @throws IllegalStateException if enterprise features are requested but not available
      */
     @NotNull
+    @Override
     public SingleChronicleQueue build() {
         preBuild();
 
@@ -1557,6 +1558,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * It's only a shallow copy so field will have the same objects.
      */
     @SuppressWarnings("java:S2975")
+    @Override
     public SingleChronicleQueueBuilder clone() {
         try {
             return (SingleChronicleQueueBuilder) super.clone();

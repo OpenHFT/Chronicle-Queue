@@ -3,21 +3,16 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import org.junit.Test;
 
-import java.io.File;
-
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
-import static org.junit.Assert.assertEquals;
+import static net.openhft.chronicle.queue.harness.WeeklyRollCycle.INSTANCE;
 
 /**
  * Compatibility coverage lifted from adv/code-review branch to boost coverage of
  * RollingResourcesCache date/format arithmetic across epochs, cycles, and formats.
  */
-public class RollingResourcesCacheCompatTest extends QueueTestCommon {
+public class RollingResourcesCacheCompatTest extends RollingResourcesCacheTestBase {
     private static final long SEED = 2983472039423847L;
 
     private static final long AM_EPOCH = 1523498933145L; //2018-04-12 02:08:53.145 UTC
@@ -70,47 +65,28 @@ public class RollingResourcesCacheCompatTest extends QueueTestCommon {
     private static final String NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0 = "19761019-0000";
     private static final String NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10 = "19761019-0010";
 
-    @Test
-    public void testToLong() {
-        doTestToLong(DAILY, AM_EPOCH, 0, Long.valueOf("17633"));
-        doTestToLong(HOURLY, AM_EPOCH, 0, Long.valueOf("423192"));
-        doTestToLong(MINUTELY, AM_EPOCH, 0, Long.valueOf("25391520"));
-        doTestToLong(DAILY, AM_EPOCH, 100, Long.valueOf("17733"));
-        doTestToLong(HOURLY, AM_EPOCH, 100, Long.valueOf("423292"));
-        doTestToLong(MINUTELY, AM_EPOCH, 100, Long.valueOf("25391620"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, AM_EPOCH, 0, Long.valueOf("2519"));
-
-        doTestToLong(DAILY, PM_EPOCH, 0, Long.valueOf("14869"));
-        doTestToLong(HOURLY, PM_EPOCH, 0, Long.valueOf("356856"));
-        doTestToLong(MINUTELY, PM_EPOCH, 0, Long.valueOf("21411360"));
-        doTestToLong(DAILY, PM_EPOCH, 100, Long.valueOf("14969"));
-        doTestToLong(HOURLY, PM_EPOCH, 100, Long.valueOf("356956"));
-        doTestToLong(MINUTELY, PM_EPOCH, 100, Long.valueOf("21411460"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, PM_EPOCH, 0, Long.valueOf("2124"));
-
-        doTestToLong(DAILY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
-        doTestToLong(HOURLY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
-        doTestToLong(MINUTELY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
-        doTestToLong(DAILY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
-        doTestToLong(HOURLY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
-        doTestToLong(MINUTELY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, POSITIVE_RELATIVE_EPOCH, 7, Long.valueOf("7"));
-
-        doTestToLong(DAILY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1"));
-        doTestToLong(HOURLY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-24"));
-        doTestToLong(MINUTELY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1440"));
-        doTestToLong(DAILY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("99"));
-        doTestToLong(HOURLY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("76"));
-        doTestToLong(MINUTELY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("-1340"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1"));
-
+    @Override
+    protected long getAmEpoch() {
+        return AM_EPOCH;
     }
 
-    public void doTestToLong(RollCycle rollCycle, long epoch, long cycle, Long expectedLong) {
-        RollingResourcesCache cache =
-                new RollingResourcesCache(rollCycle, epoch, File::new, File::getName);
+    @Override
+    protected long getPmEpoch() {
+        return PM_EPOCH;
+    }
 
-        RollingResourcesCache.Resource resource = cache.resourceFor(cycle);
-        assertEquals(expectedLong, cache.toLong(resource.path));
+    @Override
+    protected long getPositiveRelativeEpoch() {
+        return POSITIVE_RELATIVE_EPOCH;
+    }
+
+    @Override
+    protected long getNegativeRelativeEpoch() {
+        return NEGATIVE_RELATIVE_EPOCH;
+    }
+
+    @Test
+    public void testToLong() {
+        runStandardToLongTests();
     }
 }

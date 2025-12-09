@@ -4,9 +4,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.Test;
 
@@ -19,10 +17,11 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
+import static net.openhft.chronicle.queue.harness.WeeklyRollCycle.INSTANCE;
 import static org.junit.Assert.*;
 
 @SuppressWarnings({"deprecation", "removal"})
-public class RollingResourcesCacheTest extends QueueTestCommon {
+public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     private static final long SEED = 2983472039423847L;
 
     private static final long AM_EPOCH = 1523498933145L; //2018-04-12 02:08:53.145 UTC
@@ -89,6 +88,26 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     private static final boolean LOG_TEST_DEBUG =
             Jvm.getBoolean(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
 
+    @Override
+    protected long getAmEpoch() {
+        return AM_EPOCH;
+    }
+
+    @Override
+    protected long getPmEpoch() {
+        return PM_EPOCH;
+    }
+
+    @Override
+    protected long getPositiveRelativeEpoch() {
+        return POSITIVE_RELATIVE_EPOCH;
+    }
+
+    @Override
+    protected long getNegativeRelativeEpoch() {
+        return NEGATIVE_RELATIVE_EPOCH;
+    }
+
     private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
                                                 final Instant instant, final DateTimeFormatter formatter) {
         final String expectedFileName = formatter.format(instant);
@@ -138,7 +157,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     public void parseWeeklyFormatValid() {
         // round-trip property: resourceFor(cycle).text parses back to the same cycle
         final RollingResourcesCache weeklyCache = new RollingResourcesCache(
-                WeeklyRollCycle.INSTANCE, 0, File::new, File::getName);
+                INSTANCE, 0, File::new, File::getName);
         int base = (int) (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(1));
         for (int i = 0; i < 50; i++) {
             int cycle = base + i;
@@ -179,7 +198,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(AM_EPOCH, HOURLY, AM_HOURLY_CYCLE_NUMBER + 15, AM_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(AM_EPOCH, MINUTELY, AM_MINUTELY_CYCLE_NUMBER, AM_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(AM_EPOCH, MINUTELY, AM_MINUTELY_CYCLE_NUMBER + 10, AM_MINUTELY_FILE_NAME_10);
-        doTestCycleAndResourceNames(AM_EPOCH, WeeklyRollCycle.INSTANCE, AM_DAILY_CYCLE_NUMBER, "2018109");
+        doTestCycleAndResourceNames(AM_EPOCH, INSTANCE, AM_DAILY_CYCLE_NUMBER, "2018109");
 
         // PM_EPOCH is 2010-09-17 16:00:00.000 UTC
         // cycle 2484 should be formatted as:
@@ -192,7 +211,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(PM_EPOCH, HOURLY, PM_HOURLY_CYCLE_NUMBER + 15, PM_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(PM_EPOCH, MINUTELY, PM_MINUTELY_CYCLE_NUMBER, PM_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(PM_EPOCH, MINUTELY, PM_MINUTELY_CYCLE_NUMBER + 10, PM_MINUTELY_FILE_NAME_10);
-        doTestCycleAndResourceNames(PM_EPOCH, WeeklyRollCycle.INSTANCE, 42, "2011189");
+        doTestCycleAndResourceNames(PM_EPOCH, INSTANCE, 42, "2011189");
 
         // POSITIVE_RELATIVE_EPOCH is 5 hours (18000000 millis)
         // cycle 2484 should be formatted as:
@@ -205,7 +224,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, HOURLY, POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, MINUTELY, POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, POSITIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, MINUTELY, POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
-        doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976288");
+        doTestCycleAndResourceNames(POSITIVE_RELATIVE_EPOCH, INSTANCE, 354, "1976288");
 
         // BIG_POSITIVE_RELATIVE_EPOCH is 15 hours (54000000 millis)
         // cycle 2484 should be formatted as:
@@ -218,7 +237,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, HOURLY, BIG_POSITIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, BIG_POSITIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, MINUTELY, BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, BIG_POSITIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, MINUTELY, BIG_POSITIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, BIG_POSITIVE_RELATIVE_MINUTELY_FILE_NAME_10);
-        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976288");
+        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, INSTANCE, 354, "1976288");
 
         // NEGATIVE_RELATIVE_EPOCH is -3 hours (-10800000 millis)
         // cycle 2484 should be formatted as:
@@ -231,7 +250,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, HOURLY, NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, MINUTELY, NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(NEGATIVE_RELATIVE_EPOCH, MINUTELY, NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
-        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976288");
+        doTestCycleAndResourceNames(BIG_POSITIVE_RELATIVE_EPOCH, INSTANCE, 354, "1976288");
 
         // NEGATIVE_RELATIVE_EPOCH is -13 hours (-46800000 millis)
         // cycle 2484 should be formatted as:
@@ -244,7 +263,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, HOURLY, BIG_NEGATIVE_RELATIVE_HOURLY_CYCLE_NUMBER + 15, BIG_NEGATIVE_RELATIVE_HOURLY_FILE_NAME_15);
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, MINUTELY, BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER, BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_0);
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, MINUTELY, BIG_NEGATIVE_RELATIVE_MINUTELY_CYCLE_NUMBER + 10, BIG_NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10);
-        doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976287");
+        doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, INSTANCE, 354, "1976287");
     }
 
     @Test(expected = RuntimeException.class)
@@ -308,46 +327,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
     @Test
     public void testToLong() {
-        doTestToLong(DAILY, AM_EPOCH, 0, Long.valueOf("17633"));
-        doTestToLong(HOURLY, AM_EPOCH, 0, Long.valueOf("423192"));
-        doTestToLong(MINUTELY, AM_EPOCH, 0, Long.valueOf("25391520"));
-        doTestToLong(DAILY, AM_EPOCH, 100, Long.valueOf("17733"));
-        doTestToLong(HOURLY, AM_EPOCH, 100, Long.valueOf("423292"));
-        doTestToLong(MINUTELY, AM_EPOCH, 100, Long.valueOf("25391620"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, AM_EPOCH, 0, Long.valueOf("2519"));
-
-        doTestToLong(DAILY, PM_EPOCH, 0, Long.valueOf("14869"));
-        doTestToLong(HOURLY, PM_EPOCH, 0, Long.valueOf("356856"));
-        doTestToLong(MINUTELY, PM_EPOCH, 0, Long.valueOf("21411360"));
-        doTestToLong(DAILY, PM_EPOCH, 100, Long.valueOf("14969"));
-        doTestToLong(HOURLY, PM_EPOCH, 100, Long.valueOf("356956"));
-        doTestToLong(MINUTELY, PM_EPOCH, 100, Long.valueOf("21411460"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, PM_EPOCH, 0, Long.valueOf("2124"));
-
-        doTestToLong(DAILY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
-        doTestToLong(HOURLY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
-        doTestToLong(MINUTELY, POSITIVE_RELATIVE_EPOCH, 0, Long.valueOf("0"));
-        doTestToLong(DAILY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
-        doTestToLong(HOURLY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
-        doTestToLong(MINUTELY, POSITIVE_RELATIVE_EPOCH, 100, Long.valueOf("100"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, POSITIVE_RELATIVE_EPOCH, 7, Long.valueOf("7"));
-
-        doTestToLong(DAILY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1"));
-        doTestToLong(HOURLY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-24"));
-        doTestToLong(MINUTELY, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1440"));
-        doTestToLong(DAILY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("99"));
-        doTestToLong(HOURLY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("76"));
-        doTestToLong(MINUTELY, NEGATIVE_RELATIVE_EPOCH, 100, Long.valueOf("-1340"));
-        doTestToLong(WeeklyRollCycle.INSTANCE, NEGATIVE_RELATIVE_EPOCH, 0, Long.valueOf("-1"));
-
-    }
-
-    private void doTestToLong(RollCycle rollCycle, long epoch, long cycle, Long expectedLong) {
-        RollingResourcesCache cache =
-                new RollingResourcesCache(rollCycle, epoch, File::new, File::getName);
-
-        RollingResourcesCache.Resource resource = cache.resourceFor(cycle);
-        assertEquals(expectedLong, cache.toLong(resource.path));
+        runStandardToLongTests();
     }
 
     private RollingResourcesCache newCache(File dir) {

@@ -169,8 +169,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @NotNull
     private String expectedForTestAppend() {
-        return "" +
-                "idx: 4a0400000000\n" +
+        return "idx: 4a0400000000\n" +
                 "# position: 784, header: 0\n" +
                 "--- !!data #binary\n" +
                 "test: 0\n" +
@@ -237,8 +236,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @NotNull
     private String expectedForTestTextReadWrite() {
-        return "" +
-                "idx: 4a0400000000\n" +
+        return "idx: 4a0400000000\n" +
                 "# position: 784, header: 0\n" +
                 "--- !!data #binary\n" +
                 "hello world\n" +
@@ -433,8 +431,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @NotNull
     private String expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet() {
-        return "" +
-                "idx: 0\n" +
+        return "idx: 0\n" +
                 "# position: 784, header: 0\n" +
                 "--- !!data\n" +
                 "hello world\n" +
@@ -1209,8 +1206,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
             }
         }
-        assertEquals("" +
-                        "idx: 6f06c00000000\n" +
+        assertEquals("idx: 6f06c00000000\n" +
                         "# position: 65808, header: 0\n" +
                         "--- !!data #binary\n" +
                         "one\n" +
@@ -1634,8 +1630,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
                 assertTrue(dc.isOpen());
             }
-            assertEquals("" +
-                    "--- !!meta-data #binary\n" +
+            assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -1919,8 +1914,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     @NotNull
     protected String expectedMetaDataTest2() {
         if (wireType == WireType.BINARY || wireType == WireType.BINARY_LIGHT)
-            return "" +
-                    "--- !!meta-data #binary\n" +
+            return "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -2894,7 +2888,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
             }
-            String s = null;
+            String s;
 
             DocumentContext dc0;
             try (DocumentContext dc = queue.createTailer(named ? "named" : null).readingDocument()) {
@@ -3084,7 +3078,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         @SuppressWarnings("unused")
-        MappedFile mappedFile1, mappedFile2, mappedFile3, mappedFile4;
+        MappedFile mappedFile1, mappedFile2;
 
         try (ChronicleQueue queue =
                      binary(getTmpDir())
@@ -3105,13 +3099,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (ExcerptTailer tailer = queue.createTailer(named ? "named" : null)) {
                 try (DocumentContext documentContext = tailer.readingDocument()) {
-                    mappedFile3 = toMappedFile(documentContext);
                     assertEquals("some text", documentContext.wire().read().text());
 
                 }
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
-                    mappedFile4 = toMappedFile(documentContext);
                     assertEquals("some more text", documentContext.wire().read().text());
 
                 }
@@ -3145,7 +3137,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 .build()) {
             final int iterationsPerThread = Short.MAX_VALUE / 8;
             final int totalIterations = iterationsPerThread * threadCount;
-            final int[] nonAtomicCounter = new int[]{0};
+            final int[] nonAtomicCounter = {0};
             for (int i = 0; i < threadCount; i++) {
                 executorService.submit(() -> {
                     try (ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -3584,8 +3576,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 int filesOpen = openFiles.size();
                 if (filesOpen >= 50) {
                     passed = false;
-                    builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, filesOpen));
-                    builder.append("Open files:").append("\n");
+                    builder.append(String.format("Test for time %s failed: Too many mapped files: %d%n", time, filesOpen))
+                            .append("Open files:\n");
                     openFiles.stream().map(s -> s + "\n").forEach(builder::append);
                 }
             }

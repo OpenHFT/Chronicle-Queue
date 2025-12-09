@@ -68,6 +68,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     /**
      * Performs cleanup and releases resources when the lock is closed.
      */
+    @Override
     protected void performClose() {
         Closeable.closeQuietly(lock);
     }
@@ -79,8 +80,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
      */
     protected void forceUnlock(long value) {
         boolean unlocked = lock.compareAndSwapValue(value, UNLOCKED);
-        Jvm.warn().on(getClass(), "" +
-                        "Forced unlock for the " +
+        Jvm.warn().on(getClass(), "Forced unlock for the " +
                         "lock file:" + path + ", " +
                         "lockKey: " + lockKey + ", " +
                         "unlocked: " + unlocked,

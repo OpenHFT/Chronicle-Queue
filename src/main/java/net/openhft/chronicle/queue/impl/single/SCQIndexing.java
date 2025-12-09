@@ -350,10 +350,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         LongArrayValues index2index = getIndex2index(wireForIndex);
         long primaryOffset = toAddress0(index);
 
-        long secondaryAddress = 0;
         long startIndex = index & -indexSpacing;
         while (primaryOffset >= 0) {
-            secondaryAddress = index2index.getValueAt(primaryOffset);
+            long secondaryAddress = index2index.getValueAt(primaryOffset);
             if (secondaryAddress != 0) {
                 @NotNull final LongArrayValues array1 = arrayForAddress(wireForIndex, secondaryAddress);
                 ScanResult result = scanSecondaryIndexBackwards(ec, array1, startIndex, index);

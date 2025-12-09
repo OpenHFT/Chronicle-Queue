@@ -22,7 +22,7 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 /**
  * Base test class for indexing related tests.
  */
-public class IndexingTestCommon extends QueueTestCommon {
+class IndexingTestCommon extends QueueTestCommon {
 
     SetTimeProvider timeProvider;
     SingleChronicleQueue queue;

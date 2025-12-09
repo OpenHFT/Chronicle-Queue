@@ -234,6 +234,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     /**
      * Closes the directory listing by releasing resources associated with the LongValues.
      */
+    @Override
     protected void performClose() {
         Closeable.closeQuietly(minCycleValue, maxCycleValue, modCount);
     }
