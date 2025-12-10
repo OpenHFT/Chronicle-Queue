@@ -33,32 +33,7 @@ public class WeeklyRollCycle implements RollCycle {
     }
 
     @Override
-    public int defaultIndexCount() {
-        return arithmetic.indexCount();
-    }
-
-    @Override
-    public int defaultIndexSpacing() {
-        return arithmetic.indexSpacing();
-    }
-
-    @Override
-    public long toIndex(int cycle, long sequenceNumber) {
-        return arithmetic.toIndex(cycle, sequenceNumber);
-    }
-
-    @Override
-    public long toSequenceNumber(long index) {
-        return arithmetic.toSequenceNumber(index);
-    }
-
-    @Override
-    public int toCycle(long index) {
-        return arithmetic.toCycle(index);
-    }
-
-    @Override
-    public long maxMessagesPerCycle() {
-        return arithmetic.maxMessagesPerCycle();
+    public RollCycleArithmetic arithmetic() {
+        return this.arithmetic;
     }
 }

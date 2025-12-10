@@ -62,6 +62,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
      * @param force If true, forces a refresh.
      */
     @Override
+    // CPD-OFF - logic mirrors TableDirectoryListing
     public void refresh(boolean force) {
         lastRefreshTimeMS = time.currentTimeMillis();
 
@@ -92,6 +93,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
         minCreatedCycle = min;
         maxCreatedCycle = max;
     }
+    // CPD-ON
 
     /**
      * Returns the timestamp of the last refresh in milliseconds since the epoch.

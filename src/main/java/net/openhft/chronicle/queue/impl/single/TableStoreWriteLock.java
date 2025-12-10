@@ -91,6 +91,9 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         }
     }
 
+    /**
+     * Retries acquiring the write lock until success or timeout, returning the previous lock value.
+     */
     private long retryLockAcquisition() throws TimeoutException {
         TimingPauser tlPauser = pauser.get();
         try {

@@ -322,6 +322,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return sourceId;
     }
 
+    @Override
+    public int deltaCheckpointInterval() {
+        return RollingChronicleQueue.super.deltaCheckpointInterval();
+    }
+
     /**
      * Returns the highest last index that has been confirmed to be read by all remote hosts during replication.
      * If replication is not enabled, returns -1.
@@ -1662,7 +1667,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          * @return the next cycle in the given direction
          */
         @Override
-        public int nextCycle(int currentCycle, @NotNull TailerDirection direction) {
+        public int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException {
             throwExceptionIfClosed();
 
             if (direction == NONE)

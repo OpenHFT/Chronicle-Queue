@@ -46,16 +46,6 @@ public enum SparseRollCycles implements RollCycle {
         this.arithmetic = RollCycleArithmetic.of(indexCount, indexSpacing);
     }
 
-    /**
-     * Returns the maximum number of messages allowed per cycle.
-     *
-     * @return The maximum number of messages allowed per cycle
-     */
-    @Override
-    public long maxMessagesPerCycle() {
-        return arithmetic.maxMessagesPerCycle();
-    }
-
     @Override
     public String format() {
         return this.format;
@@ -66,34 +56,41 @@ public enum SparseRollCycles implements RollCycle {
         return this.lengthInMillis;
     }
 
-    /**
-     * Returns the default size of the index array.
-     * <p>Note: {@code indexCount^2} is the maximum number of index queue entries.
-     *
-     * @return The default index count
-     */
+    @Override
+    public RollCycleArithmetic arithmetic() {
+        return this.arithmetic;
+    }
+
+    // Backward compatibility: retain methods that used to be declared on this enum
+    // CPD-OFF
     @Override
     public int defaultIndexCount() {
-        return arithmetic.indexCount();
+        return RollCycle.super.defaultIndexCount();
     }
 
     @Override
     public int defaultIndexSpacing() {
-        return arithmetic.indexSpacing();
+        return RollCycle.super.defaultIndexSpacing();
     }
 
     @Override
-    public long toIndex(int cycle, long sequenceNumber) {
-        return arithmetic.toIndex(cycle, sequenceNumber);
-    }
-
-    @Override
-    public long toSequenceNumber(long index) {
-        return arithmetic.toSequenceNumber(index);
+    public long maxMessagesPerCycle() {
+        return RollCycle.super.maxMessagesPerCycle();
     }
 
     @Override
     public int toCycle(long index) {
-        return arithmetic.toCycle(index);
+        return RollCycle.super.toCycle(index);
     }
+
+    @Override
+    public long toIndex(int cycle, long sequenceNumber) {
+        return RollCycle.super.toIndex(cycle, sequenceNumber);
+    }
+
+    @Override
+    public long toSequenceNumber(long index) {
+        return RollCycle.super.toSequenceNumber(index);
+    }
+    // CPD-ON
 }

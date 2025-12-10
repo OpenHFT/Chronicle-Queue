@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.queue.rollcycles.RollCycleArithmetic;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -12,6 +13,10 @@ import org.jetbrains.annotations.NotNull;
  * <p>
  * Roll cycles are defined by a period of time, such as MINUTELY or DAILY, and they provide methods for managing the
  * cycle duration, formatting, and indexing.
+ * <p>
+ * Since Chronicle Queue 5.x, this interface provides default implementations for arithmetic operations that delegate
+ * to the {@link #arithmetic()} method. Implementations need only provide {@link #format()}, {@link #lengthInMillis()},
+ * and {@link #arithmetic()}.
  */
 public interface RollCycle {
 
@@ -45,6 +50,16 @@ public interface RollCycle {
     int lengthInMillis();
 
     /**
+     * Returns the arithmetic implementation used for index calculations.
+     * <p>
+     * This method provides access to the {@link RollCycleArithmetic} instance that handles
+     * index composition, decomposition, and cycle calculations.
+     *
+     * @return the arithmetic implementation for this roll cycle
+     */
+    RollCycleArithmetic arithmetic();
+
+    /**
      * @return the default epoch offset if one is not set
      */
     default int defaultEpoch() {
@@ -52,9 +67,17 @@ public interface RollCycle {
     }
 
     /**
-     * @return the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
+     * Returns the size of each index array.
+     * <p>
+     * Note: {@code indexCount^2} is the maximum number of index queue entries.
+     * <p>
+     * Default implementation delegates to {@link #arithmetic()}.
+     *
+     * @return the size of each index array
      */
-    int defaultIndexCount();
+    default int defaultIndexCount() {
+        return arithmetic().indexCount();
+    }
 
     /**
      * Returns the space between excerpts that are explicitly indexed.
@@ -67,10 +90,14 @@ public interface RollCycle {
      *     <li>16 (MINUTELY)</li>
      *     <li>64 (DAILY)</li>
      * </ul>
+     * <p>
+     * Default implementation delegates to {@link #arithmetic()}.
      *
      * @return the space between excerpts that are explicitly indexed
      */
-    int defaultIndexSpacing();
+    default int defaultIndexSpacing() {
+        return arithmetic().indexSpacing();
+    }
 
     /**
      * Returns the current cycle. Default epoch is 0 so for a DAILY cycle this will return the number of days since 1970-01-01T00:00:00Z.
@@ -89,41 +116,57 @@ public interface RollCycle {
      * DAILY cycle has cycleShift=32 and sequenceMask=0xFFFFFFFF so the top 32 bits are for cycle and bottom
      * 32 bits are for sequence. This means you can only store 2^32 entries per day.
      * HUGE_DAILY has shift=48 and mask=0xFFFFFFFFFFFF thus allowing 2^48 entries per day.
+     * <p>
+     * Default implementation delegates to {@link #arithmetic()}.
      *
      * @param cycle          to be composed into an index
      * @param sequenceNumber to be composed into an index
      * @return the index for the given {@code cycle} and {@code sequenceNumber}
      */
-    long toIndex(int cycle, long sequenceNumber);
+    default long toIndex(int cycle, long sequenceNumber) {
+        return arithmetic().toIndex(cycle, sequenceNumber);
+    }
 
     /**
      * Returns the sequence number for the provided {@code index}.
      * <p>
      * An index comprises both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
      * decomposes the provided {@code index} and extracts the sequence number.
+     * <p>
+     * Default implementation delegates to {@link #arithmetic()}.
      *
      * @param index to use to extract the sequence number
      * @return the sequence number for the provided {@code index}
      */
-    long toSequenceNumber(long index);
+    default long toSequenceNumber(long index) {
+        return arithmetic().toSequenceNumber(index);
+    }
 
     /**
      * Returns the cycle for the given {@code index}.
      * <p>
      * An index comprises both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
      * decomposes the provided {@code index} and extracts the cycle.
+     * <p>
+     * Default implementation delegates to {@link #arithmetic()}.
      *
      * @param index to use when extracting the cycle
      * @return the sequence number for the given {@code index}
      */
-    int toCycle(long index);
+    default int toCycle(long index) {
+        return arithmetic().toCycle(index);
+    }
 
     /**
      * Returns the maximum number of messages that can be stored in a single cycle.
+     * <p>
+     * Default implementation delegates to {@link #arithmetic()}.
      *
      * @return the maximum number of messages per cycle
      */
-    long maxMessagesPerCycle();
+    default long maxMessagesPerCycle() {
+        return arithmetic().maxMessagesPerCycle();
+    }
 
     // sanity checking of index maximums and counts
     int MAX_INDEX_COUNT = 32 << 10;

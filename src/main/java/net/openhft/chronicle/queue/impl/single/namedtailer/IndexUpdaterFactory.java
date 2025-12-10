@@ -73,7 +73,7 @@ public class IndexUpdaterFactory {
          *
          */
         @Override
-        public void close() {
+        public void close() throws IOException {
             closeQuietly(indexValue);
         }
 
@@ -131,7 +131,7 @@ public class IndexUpdaterFactory {
          *
          */
         @Override
-        public void close() {
+        public void close() throws IOException {
             closeQuietly(versionIndexLock, indexValue, indexVersionValue);
         }
 

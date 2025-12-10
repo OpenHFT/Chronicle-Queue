@@ -93,6 +93,7 @@ public class ChronicleHistoryReaderMain {
      * @param options Available command-line options
      * @return Parsed {@link CommandLine} object
      */
+    // CPD-OFF - shared parsing logic with ChronicleReaderMain
     protected CommandLine parseCommandLine(@NotNull final String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
@@ -144,6 +145,7 @@ public class ChronicleHistoryReaderMain {
         writer.flush();
         System.exit(status);
     }
+    // CPD-ON
 
     /**
      * Configures command-line options for the ChronicleHistoryReaderMain.

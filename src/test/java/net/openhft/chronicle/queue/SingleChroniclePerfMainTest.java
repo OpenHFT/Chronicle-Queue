@@ -15,11 +15,15 @@ import net.openhft.chronicle.values.Array;
 import net.openhft.chronicle.values.MaxUtf8Length;
 import net.openhft.chronicle.values.Values;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.queue.QueuePerfTestSupport.TestReader;
+import net.openhft.chronicle.queue.QueuePerfTestSupport.TestWriter;
 import org.junit.Test;
 
 import java.io.IOException;
 
 import static net.openhft.chronicle.queue.TestFacadeInterfaces.IFacade;
+import static net.openhft.chronicle.queue.QueuePerfTestSupport.readMany;
+import static net.openhft.chronicle.queue.QueuePerfTestSupport.writeMany;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -83,28 +87,6 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         IOTools.deleteDirWithFiles(file, 3);
     }
 
-    private static void writeMany(Bytes<?> bytes, int size) {
-        for (int i = 0; i < size; i += 32) {
-            bytes.writeInt(i); // 4 bytes
-            bytes.writeFloat(i); // 4 bytes
-            bytes.writeLong(i); // 8 bytes
-            bytes.writeDouble(i); // 8 bytes
-            bytes.writeUtf8("Hello!!"); // 8 bytes
-        }
-    }
-
-    private static void readMany(Bytes<?> bytes, int size) {
-        for (int i = 0; i < size; i += 32) {
-            // blackholes to avoid code elimination.
-            int s32 = bytes.readInt(); // 4 bytes
-            float f32 = bytes.readFloat(); // 4 bytes
-            long s64 = bytes.readLong(); // 8 bytes
-            double f64 = bytes.readDouble(); // 8 bytes
-            String s = bytes.readUtf8(); // 8 bytes
-            assertEquals("Hello!!", s);
-        }
-    }
-
     @Test
     public void testFacade() {
         IFacade f = Values.newNativeReference(IFacade.class);
@@ -115,13 +97,5 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         assertEquals(bytesStore, byteable.bytesStore());
         assertEquals(0, byteable.offset());
         bytesStore.releaseLast();
-    }
-
-    interface TestWriter<T> {
-        void writeTo(T t);
-    }
-
-    interface TestReader<T> {
-        void readFrom(T t);
     }
 }

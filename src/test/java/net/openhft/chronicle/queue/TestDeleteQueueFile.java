@@ -81,8 +81,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer();
 
             // while the queue is intact
-            assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
-            assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
+            assertTailerCanNavigateQueue(tailer, firstCycle, thirdCycle);
 
             // delete the first store
             Files.delete(Paths.get(firstCycle.filename));
@@ -107,8 +106,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer();
 
             // while the queue is intact
-            assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
-            assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
+            assertTailerCanNavigateQueueEndToStart(tailer, firstCycle, thirdCycle);
 
             // delete the first store
             Files.delete(Paths.get(firstCycle.filename));
@@ -132,8 +130,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer();
 
             // while the queue is intact
-            assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
-            assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
+            assertTailerCanNavigateQueueEndToStart(tailer, firstCycle, thirdCycle);
 
             // delete the last store
             Files.delete(Paths.get(thirdCycle.filename));
@@ -158,8 +155,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer();
 
             // while the queue is intact
-            assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
-            assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
+            assertTailerCanNavigateQueue(tailer, firstCycle, thirdCycle);
 
             // delete the last store
             Files.delete(Paths.get(thirdCycle.filename));
@@ -183,8 +179,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer();
 
             // while the queue is intact
-            assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
-            assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
+            assertTailerCanNavigateQueue(tailer, firstCycle, thirdCycle);
 
             // delete the first store
             Files.delete(Paths.get(firstCycle.filename));
@@ -548,6 +543,26 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
 
         return new QueueWithCycleDetails(queue, new CopyOnWriteArrayList<>(rollCycleDetails));
+    }
+
+    /**
+     * Helper method to assert that a tailer can correctly navigate to start and end of queue
+     */
+    private void assertTailerCanNavigateQueue(ExcerptTailer tailer, RollCycleDetails firstCycle, RollCycleDetails lastCycle) {
+        assertEquals("tailer toStart should land at first cycle index",
+                toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
+        assertEquals("tailer toEnd should land after last cycle index",
+                toHexString(lastCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
+    }
+
+    /**
+     * Helper method to assert that a tailer can correctly navigate from end to start of queue
+     */
+    private void assertTailerCanNavigateQueueEndToStart(ExcerptTailer tailer, RollCycleDetails firstCycle, RollCycleDetails lastCycle) {
+        assertEquals("tailer toEnd should land after last cycle index",
+                toHexString(lastCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
+        assertEquals("tailer toStart should return to first cycle index",
+                toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
     }
 
     static class QueueWithCycleDetails extends AbstractCloseable {

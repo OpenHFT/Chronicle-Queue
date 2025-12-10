@@ -88,33 +88,8 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         }
 
         @Override
-        public int defaultIndexCount() {
-            return delegate.defaultIndexCount();
-        }
-
-        @Override
-        public int defaultIndexSpacing() {
-            return delegate.defaultIndexSpacing();
-        }
-
-        @Override
-        public int current(TimeProvider time, long epoch) {
-            return delegate.current(time, epoch);
-        }
-
-        @Override
-        public long toIndex(int cycle, long sequenceNumber) {
-            return delegate.toIndex(cycle, sequenceNumber);
-        }
-
-        @Override
-        public long toSequenceNumber(long index) {
-            return delegate.toSequenceNumber(index);
-        }
-
-        @Override
-        public int toCycle(long index) {
-            return delegate.toCycle(index);
+        public net.openhft.chronicle.queue.rollcycles.RollCycleArithmetic arithmetic() {
+            return delegate.arithmetic();
         }
 
         @Override

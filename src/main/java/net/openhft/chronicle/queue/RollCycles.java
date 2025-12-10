@@ -114,31 +114,34 @@ public enum RollCycles implements RollCycle {
         return this.defaultEpoch;
     }
 
-    /**
-     * @return this is the size of each index array, note: indexCount^2 is the maximum number of index queue entries.
-     */
+    @Override
+    public RollCycleArithmetic arithmetic() {
+        return this.arithmetic;
+    }
+
+    // Backward compatibility: retain methods that used to be declared on this enum
     @Override
     public int defaultIndexCount() {
-        return arithmetic.indexCount();
+        return RollCycle.super.defaultIndexCount();
     }
 
     @Override
     public int defaultIndexSpacing() {
-        return arithmetic.indexSpacing();
-    }
-
-    @Override
-    public long toIndex(int cycle, long sequenceNumber) {
-        return arithmetic.toIndex(cycle, sequenceNumber);
-    }
-
-    @Override
-    public long toSequenceNumber(long index) {
-        return arithmetic.toSequenceNumber(index);
+        return RollCycle.super.defaultIndexSpacing();
     }
 
     @Override
     public int toCycle(long index) {
-        return arithmetic.toCycle(index);
+        return RollCycle.super.toCycle(index);
+    }
+
+    @Override
+    public long toIndex(int cycle, long sequenceNumber) {
+        return RollCycle.super.toIndex(cycle, sequenceNumber);
+    }
+
+    @Override
+    public long toSequenceNumber(long index) {
+        return RollCycle.super.toSequenceNumber(index);
     }
 }
