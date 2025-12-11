@@ -37,6 +37,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(dataDirectory.toFile());
     }

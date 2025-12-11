@@ -23,6 +23,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.*;
 
 @RequiredForClient
+@SuppressWarnings({"deprecation", "removal"})
 public class LastAcknowledgedTest extends QueueTestCommon {
     @Test
     public void testLastAcknowledge() {

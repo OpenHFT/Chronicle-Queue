@@ -11,7 +11,6 @@ import org.junit.Assume;
 
 import java.io.File;
 import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;

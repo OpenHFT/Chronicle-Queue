@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 @RequiredForClient
 public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
 
+    @SuppressWarnings("PMD.UnusedAssignment") // written by appender thread, consumed by tailer thread
     private volatile long lastWrittenIndex = Long.MIN_VALUE;
 
     @Override

@@ -4,10 +4,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;

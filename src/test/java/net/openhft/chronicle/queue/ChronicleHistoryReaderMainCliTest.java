@@ -64,6 +64,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private static final class TestChronicleHistoryReaderMain extends ChronicleHistoryReaderMain {
         final RecordingChronicleHistoryReader reader = new RecordingChronicleHistoryReader();
         final StringBuilder helpOutput = new StringBuilder();

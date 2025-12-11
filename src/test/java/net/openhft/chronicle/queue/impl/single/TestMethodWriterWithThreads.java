@@ -7,7 +7,6 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.main.DumpMain;
@@ -38,6 +37,7 @@ import static org.junit.Assume.assumeTrue;
  * check that method writes are thread safe when used with queue.methodWriter
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings({"deprecation", "removal"})
 public class TestMethodWriterWithThreads extends QueueTestCommon {
 
     private static final int AMEND = 1;

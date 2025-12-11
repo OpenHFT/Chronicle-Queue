@@ -15,7 +15,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -23,6 +22,7 @@ import static net.openhft.chronicle.queue.impl.single.StoreTailer.INDEXING_LINEA
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings({"deprecation", "removal"})
 public class IndexTest extends QueueTestCommon {
 
     @NotNull

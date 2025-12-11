@@ -3,8 +3,10 @@
  */
 package net.openhft.chronicle.queue.micros;
 
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 
+@UsedViaReflection
 public class Order extends SelfDescribingMarshallable {
     private final String symbol;
     private final Side side;

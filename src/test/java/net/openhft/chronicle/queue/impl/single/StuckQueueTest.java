@@ -24,6 +24,7 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNotNull;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class StuckQueueTest extends QueueTestCommon {
 
     @Test

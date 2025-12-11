@@ -14,6 +14,7 @@ import static org.junit.Assert.assertNull;
 /**
  * Unit tests for ExcerptCommon interface implementations.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class ExcerptCommonTest extends QueueTestCommon {
 
     private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptCommonTest";

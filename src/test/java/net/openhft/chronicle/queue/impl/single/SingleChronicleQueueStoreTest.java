@@ -19,6 +19,7 @@ import java.util.function.Function;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final int INDEX_SPACING = 4;
     private static final int RECORD_COUNT = INDEX_SPACING * 10;

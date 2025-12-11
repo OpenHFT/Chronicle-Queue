@@ -46,7 +46,7 @@ public class TestBinarySearch extends QueueTestCommon {
     }
 
     @Test
-    public void testBinarySearch() throws ParseException {
+    public void testBinarySearch() {
         final SetTimeProvider stp = new SetTimeProvider();
         long time = 0;
         stp.currentTimeMillis(time);
