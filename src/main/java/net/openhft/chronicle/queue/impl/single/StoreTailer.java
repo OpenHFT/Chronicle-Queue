@@ -1638,7 +1638,7 @@ class StoreTailer extends AbstractCloseable
     /**
      * Returns the current store, initializing it if necessary.
      *
-     * @return The current {@link SingleChronicleQueueStore}, or {@code null} if no store is available.
+     * @return The current {@link SingleChronicleQueueStore}.
      */
     @NotNull
     private SingleChronicleQueueStore store() {
