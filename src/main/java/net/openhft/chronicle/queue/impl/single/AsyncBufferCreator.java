@@ -12,7 +12,7 @@ import java.io.File;
 /**
  * The {@code AsyncBufferCreator} interface defines a contract for creating buffers
  * for use in asynchronous mode. This functionality is available as an enterprise feature.
- *
+ * <p>
  * It extends {@link ThrowingBiFunction}, allowing the creation of {@link BytesStore} instances
  * with a given size, maximum readers, and file backing.
  */

@@ -65,6 +65,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             Jvm.getSize("SingleChronicleQueueBuilder.blocksize", OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE),
             OS.is64Bit() && OS.isLinux() ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
 
+    @Deprecated(/* to be removed in 2027 */)
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
@@ -143,12 +144,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     protected SingleChronicleQueueBuilder() {
     }
-    /*
-     * ========================
-     * Builders
-     * ========================
-     */
 
+    @SuppressWarnings("EmptyMethod")
     public static void addAliases() {
         // static initialiser.
     }
@@ -369,6 +366,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @throws IllegalStateException if enterprise features are requested but not available
      */
     @NotNull
+    @Override
     public SingleChronicleQueue build() {
         preBuild();
 
@@ -1546,6 +1544,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * It's only a shallow copy so field will have the same objects.
      */
     @SuppressWarnings("java:S2975")
+    @Override
     public SingleChronicleQueueBuilder clone() {
         try {
             return (SingleChronicleQueueBuilder) super.clone();
@@ -1562,7 +1561,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      * @throws IllegalArgumentException if the builders are not from the same class hierarchy
      */
-
     public SingleChronicleQueueBuilder setAllNullFields(@Nullable SingleChronicleQueueBuilder parentBuilder) {
         if (parentBuilder == null)
             return this;

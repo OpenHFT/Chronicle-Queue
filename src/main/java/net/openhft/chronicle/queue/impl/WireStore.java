@@ -92,6 +92,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @param index the index to check
      * @return {@code true} if the index is indexable, {@code false} otherwise
      */
+    @Deprecated(/* to be removed in 2027 */)
     boolean indexable(long index);
 
     /**

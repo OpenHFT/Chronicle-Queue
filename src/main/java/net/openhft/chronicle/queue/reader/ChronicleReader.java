@@ -44,8 +44,15 @@ import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
  * including tailing (continuous reading of new entries), and allows users to specify inclusion/exclusion
  * filters, start indices, and message processing through customizable plugins.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
+
+    /**
+     * Creates a reader with default configuration.
+     */
+    public ChronicleReader() {
+    }
 
     private final List<Pattern> inclusionRegex = new ArrayList<>();
     private final List<Pattern> exclusionRegex = new ArrayList<>();
@@ -84,6 +91,7 @@ public class ChronicleReader implements Reader {
      * Executes the reader logic by creating the necessary queue, tailers, and entry readers,
      * and processing messages until the stop condition is met.
      */
+    @Override
     public void execute() {
         configureContentBasedLimiter();
         validateArgs();
@@ -290,6 +298,7 @@ public class ChronicleReader implements Reader {
      * @param messageSink The consumer for processing message strings
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader withMessageSink(final @NotNull Consumer<String> messageSink) {
         this.messageSink = messageSink;
         return this;
@@ -310,6 +319,7 @@ public class ChronicleReader implements Reader {
      * @param path The base directory path for the Chronicle Queue
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader withBasePath(final @NotNull Path path) {
         this.basePath = path;
         return this;
@@ -321,6 +331,7 @@ public class ChronicleReader implements Reader {
      * @param regex The regex pattern for inclusion
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader withInclusionRegex(final @NotNull String regex) {
         this.inclusionRegex.add(Pattern.compile(regex));
         return this;
@@ -332,6 +343,7 @@ public class ChronicleReader implements Reader {
      * @param regex The regex pattern for exclusion
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader withExclusionRegex(final @NotNull String regex) {
         this.exclusionRegex.add(Pattern.compile(regex));
         return this;
@@ -343,6 +355,7 @@ public class ChronicleReader implements Reader {
      * @param customPlugin The {@link ChronicleReaderPlugin} to use
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader withCustomPlugin(final @NotNull ChronicleReaderPlugin customPlugin) {
         this.customPlugin = customPlugin;
         return this;
@@ -354,6 +367,7 @@ public class ChronicleReader implements Reader {
      * @param index The start index to begin reading from
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader withStartIndex(final long index) {
         this.startIndex = index;
         return this;
@@ -364,6 +378,7 @@ public class ChronicleReader implements Reader {
      *
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader tail() {
         this.tailInputSource = true;
         return this;
@@ -375,6 +390,7 @@ public class ChronicleReader implements Reader {
      * @param maxHistoryRecords The maximum number of history records to process
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader historyRecords(final long maxHistoryRecords) {
         this.maxHistoryRecords = maxHistoryRecords;
         return this;
@@ -387,6 +403,7 @@ public class ChronicleReader implements Reader {
      * @param methodReaderInterface The fully qualified class name of the method reader interface
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader asMethodReader(@NotNull String methodReaderInterface) {
         if (methodReaderInterface.isEmpty()) {
             entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType);
@@ -472,6 +489,7 @@ public class ChronicleReader implements Reader {
      * @param wireType The {@link WireType} to be used
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader withWireType(@NotNull WireType wireType) {
         this.wireType = wireType;
         return this;
@@ -492,6 +510,7 @@ public class ChronicleReader implements Reader {
      *
      * @return The current instance of {@link ChronicleReader}
      */
+    @Override
     public ChronicleReader suppressDisplayIndex() {
         this.displayIndex = false;
         return this;
@@ -533,6 +552,7 @@ public class ChronicleReader implements Reader {
      * @param pollMethod The polling function to use
      * @return The current instance of {@link ChronicleReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public ChronicleReader withDocumentPollMethod(final Function<ExcerptTailer, DocumentContext> pollMethod) {
         this.pollMethod = pollMethod;
         return this;
@@ -762,6 +782,7 @@ public class ChronicleReader implements Reader {
     /**
      * Stops the reader, halting any further processing of the queue.
      */
+    @Override
     public void stop() {
         running = false;
     }

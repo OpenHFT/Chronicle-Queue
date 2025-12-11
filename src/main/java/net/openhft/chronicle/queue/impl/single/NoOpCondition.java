@@ -60,10 +60,9 @@ public final class NoOpCondition implements Condition, IgnoresEverything {
      * @param l The maximum time to wait.
      * @param timeUnit The time unit of the {@code l} argument.
      * @return Always returns {@code true}.
-     * @throws InterruptedException This method does not throw an exception.
      */
     @Override
-    public boolean await(long l, TimeUnit timeUnit) throws InterruptedException {
+    public boolean await(long l, TimeUnit timeUnit) {
         return true;
     }
 

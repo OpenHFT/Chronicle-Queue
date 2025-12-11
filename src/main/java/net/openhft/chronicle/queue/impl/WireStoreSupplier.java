@@ -68,5 +68,6 @@ public interface WireStoreSupplier {
      * @param store the {@link SingleChronicleQueueStore} to check for reuse
      * @return {@code true} if the store can be reused, {@code false} otherwise
      */
+    @Deprecated(/* to be removed in 2027 */)
     boolean canBeReused(@NotNull SingleChronicleQueueStore store);
 }

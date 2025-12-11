@@ -40,6 +40,7 @@ import static net.openhft.chronicle.wire.Wires.*;
  * excerpts to the queue. It manages the cycle of the queue, lock handling, and the state
  * of the wire and store.
  */
+@SuppressWarnings({"deprecation", "removal"})
 class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
 
@@ -58,6 +59,7 @@ class StoreAppender extends AbstractCloseable
     private final StoreAppenderContext context;
     private final WireStorePool storePool;
     private final boolean checkInterrupts;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     @UsedViaReflection
     private final Finalizer finalizer;
     @Nullable
@@ -355,6 +357,7 @@ class StoreAppender extends AbstractCloseable
      *
      * @param cycle The cycle to be set.
      */
+    @Deprecated(/* to be removed in 2027 */)
     void setCycle(int cycle) {
         if (cycle != this.cycle)
             setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
@@ -598,6 +601,7 @@ class StoreAppender extends AbstractCloseable
      * Ensures that EOF markers are properly added to all cycles, normalizing older cycles to ensure they are complete.
      * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
      */
+    @Override
     public void normaliseEOFs() {
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
@@ -939,7 +943,7 @@ class StoreAppender extends AbstractCloseable
     /*
      * overridden in delta wire
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "EmptyMethod"})
     void beforeAppend(final Wire wire, final long index) {
     }
 
@@ -1148,6 +1152,7 @@ class StoreAppender extends AbstractCloseable
          *
          * @return true if the context is empty, false otherwise
          */
+        @Override
         public boolean isEmpty() {
             Bytes<?> bytes = wire().bytes();
             return bytes.readRemaining() == 0;

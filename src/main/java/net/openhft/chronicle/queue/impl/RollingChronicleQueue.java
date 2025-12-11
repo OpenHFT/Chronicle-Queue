@@ -123,5 +123,6 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the roll cycle used by the queue.
      */
     @NotNull
+    @Override
     RollCycle rollCycle();
 }

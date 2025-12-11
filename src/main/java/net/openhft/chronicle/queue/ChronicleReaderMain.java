@@ -26,6 +26,12 @@ import static java.util.Arrays.stream;
 public class ChronicleReaderMain {
 
     /**
+     * Creates a new runner for the command-line reader.
+     */
+    public ChronicleReaderMain() {
+    }
+
+    /**
      * Entry point of the application. Initializes the {@link ChronicleReaderMain} instance and
      * passes command-line arguments for execution.
      *

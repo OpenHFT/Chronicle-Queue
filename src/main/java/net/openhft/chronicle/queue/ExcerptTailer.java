@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
  * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing a Tailer between threads will lead to errors and unpredictable behaviour.
  */
 @SingleThreaded
+@SuppressWarnings({"deprecation", "removal"})
 public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
@@ -61,6 +62,11 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @Override
     long index();
 
+    /**
+     * Returns the last index read by this tailer, or {@code -1} if no read has occurred.
+     *
+     * @return last index read or {@code -1} when unset
+     */
     default long lastReadIndex() {
         return -1;
     }
@@ -251,8 +257,13 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     @NotNull
     TailerState state();
 
+    /**
+     * Callback for deciding whether a message can be read based on replication acknowledgements.
+     */
     interface AcknowledgedIndexReplicatedCheck {
         /**
+         * Determines whether the tailer can read the provided index given the last replicated sequence.
+         *
          * @param index           the index of the next message for the tailer to read
          * @param lastSequenceAck the last index that has been acknowledged as replicated
          * @return true if you are ok for the tailer to read the message at {@code index}

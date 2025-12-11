@@ -94,24 +94,17 @@ public class InternalBenchmarkMain {
         Histogram loopTime = new Histogram();
 
         Thread reader = new Thread(() -> {
-//            try (ChronicleQueue queue2 = createQueue(path))
             ExcerptTailer tailer = queue.createTailer().toEnd();
             long endLoop = System.nanoTime();
             while (running) {
                 loopTime.sample((double) (System.nanoTime() - endLoop));
                 Jvm.safepoint();
 
-//                    readerLoopTime = System.nanoTime();
-//                    if (readerLoopTime - readerEndLoopTime > 1000)
-//                        System.out.println("r " + (readerLoopTime - readerEndLoopTime));
-//                try {
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
                 runInner(transportTime, readTime, tailer);
-//                } finally {
-//                        readerEndLoopTime = System.nanoTime();
-//                }
+
                 Jvm.safepoint();
                 endLoop = System.nanoTime();
             }
@@ -177,12 +170,6 @@ public class InternalBenchmarkMain {
      */
     private static void runInner(Histogram transportTime, Histogram readTime, ExcerptTailer tailer) {
         Jvm.safepoint();
-        /*if (tailer.peekDocument()) {
-            if (counter++ < 1000) {
-                Jvm.safepoint();
-                return;
-            }
-        }*/
         Jvm.safepoint();
         counter = 0;
         try (DocumentContext dc = tailer.readingDocument(false)) {

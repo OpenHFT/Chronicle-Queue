@@ -60,12 +60,13 @@ import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
  * It also supports various configurations such as event loop handling, wire types, buffer
  * management, and replication.
  */
-@SuppressWarnings("this-escape")
+@SuppressWarnings({"this-escape", "deprecation", "removal"})
 public class SingleChronicleQueue extends AbstractCloseable implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     public static final String DISCARD_FILE_SUFFIX = ".discard";
     public static final String QUEUE_METADATA_FILE = "metadata" + SingleTableStore.SUFFIX;
+    @Deprecated(/* to be removed in 2027 */)
     public static final String DISK_SPACE_CHECKER_NAME = DiskSpaceMonitor.DISK_SPACE_CHECKER_NAME;
     public static final String REPLICATED_NAMED_TAILER_PREFIX = "replicated:";
     public static final String INDEX_LOCK_FORMAT = "index.%s.lock";
@@ -1231,6 +1232,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the TimeProvider
      */
     @NotNull
+    @Override
     public TimeProvider time() {
         return time;
     }
@@ -1388,13 +1390,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         /**
          * Acquires a {@link SingleChronicleQueueStore} for the specified cycle.
-         * If the store doesn't exist and the strategy is {@link CreateStrategy.CREATE}, it will create a new store.
+         * If the store doesn't exist and the strategy is {@link CreateStrategy#CREATE}, it will create a new store.
          *
          * @param cycle          the cycle to acquire the store for
          * @param createStrategy the strategy for creating or reading the store
          * @return the acquired SingleChronicleQueueStore or null if the store doesn't exist and the strategy is not CREATE
-         * @throws IOException      in case of IO errors
-         * @throws TimeoutException if acquiring the store times out
          */
         @Override
         public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
