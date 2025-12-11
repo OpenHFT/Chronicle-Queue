@@ -1,0 +1,192 @@
+= Chronicle Queue Security Review
+:toc:
+:sectnums:
+:lang: en-GB
+:toclevels: 2
+:doctype: book
+:source-highlighter: rouge
+
+This document summarises the main security considerations for Chronicle Queue.
+It complements the security-related requirements in `project-requirements.adoc` (`QUEUE-NF-S-_`, `QUEUE-NF-O-_`) and the architectural decisions recorded in `decision-log.adoc` (for example `CQ-NF-S-301` and `CQ-NF-O-401`).
+
+== Trust Zone and Responsibilities
+
+Chronicle Queue operates in the _Core (Zone B)_ as defined in `Chronicle-Quality-Rules/src/main/docs/architectural-standards.adoc`.
+In this role it assumes that:
+
+* untrusted inputs have been validated at the edge (for example by Chronicle-Network and Chronicle-Wire);
+* authentication and authorisation decisions are enforced by services and applications built on top of the queue;
+* this module is responsible for preserving integrity, ordering and durability of messages once accepted.
+
+The remainder of this document describes how Chronicle Queue fulfils those Core responsibilities and where it deliberately relies on the wider platform (for example for encryption, identity and access management).
+
+== Scope and Threat Model
+
+Chronicle Queue is a low-level, log-structured messaging and journalling component.
+It:
+
+* runs in-process as a library linked into applications;
+* stores messages on local or shared file systems using memory-mapped files;
+* exposes no network listeners or authentication mechanisms by itself.
+
+Chronicle Queue assumes:
+
+* the running process is trusted and operates in a controlled environment;
+* file-system permissions and network access are managed by the host platform and surrounding infrastructure;
+* untrusted input is validated at system boundaries (for example REST endpoints, message brokers) before reaching queue writers.
+
+Chronicle Queue does *not* provide:
+
+* transport-level encryption (for example TLS);
+* application-level authentication or authorisation;
+* application-specific input validation for message payloads.
+
+Those capabilities belong to higher-level modules such as Chronicle-Network, Chronicle-Services and the caller’s own code.
+
+The primary security risks within Chronicle Queue itself are:
+
+* data corruption or loss due to misuse of roll files or sharing patterns;
+* exposure of sensitive data at rest if encryption and access controls are not configured externally;
+* resource exhaustion through unbounded queue growth or misconfigured roll/retention policies;
+* misuse of off-heap or memory-mapped storage in the underlying Chronicle-Bytes layer.
+
+== Data at Rest and Encryption Boundary (QUEUE-NF-S-002, CQ-NF-S-301)
+
+Chronicle Queue stores messages in plain form in `.cq4` roll files.
+Requirement `QUEUE-NF-S-002` as follows:
+
+* Chronicle Queue does not transparently encrypt or decrypt queue files by default.
+
+Implications:
+
+* Sensitive data written to queues must be treated as sensitive on disk; deployments should:
+** use OS-level permissions to restrict access to queue directories;
+** use encrypted volumes where regulatory requirements dictate;
+** avoid placing queues on shared or world-readable file systems.
+* Adding transparent encryption inside Chronicle Queue would introduce latency and complexity and is therefore explicitly not the default behaviour.
+
+When integrating Chronicle Queue into security-sensitive systems:
+
+* document which queues contain sensitive data and how the underlying volumes are protected;
+* ensure that any application-level encryption or signing is applied before messages reach the queue;
+* avoid relying on queue file names or directory structures as the sole means of access control.
+
+Chronicle Queue does not currently apply cryptographic hashing to queue contents or roll files.
+Where deployments require additional integrity guarantees (for example signed payloads or checksummed archives), those concerns should be addressed at the application or storage layer.
+Cryptographic keys must be managed by external key-management systems or application code; they are not embedded in Chronicle Queue itself and queue files should not be used as a long-term store for raw keys.
+
+== Off-Heap and Memory-Mapped Storage (QUEUE-NF-S-001)
+
+Chronicle Queue is built on top of Chronicle-Bytes and uses off-heap and memory-mapped storage for both data and indices.
+Requirement `QUEUE-NF-S-001` mandates that:
+
+* queue code uses bounds-checked `Bytes` APIs rather than unchecked pointer arithmetic;
+* new code paths that manipulate off-heap or mapped memory are implemented in Chronicle-Bytes where possible and reuse its safety mechanisms;
+* queue-specific logic does not introduce unchecked casts or raw address manipulation beyond what Chronicle-Bytes already exposes.
+
+Mitigations:
+
+* Bounds checking and memory-safety concerns are primarily handled in Chronicle-Bytes (`CB-NF-S-*` requirements and `security-review.adoc` for that module).
+* Queue tests that exercise roll boundaries, index structures and crash-recovery scenarios help to detect corruption caused by misuse.
+* SpotBugs and other static-analysis tools are used at the repository level to detect unsafe patterns.
+
+When modifying queue internals:
+
+* prefer high-level `Bytes` operations and existing helper methods;
+* avoid caching raw addresses or direct buffer references unless strictly necessary for performance;
+* ensure new code paths are covered by tests that exercise extreme sizes, roll boundaries and restart scenarios.
+
+== Queue Sharing, Roll Cycles and Retention (QUEUE-NF-O-002, CQ-FN-101, CQ-NF-O-401)
+
+Chronicle Queue is designed around time-based roll cycles and append-only roll files (see `CQ-FN-101` and `architecture-overview.adoc`).
+From a security and compliance perspective:
+
+* long-lived queues can accumulate large numbers of roll files containing historical data;
+* deletion or alteration of roll files has direct impact on auditability and forensics;
+* misconfigured retention policies can either:
+** retain data longer than required (risking regulatory non-compliance), or
+** delete data too aggressively (risking loss of evidence or operational insight).
+
+Requirement `QUEUE-NF-O-002` and decision `CQ-NF-O-401` state that:
+
+* retention and roll-file cleanup are explicit operational responsibilities;
+* Chronicle Queue exposes predictable naming and directory layout so scripts and tooling can act safely;
+* the core library avoids automatic deletion of data to reduce the risk of unexpected loss.
+
+Recommended practices:
+
+* document a clear retention policy per queue (for example 30 days of intraday trading data);
+* implement audited scripts or services that:
+** archive or export roll files to longer-term storage;
+** delete files only after policy preconditions are met;
+* monitor disk utilisation and roll-file counts and alert when thresholds are approached.
+
+== Logging, Diagnostics and Sensitive Data
+
+Chronicle Queue exposes diagnostics via:
+
+* system properties such as `chronicle.queue.warnSlowAppenderMs` and `chronicle.queue.report.linear.scan.latency`;
+* optional consistency checks and index validation;
+* operational logging around roll events and exceptions.
+
+These facilities are intended for trusted environments.
+Potential issues:
+
+* message contents or derived fields may appear in logs if application code logs them directly, or if debug logging is enabled at higher layers;
+* misconfigured log levels can expose more operational detail than necessary.
+
+Mitigations:
+
+* treat queue contents as sensitive and restrict log verbosity in production, particularly for payloads that include client identifiers or financial data;
+* ensure logging configuration is part of security reviews and operational runbooks;
+* prefer structured logging that redacts or truncates sensitive fields where appropriate.
+
+== Secure Configuration and Dependencies (QUEUE-NF-O-001)
+
+Requirement `QUEUE-NF-O-001` calls for documented configuration knobs, particularly system properties that alter behaviour in ways relevant to security and operability.
+
+Key aspects:
+
+* `system-properties.adoc` documents the supported properties, their defaults and their effects;
+* configuration handling is performed using standard Java mechanisms (`System.getProperty` etc.), with no dynamic code loading based on untrusted values;
+* queue code does not fetch remote configurations or execute scripts; it assumes configuration is provided by trusted deployment tooling.
+
+Dependency considerations:
+
+* Chronicle Queue depends on other Chronicle libraries (Core, Bytes, Wire, Threads) and a small set of external libraries;
+* dependency management and vulnerability scanning (for example CVE checks) are handled at the repository or build level, not in this module alone.
+
+When changing configuration surfaces or adding new dependencies:
+
+* document any new system properties or environment options in `system-properties.adoc` and, where appropriate, in `project-requirements.adoc`;
+* avoid introducing dependencies that bring in heavy reflection or deserialisation frameworks without a clear need;
+* ensure the build pipeline continues to run static analysis and dependency checks.
+
+== Vulnerability Management and Static Analysis
+
+Chronicle Queue participates in the wider Chronicle vulnerability-management process described in the root-level compliance and quality playbooks.
+In particular:
+
+* static analysis (Checkstyle and SpotBugs) is wired via the shared quality configuration from `root-parent-pom` and `Chronicle-Quality-Rules`;
+* Java 21 quality builds for this module are required to be clean for both tools before changes are merged;
+* dependency vulnerability scanning (for example CVE checks) is performed at the repository level and tracked in central compliance artefacts rather than in this document alone.
+
+Module-specific follow-ups (for example reviewing new SpotBugs findings or analysing security-related GitHub issues) are recorded in `TODO.md` and summarised in `TODO_STATUS.md`.
+Any future suppressions of static-analysis findings in this module should be justified with a short comment and, where relevant, a note in this security review.
+
+== Summary and Future Work
+
+Chronicle Queue’s security posture is characterised by:
+
+* a clear separation of concerns between:
+** low-level storage and indexing (this module),
+** serialisation and schema handling (Chronicle-Wire),
+** networking and authentication (Chronicle-Network and services),
+* explicit documentation of the encryption responsibility boundary and retention responsibilities;
+* reliance on Chronicle-Bytes for safe off-heap and memory-mapped access.
+
+Further improvements may include:
+
+* a more formal threat model for deployments that expose queues to partially untrusted producers;
+* additional fuzz and stress testing around index structures and roll-cycle transitions;
+* richer guidance for combining Chronicle Queue with Chronicle-Network and external security controls in regulated environments.
