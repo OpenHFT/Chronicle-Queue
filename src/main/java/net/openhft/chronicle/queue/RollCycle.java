@@ -60,6 +60,8 @@ public interface RollCycle {
     RollCycleArithmetic arithmetic();
 
     /**
+     * Returns the default epoch offset to use when none is provided.
+     *
      * @return the default epoch offset if one is not set
      */
     default int defaultEpoch() {
@@ -102,6 +104,7 @@ public interface RollCycle {
     /**
      * Returns the current cycle. Default epoch is 0 so for a DAILY cycle this will return the number of days since 1970-01-01T00:00:00Z.
      *
+     * @param time  time provider to read the current time
      * @param epoch an EPOCH offset, to all the user to define their own epoch
      * @return the current cycle
      */
@@ -168,6 +171,8 @@ public interface RollCycle {
         return arithmetic().maxMessagesPerCycle();
     }
 
-    // sanity checking of index maximums and counts
+    /**
+     * Upper bound for indexCount to keep array sizes reasonable.
+     */
     int MAX_INDEX_COUNT = 32 << 10;
 }

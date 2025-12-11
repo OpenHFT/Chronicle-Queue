@@ -13,6 +13,8 @@ import java.io.File;
 /**
  * The ExcerptCommon is common to both ExcerptAppender
  * and ExcerptTailer.
+ *
+ * @param <E> the concrete Excerpt type returned for fluent chaining
  */
 public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, SingleThreadedChecked {
 
@@ -36,6 +38,8 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, Si
     ChronicleQueue queue();
 
     /**
+     * Returns the current file being worked on, or {@code null} if the tailer/appender has not loaded a file yet.
+     *
      * @return the current file being worked on or null if not known.
      */
     @Nullable
@@ -44,7 +48,7 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> extends Closeable, Si
     }
 
     /**
-     * Performa sync up to the point the Appender has written or Tailer has read, if supported.
+     * Performs a sync up to the point the Appender has written or Tailer has read, if supported.
      */
     default void sync() {
     }

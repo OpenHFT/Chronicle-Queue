@@ -48,6 +48,12 @@ import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 public class ChronicleReader implements Reader {
     private static final long UNSET_VALUE = Long.MIN_VALUE;
 
+    /**
+     * Creates a reader with default configuration.
+     */
+    public ChronicleReader() {
+    }
+
     private final List<Pattern> inclusionRegex = new ArrayList<>();
     private final List<Pattern> exclusionRegex = new ArrayList<>();
     private final Pauser pauser = Pauser.millis(1, 100);

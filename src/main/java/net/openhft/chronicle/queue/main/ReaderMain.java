@@ -12,6 +12,10 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class ReaderMain {
 
+    private ReaderMain() {
+        // utility holder
+    }
+
     /**
      * The main method that triggers the reading and display of queue records.
      * Delegates execution to {@link ChronicleReaderMain#main(String[])}.

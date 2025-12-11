@@ -20,6 +20,10 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class HistoryMain {
 
+    private HistoryMain() {
+        // utility holder
+    }
+
     /**
      * The main method that triggers the history reading process.
      * Delegates execution to {@link ChronicleHistoryReaderMain#main(String[])}.

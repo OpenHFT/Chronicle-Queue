@@ -28,6 +28,12 @@ import java.util.concurrent.TimeUnit;
 public class ChronicleHistoryReaderMain {
 
     /**
+     * Creates a new instance for running via {@link #main(String[])}.
+     */
+    public ChronicleHistoryReaderMain() {
+    }
+
+    /**
      * Entry point of the application.
      * Initializes the {@link ChronicleHistoryReaderMain} and passes command-line arguments.
      *
