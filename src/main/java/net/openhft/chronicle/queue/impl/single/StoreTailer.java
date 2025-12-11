@@ -1640,7 +1640,7 @@ class StoreTailer extends AbstractCloseable
      *
      * @return The current {@link SingleChronicleQueueStore}, or {@code null} if no store is available.
      */
-    @Nullable
+    @NotNull
     private SingleChronicleQueueStore store() {
         if (store == null)
             if (!cycle(cycle())) // sets the store as a side effect
