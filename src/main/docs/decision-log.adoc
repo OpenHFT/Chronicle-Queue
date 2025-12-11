@@ -12,7 +12,6 @@ Entries cross-reference the queue documentation under `docs/` and any future `pr
 * link:#CQ-FN-101[CQ-FN-101 Queue File Format and Roll-Cycle Model]
 * link:#CQ-FN-102[CQ-FN-102 Appender and Tailer Concurrency Model]
 * link:#CQ-NF-P-201[CQ-NF-P-201 Durability, Flush Policy and Recovery]
-* link:#CQ-NF-S-301[CQ-NF-S-301 Encryption Responsibility and Boundary]
 * link:#CQ-NF-O-401[CQ-NF-O-401 Retention and Roll File Cleanup]
 
 [[CQ-FN-101]]
@@ -97,30 +96,6 @@ Impact & Consequences::
 Notes/Links::
 * link:../../docs/performance.adoc[Performance]
 * link:../../docs/How_it_works.adoc[How it works]
-
-[[CQ-NF-S-301]]
-== CQ-NF-S-301 Encryption Responsibility and Boundary
-
-Context::
-* Encryption of queue contents is an enterprise feature documented under `../../docs/encryption.adoc` and related portal pages.
-* The open-source Chronicle Queue module must remain clear about which security responsibilities it fulfils and which are delegated to enterprise extensions or surrounding infrastructure.
-Decision Statement::
-* The core Chronicle Queue module does not implement at-rest encryption itself; it focuses on the queueing and persistence model.
-* Encryption, key management and associated compliance controls are provided in the enterprise offerings and in external infrastructure, as described in the encryption documentation.
-Alternatives Considered::
-* Embed full encryption support into the core open-source module::
-** Pros: single artefact with built-in encryption.
-** Cons: increases complexity and surface area; limits flexibility over algorithms and key management; complicates licensing boundaries.
-* Leave all encryption concerns entirely out of Chronicle documentation::
-** Pros: keeps the core module minimal.
-** Cons: risks confusion about where encryption is expected to be implemented; weakens traceability for regulated users.
-Rationale for Decision::
-* Keeping encryption in the enterprise tier preserves a clear separation of concerns and aligns with Chronicle’s product structure while still documenting expectations for secure deployments.
-Impact & Consequences::
-* Users of the open-source module must rely on either the enterprise extension or external encryption at the filesystem or volume level when at-rest encryption is required.
-* Documentation must continue to signpost that encryption is an enterprise feature and link to the relevant guidance.
-Notes/Links::
-* link:../../docs/encryption.adoc[Encryption overview]
 
 [[CQ-NF-O-401]]
 == CQ-NF-O-401 Retention and Roll File Cleanup

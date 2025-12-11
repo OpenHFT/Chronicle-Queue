@@ -188,6 +188,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         return indices;
     }
 
+    // CPD-OFF - duplicated setup for metadata deletion variants
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
@@ -229,6 +230,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertFalse(capturedOutput.isEmpty());
     }
+    // CPD-ON
 
     @Test
     public void shouldNotFailOnEmptyQueue() {
@@ -285,12 +287,6 @@ public class ChronicleReaderTest extends QueueTestCommon {
         }
     }
 
-    // basicReader()
-    //         .asMethodReader(SayWhen.class.getName())
-    //         .execute();
-    //
-    // assertTrue(capturedOutput.isEmpty());
-    // }
     @Test
     public void canReadPastEmptyMessageInReverseOrder() {
         dataDir = getTmpDir().toPath();

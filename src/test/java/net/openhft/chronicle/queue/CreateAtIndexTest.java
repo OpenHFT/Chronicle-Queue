@@ -48,27 +48,6 @@ public class CreateAtIndexTest extends QueueTestCommon {
             assertEquals(before, after);
         }
 
-        /*
-         * TODO FIX
-         * if (Jvm.isAssertEnabled()) {
-         *     try (ChronicleQueue queue = single(tmp)
-         *             .testBlockSize()
-         *             .build()) {
-         *         InternalAppender appender = (InternalAppender) queue.acquireAppender();
-         *
-         *         String before = queue.dump();
-         *         try {
-         *             appender.writeBytes(0x421d00000000L, Bytes.from("hellooooo world"));
-         *             fail();
-         *         } catch (IllegalStateException e) {
-         *             // expected
-         *         }
-         *         String after = queue.dump();
-         *         assertEquals(before, after);
-         *     }
-         * }
-         */
-
         // try too far
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()

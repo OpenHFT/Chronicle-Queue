@@ -17,6 +17,10 @@ import net.openhft.chronicle.queue.internal.main.InternalPingPongMain;
  */
 public final class PingPongMain {
 
+    private PingPongMain() {
+        // utility holder
+    }
+
     /**
      * The main method that triggers the ping-pong benchmark.
      * Delegates execution to {@link InternalPingPongMain#main(String[])}.

@@ -100,6 +100,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
         final AtomicInteger acount = new AtomicInteger();
         final AtomicInteger qcount = new AtomicInteger();
         final StoreFileListener storeFileListener = new StoreFileListener() {
+            @Override
             public void onAcquired(int cycle, File file) {
                 acount.incrementAndGet();
             }

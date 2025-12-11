@@ -88,6 +88,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         assertEquals(1, context.newQueueInstance().tableStoreGet(key));
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     class TestContext implements Closeable {
 
         private final File queuePath = getTmpDir();

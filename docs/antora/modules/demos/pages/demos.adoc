@@ -1,0 +1,14 @@
+= Demos
+keywords: demo, queue, java, chronicle
+author: Julia Gustafsson
+:reftext: Demos
+:navtitle: Demos
+:source-highlighter: highlight.js
+
+See runnable demos in link:https://github.com/OpenHFT/Chronicle-Queue-Demo[https://github.com/OpenHFT/Chronicle-Queue-Demo,window=blank]
+
+== What You Need to Get Started
+* Maven 3.8.x
+* Java 8 update 180+
+* Intellij CE or another IDE
+* Access to the internet for Maven to download the JARs needed

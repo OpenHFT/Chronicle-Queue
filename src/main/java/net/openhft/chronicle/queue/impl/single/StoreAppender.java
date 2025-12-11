@@ -604,6 +604,7 @@ class StoreAppender extends AbstractCloseable
      * Ensures that EOF markers are properly added to all cycles, normalizing older cycles to ensure they are complete.
      * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
      */
+    @Override
     public void normaliseEOFs() {
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
@@ -1154,6 +1155,7 @@ class StoreAppender extends AbstractCloseable
          *
          * @return true if the context is empty, false otherwise
          */
+        @Override
         public boolean isEmpty() {
             Bytes<?> bytes = wire().bytes();
             return bytes.readRemaining() == 0;

@@ -1243,6 +1243,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the TimeProvider
      */
     @NotNull
+    @Override
     public TimeProvider time() {
         return time;
     }

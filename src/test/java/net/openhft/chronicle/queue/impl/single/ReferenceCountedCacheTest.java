@@ -153,6 +153,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private class TestReferenceCounted extends AbstractReferenceCounted implements ReferenceOwner, Closeable {
 
         TestReferenceCounted() {

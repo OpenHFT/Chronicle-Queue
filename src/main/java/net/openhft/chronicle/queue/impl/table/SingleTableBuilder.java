@@ -89,6 +89,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
     }
 
     @NotNull
+    @Override
     public TableStore<T> build() {
         if (readOnly) {
             if (!file.exists())

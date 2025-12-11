@@ -171,6 +171,12 @@ public interface ChronicleQueue extends Closeable {
         throw new UnsupportedOperationException("not currently supported in this implementation.");
     }
 
+    /**
+     * Returns the index store linked to a named tailer.
+     *
+     * @param id identifier previously supplied to {@link #createTailer(String)}
+     * @return the value tracking the named tailer's position
+     */
     default LongValue indexForId(String id) {
         throw new UnsupportedOperationException("Not supported");
     }
@@ -466,6 +472,11 @@ public interface ChronicleQueue extends Closeable {
         return PretouchUtil.createPretoucher(this);
     }
 
+    /**
+     * Creates an {@link EventHandler} that drives pretouching for this queue.
+     *
+     * @return event handler that advances pretouching work
+     */
     default EventHandler createPretoucherEventHandler() {
         return PretouchUtil.createEventHandler(this);
     }

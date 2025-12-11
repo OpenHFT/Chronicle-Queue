@@ -31,6 +31,7 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(queuePath.toFile());
     }

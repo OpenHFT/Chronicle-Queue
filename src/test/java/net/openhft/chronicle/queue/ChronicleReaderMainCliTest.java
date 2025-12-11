@@ -101,6 +101,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         assertSame(WireType.TEXT, reader.wireTypeSnapshot);
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private static final class TestChronicleReaderMain extends ChronicleReaderMain {
         final RecordingChronicleReader reader = new RecordingChronicleReader();
 

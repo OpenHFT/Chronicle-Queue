@@ -68,7 +68,7 @@ They are complementary to:
 == Traceability and Future Work
 
 This document captures the initial functional and non-functional requirement set for Chronicle Queue.
-Each requirement includes a brief description of how it is verified; `testing-strategy.adoc` describes the corresponding unit, integration and performance testing patterns in more detail.
+Each requirement includes a brief description of how it is verified.
 
 === Requirements-to-tests mapping
 
@@ -113,7 +113,7 @@ It is not exhaustive but provides reviewers with concrete entry points for verif
 |===
 
 For the requirements explicitly listed in this document (the `QUEUE-FN-*` and `QUEUE-NF-*` identifiers above), there is at least one representative test or benchmark, so functional and non-functional traceability for this set is effectively 100 per cent.
-When new requirements are added, corresponding entries should be appended to this table and to `testing-strategy.adoc` to keep that traceability complete.
+When new requirements are added, corresponding entries should be appended to this table.
 
 Future work should:
 

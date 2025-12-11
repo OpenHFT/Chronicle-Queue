@@ -70,6 +70,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
+    // CPD-OFF - mirrors SingleChroniclePerfMainTest perf loop
     private static void doPerfTest(String file, TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws InterruptedException {
         Histogram writeHdr = new Histogram(30, 7);
         Histogram readHdr = new Histogram(30, 7);

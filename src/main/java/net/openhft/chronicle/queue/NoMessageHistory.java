@@ -14,6 +14,9 @@ import net.openhft.chronicle.wire.*;
  */
 @Deprecated(/* to be removed in 2027, only used in tests */)
 public enum NoMessageHistory implements MessageHistory {
+    /**
+     * Singleton instance that records no message history.
+     */
     INSTANCE;
 
     @Override
@@ -51,6 +54,7 @@ public enum NoMessageHistory implements MessageHistory {
         // ignored
     }
 
+    @Override
     public void reset() {
         // no-op
     }

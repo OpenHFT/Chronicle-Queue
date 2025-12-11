@@ -68,6 +68,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     /**
      * Performs cleanup and releases resources when the lock is closed.
      */
+    @Override
     protected void performClose() {
         Closeable.closeQuietly(lock);
     }

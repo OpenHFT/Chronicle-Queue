@@ -41,6 +41,7 @@ public interface WriteLock extends Closeable {
     /**
      * Closes the lock resource. This method is invoked when the lock is no longer needed.
      */
+    @Override
     void close();
 
     /**

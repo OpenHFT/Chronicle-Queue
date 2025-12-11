@@ -14,6 +14,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 
+@SuppressWarnings("PMD.UnusedAssignment") // writeStarted is read from another thread while being updated
 public class QueueWriteJitterMain {
     private static final String PROFILE_OF_THE_THREAD = "profile of the thread";
 

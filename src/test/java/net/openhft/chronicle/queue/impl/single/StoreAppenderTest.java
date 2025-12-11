@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate") // JUnit4 annotations require public class
 public class StoreAppenderTest extends QueueTestCommon {
 
     private static final String TEST_TEXT = "Some text some text some text";

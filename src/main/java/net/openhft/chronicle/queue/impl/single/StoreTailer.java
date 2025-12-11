@@ -1643,7 +1643,7 @@ class StoreTailer extends AbstractCloseable
     @Nullable
     private SingleChronicleQueueStore store() {
         if (store == null)
-            if (!cycle(cycle()))
+            if (!cycle(cycle())) // sets the store as a side effect
                 Jvm.warn().on(getClass(), "Unable to find cycle=" + cycle() + ", queue=" + queue.fileAbsolutePath());
         return store;
     }

@@ -1,4 +1,4 @@
- = Chronicle Queue Data and Telemetry Disclaimer
+= Chronicle Queue Data and Telemetry Disclaimer
 :lang: en-GB
 :source-highlighter: rouge
 

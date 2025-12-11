@@ -18,6 +18,10 @@ import java.io.File;
  */
 public final class RefreshMain {
 
+    private RefreshMain() {
+        // utility holder
+    }
+
     /**
      * Call queue.refreshDirectoryListing() on the given queue directory
      *

@@ -858,6 +858,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
+    // CPD-OFF - metadata scenarios mirror each other
     @Test
     public void testMetaData() {
         assumeFalse(named);

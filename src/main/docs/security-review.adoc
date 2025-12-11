@@ -8,7 +8,6 @@
 
 This document summarises the main security considerations for Chronicle Queue.
 It complements the security-related requirements in `project-requirements.adoc` (`QUEUE-NF-S-_`, `QUEUE-NF-O-_`) and the architectural decisions recorded in `decision-log.adoc` (for example `CQ-NF-S-301` and `CQ-NF-O-401`).
-It is aligned with the shared standards in `Chronicle-Quality-Rules/src/main/docs/security-review.adoc` and `Chronicle-Quality-Rules/src/main/docs/architectural-standards.adoc`.
 
 == Trust Zone and Responsibilities
 
@@ -54,12 +53,9 @@ The primary security risks within Chronicle Queue itself are:
 == Data at Rest and Encryption Boundary (QUEUE-NF-S-002, CQ-NF-S-301)
 
 Chronicle Queue stores messages in plain form in `.cq4` roll files.
-Requirement `QUEUE-NF-S-002` and decision `CQ-NF-S-301` establish the encryption boundary as follows:
+Requirement `QUEUE-NF-S-002` as follows:
 
 * Chronicle Queue does not transparently encrypt or decrypt queue files by default.
-* Encryption at rest is expected to be provided by:
-** file-system or volume-level encryption deployed by operators, or
-** application-level payload encryption via Chronicle-Wire marshalling and custom codecs.
 
 Implications:
 
