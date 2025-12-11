@@ -43,7 +43,7 @@ Again, Chronicle Queue can support millions of events per-second, per-server, an
 
 == Latency Sensitive Micro-Services
 
-Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine in the order of magnitude of 1 microsecond; as well as between machines with a typical latency of 10 microseconds for modest throughputs of a few hundred thousands.
+Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine in the order of magnitude of 1 µs; as well as between machines with a typical latency of 10 µs for modest throughputs of a few hundred thousands.
 Chronicle Queue supports throughputs of millions of events per second, with stable microsecond latencies.
 
 See https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronicle Queue in Microservices]
@@ -55,7 +55,7 @@ All the information about the state of those components can be reproduced extern
 This significantly reduces the need for additional logging.
 However, any logging you do need can be recorded in great detail.
 This makes enabling `DEBUG` logging in production practical.
-This is because the cost of logging is very low; less than 10 microseconds.
+This is because the cost of logging is very low; less than 10 µs.
 Logs can be replicated centrally for log consolidation.
 Chronicle Queue is being used to store 100+ TB of data, which can be replayed from any point in time.
 
