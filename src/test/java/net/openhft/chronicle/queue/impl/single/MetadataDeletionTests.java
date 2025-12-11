@@ -64,20 +64,7 @@ class MetadataDeletionTests extends QueueTestCommon {
             // Create a custom time provider
             SetTimeProvider setTimeProvider = new SetTimeProvider();
 
-            // Create the queue
-            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
-                 ExcerptAppender appender = queue.createAppender()) {
-                appender.writeText("1");
-                setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
-                appender.writeText("2");
-                setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
-                appender.writeText("3");
-                setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
-                appender.writeText("4");
-            } finally {
-                // Force release of resources to ensure that they are truly released by the time we clean up metadata
-                BackgroundResourceReleaser.releasePendingResources();
-            }
+            writeFourCycleFiles(queuePath, setTimeProvider);
 
             // Imagine that system has shut down, delete metadata
             boolean delete = new File(queuePath, "metadata.cq4t").delete();
@@ -92,14 +79,7 @@ class MetadataDeletionTests extends QueueTestCommon {
             // Open again and let's see what we get
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
                  ExcerptTailer tailer = queue.createTailer()) {
-                assertEquals("1", tailer.readText());
-                assertEquals(0, tailer.cycle());
-                assertEquals("2", tailer.readText());
-                assertEquals(1, tailer.cycle());
-                assertEquals("3", tailer.readText());
-                assertEquals(2, tailer.cycle());
-                assertEquals("4", tailer.readText());
-                assertEquals(3, tailer.cycle());
+                assertTailerReadsValuesWithCycle(tailer, 0, "1", "2", "3", "4");
             }
 
         } finally {
@@ -116,25 +96,12 @@ class MetadataDeletionTests extends QueueTestCommon {
             // Create a custom time provider
             SetTimeProvider setTimeProvider = new SetTimeProvider();
 
-            // Create the queue
-            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
-                 ExcerptAppender appender = queue.createAppender()) {
-                appender.writeText("1");
-                setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
-                appender.writeText("2");
-                setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
-                appender.writeText("3");
-                setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
-                appender.writeText("4");
-            }
+            writeFourCycleFiles(queuePath, setTimeProvider);
 
             // Open again and let's see what we get
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
                  ExcerptTailer tailer = queue.createTailer()) {
-                assertEquals("1", tailer.readText());
-                assertEquals(0, tailer.cycle());
-                assertEquals("2", tailer.readText());
-                assertEquals(1, tailer.cycle());
+                assertTailerReadsValuesWithCycle(tailer, 0, "1", "2");
 
                 // Delete metadata here
                 boolean delete = new File(queuePath, "metadata.cq4t").delete();
@@ -142,14 +109,34 @@ class MetadataDeletionTests extends QueueTestCommon {
                 assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should not exist");
                 assertEquals(4, Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length, "There should be 4 cycle files");
 
-                assertEquals("3", tailer.readText());
-                assertEquals(2, tailer.cycle());
-                assertEquals("4", tailer.readText());
-                assertEquals(3, tailer.cycle());
+                assertTailerReadsValuesWithCycle(tailer, 2, "3", "4");
             }
 
         } finally {
             IOTools.deleteDirWithFiles(queuePath);
+        }
+    }
+
+    private void writeFourCycleFiles(File queuePath, SetTimeProvider setTimeProvider) {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("1");
+            setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
+            appender.writeText("2");
+            setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
+            appender.writeText("3");
+            setTimeProvider.advanceMillis(Duration.ofDays(1).toMillis());
+            appender.writeText("4");
+        } finally {
+            BackgroundResourceReleaser.releasePendingResources();
+        }
+    }
+
+    private void assertTailerReadsValuesWithCycle(ExcerptTailer tailer, int startingCycle, String... expected) {
+        int cycle = startingCycle;
+        for (String value : expected) {
+            assertEquals(value, tailer.readText());
+            assertEquals(cycle++, tailer.cycle());
         }
     }
 }

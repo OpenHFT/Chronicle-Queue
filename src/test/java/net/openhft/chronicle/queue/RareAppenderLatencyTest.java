@@ -118,14 +118,11 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             long l = System.currentTimeMillis() - now;
 
             // Write another message from the Main thread (this will be fast since we are caught up)
-            now = System.currentTimeMillis();
             try (DocumentContext ctx = rareAppender.writingDocument()) {
                 ctx.wire()
                         .write("ts").int64(System.currentTimeMillis())
                         .write("msg").text(text);
             }
-            // System.out.println("Wrote first rare one in " + l + " ms");
-            // System.out.println("Wrote another rare one in " + (System.currentTimeMillis() - now) + " ms");
 
             assertFalse("Appending from rare thread latency too high!", l > 150);
         }

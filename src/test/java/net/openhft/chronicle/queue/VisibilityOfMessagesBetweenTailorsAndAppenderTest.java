@@ -50,7 +50,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
                         try (DocumentContext dc = excerptAppender.writingDocument()) {
                             dc.wire().write("data").int64(i);
                         }
-                        lastWrittenIndex = excerptAppender.lastIndexAppended();
+                        lastWrittenIndex = excerptAppender.lastIndexAppended(); // NOPMD.UnusedAssignment - polled by tailer thread
                         if (Thread.currentThread().isInterrupted())
                             return null;
                     }

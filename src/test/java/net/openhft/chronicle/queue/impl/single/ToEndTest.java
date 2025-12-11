@@ -95,7 +95,7 @@ public class ToEndTest extends QueueTestCommon {
                 appender.writeDocument(wire -> wire.write("msg").int32(5));
 
                 // roll 5 cycles
-                timeProvider.currentTimeMillis(now += timeIncMs * 5);
+                timeProvider.currentTimeMillis(now + timeIncMs * 5);
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());

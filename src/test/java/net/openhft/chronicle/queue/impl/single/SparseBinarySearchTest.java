@@ -63,6 +63,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         runWithTimeParameters(DAILY, 1);
     }
 
+    // CPD-OFF - mirrored in TestBinarySearch
     private void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);

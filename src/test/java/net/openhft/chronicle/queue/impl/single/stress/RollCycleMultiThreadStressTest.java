@@ -227,8 +227,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         }
         final long timeToWriteMillis = System.currentTimeMillis() - startTime;
 
-        final StringBuilder writerExceptions = new StringBuilder();
-        writers.stream().filter(w -> w.exception != null).forEach(w -> writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n"));
+        final StringBuilder writerExceptions = new StringBuilder(128);
+        writers.stream().filter(w -> w.exception != null).forEach(w -> writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append('\n'));
 
         assertTrue("Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
                 wrote.get() >= expectedNumberOfMessages);
@@ -370,19 +370,22 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 int v = valueIn.int32();
                 if (v != expected) {
                     // System.out.println(dc.wire());
-                    String failureMessage = "Expected: " + expected +
-                            ", actual: " + v + ", pos: " + i + ", index: " + Long
-                            .toHexString(dc.index()) +
-                            ", cycle: " + tailer.cycle();
+                    StringBuilder failureMessage = new StringBuilder(128).append("Expected: ")
+                            .append(expected)
+                            .append(", actual: ").append(v)
+                            .append(", pos: ").append(i)
+                            .append(", index: ").append(Long.toHexString(dc.index()))
+                            .append(", cycle: ").append(tailer.cycle());
                     if (lastTailerCycle != -1) {
-                        failureMessage += ". Tailer cycle at last read: " + lastTailerCycle +
-                                " (current: " + (tailer.cycle()) +
-                                "), queue cycle at last read: " + lastQueueCycle +
-                                " (current: " + queue.cycle() + ")";
+                        failureMessage.append(". Tailer cycle at last read: ")
+                                .append(lastTailerCycle)
+                                .append(" (current: ").append(tailer.cycle())
+                                .append("), queue cycle at last read: ").append(lastQueueCycle)
+                                .append(" (current: ").append(queue.cycle()).append(')');
                     }
                     if (dumpQueue)
                         DumpMain.dump(queue.file(), System.out, Long.MAX_VALUE);
-                    throw new AssertionError(failureMessage);
+                    throw new AssertionError(failureMessage.toString());
                 }
             }
         }

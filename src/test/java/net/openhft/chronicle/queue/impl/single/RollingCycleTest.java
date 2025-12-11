@@ -292,6 +292,7 @@ public class RollingCycleTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private static class TestBytesMarshallable implements WriteBytesMarshallable, ReadBytesMarshallable {
         @Nullable
         String name;

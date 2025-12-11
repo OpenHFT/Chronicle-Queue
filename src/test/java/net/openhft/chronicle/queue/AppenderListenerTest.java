@@ -17,7 +17,7 @@ public class AppenderListenerTest extends QueueTestCommon {
     @Test
     public void appenderListenerTest() {
         String path = OS.getTarget() + "/appenderListenerTest";
-        StringBuilder results = new StringBuilder();
+        StringBuilder results = new StringBuilder(128);
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
                 .testBlockSize()
                 .appenderListener((wire, index) -> {
@@ -25,9 +25,9 @@ public class AppenderListenerTest extends QueueTestCommon {
                     String event = wire.readEvent(String.class);
                     String text = wire.getValueIn().text();
                     results.append(event)
-                            .append(" ").append(text)
+                            .append(' ').append(text)
                             .append(", addr:").append(Long.toHexString(offset))
-                            .append(", index: ").append(Long.toHexString(index)).append("\n");
+                            .append(", index: ").append(Long.toHexString(index)).append('\n');
                 })
                 .timeProvider(new SetTimeProvider("2021/11/29T13:53:59").advanceMillis(1000))
                 .build()) {

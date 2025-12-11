@@ -632,16 +632,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
             populateQueueWithTimestamps(queue, max, reps);
 
             for (int i = 0; i < max; i++) {
-                capturedOutput.clear();
                 long tsToLookFor = getTimestampAtIndex(i);
-                System.out.println("Looking for " + tsToLookFor);
-                ChronicleReader reader = new ChronicleReader()
-                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                        .withBasePath(queueDir.toPath())
-                        .withMessageSink(capturedOutput::add);
-                reader.execute();
-                assertEquals(reps * (max - i), capturedOutput.size() / 2);
+                assertEquals(reps * (max - i), executeBinarySearch(queueDir, tsToLookFor, false));
             }
         }
     }
@@ -655,17 +647,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
             populateQueueWithTimestamps(queue, max, reps);
 
             for (int i = 0; i < max; i++) {
-                capturedOutput.clear();
                 long tsToLookFor = getTimestampAtIndex(i);
-                System.out.println("Looking for " + tsToLookFor);
-                ChronicleReader reader = new ChronicleReader()
-                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                        .inReverseOrder()
-                        .withBasePath(queueDir.toPath())
-                        .withMessageSink(capturedOutput::add);
-                reader.execute();
-                assertEquals(reps * (i + 1), capturedOutput.size() / 2);
+                assertEquals(reps * (i + 1), executeBinarySearch(queueDir, tsToLookFor, true));
             }
         }
     }
@@ -675,26 +658,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.createAppender()) {
-                writeTimestamp(appender, getTimestampAtIndex(1));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                appender.writeText("aaaa");
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(3));
-            }
+            writeSparseRepeatedData(queue);
 
-            capturedOutput.clear();
             long tsToLookFor = getTimestampAtIndex(2);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(7, capturedOutput.size() / 2);
+            assertEquals(7, executeBinarySearch(queueDir, tsToLookFor, false));
         }
     }
 
@@ -703,27 +670,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.createAppender()) {
-                writeTimestamp(appender, getTimestampAtIndex(1));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                appender.writeText("aaaa");
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(3));
-            }
+            writeSparseRepeatedData(queue);
 
-            capturedOutput.clear();
             long tsToLookFor = getTimestampAtIndex(2);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .inReverseOrder()
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(7, capturedOutput.size() / 2);
+            assertEquals(7, executeBinarySearch(queueDir, tsToLookFor, true));
         }
     }
 
@@ -732,25 +682,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.createAppender()) {
-                writeTimestamp(appender, getTimestampAtIndex(1));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                appender.writeText("aaaa");
-                writeTimestamp(appender, getTimestampAtIndex(4));
-                writeTimestamp(appender, getTimestampAtIndex(4));
-                writeTimestamp(appender, getTimestampAtIndex(4));
-            }
+            writeSparseApproxData(queue);
 
-            capturedOutput.clear();
             long tsToLookFor = getTimestampAtIndex(3);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(3, capturedOutput.size() / 2);
+            assertEquals(3, executeBinarySearch(queueDir, tsToLookFor, false));
         }
     }
 
@@ -759,26 +694,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
-            try (ExcerptAppender appender = queue.createAppender()) {
-                writeTimestamp(appender, getTimestampAtIndex(1));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                writeTimestamp(appender, getTimestampAtIndex(2));
-                appender.writeText("aaaa");
-                writeTimestamp(appender, getTimestampAtIndex(4));
-                writeTimestamp(appender, getTimestampAtIndex(4));
-                writeTimestamp(appender, getTimestampAtIndex(4));
-            }
+            writeSparseApproxData(queue);
 
-            capturedOutput.clear();
             long tsToLookFor = getTimestampAtIndex(3);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .inReverseOrder()
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(3, capturedOutput.size() / 2);
+            assertEquals(3, executeBinarySearch(queueDir, tsToLookFor, true));
         }
     }
 
@@ -791,16 +710,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
             populateQueueWithTimestamps(queue, max, reps);
 
             for (int i = 0; i < max; i++) {
-                capturedOutput.clear();
                 long tsToLookFor = getTimestampAtIndex(i) - 1;
-                System.out.println("Looking for " + tsToLookFor);
-                ChronicleReader reader = new ChronicleReader()
-                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                        .withBasePath(queueDir.toPath())
-                        .withMessageSink(capturedOutput::add);
-                reader.execute();
-                assertEquals(reps * (max - i), capturedOutput.size() / 2);
+                assertEquals(reps * (max - i), executeBinarySearch(queueDir, tsToLookFor, false));
             }
         }
     }
@@ -814,17 +725,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
             populateQueueWithTimestamps(queue, max, reps);
 
             for (int i = 0; i < max; i++) {
-                capturedOutput.clear();
                 long tsToLookFor = getTimestampAtIndex(i) + 1;
-                System.out.println("Looking for " + tsToLookFor);
-                ChronicleReader reader = new ChronicleReader()
-                        .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                        .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                        .inReverseOrder()
-                        .withBasePath(queueDir.toPath())
-                        .withMessageSink(capturedOutput::add);
-                reader.execute();
-                assertEquals(reps * (i + 1), capturedOutput.size() / 2);
+                assertEquals(reps * (i + 1), executeBinarySearch(queueDir, tsToLookFor, true));
             }
         }
     }
@@ -839,13 +741,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
             // this should be after the end
             long tsToLookFor = getTimestampAtIndex(11);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(0, capturedOutput.size());
+            assertEquals(0, executeBinarySearch(queueDir, tsToLookFor, false));
         }
     }
 
@@ -859,14 +755,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
             // this should be after the end
             long tsToLookFor = getTimestampAtIndex(11);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .inReverseOrder()
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(max * reps, capturedOutput.size() / 2);
+            assertEquals(max * reps, executeBinarySearch(queueDir, tsToLookFor, true));
         }
     }
 
@@ -880,13 +769,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
             // this should be before the start
             long tsToLookFor = getTimestampAtIndex(-1);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(max * reps, capturedOutput.size() / 2);
+            assertEquals(max * reps, executeBinarySearch(queueDir, tsToLookFor, false));
         }
     }
 
@@ -900,14 +783,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
             // this should be before the start
             long tsToLookFor = getTimestampAtIndex(-1);
-            ChronicleReader reader = new ChronicleReader()
-                    .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
-                    .withBinarySearch(TimestampComparator.class.getCanonicalName())
-                    .inReverseOrder()
-                    .withBasePath(queueDir.toPath())
-                    .withMessageSink(capturedOutput::add);
-            reader.execute();
-            assertEquals(0, capturedOutput.size());
+            assertEquals(0, executeBinarySearch(queueDir, tsToLookFor, true));
         }
     }
 
@@ -966,6 +842,45 @@ public class ChronicleReaderTest extends QueueTestCommon {
         capturedOutput.poll();
         assertEquals("{\"say\":\"hello\"}",
                 capturedOutput.poll().trim());
+    }
+
+    private int executeBinarySearch(File queueDir, long tsToLookFor, boolean reverseOrder) {
+        capturedOutput.clear();
+        ChronicleReader reader = new ChronicleReader()
+                .withArg(ServicesTimestampLongConverter.INSTANCE.asString(tsToLookFor))
+                .withBinarySearch(TimestampComparator.class.getCanonicalName())
+                .withBasePath(queueDir.toPath())
+                .withMessageSink(capturedOutput::add);
+        if (reverseOrder) {
+            reader.inReverseOrder();
+        }
+        reader.execute();
+        return capturedOutput.size() / 2;
+    }
+
+    private void writeSparseRepeatedData(SingleChronicleQueue queue) {
+        try (ExcerptAppender appender = queue.createAppender()) {
+            writeTimestamp(appender, getTimestampAtIndex(1));
+            writeTimestamp(appender, getTimestampAtIndex(2));
+            writeTimestamp(appender, getTimestampAtIndex(2));
+            appender.writeText("aaaa");
+            writeTimestamp(appender, getTimestampAtIndex(2));
+            writeTimestamp(appender, getTimestampAtIndex(2));
+            writeTimestamp(appender, getTimestampAtIndex(2));
+            writeTimestamp(appender, getTimestampAtIndex(3));
+        }
+    }
+
+    private void writeSparseApproxData(SingleChronicleQueue queue) {
+        try (ExcerptAppender appender = queue.createAppender()) {
+            writeTimestamp(appender, getTimestampAtIndex(1));
+            writeTimestamp(appender, getTimestampAtIndex(2));
+            writeTimestamp(appender, getTimestampAtIndex(2));
+            appender.writeText("aaaa");
+            writeTimestamp(appender, getTimestampAtIndex(4));
+            writeTimestamp(appender, getTimestampAtIndex(4));
+            writeTimestamp(appender, getTimestampAtIndex(4));
+        }
     }
 
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {

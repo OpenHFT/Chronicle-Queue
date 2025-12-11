@@ -362,16 +362,16 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         }
 
         private String buildDiffs() {
-            final StringBuilder builder = new StringBuilder();
+            final StringBuilder builder = new StringBuilder(128);
             builder.append("acquired but not released:\n");
             HashSet<String> keyDiff = new HashSet<>(acquiredCounts.keySet());
             keyDiff.removeAll(releasedCounts.keySet());
-            keyDiff.forEach(k -> builder.append(k).append("(").append(acquiredCounts.get(k)).append(")\n"));
+            keyDiff.forEach(k -> builder.append(k).append('(').append(acquiredCounts.get(k)).append(")\n"));
             builder.append("released but not acquired:\n");
             keyDiff.clear();
             keyDiff.addAll(releasedCounts.keySet());
             keyDiff.removeAll(acquiredCounts.keySet());
-            keyDiff.forEach(k -> builder.append(k).append("(").append(releasedCounts.get(k)).append(")\n"));
+            keyDiff.forEach(k -> builder.append(k).append('(').append(releasedCounts.get(k)).append(")\n"));
 
             return builder.toString();
         }
