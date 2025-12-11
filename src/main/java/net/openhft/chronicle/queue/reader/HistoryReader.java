@@ -141,6 +141,7 @@ public interface HistoryReader {
      * Creates and returns a new history reader that will use
      * the provided {@code queueSupplier } to provide the queue.
      *
+     * @param queueSupplier supplier that yields a queue to read from
      * @return a new history reader that will use
      *         the provided {@code queueSupplier } to provide the queue.
      */

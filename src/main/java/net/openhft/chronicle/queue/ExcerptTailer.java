@@ -242,6 +242,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * <p>
      * Calling this method may move ExcerptTailer to the specified cycle and release its store.
      *
+     * @param cycle cycle to inspect
      * @return the exact number of excerpts in a cycle.
      */
     default long excerptsInCycle(int cycle) {

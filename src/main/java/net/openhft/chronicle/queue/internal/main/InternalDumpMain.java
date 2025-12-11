@@ -110,7 +110,7 @@ public class InternalDumpMain {
         Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
         try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows())) {
             bytes.readLimit(bytes.realCapacity());
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(256);
             WireDumper dumper = WireDumper.of(bytes, !UNALIGNED);
             while (bytes.readRemaining() >= 4) {
                 sb.setLength(0);
