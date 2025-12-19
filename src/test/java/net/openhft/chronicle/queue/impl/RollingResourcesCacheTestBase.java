@@ -10,7 +10,7 @@ import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Base class for RollingResourcesCache tests, containing shared test helper methods and constants.
@@ -127,6 +127,6 @@ public abstract class RollingResourcesCacheTestBase extends QueueTestCommon {
                 new RollingResourcesCache(rollCycle, epoch, File::new, File::getName);
 
         RollingResourcesCache.Resource resource = cache.resourceFor(cycle);
-        assertEquals(expectedLong, cache.toLong(resource.path));
+        assertEquals(expectedLong, cache.toLong(resource.path), "toLong(resource.path)");
     }
 }

@@ -3,12 +3,12 @@
  */
 package net.openhft.chronicle.queue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RollCyclesDistinctnessTest extends QueueTestCommon {
 
@@ -20,6 +20,6 @@ public class RollCyclesDistinctnessTest extends QueueTestCommon {
             allPatterns.add(cycle.format());
             count++;
         }
-        assertEquals(allPatterns.size(), count);
+        assertEquals(allPatterns.size(), count, "rollCycle formats should be distinct");
     }
 }

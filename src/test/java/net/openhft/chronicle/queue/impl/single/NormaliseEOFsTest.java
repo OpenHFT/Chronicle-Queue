@@ -16,9 +16,9 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -30,24 +30,23 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate") // JUnit4 annotations require public class
-public class NormaliseEOFsTest extends QueueTestCommon {
+class NormaliseEOFsTest extends QueueTestCommon {
 
     private static final String LOG_LEVEL_PROPERTY = "org.slf4j.simpleLogger.log." + StoreAppender.class.getName();
     private static final File QUEUE_PATH = Paths.get(OS.getTarget(), "normaliseEOFsTest").toFile();
     private Map<ExceptionKey, Integer> exceptionMap;
 
-    @Before
+    @BeforeEach
     public void setLogLevelProperty() {
         System.setProperty(LOG_LEVEL_PROPERTY, "debug");
     }
 
-    @Before
+    @BeforeEach
     public void clearDataFromPreviousRun() {
         IOTools.deleteDirWithFilesOrThrow(QUEUE_PATH);
     }
 
-    @Before
+    @BeforeEach
     @Override
     public void recordExceptions() {
         super.recordExceptions();
@@ -58,12 +57,12 @@ public class NormaliseEOFsTest extends QueueTestCommon {
         ignoreException(ex -> true, "Ignore everything");
     }
 
-    @After
+    @AfterEach
     public void clearLogLevelProperty() {
         System.clearProperty(LOG_LEVEL_PROPERTY);
     }
 
-    @After
+    @AfterEach
     public void cleanupQueueData() {
         BackgroundResourceReleaser.releasePendingResources();
         IOTools.deleteDirWithFilesOrThrow(QUEUE_PATH);
@@ -90,10 +89,11 @@ public class NormaliseEOFsTest extends QueueTestCommon {
             }
 
             // There is at least 5 calls to normaliseEOF and the start index increases each time
-            assertTrue(startIndices.size() >= 5);
+            assertTrue(startIndices.size() >= 5, "NormaliseEOFs should be called at least 5 times with logged start indices, got " + startIndices.size());
             int lastStartIndex = Integer.MIN_VALUE;
             for (final int startIndex : startIndices) {
-                assertTrue(startIndex > lastStartIndex);
+                final int previousStartIndex = lastStartIndex;
+                assertTrue(startIndex > previousStartIndex, "NormaliseEOFs start index should increase monotonically, last=" + previousStartIndex + ", next=" + startIndex);
                 lastStartIndex = startIndex;
             }
         }

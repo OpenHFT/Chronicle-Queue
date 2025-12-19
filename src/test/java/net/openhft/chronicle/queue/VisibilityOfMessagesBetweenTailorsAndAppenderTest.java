@@ -7,8 +7,8 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @RequiredForClient
 public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
@@ -26,7 +26,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
     private volatile boolean stop = false;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }

@@ -3,7 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.apache.commons.cli.Options;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for ChronicleReaderMain class.
@@ -39,7 +39,7 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
 
                 ChronicleReaderMain.main(args);  // Run the main method with valid args
 
-                assertTrue("Expected valid arguments to run without issues.", true);
+                assertTrue(true, "Expected valid arguments to run without issues.");
             } finally {
                 // Reset System.out and System.err
                 System.setOut(originalOut);
@@ -63,23 +63,23 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
         Options options = main.options();
 
         // Verify options are set correctly
-        assertNotNull(options.getOption("d"));  // Directory option
-        assertNotNull(options.getOption("i"));  // Include regex
-        assertNotNull(options.getOption("e"));  // Exclude regex
-        assertNotNull(options.getOption("f"));  // Follow (tail) option
-        assertNotNull(options.getOption("m"));  // Max history
-        assertNotNull(options.getOption("n"));  // Start index
-        assertNotNull(options.getOption("b"));  // Binary search
-        assertNotNull(options.getOption("a"));  // Binary argument
-        assertNotNull(options.getOption("r"));  // As method reader
-        assertNotNull(options.getOption("g"));  // Message history
-        assertNotNull(options.getOption("w"));  // Wire type
-        assertNotNull(options.getOption("s"));  // Suppress index
-        assertNotNull(options.getOption("l"));  // Single line squash
-        assertNotNull(options.getOption("z"));  // Use local timezone
-        assertNotNull(options.getOption("k"));  // Reverse order
-        assertNotNull(options.getOption("x"));  // Max results
-        assertNotNull(options.getOption("cbl"));  // Content-based limiter
-        assertNotNull(options.getOption("named"));  // Named tailer ID
+        assertNotNull(options.getOption("d"), "options: directory");  // Directory option
+        assertNotNull(options.getOption("i"), "options: include regex");  // Include regex
+        assertNotNull(options.getOption("e"), "options: exclude regex");  // Exclude regex
+        assertNotNull(options.getOption("f"), "options: follow");  // Follow (tail) option
+        assertNotNull(options.getOption("m"), "options: max history");  // Max history
+        assertNotNull(options.getOption("n"), "options: start index");  // Start index
+        assertNotNull(options.getOption("b"), "options: binary search");  // Binary search
+        assertNotNull(options.getOption("a"), "options: binary arg");  // Binary argument
+        assertNotNull(options.getOption("r"), "options: as method reader");  // As method reader
+        assertNotNull(options.getOption("g"), "options: message history");  // Message history
+        assertNotNull(options.getOption("w"), "options: wire type");  // Wire type
+        assertNotNull(options.getOption("s"), "options: suppress index");  // Suppress index
+        assertNotNull(options.getOption("l"), "options: single line squash");  // Single line squash
+        assertNotNull(options.getOption("z"), "options: local timezone");  // Use local timezone
+        assertNotNull(options.getOption("k"), "options: reverse order");  // Reverse order
+        assertNotNull(options.getOption("x"), "options: max results");  // Max results
+        assertNotNull(options.getOption("cbl"), "options: content-based limiter");  // Content-based limiter
+        assertNotNull(options.getOption("named"), "options: named tailer");  // Named tailer ID
     }
 }

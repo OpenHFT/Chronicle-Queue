@@ -14,17 +14,26 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.File;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleHistoryReaderTest extends QueueTestCommon {
+
+    private String testMethodName = "";
+
+    @BeforeEach
+    public void beforeEach(TestInfo testInfo) {
+        testMethodName = testInfo.getTestMethod().map(method -> method.getName()).orElse("");
+    }
 
     @Test
     public void testWithQueueHistoryRecordHistoryInitial() {
@@ -51,9 +60,9 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         MessageHistory.set(mh);
 
         int extraTiming = 1;
-        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
-        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
-        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
+        File queuePath1 = IOTools.createTempFile(testMethodName + "1-");
+        File queuePath2 = IOTools.createTempFile(testMethodName + "2-");
+        File queuePath3 = IOTools.createTempFile(testMethodName + "3-");
         try {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out
@@ -71,16 +80,16 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 DummyListenerId dummy = msg -> {
                     numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
-                    Assert.assertEquals(1, history.sources());
+                    Assertions.assertEquals(1, history.sources(), "history: sources");
                     // written 1st then received by me
-                    Assert.assertEquals(1 + extraTiming, history.timings());
+                    Assertions.assertEquals(1 + extraTiming, history.timings(), "history: timings");
                     // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
-                assertTrue(reader.readOne());
-                assertEquals("check routed to correct dest", 1, numberRead.get());
-                assertFalse(reader.readOne());
+                assertTrue(reader.readOne(), "history: read one");
+                assertEquals(1, numberRead.get(), "check routed to correct dest");
+                assertFalse(reader.readOne(), "history: end of queue");
             }
 
             try (ChronicleQueue in = queue(queuePath2, 2);
@@ -91,15 +100,15 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 DummyListenerId dummy = msg -> {
                     numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
-                    Assert.assertEquals(2, history.sources());
-                    Assert.assertEquals(3 + extraTiming, history.timings());
+                    Assertions.assertEquals(2, history.sources(), "history: sources");
+                    Assertions.assertEquals(3 + extraTiming, history.timings(), "history: timings");
                     // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
-                assertTrue(reader.readOne());
-                assertEquals("check routed to correct dest", 1, numberRead.get());
-                assertFalse(reader.readOne());
+                assertTrue(reader.readOne(), "history: read one");
+                assertEquals(1, numberRead.get(), "check routed to correct dest");
+                assertFalse(reader.readOne(), "history: end of queue");
             }
 
             try (ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
@@ -109,8 +118,8 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
                 chronicleHistoryReader.outputData();
 
-                Assert.assertEquals(5, histos.size());
-                Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
+                Assertions.assertEquals(5, histos.size(), "history reader: histogram count");
+                Assertions.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString(), "history reader: histogram names");
             }
         } finally {
             IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
@@ -119,7 +128,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
     public void testPredictable() {
-        runPredictable(0, null, "Timings below in MICROSECONDS\n" +
+        String expected = "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
                 "count:                   100          100          100          100          100 \n" +
                 "50:                        9           19            9           19           60 \n" +
@@ -129,12 +138,14 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 "99.99:                                                                           \n" +
                 "99.999:                                                                          \n" +
                 "99.9999:                                                                         \n" +
-                "worst:                     9           19            9           19           60 \n");
+                "worst:                     9           19            9           19           60 \n";
+        String actual = runPredictable(0, null);
+        Assertions.assertEquals(expected, actual, "predictable: output");
     }
 
     @Test
     public void testPredictableStartIndex() {
-        runPredictable(0, 33L, "Timings below in MICROSECONDS\n" +
+        String expected = "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
                 "count:                    67           67           67           67           67 \n" +
                 "50:                        9           19            9           19           60 \n" +
@@ -144,12 +155,14 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 "99.99:                                                                           \n" +
                 "99.999:                                                                          \n" +
                 "99.9999:                                                                         \n" +
-                "worst:                     9           19            9           19           60 \n");
+                "worst:                     9           19            9           19           60 \n";
+        String actual = runPredictable(0, 33L);
+        Assertions.assertEquals(expected, actual, "predictable: output (start index)");
     }
 
     @Test
     public void testPredictableMeasurementWindow() {
-        runPredictable(2_800, null, "Timings below in MICROSECONDS\n" +
+        String expected = "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
                 "count:                     1            1            1            1            1 \n" +
                 "50:                        9           19            9           19           60 \n" +
@@ -192,10 +205,12 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 "99.99:                                                                           \n" +
                 "99.999:                                                                          \n" +
                 "99.9999:                                                                         \n" +
-                "worst:                     9           19            9           19           60 \n");
+                "worst:                     9           19            9           19           60 \n";
+        String actual = runPredictable(2_800, null);
+        Assertions.assertEquals(expected, actual, "predictable: output (measurement window)");
     }
 
-    private void runPredictable(int mwMicros, Long startIndexOffset, String output) {
+    private String runPredictable(int mwMicros, Long startIndexOffset) {
         // this is because there is no way to tell CHR to open a queue with a particular sourceId
         expectException("Overriding sourceId from existing metadata, was 0, overriding to");
 
@@ -203,9 +218,10 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         mh.addSourceDetails(true);
         MessageHistory.set(mh);
 
-        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
-        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
-        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
+        File queuePath1 = IOTools.createTempFile(testMethodName + "1-");
+        File queuePath2 = IOTools.createTempFile(testMethodName + "2-");
+        File queuePath3 = IOTools.createTempFile(testMethodName + "3-");
+        String initialOutput = "";
         try {
             StringBuilder sb = new StringBuilder();
             try (ChronicleQueue q1 = queue(queuePath1, 1);
@@ -225,29 +241,28 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
                 for (int i = 0; i < 100; i++) {
                     writer1.say("hello " + i);
-                    assertTrue(reader1.readOne());
-                    assertTrue(reader2.readOne());
-                    assertFalse(reader1.readOne());
-                    assertFalse(reader2.readOne());
+                    assertTrue(reader1.readOne(), "predictable: reader1 readOne");
+                    assertTrue(reader2.readOne(), "predictable: reader2 readOne");
+                    assertFalse(reader1.readOne(), "predictable: reader1 end");
+                    assertFalse(reader2.readOne(), "predictable: reader2 end");
                 }
 
                 if (startIndexOffset != null)
                     chronicleHistoryReader.withStartIndex(startIndexOffset + q3.firstIndex());
                 chronicleHistoryReader.readChronicle();
                 chronicleHistoryReader.outputData();
-                Assert.assertEquals(output, sb.toString());
+                initialOutput = sb.toString();
 
                 writer1.say("again");
-                assertTrue(reader1.readOne());
-                assertTrue(reader2.readOne());
-                assertFalse(reader1.readOne());
-                assertFalse(reader2.readOne());
+                assertTrue(reader1.readOne(), "predictable: reader1 readOne");
+                assertTrue(reader2.readOne(), "predictable: reader2 readOne");
+                assertFalse(reader1.readOne(), "predictable: reader1 end");
+                assertFalse(reader2.readOne(), "predictable: reader2 end");
 
                 sb.setLength(0);
                 chronicleHistoryReader.readChronicle();
                 chronicleHistoryReader.outputData();
-                Assert.assertEquals("re-reading should only show new data",
-                        "Timings below in MICROSECONDS\n" +
+                Assertions.assertEquals("Timings below in MICROSECONDS\n" +
                                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
                                 "count:                     1            1            1            1            1 \n" +
                                 "50:                        9           19            9           19           60 \n" +
@@ -257,12 +272,12 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                                 "99.99:                                                                           \n" +
                                 "99.999:                                                                          \n" +
                                 "99.9999:                                                                         \n" +
-                                "worst:                     9           19            9           19           60 \n",
-                        sb.toString());
+                        "worst:                     9           19            9           19           60 \n", sb.toString(), "re-reading should only show new data");
             }
         } finally {
             IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
         }
+        return initialOutput;
     }
 
     @NotNull

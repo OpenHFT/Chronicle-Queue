@@ -9,14 +9,13 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RollCycleDefaultingTest extends QueueTestCommon {
 
@@ -24,15 +23,15 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
 
     @Test
     public void alias() {
-        assertEquals(RollCycles.class, ObjectUtils.implementationToUse(RollCycle.class));
+        assertEquals(RollCycles.class, ObjectUtils.implementationToUse(RollCycle.class), "ObjectUtils.implementationToUse(RollCycle.class)");
     }
 
-    @After
+    @AfterEach
     public void clearDefaultRollCycleProperty() {
         System.clearProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() {
         IOTools.deleteDirWithFiles(BASE_PATH, 2);
     }
@@ -43,7 +42,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         String configuredCycle = aClass + ":HOURLY";
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
-        assertEquals(HOURLY, builder.rollCycle());
+        assertEquals(HOURLY, builder.rollCycle(), "builder.rollCycle()");
     }
 
     @Test
@@ -52,7 +51,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
 
-        assertTrue(builder.rollCycle() instanceof MyRollcycle);
+        assertInstanceOf(MyRollcycle.class, builder.rollCycle(), "builder.rollCycle() instanceof MyRollcycle");
     }
 
     @Test
@@ -61,7 +60,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         String configuredCycle = "foobarblah";
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
-        assertEquals(RollCycles.DEFAULT, builder.rollCycle());
+        assertEquals(RollCycles.DEFAULT, builder.rollCycle(), "builder.rollCycle()");
 
     }
 
@@ -71,7 +70,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         String configuredCycle = String.class.getName();
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
-        assertEquals(RollCycles.DEFAULT, builder.rollCycle());
+        assertEquals(RollCycles.DEFAULT, builder.rollCycle(), "builder.rollCycle()");
     }
 
     public static class MyRollcycle implements RollCycle {

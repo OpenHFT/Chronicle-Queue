@@ -17,7 +17,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.values.Values;
 import net.openhft.chronicle.wire.DocumentContext;
 
-import static net.openhft.chronicle.queue.TestFacadeInterfaces.IFacade;
+import static net.openhft.chronicle.queue.FacadeInterfaces.IFacade;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {

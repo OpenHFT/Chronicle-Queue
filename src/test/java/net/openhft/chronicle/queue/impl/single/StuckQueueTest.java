@@ -11,8 +11,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,8 +20,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class StuckQueueTest extends QueueTestCommon {
@@ -34,7 +35,7 @@ public class StuckQueueTest extends QueueTestCommon {
         assumeFalse(OS.isWindows());
 
         Path tmpDir = getTmpDir().toPath();
-        assumeFalse("This test uses a checked in queue file that has a size incompatible with hugetlbfs", PageUtil.isHugePage(tmpDir.toString()));
+        assumeFalse(PageUtil.isHugePage(tmpDir.toString()), "This test uses a checked in queue file that has a size incompatible with hugetlbfs");
 
         expectException("Failback to readonly tablestore");
         ignoreException("reading control code as text");
@@ -59,13 +60,13 @@ public class StuckQueueTest extends QueueTestCommon {
             try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
                 String absolutePath = wireStore.file().getAbsolutePath();
                 // System.out.println(absolutePath);
-                Assert.assertTrue(absolutePath.endsWith("20180508-1249.cq4"));
+                assertTrue(absolutePath.endsWith("20180508-1249.cq4"), "queue file ends with template name");
             }
 
             // Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assumeNotNull(dc);
+                assertNotNull(dc, "tailer reading document context");
                 // Assert.assertTrue(!dc.isPresent());
                 // System.out.println(Long.toHexString(dc.index()));
             }
@@ -79,9 +80,9 @@ public class StuckQueueTest extends QueueTestCommon {
             }
             ExcerptTailer tailer2 = q.createTailer();
             try (DocumentContext dc = tailer2.readingDocument()) {
-                Assert.assertTrue(dc.isPresent());
+                assertTrue(dc.isPresent(), "tailer2 document present");
                 String actual = dc.wire().read("hello").text();
-                Assert.assertEquals("world", actual);
+                assertEquals("world", actual, "tailer2 reads appended world");
                 // System.out.println(Long.toHexString(dc.index()));
             }
         }

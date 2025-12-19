@@ -5,8 +5,8 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -37,7 +37,7 @@ public class ValueStringArrayTest extends QueueTestCommon {
                 dc.wire().read("data").marshallable(using);
                 CharSequence actual = using.getCsArr().getCharSequenceWrapperAt(1).getCharSequence();
                 // System.out.println(actual);
-                Assert.assertEquals(EXPECTED, actual.toString());
+                Assertions.assertEquals(EXPECTED, actual.toString(), "read back value");
             }
         }
     }

@@ -10,7 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Instant;
@@ -19,7 +19,7 @@ import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public final class QueueEpochTest extends QueueTestCommon {
     private static final boolean DEBUG = false;
@@ -70,22 +70,22 @@ public final class QueueEpochTest extends QueueTestCommon {
             setCurrentTime(ONE_SECOND_BEFORE_ROLL_TIME);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_BEFORE_ROLL_TIME));
 
-            assertEquals(0, fileListener.numberOfRollEvents());
+            assertEquals(0, fileListener.numberOfRollEvents(), "file roll should not occur before configured roll time with UTC offset");
 
             setCurrentTime(ONE_SECOND_AFTER_ROLL_TIME);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_AFTER_ROLL_TIME));
 
-            assertEquals(1, fileListener.numberOfRollEvents());
+            assertEquals(1, fileListener.numberOfRollEvents(), "first file roll should occur after configured roll time with UTC offset");
 
             setCurrentTime(ONE_SECOND_BEFORE_ROLL_TIME + ONE_DAY);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_BEFORE_ROLL_TIME + ONE_DAY));
 
-            assertEquals(1, fileListener.numberOfRollEvents());
+            assertEquals(1, fileListener.numberOfRollEvents(), "no additional file roll should occur before next day roll time");
 
             setCurrentTime(ONE_SECOND_AFTER_ROLL_TIME + ONE_DAY);
             eventWriter.setOrGetEvent(Long.toString(ONE_SECOND_AFTER_ROLL_TIME + ONE_DAY));
 
-            assertEquals(2, fileListener.numberOfRollEvents());
+            assertEquals(2, fileListener.numberOfRollEvents(), "second file roll should occur after next day roll time");
         }
     }
 

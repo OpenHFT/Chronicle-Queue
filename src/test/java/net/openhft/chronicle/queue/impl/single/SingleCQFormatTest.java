@@ -17,7 +17,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,8 +31,8 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class SingleCQFormatTest extends QueueTestCommon {
@@ -45,9 +45,9 @@ public class SingleCQFormatTest extends QueueTestCommon {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
         try (RollingChronicleQueue queue = binary(dir).testBlockSize().build()) {
-            assertEquals(Integer.MAX_VALUE, queue.firstCycle());
-            assertEquals(Long.MAX_VALUE, queue.firstIndex());
-            assertEquals(Integer.MIN_VALUE, queue.lastCycle());
+            assertEquals(Integer.MAX_VALUE, queue.firstCycle(), "queue.firstCycle()");
+            assertEquals(Long.MAX_VALUE, queue.firstIndex(), "queue.firstIndex()");
+            assertEquals(Integer.MIN_VALUE, queue.lastCycle(), "queue.lastCycle()");
         }
 
         IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
@@ -68,15 +68,15 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     .rollCycle(TEST4_DAILY)
                     .testBlockSize()
                     .build()) {
-                assertEquals(1, queue.firstCycle());
-                assertEquals(1, queue.lastCycle());
+                assertEquals(1, queue.firstCycle(), "queue.firstCycle()");
+                assertEquals(1, queue.lastCycle(), "queue.lastCycle()");
                 try {
                     final ExcerptTailer tailer = queue.createTailer();
                     tailer.toEnd();
-                    fail();
+                    fail("unexpected failure");
                 } catch (Exception e) {
                     assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
-                            e.toString());
+                            e.toString(), "e.toString()");
                 }
             }
         }
@@ -108,7 +108,10 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .timeoutMS(500L)
                 .testBlockSize()
                 .build()) {
-            testQueue(queue);
+            try (ExcerptTailer tailer = queue.createTailer();
+                 DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent(), "format: no header - no data");
+            }
         } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
@@ -136,7 +139,10 @@ public class SingleCQFormatTest extends QueueTestCommon {
         try (ChronicleQueue queue = binary(dir).timeoutMS(500L)
                 .testBlockSize()
                 .build()) {
-            testQueue(queue);
+            try (ExcerptTailer tailer = queue.createTailer();
+                 DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent(), "format: dead header - no data");
+            }
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
@@ -171,7 +177,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
             }
 
             assertEquals(1,
-                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
+                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length, "dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith(\"discard\")).length");
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
@@ -180,7 +186,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     private void testQueue(@NotNull final ChronicleQueue queue) {
         try (ExcerptTailer tailer = queue.createTailer();
              DocumentContext dc = tailer.readingDocument()) {
-            assertFalse(dc.isPresent());
+            assertFalse(dc.isPresent(), "dc.isPresent()");
         }
     }
 
@@ -206,7 +212,10 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .rollCycle(TEST4_DAILY)
                 .testBlockSize()
                 .build()) {
-            testQueue(queue);
+            try (ExcerptTailer tailer = queue.createTailer();
+                 DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent(), "format: complete header - no data");
+            }
         }
 
         try {
@@ -232,8 +241,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
             }
         }
 
-        final String expected = "" +
-                "00000000 24 01 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 $··@··he ader··SC\n" +
+        final String expected = "00000000 24 01 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 $··@··he ader··SC\n" +
                 "00000010 51 53 74 6f 72 65 82 0d  01 00 00 c8 77 69 72 65 QStore·· ····wire\n" +
                 "00000020 54 79 70 65 b6 08 57 69  72 65 54 79 70 65 e6 42 Type··Wi reType·B\n" +
                 "00000030 49 4e 41 52 59 cd 77 72  69 74 65 50 6f 73 69 74 INARY·wr itePosit\n" +
@@ -252,8 +260,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 "00000100 6e 6f 77 6c 65 64 67 65  64 49 6e 64 65 78 52 65 nowledge dIndexRe\n" +
                 "00000110 70 6c 69 63 61 74 65 64  8e 02 00 00 00 00 00 a7 plicated ········\n" +
                 "00000120 00 00 00 00 00 00 00 00                          ········         \n";
-        final String expectedHexDump = "" +
-                "24 01 00 40                                     # msg-length\n" +
+        final String expectedHexDump = "24 01 00 40                                     # msg-length\n" +
                 "b9 06 68 65 61 64 65 72                         # header: (event)\n" +
                 "b6 08 53 43 51 53 74 6f 72 65                   # SCQStore\n" +
                 "82 0d 01 00 00                                  # Marshallable\n" +
@@ -293,10 +300,9 @@ public class SingleCQFormatTest extends QueueTestCommon {
         assertEquals(bytes instanceof HexDumpBytes
                         ? expectedHexDump
                         : expected,
-                bytes.toHexString());
+                bytes.toHexString(), "bytes.toHexString()");
 
-        assertEquals("" +
-                "--- !!meta-data #binary\n" +
+        assertEquals("--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  wireType: !WireType BINARY,\n" +
                 "  writePosition: 0,\n" +
@@ -312,7 +318,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 "    lastIndex: 0\n" +
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: 0\n" +
-                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)), "Wires.fromSizePrefixedBlobs(bytes.readPosition(0))");
     }
 
     @Test
@@ -342,7 +348,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
-                    "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+                    "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)), "Wires.fromSizePrefixedBlobs(bytes.readPosition(0))");
         }
 
         try (RollingChronicleQueue queue = binary(dir)
@@ -350,7 +356,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .rollCycle(HOURLY)
                 .build()) {
             testQueue(queue);
-            assertEquals(2, queue.firstCycle());
+            assertEquals(2, queue.firstCycle(), "queue.firstCycle()");
         }
 
         try {
@@ -381,10 +387,10 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .testBlockSize()
                 .build()) {
             testQueue(queue);
-            fail();
+            fail("unexpected failure");
         } catch (Exception e) {
             assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required",
-                    e.toString());
+                    e.toString(), "e.toString()");
         }
         System.gc();
         try {

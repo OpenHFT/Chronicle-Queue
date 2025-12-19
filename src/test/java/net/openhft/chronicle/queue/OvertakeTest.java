@@ -12,13 +12,13 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Index runs away on double close - AM
@@ -43,7 +43,7 @@ public class OvertakeTest extends QueueTestCommon {
 
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
-                    assertNotNull(msg);
+                    assertNotNull(msg, "message text should not be null when reading document from queue");
                     i[0]++;
                 });
                 if (additionalClose) {
@@ -51,11 +51,11 @@ public class OvertakeTest extends QueueTestCommon {
                 }
             }
         }
-        assertEquals(expected, i[0]);
+        assertEquals(expected, i[0], "tailer should read exactly " + expected + " messages from queue");
         return tailIndex;
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (ChronicleQueue appender_queue = ChronicleQueue.singleBuilder(path)
@@ -76,7 +76,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -91,11 +91,11 @@ public class OvertakeTest extends QueueTestCommon {
             tailer = tailer.toStart();
             long tailIndex;
             tailIndex = doReadBad(tailer, messages, false);
-            assertEquals(appendedIndex, tailIndex);
+            assertEquals(appendedIndex, tailIndex, "tailer should reach index of last appended message after reading all messages");
             tailer = tailer_queue.createTailer();
             tailer = tailer.toStart();
             tailIndex = doReadBad(tailer, messages, true);
-            assertEquals(appendedIndex, tailIndex);
+            assertEquals(appendedIndex, tailIndex, "tailer should reach index of last appended message after reading all messages with additional close");
         }
     }
 
@@ -127,7 +127,7 @@ public class OvertakeTest extends QueueTestCommon {
             Future<Long> f2 = execService.submit(mytailer);
             tailIndex = f2.get(10, TimeUnit.SECONDS);
             appendedIndex = f.get(10, TimeUnit.SECONDS);
-            assertEquals(appendedIndex, tailIndex);
+            assertEquals(appendedIndex, tailIndex, "tailer thread should reach index of last message appended by writer thread in concurrent scenario");
         }
         execService.shutdown();
         execService.awaitTermination(1, TimeUnit.SECONDS);

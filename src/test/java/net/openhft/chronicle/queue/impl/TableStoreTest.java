@@ -10,22 +10,22 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TableStoreTest extends QueueTestCommon {
     @Test
     public void acquireValueFor() throws IOException {
 
         final File file = tempDir("table");
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(file.getAbsolutePath()));
+        Assumptions.assumeFalse(PageUtil.isHugePage(file.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         file.mkdir();
 
         final File tempFile = Files.createTempFile(file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
@@ -33,10 +33,10 @@ public class TableStoreTest extends QueueTestCommon {
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue a = table.acquireValueFor("a");
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(Long.MIN_VALUE, a.getVolatileValue());
-            assertTrue(a.compareAndSwapValue(Long.MIN_VALUE, 1));
-            assertEquals(Long.MIN_VALUE, b.getVolatileValue());
-            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2));
+            assertEquals(Long.MIN_VALUE, a.getVolatileValue(), "a.getVolatileValue()");
+            assertTrue(a.compareAndSwapValue(Long.MIN_VALUE, 1), "a.compareAndSwapValue(Long.MIN_VALUE, 1)");
+            assertEquals(Long.MIN_VALUE, b.getVolatileValue(), "b.getVolatileValue()");
+            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2), "b.compareAndSwapValue(Long.MIN_VALUE, 2)");
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT\n" +
@@ -48,16 +48,16 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "b: 2\n" +
                     "...\n" +
-                    "# 130972 bytes remaining\n", table.dump(WireType.BINARY_LIGHT));
+                    "# 130972 bytes remaining\n", table.dump(WireType.BINARY_LIGHT), "table.dump(WireType.BINARY_LIGHT)");
         }
 
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue c = table.acquireValueFor("c");
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(Long.MIN_VALUE, c.getVolatileValue());
-            assertTrue(c.compareAndSwapValue(Long.MIN_VALUE, 3));
-            assertEquals(2, b.getVolatileValue());
-            assertTrue(b.compareAndSwapValue(2, 22));
+            assertEquals(Long.MIN_VALUE, c.getVolatileValue(), "c.getVolatileValue()");
+            assertTrue(c.compareAndSwapValue(Long.MIN_VALUE, 3), "c.compareAndSwapValue(Long.MIN_VALUE, 3)");
+            assertEquals(2, b.getVolatileValue(), "b.getVolatileValue()");
+            assertTrue(b.compareAndSwapValue(2, 22), "b.compareAndSwapValue(2, 22)");
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT\n" +
@@ -72,7 +72,7 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "c: 3\n" +
                     "...\n" +
-                    "# 130956 bytes remaining\n", table.dump(WireType.BINARY_LIGHT));
+                    "# 130956 bytes remaining\n", table.dump(WireType.BINARY_LIGHT), "table.dump(WireType.BINARY_LIGHT)");
         }
     }
 
@@ -86,13 +86,13 @@ public class TableStoreTest extends QueueTestCommon {
 
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(Long.MIN_VALUE, b.getVolatileValue());
-            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2));
+            assertEquals(Long.MIN_VALUE, b.getVolatileValue(), "b.getVolatileValue()");
+            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2), "b.compareAndSwapValue(Long.MIN_VALUE, 2)");
         }
 
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(2, b.getVolatileValue());
+            assertEquals(2, b.getVolatileValue(), "b.getVolatileValue()");
             assertThrows(IllegalStateException.class, () -> table.acquireValueFor("d"));
         }
     }

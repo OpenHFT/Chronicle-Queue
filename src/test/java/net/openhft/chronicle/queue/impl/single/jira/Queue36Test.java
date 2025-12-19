@@ -8,12 +8,12 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-36
@@ -33,7 +33,7 @@ public class Queue36Test extends QueueTestCommon {
             checkNoFiles(basePath);
 
             assertFalse(tailer.readDocument(d -> {
-            }));
+            }), "readDocument: empty queue");
 
             checkNoFiles(basePath);
         }
@@ -41,6 +41,6 @@ public class Queue36Test extends QueueTestCommon {
 
     private void checkNoFiles(@NotNull File basePath) {
         String[] fileNames = basePath.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
-        assertTrue(fileNames == null || fileNames.length == 0);
+        assertTrue(fileNames == null || fileNames.length == 0, "basePath: no cq4 files");
     }
 }

@@ -48,7 +48,7 @@ class MetadataDeletionTests extends QueueTestCommon {
             // Open again and let's see what we get
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).build();
                  ExcerptTailer tailer = queue.createTailer()) {
-                assertEquals("hello world", tailer.readText());
+                assertEquals("hello world", tailer.readText(), "tailer: readText after metadata deletion");
             }
 
         } finally {
@@ -135,8 +135,8 @@ class MetadataDeletionTests extends QueueTestCommon {
     private void assertTailerReadsValuesWithCycle(ExcerptTailer tailer, int startingCycle, String... expected) {
         int cycle = startingCycle;
         for (String value : expected) {
-            assertEquals(value, tailer.readText());
-            assertEquals(cycle++, tailer.cycle());
+            assertEquals(value, tailer.readText(), "tailer should read expected value '" + value + "' from queue");
+            assertEquals(cycle++, tailer.cycle(), "tailer should be at cycle " + (cycle - 1) + " after reading value");
         }
     }
 }

@@ -9,8 +9,8 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -37,10 +37,10 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
             try (DocumentContext dc = q.createTailer().readingDocument()) {
 
                 DtoBytesMarshallable who = (DtoBytesMarshallable) dc.wire().read("who").object();
-                Assert.assertEquals("!net.openhft.chronicle.queue.DtoBytesMarshallableTest$DtoBytesMarshallable {\n" +
+                Assertions.assertEquals("!net.openhft.chronicle.queue.DtoBytesMarshallableTest$DtoBytesMarshallable {\n" +
                         "  name: rob,\n" +
                         "  age: 45\n" +
-                        "}\n", who.toString());
+                        "}\n", who.toString(), "dto: toString after roundtrip");
             }
         }
     }
@@ -69,7 +69,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
                 DtoAbstractMarshallable who = (DtoAbstractMarshallable) dc.wire().read("who").object();
                 // System.out.println(who);
 
-                Assert.assertTrue(yaml.contains(who.toString()));
+                Assertions.assertTrue(yaml.contains(who.toString()), "yaml: should contain dto");
             }
         }
     }

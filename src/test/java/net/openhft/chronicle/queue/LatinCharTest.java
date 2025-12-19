@@ -6,10 +6,10 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class LatinCharTest extends QueueTestCommon {
 
@@ -43,7 +43,7 @@ public class LatinCharTest extends QueueTestCommon {
             Message actual = new Message();
             tailer.readDocument(actual);
 
-            assertEquals(expected, actual);
+            assertEquals(expected, actual, "encode/decode: message roundtrip");
         }
     }
 }

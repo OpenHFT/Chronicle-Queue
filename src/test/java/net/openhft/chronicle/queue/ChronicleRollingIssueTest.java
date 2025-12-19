@@ -10,9 +10,9 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RequiredForClient
 public class ChronicleRollingIssueTest extends QueueTestCommon {
@@ -28,13 +29,13 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
     private String path;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
         path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
     }
 
-    @After
+    @AfterEach
     @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(path);
@@ -76,17 +77,17 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
         }
         long start = System.currentTimeMillis();
         long lastIndex = 0;
+        int count2 = 0;
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(path)
                 .testBlockSize()
                 .storeFileListener(storeFileListener)
                 .rollCycle(TEST_SECONDLY).build()) {
             ExcerptTailer tailer = queue.createTailer();
-            int count2 = 0;
             while (count2 < threads * messages) {
                 Map<String, Object> map = tailer.readMap();
-                    long index = tailer.index();
-                    if (map != null) {
+                long index = tailer.index();
+                if (map != null) {
                         count2++;
                     } else if (index >= 0) {
                         if (TEST_SECONDLY.toCycle(lastIndex) != TEST_SECONDLY.toCycle(index)) {
@@ -113,5 +114,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                 Jvm.debug().on(ChronicleRollingIssueTest.class, "Failed to clean up test directory", e);
             }
         }
+        assertEquals(threads * messages, count.get(), "rolling-issue: messages written");
+        assertEquals(threads * messages, count2, "rolling-issue: messages read");
     }
 }

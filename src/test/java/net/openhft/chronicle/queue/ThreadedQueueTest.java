@@ -8,8 +8,8 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
@@ -17,19 +17,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 public class ThreadedQueueTest extends QueueTestCommon {
 
     private static final int REQUIRED_COUNT = 10;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Test(timeout = 10000)
+    @Test
+
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
         final File path = getTmpDir();
@@ -85,7 +91,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
         af.get(9000, TimeUnit.MILLISECONDS);
         tf.get(end - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
 
-        assertEquals(REQUIRED_COUNT, counter.get());
+        assertEquals(REQUIRED_COUNT, counter.get(), "read/write threads: messages processed");
     }
 
     @Test
@@ -106,7 +112,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
                  final ExcerptAppender appender = wqueue.createAppender()) {
 
                 Bytes<?> bytes = Bytes.elasticByteBuffer();
-                assertFalse(tailer.readBytes(bytes));
+                assertFalse(tailer.readBytes(bytes), "empty queue: tailer should not read bytes");
 
                 appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes(ISO_8859_1)));
 
@@ -117,8 +123,8 @@ public class ThreadedQueueTest extends QueueTestCommon {
                     Jvm.pause(1);
                     condition = tailer.readBytes(bytes);
                 }
-                assertTrue(condition);
-                assertEquals("Hello World", bytes.toString());
+                assertTrue(condition, "tailer should read bytes after appender write");
+                assertEquals("Hello World", bytes.toString(), "tailer should read expected payload");
 
                 bytes.releaseLast();
             }

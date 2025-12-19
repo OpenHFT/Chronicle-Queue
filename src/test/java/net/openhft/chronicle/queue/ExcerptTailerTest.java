@@ -4,27 +4,27 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ExcerptTailerTest extends QueueTestCommon {
 
     private ExcerptTailer excerptTailer;
     private ChronicleQueue queue;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         File dir = new File(System.getProperty("java.io.tmpdir"), "queue-test");
         queue = ChronicleQueue.single(dir.getPath());
         excerptTailer = queue.createTailer();
     }
 
-    @After
+    @AfterEach
     @Override
     public void tearDown() {
         excerptTailer.close();
@@ -34,34 +34,34 @@ public class ExcerptTailerTest extends QueueTestCommon {
     @Test
     public void testReadingDocumentWithMetaData() {
         try (DocumentContext dc = excerptTailer.readingDocument(true)) {
-            assertNotNull(dc);
+            assertNotNull(dc, "reading document context should not be null");
         }
     }
 
     @Test
     public void testReadingDocumentWithoutMetaData() {
         try (DocumentContext dc = excerptTailer.readingDocument(false)) {
-            assertNotNull(dc);
+            assertNotNull(dc, "reading document context should not be null");
         }
     }
 
     @Test
     public void testIndex() {
         long index = excerptTailer.index();
-        assertTrue(index >= 0);
+        assertTrue(index >= 0, "index >= 0");
     }
 
     @Test
     public void testLastReadIndex() {
         // The last read index may return -1 or 0 depending on the state
         long lastReadIndex = excerptTailer.lastReadIndex();
-        assertTrue(lastReadIndex == -1 || lastReadIndex == 0);
+        assertTrue(lastReadIndex == -1 || lastReadIndex == 0, "lastReadIndex == -1 || lastReadIndex == 0");
     }
 
     @Test
     public void testCycle() {
         // Since no data has been read, cycle should be Integer.MIN_VALUE as no cycle has been loaded
         int cycle = excerptTailer.cycle();
-        assertEquals(Integer.MIN_VALUE, cycle);
+        assertEquals(Integer.MIN_VALUE, cycle, "tailer cycle should be MIN_VALUE when no data has been read");
     }
 }

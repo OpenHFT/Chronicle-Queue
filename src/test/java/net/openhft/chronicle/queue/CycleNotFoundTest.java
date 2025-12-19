@@ -8,9 +8,9 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -19,7 +19,11 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 @RequiredForClient
 @SuppressWarnings({"deprecation", "removal"})
@@ -31,12 +35,14 @@ public class CycleNotFoundTest extends QueueTestCommon {
     // reduced so that it runs quicker for the continuous integration (CI)
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Test(timeout = 50_000L)
+    @Test
+
+    @Timeout(value = 50_000L, unit = TimeUnit.MILLISECONDS)
     public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
         File path = getTmpDir();  // added nano time just to make
 
@@ -62,19 +68,19 @@ public class CycleNotFoundTest extends QueueTestCommon {
                         if (!dc.isPresent())
                             continue;
 
-                        Assert.assertTrue(dc.isData());
-                        Assert.assertEquals(last + 1, last = dc.wire().read().int64());
+                        Assertions.assertTrue(dc.isData(), "dc.isData()");
+                        Assertions.assertEquals(last + 1, last = dc.wire().read().int64(), "last = dc.wire().read().int64()");
                         count++;
                         counter.incrementAndGet();
                     }
 
                     if (executorService.isShutdown())
-                        Assert.fail();
+                        Assertions.fail("unexpected failure");
                 }
 
                 // check nothing after the NUMBER_OF_MSG
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    Assert.assertFalse(dc.isPresent());
+                    Assertions.assertFalse(dc.isPresent(), "dc.isPresent()");
                 }
             } finally {
                 Jvm.debug().on(CycleNotFoundTest.class,
@@ -124,6 +130,6 @@ public class CycleNotFoundTest extends QueueTestCommon {
         executorService.awaitTermination(5, TimeUnit.SECONDS);
         executorService1.awaitTermination(5, TimeUnit.SECONDS);
 
-        assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get());
+        assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get(), "counter.get()");
     }
 }

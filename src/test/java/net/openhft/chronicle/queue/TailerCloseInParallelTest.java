@@ -16,9 +16,9 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.queue.QueuePerfTestSupport.TestReader;
 import net.openhft.chronicle.queue.QueuePerfTestSupport.TestWriter;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
 import java.util.Random;
@@ -26,8 +26,8 @@ import java.util.Random;
 import static net.openhft.chronicle.queue.QueuePerfTestSupport.readMany;
 import static net.openhft.chronicle.queue.QueuePerfTestSupport.writeMany;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
 public class TailerCloseInParallelTest extends QueueTestCommon {
@@ -43,12 +43,12 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
     private static final Random random = new Random();
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanup() {
         IOTools.deleteDirWithFiles(file, 3);
     }
@@ -72,6 +72,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
         Paths.get(file).toFile().delete();
         finishedNormally = true;
+        assertTrue(finishedNormally, "tailer-close: finished");
     }
 
     // CPD-OFF - mirrors SingleChroniclePerfMainTest perf loop
@@ -88,7 +89,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
                 for (int i = 0; i < random.nextInt(10); i++) {
                     Jvm.pause(1);
                     try (DocumentContext dc = tailer0.readingDocument()) {
-                        assertNotNull(dc);
+                        assertNotNull(dc, "tailer0: readingDocument returned context");
                     }
                 }
                 Closeable.closeQuietly(tailer0);
@@ -118,7 +119,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
                 for (int i = 0; i < count; i++) {
                     long start2 = System.nanoTime();
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        assertTrue(dc.isPresent());
+                        assertTrue(dc.isPresent(), "tailer: document should be present");
                         Bytes<?> bytes0 = dc.wire().bytes();
                         bytes.setBytes(bytes0);
                         reader.readFrom(bytes);

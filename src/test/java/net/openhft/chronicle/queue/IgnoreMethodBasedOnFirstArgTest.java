@@ -7,9 +7,10 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MethodFilterOnFirstArg;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
 
@@ -30,17 +31,17 @@ public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
 
                         @Override
                         public boolean ignoreMethodBasedOnFirstArg(final String methodName, final String firstArg) {
-                            assertEquals(EXPECTED_ENVELOPE, firstArg);
+                            assertEquals(EXPECTED_ENVELOPE, firstArg, "ignoreMethod: firstArg");
                             return false;
                         }
 
                         @Override
                         public void print(String envelope, final String msg) {
-                            assertEquals(EXPECTED_ENVELOPE, envelope);
-                            assertEquals(MSG, msg);
+                            assertEquals(EXPECTED_ENVELOPE, envelope, "print: envelope");
+                            assertEquals(MSG, msg, "print: message");
                         }
                     });
-            mr.readOne();
+            assertTrue(mr.readOne(), "methodReader: read one");
         }
     }
 }

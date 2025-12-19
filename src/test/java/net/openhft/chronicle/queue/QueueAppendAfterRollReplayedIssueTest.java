@@ -10,13 +10,13 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /*
     Scenario:
@@ -54,7 +54,7 @@ public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
                 .rollCycle(TEST_SECONDLY).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
             try (final DocumentContext documentContext = excerptAppender.acquireWritingDocument(false)) {
-                assertNotNull(documentContext.wire());
+                assertNotNull(documentContext.wire(), "acquireWritingDocument should provide wire");
             }
 
         } finally {

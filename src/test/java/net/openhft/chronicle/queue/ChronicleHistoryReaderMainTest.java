@@ -7,17 +7,18 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.security.Permission;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReaderMainTest {
@@ -34,14 +35,14 @@ public class ChronicleHistoryReaderMainTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         // SecurityManager is effectively disabled from JDK 17 onwards
         assumeTrue(Jvm.majorVersion() < 17);
         System.setSecurityManager(new NoExitSecurityManager());
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         if (Jvm.majorVersion() < 17)
             System.setSecurityManager(null);
@@ -49,6 +50,7 @@ public class ChronicleHistoryReaderMainTest {
 
     @Test
     public void testRunExecutesChronicleHistoryReader() {
+        AtomicBoolean executed = new AtomicBoolean();
         // Setup
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
             @Override
@@ -56,8 +58,7 @@ public class ChronicleHistoryReaderMainTest {
                 return new ChronicleHistoryReader() {
                     @Override
                     public void execute() {
-                        // Simulate execution
-                        assertTrue(true);  // Verify execution reached here
+                        executed.set(true);
                     }
                 };
             }
@@ -65,6 +66,7 @@ public class ChronicleHistoryReaderMainTest {
 
         String[] args = {"-d", "test-directory"}; // Simulate passing a directory argument
         main.run(args);  // Expect that execute is called
+        assertTrue(executed.get(), "ChronicleHistoryReader.execute should be invoked when run method is called with directory argument");
     }
 
     @Test
@@ -94,13 +96,13 @@ public class ChronicleHistoryReaderMainTest {
 
             @Override
             public ChronicleHistoryReader withBasePath(Path basePath) {
-                assertEquals("test-directory", basePath.toString());
+                assertEquals("test-directory", basePath.toString(), "Base path should be set to test-directory from command line argument");
                 return this;
             }
 
             @Override
             public ChronicleHistoryReader withTimeUnit(TimeUnit timeUnit) {
-                assertEquals(TimeUnit.NANOSECONDS, timeUnit);
+                assertEquals(TimeUnit.NANOSECONDS, timeUnit, "Time unit should be set to NANOSECONDS from -t command line argument");
                 return this;
             }
 
@@ -114,8 +116,8 @@ public class ChronicleHistoryReaderMainTest {
         main.setup(commandLine, historyReader);
 
         // Assert
-        assertNotNull(historyReader.withProgress(true));
-        assertNotNull(historyReader.withHistosByMethod(true));
+        assertNotNull(historyReader.withProgress(true), "withProgress should return non-null reader for method chaining");
+        assertNotNull(historyReader.withHistosByMethod(true), "withHistosByMethod should return non-null reader for method chaining");
     }
 
     @Test
@@ -126,8 +128,8 @@ public class ChronicleHistoryReaderMainTest {
         String[] args = {"-d", "test-directory", "-t", "SECONDS"};
         CommandLine commandLine = main.parseCommandLine(args, options);
 
-        assertEquals("test-directory", commandLine.getOptionValue("d"));
-        assertEquals("SECONDS", commandLine.getOptionValue("t"));
+        assertEquals("test-directory", commandLine.getOptionValue("d"), "Directory option -d should be parsed correctly from command line arguments");
+        assertEquals("SECONDS", commandLine.getOptionValue("t"), "Time unit option -t should be parsed correctly from command line arguments");
     }
 
     @Test
@@ -135,7 +137,7 @@ public class ChronicleHistoryReaderMainTest {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
             @Override
             protected void printHelpAndExit(Options options, int status, String message) {
-                assertEquals(0, status);  // Ensure help is printed with status 0 (success)
+                assertEquals(0, status, "Help option should exit with success status code 0");  // Ensure help is printed with status 0 (success)
                 throw new ThreadDeath();  // Exit without calling System.exit()
             }
         };
@@ -151,14 +153,14 @@ public class ChronicleHistoryReaderMainTest {
         Options options = main.options();
 
         // Verify that all expected options are present
-        assertNotNull(options.getOption("d"));
-        assertNotNull(options.getOption("h"));
-        assertNotNull(options.getOption("t"));
-        assertNotNull(options.getOption("i"));
-        assertNotNull(options.getOption("w"));
-        assertNotNull(options.getOption("u"));
-        assertNotNull(options.getOption("p"));
-        assertNotNull(options.getOption("m"));
+        assertNotNull(options.getOption("d"), "Directory option -d should be configured in options");
+        assertNotNull(options.getOption("h"), "Help option -h should be configured in options");
+        assertNotNull(options.getOption("t"), "Time unit option -t should be configured in options");
+        assertNotNull(options.getOption("i"), "Ignore count option -i should be configured in options");
+        assertNotNull(options.getOption("w"), "Measurement window option -w should be configured in options");
+        assertNotNull(options.getOption("u"), "Summary output offset option -u should be configured in options");
+        assertNotNull(options.getOption("p"), "Progress option -p should be configured in options");
+        assertNotNull(options.getOption("m"), "Histograms by method option -m should be configured in options");
     }
 
     @Test
@@ -169,7 +171,7 @@ public class ChronicleHistoryReaderMainTest {
             main.printHelpAndExit(options, 0, "Optional message");
             fail("Expected SecurityException due to System.exit(0)");
         } catch (SecurityException e) {
-            assertTrue(e.getMessage().contains("System exit attempted with status: 0"));
+            assertTrue(e.getMessage().contains("System exit attempted with status: 0"), "Security exception should indicate system exit was attempted with status 0");
         }
     }
 }

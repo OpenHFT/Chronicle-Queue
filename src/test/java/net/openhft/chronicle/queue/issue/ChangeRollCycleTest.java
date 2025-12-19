@@ -10,10 +10,10 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Test class to verify the behavior of Chronicle Queue when changing Roll Cycles.
@@ -24,12 +24,14 @@ public class ChangeRollCycleTest {
 
     @Test
     public void changeRollCycleWithReadOnlyTailer() {
-        testChangeRollCycle(true);
+        int messagesRead = testChangeRollCycle(true);
+        assertEquals(0, messagesRead, "roll cycle: messages read (read-only)");
     }
 
     @Test
     public void changeRollCycleWithReadWriteTailer() {
-        testChangeRollCycle(false);
+        int messagesRead = testChangeRollCycle(false);
+        assertEquals(2, messagesRead, "roll cycle: messages read (read/write)");
     }
 
     /**
@@ -37,7 +39,7 @@ public class ChangeRollCycleTest {
      *
      * @param readOnly whether the tailer should be in read-only mode
      */
-    private void testChangeRollCycle(boolean readOnly) {
+    private int testChangeRollCycle(boolean readOnly) {
         // Define the queue path
         String queuePath = OS.getTarget() + "/changeRollCycle-" + System.nanoTime();
 
@@ -50,7 +52,7 @@ public class ChangeRollCycleTest {
 
             // Verify the queue is initially empty
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse("Queue should be empty initially", dc.isPresent());
+                assertFalse(dc.isPresent(), "Queue should be empty initially");
             }
 
             // Step 2: Reopen the queue with a WEEKLY roll cycle and write data
@@ -67,36 +69,34 @@ public class ChangeRollCycleTest {
                         .rollCycle(RollCycles.FAST_HOURLY)
                         .build();
                      ExcerptAppender appender3 = q3.createAppender()) {
-                    assertEquals(q2.rollCycle(), q3.rollCycle());
+                    assertEquals(q2.rollCycle(), q3.rollCycle(), "existing rollCycle should be preserved");
 
                     // Write two messages to the queue
                     appender3.writeText("World");
 
                     if (readOnly && !OS.isWindows())
-                        assertEquals("Roll cycle should match WEEKLY for read-only mode",
-                                RollCycles.WEEKLY, q3.rollCycle());
+                        assertEquals(RollCycles.WEEKLY, q3.rollCycle(), "Roll cycle should match WEEKLY for read-only mode");
                 }
 
                 // If the tailer is read-only, the roll cycle cannot not be changed
                 // The read only case assumes there queue is historical and the roll cycle is fixed
-                if (readOnly) return;
+                if (readOnly) return 0;
 
                 // Step 4: Verify the data can be read back correctly
-                assertEquals("First message should match", "Hello", tailer.readText());
+                assertEquals("Hello", tailer.readText(), "First message should match");
 
                 if (readOnly)
-                    assertEquals("Roll cycle should match WEEKLY for read-only mode",
-                            RollCycles.WEEKLY,
-                            q1.rollCycle());
+                    assertEquals(RollCycles.WEEKLY, q1.rollCycle(), "Roll cycle should match WEEKLY for read-only mode");
 
-                assertEquals("Second message should match", "World", tailer.readText());
+                assertEquals("World", tailer.readText(), "Second message should match");
 
-                assertEquals(q2.rollCycle(), q1.rollCycle());
+                assertEquals(q2.rollCycle(), q1.rollCycle(), "rollCycle should match persisted value");
 
                 // Verify there is no extra data in the queue
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertFalse("No more data should be present in the queue", dc.isPresent());
+                    assertFalse(dc.isPresent(), "No more data should be present in the queue");
                 }
+                return 2;
             }
         } finally {
             // Clean up the queue directory to avoid leaving test artifacts

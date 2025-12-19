@@ -10,16 +10,16 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class TailerTest extends QueueTestCommon {
@@ -27,8 +27,8 @@ public class TailerTest extends QueueTestCommon {
     private static final Path QUEUE_PATH = Paths.get(OS.getTarget() + "/host-1/queue/broker_out");
     private static final int OFFSET = 3;
 
-    @Before
-    @After
+    @BeforeEach
+    @AfterEach
     public void cleanupFiles() {
         IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
     }
@@ -60,7 +60,7 @@ public class TailerTest extends QueueTestCommon {
         try (ChronicleQueue q = createQueue(); ExcerptTailer tailer = q.createTailer()) {
             initRecovery(tailer, firstOutputIndex + OFFSET);
             final List<String> messages = drainTailer(tailer);
-            assertEquals("Hello World " + OFFSET, messages.get(0));
+            assertEquals("Hello World " + OFFSET, messages.get(0), "recovery: first tailed message");
         }
     }
 

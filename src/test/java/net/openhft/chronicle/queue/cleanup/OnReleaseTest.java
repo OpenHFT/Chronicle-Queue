@@ -15,18 +15,25 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OnReleaseTest extends QueueTestCommon {
     @Test
     public void onRelease() throws Throwable {
-        FlakyTestRunner.builder(this::onRelease0).build().run();
+        AtomicBoolean executed = new AtomicBoolean();
+        FlakyTestRunner.builder(() -> {
+            onRelease0();
+            executed.set(true);
+        }).build().run();
+        assertTrue(executed.get(), "onRelease: flaky runner executed");
     }
 
     private void onRelease0() {
@@ -61,10 +68,10 @@ public class OnReleaseTest extends QueueTestCommon {
             int messageCount = PageUtil.isHugePage(path) ? 10 : 500;
             for (int i = 0; i < messageCount; i++) {
                 appender.writeText("hello-" + i);
-                assertNotNull(tailer.readText());
+                assertNotNull(tailer.readText(), "tailer: readText at i=" + i);
                 BackgroundResourceReleaser.releasePendingResources();
-                assertEquals(i, writeRoll.get());
-                assertEquals(i, readRoll.get());
+                assertEquals(i, writeRoll.get(), "write queue: released files at i=" + i);
+                assertEquals(i, readRoll.get(), "read queue: released files at i=" + i);
                 stp.advanceMillis(66_000);
             }
         } finally {

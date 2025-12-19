@@ -11,15 +11,15 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.IllegalIndexException;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RequiredForClient
 @SuppressWarnings({"deprecation", "removal"})
@@ -45,7 +45,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
             String before = queue.dump();
             appender.writeBytes(0x421d00000000L, HELLO_WORLD);
             String after = queue.dump();
-            assertEquals(before, after);
+            assertEquals(before, after, "queue dump should remain unchanged when writing to existing index");
         }
 
         /*
@@ -76,7 +76,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             IllegalIndexException e = assertThrows(IllegalIndexException.class, () -> appender.writeBytes(0x421d00000003L, HELLO_WORLD));
-            assertEquals("Index provided is after the next index in the queue, provided index = 421d00000003, last index in queue = 421d00000001", e.getMessage());
+            assertEquals("Index provided is after the next index in the queue, provided index = 421d00000003, last index in queue = 421d00000001", e.getMessage(), "exception message should indicate index gap when writing beyond next sequential index");
         }
 
         try (ChronicleQueue queue = single(tmp)
@@ -111,7 +111,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
                 dc.wire().write().text("some-data");
 
                 expected = dc.index();
-                Assert.assertTrue(expected > 0);
+                Assertions.assertTrue(expected > 0, "expected > 0");
 
             }
 
@@ -124,16 +124,16 @@ public class CreateAtIndexTest extends QueueTestCommon {
 
                 {
                     long actualIndex = dc.index();
-                    Assert.assertTrue(actualIndex > 0);
+                    Assertions.assertTrue(actualIndex > 0, "actualIndex > 0");
 
-                    Assert.assertEquals(expected, actualIndex);
+                    Assertions.assertEquals(expected, actualIndex, "document context index should match index from write operation");
                 }
 
                 {
                     long actualIndex = tailer.index();
-                    Assert.assertTrue(actualIndex > 0);
+                    Assertions.assertTrue(actualIndex > 0, "actualIndex > 0");
 
-                    Assert.assertEquals(expected, actualIndex);
+                    Assertions.assertEquals(expected, actualIndex, "document context index should match index from write operation");
                 }
             }
         }

@@ -17,8 +17,8 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,15 +29,15 @@ import java.util.Arrays;
 import java.util.List;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
     private static final String BASE_PATH = OS.getTarget() + "/singleChronicleQueueBuilderTest";
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() {
         IOTools.deleteDirWithFiles(BASE_PATH, 2);
     }
@@ -63,20 +63,21 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
              final ExcerptTailer tailer = queue.createTailer();
              final DocumentContext dc = tailer.readingDocument()) {
             // System.out.println(queue.dump());
-            assertFalse(dc.isPresent());
+            assertFalse(dc.isPresent(), "queue file path: no document present");
 
         } finally {
             IOTools.deleteDirWithFiles(path.toFile(), 20);
         }
-        assertTrue(new File(TEST_QUEUE_FILE).length() < (1 << 20));
+        assertTrue(new File(TEST_QUEUE_FILE).length() < (1 << 20), "queue file path: file size < 1MiB");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws IOException {
         final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
         tempFile.deleteOnExit();
-        SingleChronicleQueueBuilder.
-                binary(tempFile);
+        assertThrows(IllegalArgumentException.class,
+                () -> SingleChronicleQueueBuilder.binary(tempFile),
+                "queue path: incorrect extension");
     }
 
     @Test
@@ -86,17 +87,19 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         b1.blockSize(1234567);
         b2.bufferCapacity(98765);
         b2.setAllNullFields(b1);
-        assertEquals(1234567, b2.blockSize());
-        assertEquals(98765, b2.bufferCapacity());
+        assertEquals(1234567, b2.blockSize(), "setAllNullFields: blockSize");
+        assertEquals(98765, b2.bufferCapacity(), "setAllNullFields: bufferCapacity");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
         OneExtendedBuilder b1 = new OneExtendedBuilder();
         OtherExtendedBuilder b2 = new OtherExtendedBuilder();
         b2.bufferCapacity(98765);
         b1.blockSize(1234567);
-        b2.setAllNullFields(b1);
+        assertThrows(IllegalArgumentException.class,
+                () -> b2.setAllNullFields(b1),
+                "setAllNullFields: different hierarchy");
     }
 
     static class OneExtendedBuilder extends SingleChronicleQueueBuilder {
@@ -122,11 +125,11 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 "  }," +
                 "}\n");
         builder.build().close();
-        assertEquals(61320000, builder.epoch());
+        assertEquals(61320000, builder.epoch(), "read marshallable: epoch");
 
         SingleChronicleQueueBuilder builder2 = Marshallable.fromString(builder.toString());
         builder2.build().close();
-        assertEquals(61320000, builder2.epoch());
+        assertEquals(61320000, builder2.epoch(), "read marshallable: epoch after round-trip");
     }
 
     @Test
@@ -140,7 +143,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
             wire.write().typedMarshallable(builder);
 
             SingleChronicleQueueBuilder builder2 = wire.read().typedMarshallable();
-            assertEquals(builder, builder2);
+            assertEquals(builder, builder2, "write marshallable binary: round-trip");
             builder2.build().close();
         }
     }
@@ -153,7 +156,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         String val = Marshallable.$toString(builder);
 
         SingleChronicleQueueBuilder builder2 = Marshallable.fromString(val);
-        assertEquals(builder, builder2);
+        assertEquals(builder, builder2, "write marshallable: round-trip");
         builder2.build().close();
     }
 
@@ -164,11 +167,11 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         final File tmpDir = getTmpDir();
         final int firstSourceId = 1;
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId).build()) {
-            assertNotNull(queue);
+            assertNotNull(queue, "override sourceId: queue created");
             // just create the queue
         }
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(tmpDir).sourceId(firstSourceId + 1).build()) {
-            assertEquals(firstSourceId, q.sourceId());
+            assertEquals(firstSourceId, q.sourceId(), "override sourceId: sourceId read from metadata");
         }
     }
 
@@ -178,7 +181,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
 
         final File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).build()) {
-            assertNotNull(queue);
+            assertNotNull(queue, "read-only: queue created");
             // just create the queue
         }
 
@@ -189,7 +192,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 })
                 .readOnly(true)
                 .build()) {
-            assertNotNull(queue);
+            assertNotNull(queue, "read-only: queue created with condition creator");
             // This will throw if we attempt to create the createAppender condition
         }
     }
@@ -200,7 +203,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     @Test
     public void drainerPriorityIsSetByDefault() {
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single();
-        assertNotNull(builder.drainerPriority()); // priority may change from CONCURRENT in future
+        assertNotNull(builder.drainerPriority(), "drainerPriority: set by default"); // priority may change from CONCURRENT in future
     }
 
     @Test
@@ -231,7 +234,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
 
             try (ExcerptTailer tailer = queue.createTailer()) {
                 for (String expected : messages) {
-                    assertEquals(expected, tailer.readText());
+                    assertEquals(expected, tailer.readText(), "logger config: read message");
                 }
             }
         }
@@ -242,11 +245,11 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 .rollCycle(rollCycle)
                 .build();
              ExcerptTailer tailer = reopened.createTailer()) {
-            assertEquals("Roll cycle should be read from metadata", rollCycle, reopened.rollCycle());
-            assertEquals("SourceId should be read from metadata", sourceId, reopened.sourceId());
+            assertEquals(rollCycle, reopened.rollCycle(), "Roll cycle should be read from metadata");
+            assertEquals(sourceId, reopened.sourceId(), "SourceId should be read from metadata");
 
             for (String expected : messages) {
-                assertEquals(expected, tailer.readText());
+                assertEquals(expected, tailer.readText(), "logger config: read message after reopen");
             }
         } finally {
             IOTools.deleteDirWithFiles(tmpDir);
@@ -259,10 +262,10 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                                              RollCycle expectedRollCycle,
                                              WireType expectedWireType,
                                              int expectedSourceId) {
-        assertEquals(expectedBlockSize, queue.blockSize());
-        assertEquals(expectedBufferCapacity, queue.bufferCapacity());
-        assertEquals(expectedRollCycle, queue.rollCycle());
-        assertEquals(expectedWireType, queue.wireType());
-        assertEquals(expectedSourceId, queue.sourceId());
+        assertEquals(expectedBlockSize, queue.blockSize(), "queue overrides: blockSize");
+        assertEquals(expectedBufferCapacity, queue.bufferCapacity(), "queue overrides: bufferCapacity");
+        assertEquals(expectedRollCycle, queue.rollCycle(), "queue overrides: rollCycle");
+        assertEquals(expectedWireType, queue.wireType(), "queue overrides: wireType");
+        assertEquals(expectedSourceId, queue.sourceId(), "queue overrides: sourceId");
     }
 }

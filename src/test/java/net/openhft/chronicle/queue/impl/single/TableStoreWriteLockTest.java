@@ -16,9 +16,9 @@ import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.Threads;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.Collection;
@@ -28,7 +28,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class TableStoreWriteLockTest extends QueueTestCommon {
@@ -38,7 +42,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     private TableStore<Metadata.NoMeta> tableStore;
     private Path tempDir;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         tempDir = IOTools.createTempDirectory("namedTableStoreLockTest");
         tempDir.toFile().mkdirs();
@@ -47,19 +51,21 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @After
+    @AfterEach
     @Override
     public void tearDown() {
         Closeable.closeQuietly(tableStore);
         IOTools.deleteDirWithFiles(tempDir.toFile());
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void lockWillThrowIllegalStateExceptionIfInterruptedWhileWaitingForLock() throws InterruptedException {
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 5_000)) {
             testLock.lock();
@@ -75,24 +81,28 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             Jvm.pause(10);
             t.interrupt();
             t.join();
-            assertTrue(threwException.get());
+            assertTrue(threwException.get(), "lock: throws IllegalStateException when interrupted");
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void testIsLockedByCurrentProcess() {
         AtomicLong actualPid = new AtomicLong(-1);
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.lock();
-            assertTrue(testLock.isLockedByCurrentProcess(actualPid::set));
-            assertEquals(-1, actualPid.get());
+            assertTrue(testLock.isLockedByCurrentProcess(actualPid::set), "isLockedByCurrentProcess: locked");
+            assertEquals(-1, actualPid.get(), "isLockedByCurrentProcess: pid not reported");
             testLock.unlock();
-            assertFalse(testLock.isLockedByCurrentProcess(actualPid::set));
-            assertEquals(TableStoreWriteLock.UNLOCKED, actualPid.get());
+            assertFalse(testLock.isLockedByCurrentProcess(actualPid::set), "isLockedByCurrentProcess: unlocked");
+            assertEquals(TableStoreWriteLock.UNLOCKED, actualPid.get(), "isLockedByCurrentProcess: unlocked pid");
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void lockWillBeAcquiredAfterTimeoutWithAWarning() throws InterruptedException {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
@@ -100,6 +110,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             t.start();
             t.join();
             testLock.lock();
+            assertTrue(testLock.locked(), "write lock: acquired after timeout");
             expectException("Unlocking forcibly");
             expectException("Forced unlock");
         } finally {
@@ -107,87 +118,100 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5_000, expected = UnrecoverableTimeoutException.class)
+    @Test
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void lockWillThrowExceptionAfterTimeoutWhenDontRecoverLockTimeoutIsTrue() throws InterruptedException {
         System.setProperty("queue.force.unlock.mode", "NEVER");
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
             Thread t = new Thread(testLock::lock);
             t.start();
             t.join();
-            testLock.lock();
-            fail("Should have thrown trying to lock()");
+            assertThrows(UnrecoverableTimeoutException.class, testLock::lock, "lock: unrecoverable timeout when recovery disabled");
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }
     }
 
-    @Test(timeout = 5_000, expected = UnrecoverableTimeoutException.class)
+    @Test
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void lockWillThrowExceptionAfterTimeoutWhenOnlyUnlockIfProcessDeadIsTrue() throws InterruptedException {
         System.setProperty("queue.force.unlock.mode", "LOCKING_PROCESS_DEAD");
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
             Thread t = new Thread(testLock::lock);
             t.start();
             t.join();
-            testLock.lock();
-            fail("Should have thrown trying to lock()");
+            assertThrows(UnrecoverableTimeoutException.class, testLock::lock, "lock: unrecoverable timeout when locked by live process");
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void unlockWillWarnIfNotLocked() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.unlock();
+            assertFalse(testLock.locked(), "write lock: not locked");
             expectException("Write lock was already unlocked.");
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void unlockWillNotUnlockAndWarnIfLockedByAnotherProcess() throws InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
             testLock.unlock();
-            assertTrue(testLock.locked());
+            assertTrue(testLock.locked(), "unlock: remains locked by other process");
             expectException("Write lock was locked by someone else!");
             process.destroy();
             process.waitFor();
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void forceUnlockWillUnlockAndWarnIfLockedByAnotherProcess() throws InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
             testLock.forceUnlock();
-            assertFalse(testLock.locked());
+            assertFalse(testLock.locked(), "forceUnlock: unlocked");
             expectException("Forced unlock for the lock");
             process.destroy();
             process.waitFor();
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void forceUnlockWillNotWarnIfLockIsNotLocked() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.forceUnlock();
-            assertFalse(testLock.locked());
+            assertFalse(testLock.locked(), "forceUnlock: not locked");
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void forceUnlockWillWarnIfLockIsLockedByCurrentProcess() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.lock();
             testLock.forceUnlock();
-            assertFalse(testLock.locked());
+            assertFalse(testLock.locked(), "forceUnlock: unlocked");
             expectException("Forced unlock for the lock");
         }
     }
 
-    @Test(timeout = 15_000)
+    @Test
+
+    @Timeout(value = 15_000, unit = TimeUnit.MILLISECONDS)
     public void lockPreventsConcurrentAcquisition() {
         AtomicBoolean lockIsAcquired = new AtomicBoolean(false);
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 10_000)) {
@@ -205,23 +229,27 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
                 }
             });
             Threads.shutdown(executorService);
+            assertFalse(testLock.locked(), "concurrent acquisition: lock released");
         }
-        assertTrue(true); // if we got here without an exception, the test passes
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(true);
         try (TableStoreWriteLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
-            assertFalse(lock.forceUnlockIfProcessIsDead());
-            assertTrue(lock.locked());
+            assertFalse(lock.forceUnlockIfProcessIsDead(), "forceUnlockIfProcessIsDead: fails when process alive");
+            assertTrue(lock.locked(), "forceUnlockIfProcessIsDead: remains locked");
         }
         lockingProcess.destroy();
         lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws TimeoutException, InterruptedException {
         ignoreException("Forced unlock");
         Process lockingProcess = runLockingProcess(false);
@@ -229,16 +257,18 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             waitForLockToBecomeLocked(lock);
             lockingProcess.destroy();
             lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
-            assertTrue(lock.forceUnlockIfProcessIsDead());
-            assertFalse(lock.locked());
+            assertTrue(lock.forceUnlockIfProcessIsDead(), "forceUnlockIfProcessIsDead: succeeds when process dead");
+            assertFalse(lock.locked(), "forceUnlockIfProcessIsDead: unlocked");
         }
     }
 
-    @Test(timeout = 5_000)
+    @Test
+
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     public void forceUnlockIfProcessIsDeadWillSucceedWhenLockIsNotLocked() {
         try (TableStoreWriteLock lock = createTestLock()) {
-            assertTrue(lock.forceUnlockIfProcessIsDead());
-            assertFalse(lock.locked());
+            assertTrue(lock.forceUnlockIfProcessIsDead(), "forceUnlockIfProcessIsDead: succeeds when not locked");
+            assertFalse(lock.locked(), "forceUnlockIfProcessIsDead: not locked");
         }
     }
 

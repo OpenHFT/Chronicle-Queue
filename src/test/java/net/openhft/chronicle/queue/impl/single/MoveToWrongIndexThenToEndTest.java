@@ -11,9 +11,9 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.RollCycles.DEFAULT;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The ChronicleQueueIT class implements a test that causes Chronicle Queue to
@@ -57,12 +57,12 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     }
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @After
+    @AfterEach
     public void after() {
         outbound.releaseLast();
         closeQuietly(appender, queue);
@@ -71,7 +71,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     private void waitFor(Semaphore semaphore, String message)
             throws InterruptedException {
         boolean ok = semaphore.tryAcquire(5, SECONDS);
-        assertTrue(message, ok);
+        assertTrue(ok, message);
     }
 
     private void append() {
@@ -123,7 +123,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
             waitFor(l1, "tailer finish");
 
-            assertNull("refThrowable", refThrowable.get());
+            assertNull(refThrowable.get(), "refThrowable");
 
         } finally {
             try {

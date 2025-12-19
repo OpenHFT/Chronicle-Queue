@@ -7,13 +7,13 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MultipleNamedTailersTest extends QueueTestCommon {
     @Test
@@ -43,9 +43,9 @@ public class MultipleNamedTailersTest extends QueueTestCommon {
 
     private void check(ExcerptTailer tailer1, String id0, long index0) {
         try (DocumentContext dc = tailer1.readingDocument()) {
-            assertTrue(dc.isPresent());
-            assertEquals(index0, tailer1.index());
-            assertEquals(id0, dc.wire().getValueIn().text());
+            assertTrue(dc.isPresent(), "tailer: document present");
+            assertEquals(index0, tailer1.index(), "tailer: index should match lastIndexAppended");
+            assertEquals(id0, dc.wire().getValueIn().text(), "tailer: readText should match written id");
         }
     }
 }

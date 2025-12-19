@@ -15,8 +15,8 @@ import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -25,7 +25,7 @@ import java.util.TreeMap;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SingleCQFormat2Test extends QueueTestCommon {
 
@@ -38,7 +38,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
     private static void assertHexEquals(long a, long b) {
         if (a != b)
-            assertEquals(Long.toHexString(a) + " != " + Long.toHexString(b), a, b);
+            assertEquals(a, b, Long.toHexString(a) + " != " + Long.toHexString(b));
     }
 
     @Test
@@ -61,12 +61,12 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 name2.writeMarshallable(dc.wire());
             }
             String dump = queue.dump();
-            assertTrue(dump, dump.contains("--- !!meta-data #binary\n" +
+            assertTrue(dump.contains("--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  400,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]"));
+                    "]"), dump);
         }
     }
 
@@ -87,8 +87,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
                 long start = RollCycles.DEFAULT.toIndex(queue.cycle(), 0);
                 appendMessage(appender, start, "Hello World");
-                @NotNull String expectedEager = "" +
-                        "--- !!meta-data #binary\n" +
+                @NotNull String expectedEager = "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
                         "    400,\n" +
@@ -120,8 +119,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 checkFileContents(getFirstQueueFile(dir), expectedEager);
 
                 appendMessage(appender, start + 1, "Another Hello World");
-                @NotNull String expectedEager2 = "" +
-                        "--- !!meta-data #binary\n" +
+                @NotNull String expectedEager2 = "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
                         "    420,\n" +
@@ -157,8 +155,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
                 appendMessage(appender, start + 2, "Bye for now");
 
-                @NotNull String expectedEager3 = "" +
-                        "--- !!meta-data #binary\n" +
+                @NotNull String expectedEager3 = "--- !!meta-data #binary\n" +
                         "header: !SCQStore {\n" +
                         "  writePosition: [\n" +
                         "    448,\n" +
@@ -203,15 +200,19 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         return file.listFiles((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX))[0];
     }
 
-    private void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
-
+    private String readFileContents(@NotNull File file) throws FileNotFoundException {
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, PageUtil.getPageSize(file.getAbsolutePath()), true);
         bytes.readLimit(bytes.realCapacity());
-        assertEquals(expected, Wires.fromAlignedSizePrefixedBlobs(bytes).replaceAll("(?m)^#.+$\\n", ""));
+        String actual = Wires.fromAlignedSizePrefixedBlobs(bytes).replaceAll("(?m)^#.+$\\n", "");
         bytes.releaseLast();
+        return actual;
     }
 
-    private void doTestWritingTwentyMessagesTinyIndex(int spacing, String expected) throws FileNotFoundException {
+    private void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
+        assertEquals(expected, readFileContents(file), "queue file contents should match expected format");
+    }
+
+    private String doTestWritingTwentyMessagesTinyIndex(int spacing, String expected) throws FileNotFoundException {
         @NotNull File dir = getTmpDir();
         dir.mkdir();
 
@@ -225,11 +226,10 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
             long start = RollCycles.DEFAULT.toIndex(queue.cycle(), 0);
             @NotNull ExcerptTailer tailer = queue.createTailer();
-            assertFalse(tailer.moveToIndex(start));
+            assertFalse(tailer.moveToIndex(start), "tailer should not move to non-existent index before any messages written");
 
             appendMessage(appender, start, "Hello World");
-            @NotNull String expectedEager = "" +
-                    "--- !!meta-data #binary\n" +
+            @NotNull String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +
                     "    400,\n" +
@@ -263,25 +263,23 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     .replace("indexSpacing: 1", "indexSpacing: " + spacing)
                     .replace("lastIndex: 1", "lastIndex: " + spacing));
 
-            assertTrue(tailer.moveToIndex(start));
+            assertTrue(tailer.moveToIndex(start), "tailer should move to first written message index");
             for (int i = 1; i < 19; i++) {
-                assertFalse(tailer.moveToIndex(start + i));
+                assertFalse(tailer.moveToIndex(start + i), "tailer should not move to index " + i + " before message written");
                 appendMessage(appender, start + i, "Another Hello World " + (i + 1));
-                assertTrue(tailer.moveToIndex(start + i));
+                assertTrue(tailer.moveToIndex(start + i), "tailer should move to index " + i + " after message written");
             }
-            assertFalse(tailer.moveToIndex(start + 19));
+            assertFalse(tailer.moveToIndex(start + 19), "tailer should not move to index 19 before message written");
             appendMessage(appender, start + 19, "Bye for now");
-            assertTrue(tailer.moveToIndex(start + 19));
-            assertFalse(tailer.moveToIndex(start + 20));
-
-            checkFileContents(getFirstQueueFile(dir), expected);
+            assertTrue(tailer.moveToIndex(start + 19), "tailer should move to index 19 after message written");
+            assertFalse(tailer.moveToIndex(start + 20), "tailer should not move to non-existent index 20");
         }
+        return readFileContents(getFirstQueueFile(dir));
     }
 
     @Test
     public void testWritingTwentyMessagesTinyIndex1() throws FileNotFoundException {
-        doTestWritingTwentyMessagesTinyIndex(1, "" +
-                "--- !!meta-data #binary\n" +
+        String expected = "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
                 "    1184,\n" +
@@ -376,13 +374,14 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 "msg: Another Hello World 19\n" +
                 "--- !!data #binary\n" +
                 "msg: Bye for now\n" +
-                "...\n");
+                "...\n";
+        String actual = doTestWritingTwentyMessagesTinyIndex(1, expected);
+        assertEquals(expected, actual, "format2: twenty messages (spacing=1)");
     }
 
     @Test
     public void testWritingTwentyMessagesTinyIndex2() throws FileNotFoundException {
-        doTestWritingTwentyMessagesTinyIndex(2, "" +
-                "--- !!meta-data #binary\n" +
+        String expected = "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
                 "    1088,\n" +
@@ -462,12 +461,14 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 "msg: Another Hello World 19\n" +
                 "--- !!data #binary\n" +
                 "msg: Bye for now\n" +
-                "...\n");
+                "...\n";
+        String actual = doTestWritingTwentyMessagesTinyIndex(2, expected);
+        assertEquals(expected, actual, "format2: twenty messages (spacing=2)");
     }
 
     @Test
     public void testWritingTwentyMessagesTinyIndex4() throws FileNotFoundException {
-        doTestWritingTwentyMessagesTinyIndex(4, "--- !!meta-data #binary\n" +
+        String expected = "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
                 "    996,\n" +
@@ -537,10 +538,12 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 "msg: Another Hello World 19\n" +
                 "--- !!data #binary\n" +
                 "msg: Bye for now\n" +
-                "...\n");
+                "...\n";
+        String actual = doTestWritingTwentyMessagesTinyIndex(4, expected);
+        assertEquals(expected, actual, "format2: twenty messages (spacing=4)");
     }
 
-    @Before
+    @BeforeEach
     public void resetAppendMode() {
         appendMode = 0;
     }
@@ -590,8 +593,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
             map.put("abc", "aye-bee-see");
             appender.writeMap(map);
 
-            String expectedEager = "" +
-                    "--- !!meta-data #binary\n" +
+            String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -654,14 +656,14 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     "hello: world\n" +
                     "number: 1\n" +
                     "...\n";
-            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""), "queue dump should match expected format with two map entries");
 
             @NotNull ExcerptTailer tailer = queue.createTailer();
             Map<String, Object> map2 = tailer.readMap();
             Map<String, Object> map3 = tailer.readMap();
-            assertEquals("{abc=def, double=1.28, hello=world, number=1}", map2.toString());
-            assertEquals("{abc=aye-bee-see, double=1.28, hello=world, number=1}", map3.toString());
-            assertNull(tailer.readMap());
+            assertEquals("{abc=def, double=1.28, hello=world, number=1}", map2.toString(), "first map should contain original values");
+            assertEquals("{abc=aye-bee-see, double=1.28, hello=world, number=1}", map3.toString(), "second map should contain updated abc value");
+            assertNull(tailer.readMap(), "tailer should return null when no more maps available");
         }
     }
 
@@ -677,8 +679,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
              @NotNull ExcerptAppender appender = queue.createAppender()) {
             appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
             appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
-            String expectedEager = "" +
-                    "--- !!meta-data #binary\n" +
+            String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -743,7 +744,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     "  quantity: 10E6\n" +
                     "}\n" +
                     "...\n";
-            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""), "queue dump should match expected format with two marshallable Order objects");
         }
     }
 
@@ -759,8 +760,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 .build();
              @NotNull final ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("msg-1");
-            String expectedEager = "" +
-                    "--- !!meta-data #binary\n" +
+            String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -817,8 +817,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
             try (DocumentContext dc = appender.writingDocument()) {
                 final Bytes<?> bytes = dc.wire().bytes();
                 final String s = bytes.toHexString(0, bytes.writePosition());
-                assertEquals("" +
-                                "00000000 c1 00 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 ···@··he ader··SC\n" +
+                assertEquals("00000000 c1 00 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 ···@··he ader··SC\n" +
                                 "00000010 51 53 74 6f 72 65 82 aa  00 00 00 cd 77 72 69 74 QStore·· ····writ\n" +
                                 "00000020 65 50 6f 73 69 74 69 6f  6e 8e 01 00 00 00 00 8d ePositio n·······\n" +
                                 "00000030 02 00 00 00 00 00 00 00  02 00 00 00 00 00 00 00 ········ ········\n" +
@@ -842,10 +841,10 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                                 "00000160 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
                                 "........\n" +
                                 "00000190 06 00 00 00 e5 6d 73 67  2d 31 00 00 00 00 00 00 ·····msg -1······\n",
-                        s);
+                        s, "writing document bytes should match expected hex format");
                 dc.rollbackOnClose();
             }
-            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""), "queue dump should match expected format after rolled back write");
         }
         finishedNormally = true;
     }

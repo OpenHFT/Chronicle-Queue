@@ -18,28 +18,28 @@ import net.openhft.chronicle.wire.Wires;
 
 import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @SuppressWarnings({"this-escape", "deprecation", "removal"})
 public class StoreTailerTest extends QueueTestCommon {
     private final Path dataDirectory = getTmpDir().toPath();
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -48,20 +48,20 @@ public class StoreTailerTest extends QueueTestCommon {
     public void testEntryCount() {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build();
              final ExcerptAppender appender = queue.createAppender()) {
-            assertEquals(0, queue.entryCount());
+            assertEquals(0, queue.entryCount(), "Queue should have 0 entries when first created");
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("test").text("value");
             }
             appender.sync();
 
-            assertEquals(1, queue.entryCount());
+            assertEquals(1, queue.entryCount(), "Queue should have 1 entry after writing a single document");
         }
     }
 
     @Test
     public void shouldHandleCycleRollWhenInReadOnlyMode() {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
         try (ChronicleQueue queue = build(createQueue(dataDirectory, MINUTELY, 0, "cycleRoll", false).
@@ -83,13 +83,13 @@ public class StoreTailerTest extends QueueTestCommon {
                 tailer.toStart();
                 tailer.sync();
                 try (final DocumentContext context = tailer.readingDocument()) {
-                    assertTrue(context.isPresent());
+                    assertTrue(context.isPresent(), "Tailer in read-only mode should successfully read the first written document");
                 }
                 tailer.sync();
                 tailer.toEnd();
                 tailer.sync();
                 try (final DocumentContext context = tailer.readingDocument()) {
-                    assertFalse(context.isPresent());
+                    assertFalse(context.isPresent(), "Tailer positioned at end should return no document when attempting to read beyond the last entry");
                 }
                 tailer.sync();
             }
@@ -115,10 +115,10 @@ public class StoreTailerTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text"));
 
-            if (!tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals))) {
+            if (!tailer.readDocument(w -> w.read("test").text("text", org.junit.jupiter.api.Assertions::assertEquals))) {
                 // System.out.println("dump chronicle:\n" + chronicle.dump());
                 // System.out.println("dump chronicle2:\n" + chronicle2.dump());
-                fail("readDocument false");
+                fail("Tailer should successfully read document written after cycle roll (time advanced by 10 minutes)");
             }
         }
     }
@@ -151,8 +151,8 @@ public class StoreTailerTest extends QueueTestCommon {
             ExecutorService ex = Executors.newFixedThreadPool(3);
             // Read the queue with the partially initialised roll cycle
             try (final ExcerptTailer tailer = consumerQueue.createTailer()) {
-                assertEquals("one", tailer.readText());
-                assertEquals("two", tailer.readText());
+                assertEquals("one", tailer.readText(), "Tailer should read first message 'one' from initial cycle before partially initialised cycle");
+                assertEquals("two", tailer.readText(), "Tailer should read second message 'two' from initial cycle before partially initialised cycle");
 
                 // Start the appender, it will over-write the second cycle then create a third
                 final Future<?> submit = ex.submit(() -> appendTwoMoreCycles(tp, producerQueue));
@@ -162,10 +162,10 @@ public class StoreTailerTest extends QueueTestCommon {
                 while ((firstRead = tailer.readText()) == null) {
                     Jvm.pause(1);
                 }
-                assertEquals("other-three", firstRead);
-                assertEquals("other-four", tailer.readText());
-                assertEquals("five", tailer.readText());
-                assertEquals("six", tailer.readText());
+                assertEquals("other-three", firstRead, "After repair, tailer should read 'other-three' from overwritten second cycle");
+                assertEquals("other-four", tailer.readText(), "After repair, tailer should read 'other-four' from overwritten second cycle");
+                assertEquals("five", tailer.readText(), "After repair, tailer should read 'five' from third cycle");
+                assertEquals("six", tailer.readText(), "After repair, tailer should read 'six' from third cycle");
                 submit.get();
             } finally {
                 ExecutorServiceUtil.shutdownAndWaitForTermination(ex);
@@ -220,6 +220,7 @@ public class StoreTailerTest extends QueueTestCommon {
 
     @Test
     public void disableThreadSafety() throws InterruptedException {
+        AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
 
             @Override
@@ -231,43 +232,49 @@ public class StoreTailerTest extends QueueTestCommon {
             void doOnSecondThread(ExcerptTailer tailer) {
                 try {
                     tailer.readText();
-                    fail();
+                    fail("Tailer should throw IllegalStateException when accessed from a different thread without disabling thread safety check");
                 } catch (IllegalStateException expected) {
+                    illegalStateThrown.set(true);
                     // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
                 tailer.readText();
             }
         }.run();
+        assertTrue(illegalStateThrown.get(), "IllegalStateException should have been thrown when tailer was accessed from second thread");
     }
 
     @Test
     public void disableThreadSafetyWithMethodReader() throws InterruptedException {
+        AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
 
             @Override
             void doOnFirstThread(SingleChronicleQueue queue, ExcerptTailer tailer) {
                 writeMethodCall(queue, "Testing1");
                 writeMethodCall(queue, "Testing2");
-                assertEquals("Testing1", readMethodCall(tailer));
+                assertEquals("Testing1", readMethodCall(tailer), "MethodReader on first thread should read 'Testing1' message");
             }
 
             @Override
             void doOnSecondThread(ExcerptTailer tailer) {
                 try {
                     readMethodCall(tailer);
-                    fail();
+                    fail("MethodReader should throw IllegalStateException when tailer is accessed from a different thread without disabling thread safety check");
                 } catch (IllegalStateException expected) {
+                    illegalStateThrown.set(true);
                     // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
-                assertEquals("Testing2", readMethodCall(tailer));
+                assertEquals("Testing2", readMethodCall(tailer), "MethodReader should read 'Testing2' after disabling thread safety check");
             }
         }.run();
+        assertTrue(illegalStateThrown.get(), "IllegalStateException should have been thrown when MethodReader accessed tailer from second thread");
     }
 
     @Test
     public void clearUsedByThread() throws InterruptedException {
+        AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
 
             @Override
@@ -279,18 +286,21 @@ public class StoreTailerTest extends QueueTestCommon {
             void doOnSecondThread(ExcerptTailer tailer) {
                 try {
                     tailer.readText();
-                    fail();
+                    fail("Tailer should throw IllegalStateException when accessed from a different thread without resetting thread ownership");
                 } catch (IllegalStateException expected) {
+                    illegalStateThrown.set(true);
                     // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckReset();
                 tailer.readText();
             }
         }.run();
+        assertTrue(illegalStateThrown.get(), "IllegalStateException should have been thrown when tailer was accessed from second thread before reset");
     }
 
     @Test
     public void clearUsedByThreadWithMethodReader() throws InterruptedException {
+        AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
 
             @Override
@@ -298,21 +308,23 @@ public class StoreTailerTest extends QueueTestCommon {
                 writeMethodCall(queue, "Testing1");
                 writeMethodCall(queue, "Testing2");
                 writeMethodCall(queue, "Testing3");
-                assertEquals("Testing1", readMethodCall(tailer));
+                assertEquals("Testing1", readMethodCall(tailer), "MethodReader on first thread should read 'Testing1' message");
             }
 
             @Override
             void doOnSecondThread(ExcerptTailer tailer) {
                 try {
                     readMethodCall(tailer);
-                    fail();
+                    fail("MethodReader should throw IllegalStateException when tailer is accessed from a different thread without resetting thread ownership");
                 } catch (IllegalStateException expected) {
+                    illegalStateThrown.set(true);
                     // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckReset();
-                assertEquals("Testing2", readMethodCall(tailer));
+                assertEquals("Testing2", readMethodCall(tailer), "MethodReader should read 'Testing2' after resetting thread ownership");
             }
         }.run();
+        assertTrue(illegalStateThrown.get(), "IllegalStateException should have been thrown when MethodReader accessed tailer from second thread before reset");
     }
 
     private void writeMethodCall(SingleChronicleQueue queue, String message) {
@@ -335,9 +347,9 @@ public class StoreTailerTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("Hello World");
             try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isPresent());
-                assertTrue(dc.isMetaData());
-                assertEquals("header", dc.wire().readEvent(String.class));
+                assertTrue(dc.isPresent(), "DocumentContext should be present when reading metadata with readingDocument(true)");
+                assertTrue(dc.isMetaData(), "DocumentContext should indicate it contains metadata");
+                assertEquals("header", dc.wire().readEvent(String.class), "Metadata event should be named 'header'");
             }
         }
     }
@@ -367,8 +379,8 @@ public class StoreTailerTest extends QueueTestCommon {
 
         try (SingleChronicleQueue queue = createQueue.get();
              ExcerptTailer appender = queue.createTailer()) {
-            assertEquals(2, appender.direction(TailerDirection.BACKWARD).toEnd().index());
-            assertEquals(3, appender.direction(TailerDirection.FORWARD).toEnd().index());
+            assertEquals(2, appender.direction(TailerDirection.BACKWARD).toEnd().index(), "Backward tailer's toEnd() should return index 2 (last valid entry) when last cycle is empty");
+            assertEquals(3, appender.direction(TailerDirection.FORWARD).toEnd().index(), "Forward tailer's toEnd() should return index 3 (position after last entry) when last cycle is empty");
         }
     }
 
@@ -434,14 +446,16 @@ public class StoreTailerTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
     public void cantMoveToStartDuringDocumentReading() {
-        assertCannotMoveDuringDocumentReading(ExcerptTailer::toStart);
+        assertThrows(IllegalStateException.class,
+                () -> assertCannotMoveDuringDocumentReading(ExcerptTailer::toStart),
+                "Tailer should throw IllegalStateException when attempting toStart() while reading a document");
     }
 
-    @Test(expected = IllegalStateException.class)
     public void cantMoveToEndDuringDocumentReading() {
-        assertCannotMoveDuringDocumentReading(ExcerptTailer::toEnd);
+        assertThrows(IllegalStateException.class,
+                () -> assertCannotMoveDuringDocumentReading(ExcerptTailer::toEnd),
+                "Tailer should throw IllegalStateException when attempting toEnd() while reading a document");
     }
 
     private void assertCannotMoveDuringDocumentReading(Consumer<ExcerptTailer> move) {
@@ -452,10 +466,10 @@ public class StoreTailerTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("Hello World");
             try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isPresent());
-                assertTrue(dc.isMetaData());
-                assertEquals("header", dc.wire().readEvent(String.class));
-                assertTrue(tailer.toString().contains("StoreTailer{"));
+                assertTrue(dc.isPresent(), "DocumentContext should be present when reading document");
+                assertTrue(dc.isMetaData(), "DocumentContext should indicate it contains metadata");
+                assertEquals("header", dc.wire().readEvent(String.class), "Metadata event should be named 'header'");
+                assertTrue(tailer.toString().contains("StoreTailer{"), "Tailer toString() should contain 'StoreTailer{' type indicator");
                 move.accept(tailer); // forbidden
             }
         }
@@ -468,7 +482,7 @@ public class StoreTailerTest extends QueueTestCommon {
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.striding(true);
-            assertTrue(tailer.striding());
+            assertTrue(tailer.striding(), "Tailer should return true for striding() after enabling striding mode");
         }
     }
 
@@ -490,7 +504,7 @@ public class StoreTailerTest extends QueueTestCommon {
             System.out.println("stride: " + stride);
             for (int i = 1; i <= 10; i += stride) {
                 String expectedMessage = "Message " + i;
-                assertEquals(expectedMessage, tailer.readText());
+                assertEquals(expectedMessage, tailer.readText(), "Striding tailer in forward direction should read '" + expectedMessage + "' at position " + i);
             }
         }
     }
@@ -513,7 +527,7 @@ public class StoreTailerTest extends QueueTestCommon {
             int stride = 256;
             for (int i = 10; i >= 1; i -= stride) {
                 String expectedMessage = "Message " + i;
-                assertEquals(expectedMessage, tailer.readText());
+                assertEquals(expectedMessage, tailer.readText(), "Striding tailer in backward direction should read '" + expectedMessage + "' at position " + i);
             }
         }
     }
@@ -527,7 +541,7 @@ public class StoreTailerTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("Hello World");
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
+                assertTrue(dc.isPresent(), "DocumentContext should be present after writing and reading a document");
                 tailer.moveToIndex(tailer.index() + 1);
             }
         }
@@ -543,15 +557,15 @@ public class StoreTailerTest extends QueueTestCommon {
 
             int cycle = queue.cycle();
 
-            assertEquals("No excerpts should be present initially", -1, tailer.excerptsInCycle(cycle));
+            assertEquals(-1, tailer.excerptsInCycle(cycle), "Tailer should return -1 for excerpt count when no messages have been written to the cycle");
 
             appender.writeText("Message 1");
             appender.writeText("Message 2");
 
-            assertEquals("Should have 2 excerpts in cycle", 2, tailer.excerptsInCycle(cycle));
+            assertEquals(2, tailer.excerptsInCycle(cycle), "Tailer should return 2 excerpts after writing two messages to the cycle");
 
             int nonExistentCycle = cycle + 1;
-            assertEquals("Excerpts in non-existent cycle should be -1", -1, tailer.excerptsInCycle(nonExistentCycle));
+            assertEquals(-1, tailer.excerptsInCycle(nonExistentCycle), "Tailer should return -1 for excerpt count in a non-existent cycle");
         }
     }
 
@@ -562,15 +576,15 @@ public class StoreTailerTest extends QueueTestCommon {
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
             // Negative index
-            assertFalse("Should not move to a negative index", tailer.moveToIndex(-1));
+            assertFalse(tailer.moveToIndex(-1), "Tailer moveToIndex() should return false when given a negative index");
 
             // Index beyond the last index
-            assertFalse("Should not move to an index beyond the last index", tailer.moveToIndex(100));
+            assertFalse(tailer.moveToIndex(100), "Tailer moveToIndex() should return false when given an index beyond the last written entry");
 
             // Index in a non-existent cycle
             int nonExistentCycle = queue.rollCycle().toCycle(tailer.index()) + 10;
             long nonExistentIndex = queue.rollCycle().toIndex(nonExistentCycle, 0);
-            assertFalse("Should not move to an index in a non-existent cycle", tailer.moveToIndex(nonExistentIndex));
+            assertFalse(tailer.moveToIndex(nonExistentIndex), "Tailer moveToIndex() should return false when given an index in a non-existent cycle");
         }
     }
 
@@ -588,16 +602,16 @@ public class StoreTailerTest extends QueueTestCommon {
             tailer.toEnd();
 
             tailer.direction(TailerDirection.BACKWARD);
-            assertEquals("Message 3", tailer.readText());
-            assertEquals("Message 2", tailer.readText());
-            assertEquals("Message 1", tailer.readText());
-            assertNull("Should be null", tailer.readText());
+            assertEquals("Message 3", tailer.readText(), "Backward tailer should read 'Message 3' first (last written message)");
+            assertEquals("Message 2", tailer.readText(), "Backward tailer should read 'Message 2' second");
+            assertEquals("Message 1", tailer.readText(), "Backward tailer should read 'Message 1' third (first written message)");
+            assertNull(tailer.readText(), "Backward tailer should return null when reading before the start");
 
             tailer.direction(TailerDirection.FORWARD);
-            assertNull("Should be null", tailer.readText());
-            assertEquals("Message 1", tailer.readText());
-            assertEquals("Message 2", tailer.readText());
-            assertEquals("Message 3", tailer.readText());
+            assertNull(tailer.readText(), "Forward tailer should return null immediately after direction change from backward at start");
+            assertEquals("Message 1", tailer.readText(), "Forward tailer should read 'Message 1' first after skipping initial null");
+            assertEquals("Message 2", tailer.readText(), "Forward tailer should read 'Message 2' second");
+            assertEquals("Message 3", tailer.readText(), "Forward tailer should read 'Message 3' third");
         }
     }
 
@@ -608,12 +622,12 @@ public class StoreTailerTest extends QueueTestCommon {
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
 
-            assertNull("Should return null when reading from an empty queue", tailer.readText());
+            assertNull(tailer.readText(), "Tailer should return null when attempting to read from an empty queue");
 
             tailer.toStart();
             tailer.toEnd();
 
-            assertNull("Should still return null after moving to end", tailer.readText());
+            assertNull(tailer.readText(), "Tailer should still return null after moving to end of an empty queue");
         }
     }
 
@@ -640,19 +654,15 @@ public class StoreTailerTest extends QueueTestCommon {
 
             // first backward read should retrieve message from second cycle
             boolean firstRead = tailer.readDocument(w ->
-                    assertEquals("secondCycle", w.read("test").text())
+                    assertEquals("secondCycle", w.read("test").text(), "Backward tailer should read 'secondCycle' text from the second cycle")
             );
-            if (!firstRead) {
-                fail("Did not read expected second cycle message!!");
-            }
+            assertTrue(firstRead, "Backward tailer should successfully read document from second cycle");
 
             // second backward read should cross the cycle boundary - reading the message from the first cycle.
             boolean secondRead = tailer.readDocument(w ->
-                    assertEquals("firstCycle", w.read("test").text())
+                    assertEquals("firstCycle", w.read("test").text(), "Backward tailer should read 'firstCycle' text after crossing cycle boundary")
             );
-            if (!secondRead) {
-                fail("Did not read expected first cycle message!!");
-            }
+            assertTrue(secondRead, "Backward tailer should successfully read document from first cycle after crossing cycle boundary");
         }
     }
 
@@ -663,6 +673,9 @@ public class StoreTailerTest extends QueueTestCommon {
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.direction(TailerDirection.BACKWARD);
             tailer.toEnd();
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent(), "Backward tailer should return no document when reading from an empty queue after toEnd()");
+            }
         }
     }
 
@@ -675,7 +688,7 @@ public class StoreTailerTest extends QueueTestCommon {
             appender.writeText("Test123");
             tailer.readText();
 
-            assertNotNull(tailer.currentFile());
+            assertNotNull(tailer.currentFile(), "Tailer currentFile() should return a non-null File after reading a message");
         }
     }
 
@@ -685,7 +698,7 @@ public class StoreTailerTest extends QueueTestCommon {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
 
-            assertNull(tailer.currentFile());
+            assertNull(tailer.currentFile(), "Tailer currentFile() should return null when tailer has not been initialized by reading");
         }
     }
 
@@ -696,7 +709,7 @@ public class StoreTailerTest extends QueueTestCommon {
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.sync();
 
-            assertNull(tailer.currentFile());
+            assertNull(tailer.currentFile(), "Tailer currentFile() should return null after sync() when tailer has not been initialized by reading");
         }
     }
 }

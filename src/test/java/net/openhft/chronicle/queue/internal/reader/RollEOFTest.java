@@ -26,7 +26,7 @@ import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,8 +41,10 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+import org.junit.jupiter.api.Timeout;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class RollEOFTest extends QueueTestCommon {
@@ -65,9 +67,11 @@ public class RollEOFTest extends QueueTestCommon {
         return null;
     }
 
-    @Test(timeout = 5000L)
+    @Test
+
+    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     public void testRollWritesEOF() throws IOException {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
         // expectException("Overriding roll length from existing metadata");
         // expectException("Overriding roll cycle from");
@@ -78,54 +82,60 @@ public class RollEOFTest extends QueueTestCommon {
             final SetTimeProvider timeProvider = new SetTimeProvider();
             timeProvider.currentTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1));
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(1, getNumberOfQueueFiles(path));
+            assertEquals(1, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
 
             // adjust time
             timeProvider.currentTimeMillis(System.currentTimeMillis());
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(2, getNumberOfQueueFiles(path));
+            assertEquals(2, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
 
             List<String> l = new LinkedList<>();
             new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
             // 2 entries per message
-            assertEquals(4, l.size());
+            assertEquals(4, l.size(), "l.size()");
         } finally {
             IOTools.deleteDirWithFiles(path, 20);
         }
     }
 
-    @Test(timeout = 5000L)
-    public void testRollWithoutEOFDoesntBlowup() throws IOException {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+    @Test
 
-        runRollWithoutEOF(-TimeUnit.DAYS.toMillis(1), true);
+    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+    public void testRollWithoutEOFDoesntBlowup() throws IOException {
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
+
+        int messages = runRollWithoutEOF(-TimeUnit.DAYS.toMillis(1), true);
+        assertEquals(4, messages, "roll without eof: messages read (read-only)");
     }
 
-    @Test(timeout = 5000L)
+    @Test
+
+    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     public void testRollWithoutEOF() throws IOException {
         // expectException("Overriding roll length from existing metadata");
         // expectException("Overriding roll cycle from");
 
-        runRollWithoutEOF(-TimeUnit.DAYS.toMillis(3), false);
+        int messages = runRollWithoutEOF(-TimeUnit.DAYS.toMillis(3), false);
+        assertEquals(4, messages, "roll without eof: messages read (writable)");
     }
 
-    private void runRollWithoutEOF(long initialOffsetMillis, boolean readOnly) throws IOException {
+    private int runRollWithoutEOF(long initialOffsetMillis, boolean readOnly) throws IOException {
         final File path = getTmpDir();
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();
             timeProvider.currentTimeMillis(System.currentTimeMillis() + initialOffsetMillis);
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(1, getNumberOfQueueFiles(path));
+            assertEquals(1, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
 
             // adjust time
             timeProvider.currentTimeMillis(System.currentTimeMillis());
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(2, getNumberOfQueueFiles(path));
+            assertEquals(2, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
 
             Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
 
-            assertTrue(firstQueueFile.isPresent());
+            assertTrue(firstQueueFile.isPresent(), "firstQueueFile.isPresent()");
 
             // remove EOF from first file
             removeEOF(firstQueueFile.get());
@@ -137,7 +147,7 @@ public class RollEOFTest extends QueueTestCommon {
             }
             reader.execute();
             // 2 entries per message
-            assertEquals(4, l.size());
+            return l.size();
         } finally {
             IOTools.deleteDirWithFiles(path, 20);
         }
@@ -156,7 +166,7 @@ public class RollEOFTest extends QueueTestCommon {
             bytes.readSkip(4);
             // move past header
             try (final SingleChronicleQueueStore qs = loadStore(wire)) {
-                assertNotNull(qs);
+                assertNotNull(qs, "qs");
                 long l = qs.writePosition();
                 long len = Wires.lengthOf(bytes.readVolatileInt(l));
                 long eofOffset = l + len + 4L;

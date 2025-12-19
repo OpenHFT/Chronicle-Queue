@@ -10,9 +10,9 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -23,19 +23,21 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Timeout;
 
 public class EmptyRollCycleTest extends QueueTestCommon {
 
     private static final String EMPTY_ROLL_CYCLE_NAME = "19700101-0020X.cq4";
     private Path dataDirectory;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         dataDirectory = IOTools.createTempDirectory("EmptyRollCycleTest");
     }
 
-    @After
+    @AfterEach
     @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(dataDirectory.toFile());
@@ -58,10 +60,10 @@ public class EmptyRollCycleTest extends QueueTestCommon {
                     if (!readingDocument.isPresent()) {
                         break;
                     }
-                    assertEquals(expectedValue++, readingDocument.wire().read("test").int32());
+                    assertEquals(expectedValue++, readingDocument.wire().read("test").int32(), "tailer should read sequential test values from queue despite empty roll cycle at end");
                 }
             }
-            assertEquals(2, expectedValue);
+            assertEquals(2, expectedValue, "tailer should read exactly 2 documents before reaching empty roll cycle");
         }
     }
 
@@ -89,13 +91,15 @@ public class EmptyRollCycleTest extends QueueTestCommon {
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.moveToIndex(indexWritten);
             try (final DocumentContext readingDocument = tailer.readingDocument()) {
-                assertTrue(readingDocument.isPresent());
-                assertEquals("appending", readingDocument.wire().read("test").text());
+                assertTrue(readingDocument.isPresent(), "tailer should find document at index written after empty roll cycle");
+                assertEquals("appending", readingDocument.wire().read("test").text(), "document appended after empty roll cycle should contain expected text value");
             }
         }
     }
 
-    @Test(timeout = 6_000)
+    @Test
+
+    @Timeout(value = 6_000, unit = TimeUnit.MILLISECONDS)
     public void appropriateExceptionIsThrownWhenLockCannotBeAcquiredForRecovery() throws IOException, InterruptedException {
         createQueueWithEmptyRollCycleAtEnd();
 
@@ -113,14 +117,14 @@ public class EmptyRollCycleTest extends QueueTestCommon {
                  ExcerptTailer tailer = queue.createTailer()) {
                 for (int i = 0; i < 2; i++) {
                     try (final DocumentContext readingDocument = tailer.readingDocument()) {
-                        assertTrue(readingDocument.isPresent());
+                        assertTrue(readingDocument.isPresent(), "tailer should read document " + i + " even when empty roll cycle is locked");
                     }
                 }
-                assertFalse(tailer.readingDocument().isPresent());
+                assertFalse(tailer.readingDocument().isPresent(), "tailer should not find any more documents after reading all valid entries");
             }
         } finally {
             start.destroy();
-            assertTrue(start.waitFor(5, TimeUnit.SECONDS));
+            assertTrue(start.waitFor(5, TimeUnit.SECONDS), "locking process should terminate within 5 seconds after destroy");
         }
     }
 

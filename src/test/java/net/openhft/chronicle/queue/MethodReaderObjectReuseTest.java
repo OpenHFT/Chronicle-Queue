@@ -12,21 +12,21 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiredForClient
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class MethodReaderObjectReuseTest extends QueueTestCommon {
-    @Before
+    @BeforeEach
     public void resetCounters() {
         PingDTO.constructionCounter.set(0);
         PingDTO.constructionExpected.set(0);
@@ -43,7 +43,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
             Pinger pinger = cq.methodWriter(Pinger.class);
             for (int i = 0; i < 5; i++) {
                 pinger.ping(pdtio);
-                assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get());
+                assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get(), "PingDTO construction count should match expected count to verify object reuse");
                 pdtio.bytes.append("hi");
             }
             StringBuilder sb = new StringBuilder();
@@ -56,7 +56,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                 continue;
             }
             // moved this assert below the readOne as object may be constructed lazily
-            assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get());
+            assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get(), "PingDTO construction count should match expected count after reading all messages");
             assertEquals("ping !PingDTO {\n" +
                     "  bytes: \"\"\n" +
                     "}\n" +
@@ -71,7 +71,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                     "}\n" +
                     "ping !PingDTO {\n" +
                     "  bytes: hihihihi\n" +
-                    "}\n", sb.toString());
+                    "}\n", sb.toString(), "Method reader output should contain all ping messages with accumulated byte contents");
         } finally {
             IOTools.deleteDirWithFiles(path);
         }
@@ -95,8 +95,8 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
             PingDTO.constructionExpected.incrementAndGet();
             MethodReader reader = cq.createTailer().methodReader(
                     (Pinger) pingDTO -> observed.set(pingDTO.bytes.toString()));
-            assertTrue(reader.readOne());
-            assertEquals("immutable", observed.get());
+            assertTrue(reader.readOne(), "Method reader should successfully read one message from queue");
+            assertEquals("immutable", observed.get(), "Payload should be 'immutable' to verify snapshot was taken at write time, not affected by source mutation");
         } finally {
             IOTools.deleteDirWithFiles(path);
         }
@@ -116,8 +116,8 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
             AtomicReference<String> observed = new AtomicReference<>();
             MethodReader reader = cq.createTailer().methodReader(
                     (DirectPinger) pingDTO -> observed.set(pingDTO.bytes.toString()));
-            assertTrue(reader.readOne());
-            assertEquals("direct", observed.get());
+            assertTrue(reader.readOne(), "Method reader should successfully read one message with direct bytes from queue");
+            assertEquals("direct", observed.get(), "Direct bytes payload should be 'direct' to verify snapshot was taken at write time, not affected by source mutation");
             dto.close();
         } finally {
             IOTools.deleteDirWithFiles(path);

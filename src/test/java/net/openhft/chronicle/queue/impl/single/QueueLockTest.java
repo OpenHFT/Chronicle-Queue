@@ -10,20 +10,20 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class QueueLockTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -38,9 +38,9 @@ public class QueueLockTest extends QueueTestCommon {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try {
             check(false);
-            fail();
+            fail("unexpected failure");
         } catch (IllegalStateException e) {
-            assertTrue(e.getMessage().contains("overwritten? Expected:"));
+            assertTrue(e.getMessage().contains("overwritten? Expected:"), "e.getMessage().contains(\"overwritten? Expected:\")");
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }
@@ -64,7 +64,7 @@ public class QueueLockTest extends QueueTestCommon {
 
                 // lock the queue
                 try (DocumentContext dc = excerptAppender.writingDocument()) {
-                    assertNotNull(dc);
+                    assertNotNull(dc, "writing document context should be created successfully");
                     final CountDownLatch started = new CountDownLatch(1);
                     final CountDownLatch finished = new CountDownLatch(1);
                     final AtomicBoolean recoveredAndAcquiredTheLock = new AtomicBoolean();
@@ -77,7 +77,7 @@ public class QueueLockTest extends QueueTestCommon {
                             started.countDown();
                             try (final ExcerptAppender queue2Appender = queue2.createAppender();
                                  final DocumentContext context = queue2Appender.writingDocument()) {
-                                assertNotNull(context);
+                                assertNotNull(context, "second thread writing document context should be created after lock timeout or recovery");
 
                                 recoveredAndAcquiredTheLock.set(true);
                                 System.out.println("Done");
@@ -99,9 +99,9 @@ public class QueueLockTest extends QueueTestCommon {
                     finished.await(10, TimeUnit.SECONDS);
                     long endTime = System.currentTimeMillis();
                     long time = endTime - startTime;
-                    assertEquals(shouldThrowException, threwException.get());
-                    assertEquals(shouldThrowException, !recoveredAndAcquiredTheLock.get());
-                    assertTrue("timeout, time: " + time, time >= timeoutMs);
+                    assertEquals(shouldThrowException, threwException.get(), "lock acquisition should throw exception when recovery disabled and timeout when recovery enabled");
+                    assertEquals(shouldThrowException, !recoveredAndAcquiredTheLock.get(), "lock should be recovered and acquired when recovery enabled, fail when recovery disabled");
+                    assertTrue(time >= timeoutMs, "timeout, time: " + time);
                 }
             }
             finishedNormally = true;

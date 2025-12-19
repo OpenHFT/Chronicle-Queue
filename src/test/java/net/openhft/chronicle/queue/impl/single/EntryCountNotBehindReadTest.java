@@ -9,8 +9,8 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,14 +22,14 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongConsumer;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SuppressWarnings({"deprecation", "removal"})
 public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     private static final int TOTAL_EVENTS = 100_000;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -90,7 +90,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
         final int cycle = cycleType.toCycle(readIndex);
         final long readCount = cycleType.toSequenceNumber(readIndex) + 1;
         final long excerptCount = tailer.excerptsInCycle(cycle);
-        assertFalse(readCount > excerptCount);
+        assertFalse(readCount > excerptCount, "readCount should not exceed excerptCount");
     }
 
     private void checkToEnd(SingleChronicleQueue queue, long readIndex) {
@@ -103,7 +103,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
                 excerptCount = cycleType.toSequenceNumber(tailer.toEnd().index());
             }
         }
-        assertFalse(readCount > excerptCount);
+        assertFalse(readCount > excerptCount, "readCount should not exceed excerptCount");
     }
 
     private void startWriter(SingleChronicleQueue queue, CyclicBarrier startBarrier) {

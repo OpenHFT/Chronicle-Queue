@@ -12,15 +12,15 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
 @SuppressWarnings({"deprecation", "removal"})
@@ -36,32 +36,32 @@ public class LastAcknowledgedTest extends QueueTestCommon {
 
             ExcerptTailer tailer = q.createTailer();
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isData());
-                assertEquals(lastIndexAppended, tailer.index());
+                assertTrue(dc.isData(), "last acknowledged: first document is data");
+                assertEquals(lastIndexAppended, tailer.index(), "last acknowledged: tailer index");
             }
 
             ExcerptTailer tailer2 = q.createTailer();
             tailer2.readAfterReplicaAcknowledged(true);
             try (DocumentContext dc = tailer2.readingDocument()) {
-                assertFalse(dc.isPresent());
+                assertFalse(dc.isPresent(), "last acknowledged: not present until acknowledged");
             }
         }
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(name).testBlockSize().build()) {
-            assertEquals(-1, q.lastAcknowledgedIndexReplicated());
+            assertEquals(-1, q.lastAcknowledgedIndexReplicated(), "last acknowledged: initial replicated index");
 
             q.lastAcknowledgedIndexReplicated(lastIndexAppended - 1);
 
             ExcerptTailer tailer2 = q.createTailer();
             tailer2.readAfterReplicaAcknowledged(true);
             try (DocumentContext dc = tailer2.readingDocument()) {
-                assertFalse(dc.isPresent());
+                assertFalse(dc.isPresent(), "last acknowledged: not present at lastIndexAppended - 1");
             }
 
             q.lastAcknowledgedIndexReplicated(lastIndexAppended);
 
             try (DocumentContext dc = tailer2.readingDocument()) {
-                assertTrue(dc.isData());
-                assertEquals(lastIndexAppended, tailer2.index());
+                assertTrue(dc.isData(), "last acknowledged: present after acknowledgement");
+                assertEquals(lastIndexAppended, tailer2.index(), "last acknowledged: tailer2 index");
             }
         }
         IOTools.deleteDirWithFiles(name);
@@ -79,19 +79,19 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             ExcerptAppender appender = queue.createAppender();
 
             ExcerptTailer tailer = queue.createTailer();
-            Assert.assertFalse(tailer.readAfterReplicaAcknowledged());
+            Assertions.assertFalse(tailer.readAfterReplicaAcknowledged(), "read before ack: default readAfterReplicaAcknowledged");
 
             // Set up the tailer to use a custom acknowledged index replicated check
             tailer.acknowledgedIndexReplicatedCheck((index, lastSequenceAck) -> index <= lastSequenceAck);
-            Assert.assertTrue(tailer.readAfterReplicaAcknowledged());
+            Assertions.assertTrue(tailer.readAfterReplicaAcknowledged(), "read before ack: readAfterReplicaAcknowledged enabled");
 
             // tolerateNumberOfUnAckedMessages
             {
                 appender.writeText("hello1");
-                assertNull(tailer.readText());
+                assertNull(tailer.readText(), "read before ack: hello1 not yet visible");
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
-                Assert.assertEquals("hello1", tailer.readText());
-                assertNull(tailer.readText());
+                Assertions.assertEquals("hello1", tailer.readText(), "read before ack: hello1 visible");
+                assertNull(tailer.readText(), "read before ack: end after hello1");
             }
 
             // tolerateNumberOfUnAckedMessages = 1
@@ -101,9 +101,9 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 appender.writeText("hello2");
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
                 appender.writeText("hello3");
-                Assert.assertEquals("hello2", tailer.readText());
-                Assert.assertEquals("hello3", tailer.readText());
-                assertNull(tailer.readText());
+                Assertions.assertEquals("hello2", tailer.readText(), "read before ack: hello2 visible");
+                Assertions.assertEquals("hello3", tailer.readText(), "read before ack: hello3 visible");
+                assertNull(tailer.readText(), "read before ack: end after hello3");
             }
 
             // tolerateNumberOfUnAckedMessages = 2
@@ -114,10 +114,10 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
                 appender.writeText("hello5");
                 appender.writeText("hello6");
-                Assert.assertEquals("hello4", tailer.readText());
-                Assert.assertEquals("hello5", tailer.readText());
-                Assert.assertEquals("hello6", tailer.readText());
-                assertNull(tailer.readText());
+                Assertions.assertEquals("hello4", tailer.readText(), "read before ack: hello4 visible");
+                Assertions.assertEquals("hello5", tailer.readText(), "read before ack: hello5 visible");
+                Assertions.assertEquals("hello6", tailer.readText(), "read before ack: hello6 visible");
+                assertNull(tailer.readText(), "read before ack: end after hello6");
             }
         }
     }
@@ -146,22 +146,22 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             ExcerptAppender appender = queue.createAppender();
             timeProvider.set(1);
             ExcerptTailer tailer = queue.createTailer();
-            Assert.assertFalse(tailer.readAfterReplicaAcknowledged());
+            Assertions.assertFalse(tailer.readAfterReplicaAcknowledged(), "read before ack roll: default readAfterReplicaAcknowledged");
 
             // Set up the tailer to use a custom acknowledged index replicated check
             tailer.acknowledgedIndexReplicatedCheck((index, lastSequenceAck) -> index <= lastSequenceAck);
-            Assert.assertTrue(tailer.readAfterReplicaAcknowledged());
+            Assertions.assertTrue(tailer.readAfterReplicaAcknowledged(), "read before ack roll: readAfterReplicaAcknowledged enabled");
 
             timeProvider.set(1);
             // tolerateNumberOfUnAckedMessages
             {
                 appender.writeText("hello1");
                 appender.writeText("hello2");
-                assertNull(tailer.readText());
+                assertNull(tailer.readText(), "read before ack roll: hello1 not yet visible");
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
-                Assert.assertEquals("hello1", tailer.readText());
-                Assert.assertEquals("hello2", tailer.readText());
-                assertNull(tailer.readText());
+                Assertions.assertEquals("hello1", tailer.readText(), "read before ack roll: hello1 visible");
+                Assertions.assertEquals("hello2", tailer.readText(), "read before ack roll: hello2 visible");
+                assertNull(tailer.readText(), "read before ack roll: end after hello2");
             }
 
             timeProvider.set(2);
@@ -172,8 +172,8 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             // causing the roll
             timeProvider.set(1002);
 
-            Assert.assertEquals("hello3", tailer.readText());
-            assertNull(tailer.readText());
+            Assertions.assertEquals("hello3", tailer.readText(), "read before ack roll: hello3 visible");
+            assertNull(tailer.readText(), "read before ack roll: end after hello3");
         }
     }
 }

@@ -10,13 +10,13 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiredForClient
 public class MessageReaderWriterTest extends QueueTestCommon {
@@ -49,14 +49,14 @@ public class MessageReaderWriterTest extends QueueTestCommon {
                 writer1.method2(new Message2(234));
 
                 // read those messages
-                assertTrue(reader1.readOne());
-                assertTrue(reader1.readOne());
-                assertFalse(reader1.readOne());
+                assertTrue(reader1.readOne(), "reader1.readOne()");
+                assertTrue(reader1.readOne(), "reader1.readOne()");
+                assertFalse(reader1.readOne(), "reader1.readOne()");
 
                 // read the produced messages
-                assertTrue(reader2.readOne());
-                assertTrue(reader2.readOne());
-                assertFalse(reader2.readOne());
+                assertTrue(reader2.readOne(), "reader2.readOne()");
+                assertTrue(reader2.readOne(), "reader2.readOne()");
+                assertFalse(reader2.readOne(), "reader2.readOne()");
             }
             // System.out.println(queue1.dump());
         }

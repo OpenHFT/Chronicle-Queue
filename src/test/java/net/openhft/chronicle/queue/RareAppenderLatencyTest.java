@@ -10,8 +10,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.UUID;
@@ -20,8 +20,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static junit.framework.TestCase.assertFalse;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /*
  * Created by skidder on 8/2/16.
@@ -39,12 +39,12 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
     private ExecutorService appenderES;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         appenderES = Executors.newSingleThreadExecutor(
                 new NamedThreadFactory("Appender", false));
@@ -126,7 +126,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             // System.out.println("Wrote first rare one in " + l + " ms");
             // System.out.println("Wrote another rare one in " + (System.currentTimeMillis() - now) + " ms");
 
-            assertFalse("Appending from rare thread latency too high!", l > 150);
+            assertFalse(l > 150, "Appending from rare thread latency too high!");
         }
     }
 

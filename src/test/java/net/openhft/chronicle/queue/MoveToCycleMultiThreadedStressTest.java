@@ -9,16 +9,20 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Threads;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
@@ -33,12 +37,12 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
     private boolean resourceTracing;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Before
+    @BeforeEach
     public void disableResourceTracing() {
         // with this enabled, and a 32 GB heap this fails with flight recorder
         // with this disabled, and a 32 *MB* heap this passes with flight recorder on
@@ -46,12 +50,14 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
         Jvm.setResourceTracing(false);
     }
 
-    @After
+    @AfterEach
     public void resetResourceTracing() {
         Jvm.setResourceTracing(resourceTracing);
     }
 
-    @Test(timeout = 60000)
+    @Test
+
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void test() throws ExecutionException, InterruptedException {
         final String path = OS.getTarget() + "/stressMoveToCycle-" + Time.uniqueId();
         final ExecutorService es = Executors.newCachedThreadPool();
@@ -79,14 +85,15 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
             shutDown.set(true);
             Thread.sleep(100);
 
-            f.forEach(c -> {
+            for (Future<Void> future : f) {
                 try {
-                    c.get(1, TimeUnit.SECONDS);
+                    future.get(1, TimeUnit.SECONDS);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    Assert.fail();
+                    Assertions.fail("moveToCycle: reader task failed");
                 }
-            });
+            }
+            Assertions.assertTrue(last.get() >= firstCycle, "moveToCycle: last cycle updated");
         }
 
         Threads.shutdown(es);

@@ -82,8 +82,8 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
                  ExcerptAppender appender = queue.createAppender()) {
-                assertNotNull(queue);
-                assertNotNull(appender);
+                assertNotNull(queue, "Queue should be created successfully for existing queue test");
+                assertNotNull(appender, "Appender should be created successfully for existing queue test");
             }
 
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -97,8 +97,8 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
                  ExcerptAppender appender = queue.createAppender()) {
-                assertNotNull(queue);
-                assertNotNull(appender);
+                assertNotNull(queue, "Queue should be created successfully for existing queue with write test");
+                assertNotNull(appender, "Appender should be created successfully for existing queue with write test");
             }
 
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -111,6 +111,6 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
 
     private void assertMapped(File queuePath) {
         String path = queuePath.getAbsolutePath();
-        assertTrue(monitoredPaths.containsKey(path), () -> "Expected that the following queue path should be monitored by the disk space monitor, but it was not. Path: " + path);
+        assertTrue(monitoredPaths.containsKey(path), "Expected that the following queue path should be monitored by the disk space monitor, but it was not. Path: " + path);
     }
 }

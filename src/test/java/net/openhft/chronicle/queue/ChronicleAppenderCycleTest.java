@@ -8,8 +8,8 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * This test case replicates the assertion error in Chronicle StoreAppender's checkWritePositionHeaderNumber() method. see
@@ -29,7 +29,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
     private static final long LATCH_TIMEOUT_MS = 5000;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -40,14 +40,18 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
         Bytes<?> msg = Bytes.allocateDirect(64);
         try {
             int n = 20;
-            for (int i = 0; i < n; ++i)
-                runTest(id + '-' + i, msg);
+            for (int i = 0; i < n; ++i) {
+                String runId = id + '-' + i;
+                Throwable[] errors = runTest(runId, msg);
+                assertNull(errors[0], "Writer thread should complete without errors during cycle test run " + runId);
+                assertNull(errors[1], "Cycler thread should complete without errors during cycle test run " + runId);
+            }
         } finally {
             msg.releaseLast();
         }
     }
 
-    private void runTest(String id, Bytes<?> msg) {
+    private Throwable[] runTest(String id, Bytes<?> msg) {
         Path path = IOTools.createTempDirectory(id);
         try {
             CountDownLatch steady = new CountDownLatch(2);
@@ -77,8 +81,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
             go.countDown();
             await(done, "done");
 
-            assertNull(thr1.get());
-            assertNull(thr2.get());
+            return new Throwable[]{thr1.get(), thr2.get()};
         } finally {
             IOTools.deleteDirWithFiles(path.toFile());
         }

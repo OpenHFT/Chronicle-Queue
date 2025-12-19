@@ -6,31 +6,28 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import static net.openhft.chronicle.queue.util.HugetlbfsTestUtil.getHugetlbfsQueueDirectory;
 import static net.openhft.chronicle.queue.util.HugetlbfsTestUtil.isHugetlbfsAvailable;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class HugetlbfsTest extends QueueTestCommon {
 
-    @Rule
-    public final TestName testName = new TestName();
-
     @Test
-    public void queueHugetlbfsEndToEndSimpleAcceptanceTest() {
+    public void queueHugetlbfsEndToEndSimpleAcceptanceTest(TestInfo testInfo) {
         assumeTrue(isHugetlbfsAvailable());
-        String path = getHugetlbfsQueueDirectory(testName);
+        String methodName = testInfo.getTestMethod().map(m -> m.getName()).orElse("unknown");
+        String path = getHugetlbfsQueueDirectory(methodName);
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single()
                 .path(path)
                 .build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
             appender.writeText("1");
-            assertEquals("1", tailer.readText());
+            assertEquals("1", tailer.readText(), "hugetlbfs: read back written message");
         } finally {
             IOTools.deleteDirWithFiles(path);
         }

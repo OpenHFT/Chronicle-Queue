@@ -12,8 +12,8 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -24,7 +24,7 @@ import java.util.List;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class ToEndTest extends QueueTestCommon {
@@ -69,9 +69,9 @@ public class ToEndTest extends QueueTestCommon {
                 appender.writeDocument(wire -> wire.write("msg").int32(4));
 
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
+                    assertTrue(dc.isPresent(), "Should be able to read entry in this cycle. Got NoDocumentContext.");
                     int i = dc.wire().read("msg").int32();
-                    assertEquals("Should've read 4, instead we read: " + i, 4, i);
+                    assertEquals(4, i, "Should've read 4, instead we read: " + i);
                 }
 
                 // read from the beginning
@@ -79,9 +79,9 @@ public class ToEndTest extends QueueTestCommon {
 
                 for (int j = 1; j <= 4; j++) {
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        assertTrue(dc.isPresent());
+                        assertTrue(dc.isPresent(), "missing cycles: present j=" + j);
                         int i = dc.wire().read("msg").int32();
-                        assertEquals(j, i);
+                        assertEquals(j, i, "missing cycles: msg at j=" + j);
                     }
                 }
 
@@ -98,11 +98,11 @@ public class ToEndTest extends QueueTestCommon {
                 timeProvider.currentTimeMillis(now + timeIncMs * 5);
 
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue(dc.isPresent());
-                    assertEquals(5, dc.wire().read("msg").int32());
+                    assertTrue(dc.isPresent(), "missing cycles: present after roll");
+                    assertEquals(5, dc.wire().read("msg").int32(), "missing cycles: msg after roll");
                 }
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertFalse(dc.isPresent());
+                    assertFalse(dc.isPresent(), "missing cycles: end after roll");
                 }
             }
         } finally {
@@ -143,7 +143,7 @@ public class ToEndTest extends QueueTestCommon {
             SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
             // the reference count here is 1, the queue itself
-            assertFalse(store2.isClosed());
+            assertFalse(store2.isClosed(), "toEnd: store not closed");
         } finally {
             IOTools.deleteDirWithFiles(path);
         }
@@ -175,16 +175,16 @@ public class ToEndTest extends QueueTestCommon {
                 checkOneFile(baseDir);
 
                 ExcerptTailer atEnd = tailer.toEnd();
-                assertEquals(10, queue.rollCycle().toSequenceNumber(atEnd.index()));
+                assertEquals(10, queue.rollCycle().toSequenceNumber(atEnd.index()), "toEnd: index at end");
                 checkOneFile(baseDir);
                 fillResults(atEnd, results);
                 checkOneFile(baseDir);
-                assertEquals(0, results.size());
+                assertEquals(0, results.size(), "toEnd: results empty at end");
 
                 tailer.toStart();
                 checkOneFile(baseDir);
                 fillResults(tailer, results);
-                assertEquals(10, results.size());
+                assertEquals(10, results.size(), "toEnd: results size after toStart");
                 checkOneFile(baseDir);
             }
             System.gc();
@@ -207,7 +207,7 @@ public class ToEndTest extends QueueTestCommon {
 
                 // if this appender isn't created, the tailer toEnd doesn't cause a roll.
                 try (ExcerptAppender appender = queue.createAppender()) {
-                    assertNotNull(appender);
+                    assertNotNull(appender, "toEnd before write: appender created");
 
                     checkOneFile(baseDir);
 
@@ -271,12 +271,12 @@ public class ToEndTest extends QueueTestCommon {
             while (tailer.readText() != null)
                 Jvm.nanoPause();
 
-            assertNull(tailer.readText());
+            assertNull(tailer.readText(), "toEnd after write: end of queue");
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
             ExcerptTailer tailer1 = rqueue.createTailer();
             ExcerptTailer excerptTailer = tailer1.toEnd();
-            assertNull(excerptTailer.readText());
+            assertNull(excerptTailer.readText(), "toEnd after write: empty at end");
         }
         System.gc();
     }
@@ -285,8 +285,8 @@ public class ToEndTest extends QueueTestCommon {
     public void shouldReturnExpectedValuesForEmptyQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
-            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
+            assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue), "toEnd index: empty queue");
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue), "last write index: empty queue");
         }
     }
 
@@ -295,7 +295,7 @@ public class ToEndTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(queue.file().getAbsolutePath()));
+            Assumptions.assumeFalse(PageUtil.isHugePage(queue.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
             writeMetadataToQueue(queue);
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -362,12 +362,12 @@ public class ToEndTest extends QueueTestCommon {
                     "--- !!meta-data #binary\n" +
                     "\"\": hello!\n" +
                     "...\n" +
-                    "# 130272 bytes remaining\n", queue.dump());
-            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue));
+                    "# 130272 bytes remaining\n", queue.dump(), "queue dump: only metadata");
+            assertEquals(LONG_MIN_VALUE_AS_HEX_STRING, lastWriteIndex(queue), "last write index: only metadata");
             // toEnd().index() should be where it expects the next excerpt in an existing cycle to be written.
             final String actual = tailerToEndIndex(queue);
             writeExcerptToQueue(queue);
-            assertEquals(actual, lastWriteIndex(queue));
+            assertEquals(actual, lastWriteIndex(queue), "last write index: after writing excerpt");
         }
     }
 
@@ -383,8 +383,8 @@ public class ToEndTest extends QueueTestCommon {
             timeProvider.advanceMicros(FIVE_SECONDS);
             writeMetadataToQueue(queue);
 
-            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue));
-            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue));
+            assertEquals(lastWriteIndexBefore, lastWriteIndex(queue), "last write index: unchanged after metadata");
+            assertEquals(tailerToEndIndexBefore, tailerToEndIndex(queue), "tailer toEnd index: unchanged after metadata");
         }
     }
 
@@ -431,7 +431,7 @@ public class ToEndTest extends QueueTestCommon {
             return;
 
         if (files.length == 1)
-            assertTrue(files[0], files[0].startsWith("2"));
+            assertTrue(files[0].startsWith("2"), files[0]);
         else
             fail("Too many files " + Arrays.toString(files));
     }

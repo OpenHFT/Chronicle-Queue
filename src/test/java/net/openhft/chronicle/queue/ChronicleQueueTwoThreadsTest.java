@@ -11,16 +11,20 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 @RequiredForClient
 public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
@@ -29,39 +33,44 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     private static final long INTERVAL_US = 10;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Ignore("long running test")
-    @Test(timeout = 60000)
+    @Disabled("long running test")
+    @Test
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testUnbuffered() throws InterruptedException {
-        doTest(false, 50_000);
+        long reads = doTest(false, 50_000);
+        assertEquals(50_000, reads, "two-threads: unbuffered reads");
     }
 
     @Test
     public void testConcurrentShortRun() throws InterruptedException {
-        doTest(false, 1_000);
+        long reads = doTest(false, 1_000);
+        assertEquals(1_000, reads, "two-threads: concurrent short run reads");
     }
 
     @Test
     public void testBufferedShortRun() throws InterruptedException {
         assumeBufferingAvailable();
-        doTest(BufferMode.Asynchronous, false, false, 1_000);
+        long reads = doTest(BufferMode.Asynchronous, false, false, 1_000);
+        assertEquals(1_000, reads, "two-threads: buffered short run reads");
     }
 
     @Test
     public void testBufferedHeapBytes() throws InterruptedException {
         assumeBufferingAvailable();
-        doTest(BufferMode.Asynchronous, true, true, 512);
+        long reads = doTest(BufferMode.Asynchronous, true, true, 512);
+        assertEquals(512, reads, "two-threads: buffered heap bytes reads");
     }
 
-    private void doTest(boolean buffered, long runs) throws InterruptedException {
-        doTest(buffered ? BufferMode.Asynchronous : BufferMode.None, false, false, runs);
+    private long doTest(boolean buffered, long runs) throws InterruptedException {
+        return doTest(buffered ? BufferMode.Asynchronous : BufferMode.None, false, false, runs);
     }
 
-    private void doTest(@NotNull BufferMode bufferMode,
+    private long doTest(@NotNull BufferMode bufferMode,
                         boolean tailerHeapBytes,
                         boolean appenderHeapBytes,
                         long runs) throws InterruptedException {
@@ -136,8 +145,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
             tailerThread.join(100);
         }
 
-        assertEquals(runs, counter.get());
-
+        return counter.get();
     }
 
     private ChronicleQueue buildQueue(File path, boolean buffered) {
@@ -161,7 +169,6 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     }
 
     private static void assumeBufferingAvailable() {
-        assumeTrue("BufferMode.Asynchronous requires Chronicle Queue Enterprise",
-                SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
+        assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable(), "BufferMode.Asynchronous requires Chronicle Queue Enterprise");
     }
 }

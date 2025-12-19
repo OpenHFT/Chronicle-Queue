@@ -5,7 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class QueuePerfTestSupport {
     private QueuePerfTestSupport() {
@@ -29,7 +29,7 @@ final class QueuePerfTestSupport {
             long s64 = bytes.readLong(); // 8 bytes
             double f64 = bytes.readDouble(); // 8 bytes
             String s = bytes.readUtf8(); // 8 bytes
-            assertEquals("Hello!!", s);
+            assertEquals("Hello!!", s, "bytes: readUtf8");
         }
     }
 

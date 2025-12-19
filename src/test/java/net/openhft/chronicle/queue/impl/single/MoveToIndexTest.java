@@ -8,25 +8,26 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public final class MoveToIndexTest extends QueueTestCommon {
-    @Rule
-    public final TemporaryFolder tmpFolder = new TemporaryFolder();
+    @TempDir
+    Path tmpFolder;
 
     @Test
     public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
-        File queuePath = tmpFolder.newFolder("cq");
+        File queuePath = Files.createDirectories(tmpFolder.resolve("cq")).toFile();
 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).build();
              ExcerptAppender appender = queue.createAppender()) {
@@ -51,7 +52,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
         final Map<Long, String> messageByIndex = new HashMap<>();
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.
-                binary(tmpFolder.newFolder()).build();
+                binary(tmpFolder.toFile()).build();
              final ExcerptAppender appender = queue.createAppender()) {
             // create a queue and add some excerpts
             for (int i = 0; i < 10; i++) {
@@ -69,7 +70,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
                 final long randomIndex = indices.get(random.nextInt(messageByIndex.size()));
                 tailer.moveToIndex(randomIndex);
                 tailer.readDocument(w -> capturedMessage.set((String) w.read("message").object()));
-                assertEquals(messageByIndex.get(randomIndex), capturedMessage.get());
+                assertEquals(messageByIndex.get(randomIndex), capturedMessage.get(), "moveToIndex: tailer should read expected message");
                 tailer.readDocument(w -> w.read("message").object());
             }
         }
@@ -84,7 +85,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
      */
     @Test
     public void testNotReachedInCycle() throws Exception {
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpFolder.newFolder()).build();
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpFolder.toFile()).build();
              ExcerptAppender appender = q.createAppender()) {
             ExcerptTailer tailer = q.createTailer();
 
@@ -109,10 +110,10 @@ public final class MoveToIndexTest extends QueueTestCommon {
             long seq = q.rollCycle().toSequenceNumber(index);
 
             index = q.rollCycle().toIndex(cycle + 1, seq);
-            assertFalse(tailer.moveToIndex(index));
+            assertFalse(tailer.moveToIndex(index), "moveToIndex: next cycle should not contain same sequence");
 
             index = q.rollCycle().toIndex(cycle, seq + 6);
-            assertFalse(tailer.moveToIndex(index));
+            assertFalse(tailer.moveToIndex(index), "moveToIndex: should not move past existing entries");
 
             for (int i = 0; i < 5; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
@@ -130,6 +131,6 @@ public final class MoveToIndexTest extends QueueTestCommon {
 
     private void assertNext(ExcerptTailer tailer, String expected) {
         String next = tailer.readText();
-        assertEquals(expected, next);
+        assertEquals(expected, next, "tailer readText");
     }
 }

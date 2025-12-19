@@ -6,14 +6,14 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleWriterMainCliTest extends QueueTestCommon {
 
@@ -32,11 +32,11 @@ public class ChronicleWriterMainCliTest extends QueueTestCommon {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
             final ExcerptTailer tailer = queue.createTailer();
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
-                assertEquals(42, dc.wire().read("value").int32());
+                assertTrue(dc.isPresent(), "first document should be present after writing single YAML file");
+                assertEquals(42, dc.wire().read("value").int32(), "first document should contain value 42 from YAML payload");
             }
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(dc.isPresent());
+                assertFalse(dc.isPresent(), "no more documents should exist after reading single YAML file");
             }
         }
     }
@@ -59,12 +59,12 @@ public class ChronicleWriterMainCliTest extends QueueTestCommon {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
             final ExcerptTailer tailer = queue.createTailer();
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
-                assertEquals(1, dc.wire().read("value").int32());
+                assertTrue(dc.isPresent(), "first document should be present when reading multiple files");
+                assertEquals(1, dc.wire().read("value").int32(), "first document should contain value 1 from first YAML file");
             }
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
-                assertEquals(2, dc.wire().read("value").int32());
+                assertTrue(dc.isPresent(), "second document should be present when reading multiple files");
+                assertEquals(2, dc.wire().read("value").int32(), "second document should contain value 2 from second YAML file");
             }
         }
     }

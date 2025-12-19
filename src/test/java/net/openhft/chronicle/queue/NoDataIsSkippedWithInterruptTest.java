@@ -6,9 +6,9 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 
@@ -16,7 +16,7 @@ public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
 
     private static final String EXPECTED = "Hello World";
 
-    @After
+    @AfterEach
     public void clearInterrupt() {
         Thread.interrupted();
     }
@@ -34,14 +34,14 @@ public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
 
             Thread.currentThread().interrupt();
             excerptAppender.writeText(EXPECTED);
-            Assert.assertTrue(Thread.currentThread().isInterrupted());
+            Assertions.assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag should remain set");
 
             timeProvider.advanceMillis(60_000);
 
             excerptAppender.writeText(EXPECTED);
 
-            Assert.assertEquals(EXPECTED, tailer.readText());
-            Assert.assertEquals(EXPECTED, tailer.readText());
+            Assertions.assertEquals(EXPECTED, tailer.readText(), "tailer: first message should be readable");
+            Assertions.assertEquals(EXPECTED, tailer.readText(), "tailer: second message should be readable");
         }
     }
 }

@@ -9,12 +9,12 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class WriteBytesIndexTest extends QueueTestCommon {
     @Test
@@ -43,19 +43,19 @@ public class WriteBytesIndexTest extends QueueTestCommon {
 
                     // try a1
                     ((InternalAppender) a1).writeBytes(index, bytes);
-                    assertTrue(t1.readBytes(bytes2.clear()));
+                    assertTrue(t1.readBytes(bytes2.clear()), "t1.readBytes(bytes2.clear())");
                     if (!bytes.contentEquals(bytes2)) {
                         System.out.println(q2.dump());
-                        assertEquals(bytes.toString(), bytes2.toString());
+                        assertEquals(bytes.toString(), bytes2.toString(), "bytes2.toString()");
                     }
-                    assertFalse(t1.readBytes(bytes2.clear()));
+                    assertFalse(t1.readBytes(bytes2.clear()), "t1.readBytes(bytes2.clear())");
 
-                    assertTrue(t0.readBytes(bytes2.clear()));
+                    assertTrue(t0.readBytes(bytes2.clear()), "t0.readBytes(bytes2.clear())");
                     if (!bytes.contentEquals(bytes2)) {
                         System.out.println(q2.dump());
-                        assertEquals(bytes.toString(), bytes2.toString());
+                        assertEquals(bytes.toString(), bytes2.toString(), "bytes2.toString()");
                     }
-                    assertFalse(t0.readBytes(bytes2.clear()));
+                    assertFalse(t0.readBytes(bytes2.clear()), "t0.readBytes(bytes2.clear())");
                 }
             }
         } finally {

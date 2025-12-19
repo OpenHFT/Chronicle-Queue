@@ -9,7 +9,6 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ReferenceCounted;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +21,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReferenceCountedCacheTest extends QueueTestCommon {
 
@@ -31,10 +30,10 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     private static final int NUM_RESOURCES = 50;
     private AtomicInteger createdCount;
     private AtomicInteger releasedCount;
-    private ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> cache;
+    private ReferenceCountedCache<Integer, ReferenceCountedStub, Reservation, RuntimeException> cache;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -43,7 +42,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     void setUp() {
         createdCount = new AtomicInteger(0);
         releasedCount = new AtomicInteger(0);
-        cache = new ReferenceCountedCache<>(Reservation::new, id -> new TestReferenceCounted());
+        cache = new ReferenceCountedCache<>(Reservation::new, id -> new ReferenceCountedStub());
     }
 
     @AfterEach
@@ -57,28 +56,39 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
         int numThreads = Math.min(MAX_THREADS_TO_RUN, Math.max(MIN_THREADS_TO_RUN, Runtime.getRuntime().availableProcessors()));
         AtomicBoolean running = new AtomicBoolean(true);
         List<Future<?>> executors = new ArrayList<>();
-        for (int i = 0; i < numThreads; i++) {
-            executors.add(executorService.submit(new ReferenceGetter(NUM_RESOURCES, cache, running)));
-        }
-        Jvm.pause(5_000);
-        running.set(false);
-        executors.forEach(f -> {
+        try {
+            for (int i = 0; i < numThreads; i++) {
+                executors.add(executorService.submit(new ReferenceGetter(NUM_RESOURCES, cache, running)));
+            }
+            Jvm.pause(5_000);
+            running.set(false);
+            for (Future<?> future : executors) {
+                future.get();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        } finally {
+            executorService.shutdownNow();
             try {
-                f.get();
-            } catch (InterruptedException | ExecutionException e) {
+                assertTrue(executorService.awaitTermination(10, TimeUnit.SECONDS), "executor: terminated");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
-        });
+        }
         Closeable.closeQuietly(cache);
         Jvm.startup().on(ReferenceCountedCache.class, "Created " + createdCount.get() + ", released " + releasedCount.get());
-        assertTrue(true); // if we got here without an exception, the test passes
+        assertTrue(true, "cache: completed without exception");
     }
 
     @Test
     void shouldReturnSameObjectWhileNotReleased() {
         final Reservation reservation = cache.get(1);
         final Reservation otherReservation = cache.get(1);
-        Assertions.assertSame(reservation.referenceCounted, otherReservation.referenceCounted);
+        Assertions.assertSame(reservation.referenceCounted, otherReservation.referenceCounted, "cache: same instance while reserved");
         reservation.release();
         otherReservation.release();
     }
@@ -89,19 +99,19 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
         reservation.release();
         Jvm.pause(100);
         final Reservation otherReservation = cache.get(1);
-        Assertions.assertNotSame(reservation.referenceCounted, otherReservation.referenceCounted);
+        Assertions.assertNotSame(reservation.referenceCounted, otherReservation.referenceCounted, "cache: new instance after release");
         otherReservation.release();
     }
 
     private static class ReferenceGetter implements Runnable, ReferenceOwner {
 
         private final int numResources;
-        private final ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> cache;
+        private final ReferenceCountedCache<Integer, ReferenceCountedStub, Reservation, RuntimeException> cache;
         private final AtomicBoolean running;
         private final Random random;
         private final Reservation[] reservations;
 
-        ReferenceGetter(int numResources, ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> referenceId, AtomicBoolean running) {
+        ReferenceGetter(int numResources, ReferenceCountedCache<Integer, ReferenceCountedStub, Reservation, RuntimeException> referenceId, AtomicBoolean running) {
             this.numResources = numResources;
             this.cache = referenceId;
             this.running = running;
@@ -149,14 +159,13 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
 
         void assertNotReleased() {
             final int referenceCount = this.referenceCounted.refCount();
-            assertTrue("Expected reference count of at least 2, got " + referenceCount, referenceCount > 1);
+            assertTrue(referenceCount > 1, "Expected reference count of at least 2, got " + referenceCount);
         }
     }
 
-    @SuppressWarnings("PMD.TestClassWithoutTestCases")
-    private class TestReferenceCounted extends AbstractReferenceCounted implements ReferenceOwner, Closeable {
+    private class ReferenceCountedStub extends AbstractReferenceCounted implements ReferenceOwner, Closeable {
 
-        TestReferenceCounted() {
+        ReferenceCountedStub() {
             createdCount.incrementAndGet();
         }
 

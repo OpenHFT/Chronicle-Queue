@@ -14,19 +14,20 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class OrderManagerTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -86,9 +87,9 @@ public class OrderManagerTest extends QueueTestCommon {
                 OrderManager orderManager = new OrderManager(listener);
                 MethodReader reader = queue.createTailer().methodReader(orderManager);
                 for (int i = 0; i < 5; i++)
-                    assertTrue(reader.readOne());
+                    assertTrue(reader.readOne(), "reader.readOne()");
 
-                assertFalse(reader.readOne());
+                assertFalse(reader.readOne(), "reader.readOne()");
                 // System.out.println(queue.dump());
             }
 
@@ -104,7 +105,12 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testWithQueueHistory() throws Throwable {
-        FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
+        AtomicBoolean executed = new AtomicBoolean();
+        FlakyTestRunner.builder(() -> {
+            testWithQueueHistory0();
+            executed.set(true);
+        }).build().run();
+        assertTrue(executed.get(), "queue history: flaky runner executed");
     }
 
     private void testWithQueueHistory0() {
@@ -148,9 +154,9 @@ public class OrderManagerTest extends QueueTestCommon {
                 OrderManager orderManager = new OrderManager(listener);
                 MethodReader reader = in.createTailer().methodReader(orderManager);
                 for (int i = 0; i < 5; i++)
-                    assertTrue(reader.readOne());
+                    assertTrue(reader.readOne(), "reader.readOne()");
 
-                assertFalse(reader.readOne());
+                assertFalse(reader.readOne(), "reader.readOne()");
                 // System.out.println(out.dump());
             }
 
@@ -159,12 +165,12 @@ public class OrderManagerTest extends QueueTestCommon {
                     MessageHistory x = MessageHistory.get();
                     // Note: this will have one extra timing, the time it was written to the console.
                     // System.out.println(x);
-                    assertEquals(1, x.sourceId(0));
-                    assertEquals(2, x.sourceId(1));
-                    assertEquals(4, x.timings());
+                    assertEquals(1, x.sourceId(0), "x.sourceId(0)");
+                    assertEquals(2, x.sourceId(1), "x.sourceId(1)");
+                    assertEquals(4, x.timings(), "x.timings()");
                 });
-                assertTrue(reader.readOne());
-                assertFalse(reader.readOne());
+                assertTrue(reader.readOne(), "reader.readOne()");
+                assertFalse(reader.readOne(), "reader.readOne()");
             }
         } finally {
             try {
@@ -219,13 +225,13 @@ public class OrderManagerTest extends QueueTestCommon {
 
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer("test");
-                    assertEquals("tailer.index()=" + Long.toHexString(tailer.index()), i, in.rollCycle().toSequenceNumber(tailer.index()));
+                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()), "tailer.index()=" + Long.toHexString(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 
                     // System.out.println("#### IN\n" + in.dump());
                     // System.out.println("#### OUT:\n" + out.dump());
-                    assertTrue("i: " + i, reader.readOne());
+                    assertTrue(reader.readOne(), "i: " + i);
                 }
             }
         } finally {

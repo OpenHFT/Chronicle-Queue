@@ -7,9 +7,9 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class AppenderListenerTest extends QueueTestCommon {
@@ -38,7 +38,7 @@ public class AppenderListenerTest extends QueueTestCommon {
             IOTools.deleteDirWithFiles(path);
         }
         assertEquals("hello G'Day, addr:4a100000010114, index: 4a1000000000\n" +
-                "hello Bye-now, addr:4a100000010128, index: 4a1000000001\n", results.toString());
+                "hello Bye-now, addr:4a100000010128, index: 4a1000000001\n", results.toString(), "appender listener output");
     }
 
     public interface HelloWorld {

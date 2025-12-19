@@ -8,10 +8,10 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.RollCyclesTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
     /**
@@ -28,6 +28,6 @@ public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
                     cycle.maxMessagesPerCycle() / (cycle.lengthInMillis() / 1000)));
         }
         Jvm.startup().on(RollCyclesTest.class, stringBuilder.toString());
-        assertTrue(true); // if we got here without an exception, the test passes
+        assertTrue(true, "dumped rollCycle table"); // if we got here without an exception, the test passes
     }
 }

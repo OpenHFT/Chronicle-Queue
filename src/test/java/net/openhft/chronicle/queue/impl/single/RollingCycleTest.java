@@ -15,20 +15,25 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
-@RunWith(Parameterized.class)
+@ExtendWith(RollingCycleTest.RollingCycleTemplateProvider.class)
 public class RollingCycleTest extends QueueTestCommon {
     private final boolean named;
 
@@ -36,22 +41,67 @@ public class RollingCycleTest extends QueueTestCommon {
         this.named = named;
     }
 
-    @Parameterized.Parameters(name = "named={0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(
-                new Object[]{true},
-                new Object[]{false}
-        );
+    private static Stream<Boolean> cases() {
+        return Stream.of(true, false);
     }
 
-    @Test
+    static final class RollingCycleTemplateProvider implements TestTemplateInvocationContextProvider {
+        @Override
+        public boolean supportsTestTemplate(ExtensionContext context) {
+            return true;
+        }
+
+        @Override
+        public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context) {
+            return cases().map(RollingCycleInvocationContext::new);
+        }
+    }
+
+    private static final class RollingCycleInvocationContext implements TestTemplateInvocationContext {
+        private final boolean named;
+
+        private RollingCycleInvocationContext(boolean named) {
+            this.named = named;
+        }
+
+        @Override
+        public String getDisplayName(int invocationIndex) {
+            return "named=" + named;
+        }
+
+        @Override
+        public java.util.List<Extension> getAdditionalExtensions() {
+            return Collections.singletonList(new RollingCycleParameterResolver(named));
+        }
+    }
+
+    private static final class RollingCycleParameterResolver implements ParameterResolver {
+        private final boolean named;
+
+        private RollingCycleParameterResolver(boolean named) {
+            this.named = named;
+        }
+
+        @Override
+        public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            Class<?> type = parameterContext.getParameter().getType();
+            return type == boolean.class || type == Boolean.class;
+        }
+
+        @Override
+        public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            return named;
+        }
+    }
+
+    @TestTemplate
     public void testRollCycle() {
         SetTimeProvider stp = new SetTimeProvider();
         long start = 19059 * 86_400_000L;
         stp.currentTimeMillis(start);
 
         String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
+        assumeFalse(PageUtil.isHugePage(basePath), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .timeoutMS(5)
@@ -63,7 +113,7 @@ public class RollingCycleTest extends QueueTestCommon {
             for (int h = 0; h < 3; h++) {
                 stp.currentTimeMillis(start + TimeUnit.DAYS.toMillis(h));
                 for (int i = 0; i < 3; i++) {
-                    appender.writeBytes(new TestBytesMarshallable(i));
+                    appender.writeBytes(new BytesMarshallableSample(i));
                 }
             }
             String expected = "--- !!meta-data #binary\n" +
@@ -255,13 +305,13 @@ public class RollingCycleTest extends QueueTestCommon {
                     "# 130524 bytes remaining\n";
 
             long numRead = 0;
-            final TestBytesMarshallable reusableData = new TestBytesMarshallable(0);
+            final BytesMarshallableSample reusableData = new BytesMarshallableSample(0);
             final ExcerptTailer currentPosTailer = queue.createTailer(named ? "named" : null)
                     .toStart();
             final ExcerptTailer endPosTailer = queue.createTailer(named ? "named2" : null).toEnd();
             while (currentPosTailer.index() < endPosTailer.index()) {
                 try {
-                    assertTrue(currentPosTailer.readBytes(reusableData));
+                    assertTrue(currentPosTailer.readBytes(reusableData), "tailer: readBytes should succeed");
                 } catch (AssertionError e) {
                     System.err.println("Could not read data at index: " +
                             numRead + " " +
@@ -273,7 +323,7 @@ public class RollingCycleTest extends QueueTestCommon {
                 }
                 numRead++;
             }
-            assertFalse(currentPosTailer.readBytes(reusableData));
+            assertFalse(currentPosTailer.readBytes(reusableData), "tailer: readBytes at end should be false");
 
             // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
@@ -281,7 +331,7 @@ public class RollingCycleTest extends QueueTestCommon {
             // was it truncated
             if (dump.contains("\n4 bytes remaining"))
                 expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
-            assertEquals(expected, dump);
+            assertEquals(expected, dump, "dump: expected output");
 
             try {
                 IOTools.deleteDirWithFiles(basePath, 2);
@@ -291,15 +341,14 @@ public class RollingCycleTest extends QueueTestCommon {
         }
     }
 
-    @SuppressWarnings("PMD.TestClassWithoutTestCases")
-    private static class TestBytesMarshallable implements WriteBytesMarshallable, ReadBytesMarshallable {
+    private static class BytesMarshallableSample implements WriteBytesMarshallable, ReadBytesMarshallable {
         @Nullable
         String name;
         long value1;
         long value2;
         long value3;
 
-        TestBytesMarshallable(int i) {
+        BytesMarshallableSample(int i) {
             final Random rand = new Random(i);
             name = "name_" + rand.nextInt();
             value1 = rand.nextLong();

@@ -6,12 +6,12 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
     @SuppressWarnings("try")
@@ -40,11 +40,11 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestC
 
             final ExcerptTailer tailer = readQueue.createTailer();
             final RollCycle rollCycle = readQueue.rollCycle();
-            assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()));
+            assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()), "tailer should start at sequence number 0 before reading any documents");
             try (final DocumentContext ctx = tailer.direction(TailerDirection.NONE).readingDocument()) {
-                assertFalse("Document shouldn't be readable yet as direction is NONE", ctx.isPresent());
+                assertFalse(ctx.isPresent(), "Document shouldn't be readable yet as direction is NONE");
             }
-            assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()));
+            assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()), "tailer should remain at sequence number 0 after NONE direction read");
 
             String value;
             try (DocumentContext dc =
@@ -52,27 +52,27 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestC
                 ValueIn valueIn = dc.wire().getValueIn();
                 value = (String) valueIn.object();
             }
-            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()));
+            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()), "tailer should advance to sequence number 1 after FORWARD direction read");
 
-            assertEquals("first", value);
-
-            try (DocumentContext dc =
-                         tailer.direction(TailerDirection.NONE).readingDocument()) {
-                ValueIn valueIn = dc.wire().getValueIn();
-                value = (String) valueIn.object();
-            }
-            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()));
-
-            assertEquals("second", value);
+            assertEquals("first", value, "first document should be read after FORWARD direction");
 
             try (DocumentContext dc =
                          tailer.direction(TailerDirection.NONE).readingDocument()) {
                 ValueIn valueIn = dc.wire().getValueIn();
                 value = (String) valueIn.object();
             }
-            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()));
+            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()), "tailer should remain at sequence number 1 after first NONE direction read");
 
-            assertEquals("second", value);
+            assertEquals("second", value, "second document should be read with NONE direction without advancing index");
+
+            try (DocumentContext dc =
+                         tailer.direction(TailerDirection.NONE).readingDocument()) {
+                ValueIn valueIn = dc.wire().getValueIn();
+                value = (String) valueIn.object();
+            }
+            assertEquals(1L, rollCycle.toSequenceNumber(tailer.index()), "tailer should remain at sequence number 1 after second NONE direction read");
+
+            assertEquals("second", value, "second document should be read again with NONE direction as index hasn't advanced");
         }
     }
 }

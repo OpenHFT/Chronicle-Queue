@@ -7,10 +7,10 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ReadmeTest extends QueueTestCommon {
 
@@ -34,7 +34,7 @@ public class ReadmeTest extends QueueTestCommon {
 
             tailer.readDocument(w -> System.out.println("msg: " + w.read("msg").text()));
 
-            assertEquals("TestMessage", tailer.readText());
+            assertEquals("TestMessage", tailer.readText(), "tailer: readText after writeText");
         } finally {
             IOTools.deleteDirWithFiles(basePath);
         }

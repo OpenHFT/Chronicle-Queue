@@ -6,8 +6,8 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 
@@ -19,7 +19,7 @@ public class SingleChronicleQueueCloseTest extends QueueTestCommon {
             final ExcerptAppender appender = queue.createAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(1));
             Closeable.closeQuietly(queue);
-            Assert.assertThrows(IllegalStateException.class,
+            Assertions.assertThrows(IllegalStateException.class,
                     () -> appender.writeDocument(w -> w.write(TestKey.test).int32(2)));
         }
     }
@@ -44,14 +44,14 @@ public class SingleChronicleQueueCloseTest extends QueueTestCommon {
             final ExcerptAppender appender4 = acquireThreadLocalAppender(queue);
             appender2.writeText("hello4");
 
-            Assert.assertSame(appender3, appender4);
+            Assertions.assertSame(appender3, appender4, "appender4");
 
             final ExcerptTailer tailer = queue.createTailer();
 
-            Assert.assertEquals("hello1", tailer.readText());
-            Assert.assertEquals("hello2", tailer.readText());
-            Assert.assertEquals("hello3", tailer.readText());
-            Assert.assertEquals("hello4", tailer.readText());
+            Assertions.assertEquals("hello1", tailer.readText(), "tailer.readText()");
+            Assertions.assertEquals("hello2", tailer.readText(), "tailer.readText()");
+            Assertions.assertEquals("hello3", tailer.readText(), "tailer.readText()");
+            Assertions.assertEquals("hello4", tailer.readText(), "tailer.readText()");
         }
     }
 }

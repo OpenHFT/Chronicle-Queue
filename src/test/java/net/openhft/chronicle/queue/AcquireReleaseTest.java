@@ -11,8 +11,8 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.ExecutionException;
@@ -20,8 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @RequiredForClient
 public class AcquireReleaseTest extends QueueTestCommon {
@@ -62,8 +63,8 @@ public class AcquireReleaseTest extends QueueTestCommon {
 
             BackgroundResourceReleaser.releasePendingResources();
 
-            Assert.assertEquals(iter, acount.get());
-            Assert.assertEquals(iter, qcount.get());
+            Assertions.assertEquals(iter, acount.get(), "acquire/release: acquired count");
+            Assertions.assertEquals(iter, qcount.get(), "acquire/release: released count");
         }
         IOTools.deleteDirWithFiles(dir);
     }
@@ -83,11 +84,10 @@ public class AcquireReleaseTest extends QueueTestCommon {
             appender.writeText("Hello World");
             stp.currentTimeMillis(2000);
             appender.writeText("Hello World");
-            queue.createTailer().readText();
             try (ExcerptTailer tailer = queue.createTailer()) {
-                tailer.readText();
-                tailer.readText();
-                tailer.readText();
+                assertEquals("Hello World", tailer.readText(), "reserve/release: first read");
+                assertEquals("Hello World", tailer.readText(), "reserve/release: second read");
+                assertNull(tailer.readText(), "reserve/release: end-of-queue");
             }
         }
         IOTools.deleteDirWithFiles(dir);
@@ -120,22 +120,22 @@ public class AcquireReleaseTest extends QueueTestCommon {
              final ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("Main thread: Hello world");
             BackgroundResourceReleaser.releasePendingResources();
-            assertEquals(1, acount.get());
+            assertEquals(1, acount.get(), "cleanup-store: acquired after first write");
 
             stp.advanceMillis(1000L); // advance 1 cycle, so that cleanupStoreFilesWithNoData() acquires store
 
             // other appender is created
             try (final ExcerptAppender secondAppender = queue.createAppender()) {
-                assertNotNull(secondAppender);
+                assertNotNull(secondAppender, "cleanup-store: second appender");
                 // Here store is Acquired twice (second time in cleanupStoreFilesWithNoData())
                 // Do nothing with it
             }
         }
         BackgroundResourceReleaser.releasePendingResources();
 
-        assertEquals(2, acount.get());
+        assertEquals(2, acount.get(), "cleanup-store: acquired after second appender");
 
-        assertEquals(2, qcount.get());
+        assertEquals(2, qcount.get(), "cleanup-store: released after queue close");
         IOTools.deleteDirWithFiles(dir);
     }
 }

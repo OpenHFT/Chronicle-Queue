@@ -16,7 +16,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -31,19 +32,22 @@ import static java.util.stream.Collectors.toList;
 import static net.openhft.chronicle.queue.internal.util.InternalFileUtil.getAllOpenFilesIsSupportedOnOS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class FileUtilTest extends QueueTestCommon {
 
-    @Test(timeout = 30_000)
+    @Test
+    @Timeout(30)
     public void stateNonExisting() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
-        assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
+        assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")),
+                "FileUtil.state() should return NON_EXISTENT for non-existing file path");
     }
 
-    @Test(timeout = 30_000)
+    @Test
+    @Timeout(30)
     public void state() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
@@ -58,16 +62,19 @@ public class FileUtilTest extends QueueTestCommon {
             Jvm.pause(100);
 
             // The file is created but not open
-            assertEquals(FileState.CLOSED, FileUtil.state(testFile));
+            assertEquals(FileState.CLOSED, FileUtil.state(testFile),
+                    "FileUtil.state() should return CLOSED for a created file that has been released");
 
             try (BufferedReader br = new BufferedReader(new FileReader(testFile))) {
-                assertNotNull(br);
+                assertNotNull(br, "BufferedReader should be successfully created for test file");
                 // The file is now held open
-                assertEquals(FileState.OPEN, FileUtil.state(testFile));
+                assertEquals(FileState.OPEN, FileUtil.state(testFile),
+                        "FileUtil.state() should return OPEN when file is actively held by BufferedReader");
             }
 
             // The file is now released again
-            assertEquals(FileState.CLOSED, FileUtil.state(testFile));
+            assertEquals(FileState.CLOSED, FileUtil.state(testFile),
+                    "FileUtil.state() should return CLOSED after BufferedReader is closed and file handle is released");
 
         } finally {
             IOTools.deleteDirWithFiles(dir.toFile());
@@ -82,22 +89,28 @@ public class FileUtilTest extends QueueTestCommon {
         AbstractCloseable.disableCloseableTracing();
 
         FileState foo = FileUtil.state(new File("foo"));
-        assertEquals(FileState.NON_EXISTENT, foo);
+        assertEquals(FileState.NON_EXISTENT, foo,
+                "FileUtil.state() should return NON_EXISTENT on Windows when closeable tracing is disabled");
     }
 
-    @Test(timeout = 30_000)
+    @Test
+    @Timeout(30)
     public void hasQueueSuffixFalse() {
         final File file = new File("foo");
-        assertFalse(FileUtil.hasQueueSuffix(file));
+        assertFalse(FileUtil.hasQueueSuffix(file),
+                "FileUtil.hasQueueSuffix() should return false for file without Chronicle Queue suffix");
     }
 
-    @Test(timeout = 30_000)
+    @Test
+    @Timeout(30)
     public void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
-        assertTrue(FileUtil.hasQueueSuffix(file));
+        assertTrue(FileUtil.hasQueueSuffix(file),
+                "FileUtil.hasQueueSuffix() should return true for file with Chronicle Queue suffix (.cq4)");
     }
 
-    @Test(timeout = 30_000)
+    @Test
+    @Timeout(30)
     public void removableQueueFileCandidates() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;
@@ -122,13 +135,14 @@ public class FileUtilTest extends QueueTestCommon {
             tailer.toStart();
 
             final File[] files = tmpDir.listFiles(FileUtil::hasQueueSuffix);
-            assertNotNull(files);
+            assertNotNull(files, "listFiles() should return non-null array of queue files from temp directory");
             final List<File> createdFiles = Stream.of(files).sorted(earliestFirst).collect(toList());
 
             final List<File> candidatesBeforeTailing = FileUtil.removableRollFileCandidates(tmpDir).collect(toList());
             assertSorted(candidatesBeforeTailing, earliestFirst);
             // We have a tailer open but have not read yet -> no files can be removed
-            assertEquals(emptyList(), candidatesBeforeTailing);
+            assertEquals(emptyList(), candidatesBeforeTailing,
+                    "removableRollFileCandidates() should return empty list when tailer is at start position and has not read any files");
 
             for (int i = 0; i < intermediateRolls; i++) {
                 final String text = tailer.readText();
@@ -141,7 +155,8 @@ public class FileUtilTest extends QueueTestCommon {
             final List<File> candidatesAfterIntermediateTailing = FileUtil.removableRollFileCandidates(tmpDir).collect(toList());
             assertSorted(candidatesAfterIntermediateTailing, earliestFirst);
             // We have a tailer open and have read `intermediateRolls` -> `intermediateRolls` - 1 files can be removed
-            assertEquals(createdFiles.subList(0, intermediateRolls - 1), candidatesAfterIntermediateTailing);
+            assertEquals(createdFiles.subList(0, intermediateRolls - 1), candidatesAfterIntermediateTailing,
+                    "removableRollFileCandidates() should return (intermediateRolls - 1) files after tailer reads through half the rolls, keeping current file");
 
             for (int i = intermediateRolls; i < rolls; i++) {
                 final String text = tailer.readText();
@@ -154,21 +169,25 @@ public class FileUtilTest extends QueueTestCommon {
             final List<File> candidatesAfterAllTailing = FileUtil.removableRollFileCandidates(tmpDir).collect(toList());
             assertSorted(candidatesAfterAllTailing, earliestFirst);
             // We have no tailed all the rolls -> `rolls` - 1 files can be removed (because the appender has one open)
-            assertEquals(createdFiles.subList(0, rolls - 1), candidatesAfterAllTailing);
+            assertEquals(createdFiles.subList(0, rolls - 1), candidatesAfterAllTailing,
+                    "removableRollFileCandidates() should return (rolls - 1) files after tailer reads all rolls, excluding file currently held by appender");
 
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
+    @Test
+    @Timeout(30)
     public void removableQueueFileCandidatesWindows() {
         assumeTrue(OS.isWindows());
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
-        FileUtil.removableRollFileCandidates(new File("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> FileUtil.removableRollFileCandidates(new File("foo")),
+                "removableRollFileCandidates() should throw UnsupportedOperationException on Windows platform");
     }
 
     private <T> void assertSorted(List<T> list, Comparator<T> comparator) {
-        assertEquals(list.stream().sorted(comparator).collect(toList()), list);
+        assertEquals(list.stream().sorted(comparator).collect(toList()), list,
+                "List of removable file candidates should be returned in sorted order according to the provided comparator");
     }
 
     @NotNull
@@ -187,12 +206,14 @@ public class FileUtilTest extends QueueTestCommon {
         out.write("somedata");
 
         Map<String, String> filesWithPid = FileUtil.getAllOpenFiles();
-        assertEquals(Integer.toString(Jvm.getProcessId()), filesWithPid.get(temporaryFile.getAbsolutePath()));
+        assertEquals(Integer.toString(Jvm.getProcessId()), filesWithPid.get(temporaryFile.getAbsolutePath()),
+                "getAllOpenFiles() should map the temporary file path to the current process ID while file is held open");
 
         // close file
         out.close();
 
         filesWithPid = FileUtil.getAllOpenFiles();
-        assertFalse(filesWithPid.containsKey(temporaryFile.getAbsolutePath()));
+        assertFalse(filesWithPid.containsKey(temporaryFile.getAbsolutePath()),
+                "getAllOpenFiles() should not contain the temporary file path after file has been closed and handle released");
     }
 }

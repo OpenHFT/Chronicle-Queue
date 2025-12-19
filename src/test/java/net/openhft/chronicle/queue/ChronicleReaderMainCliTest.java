@@ -8,12 +8,12 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleReaderMainCliTest extends QueueTestCommon {
 
@@ -35,21 +35,25 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         }
 
         final String out = capture.toString();
-        assertTrue("Expected output to contain written text", out.contains("hello"));
+        assertTrue(out.contains("hello"), "Expected output to contain written text");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void invalidContentBasedLimiterClassThrows() {
         final java.io.File dir = getTmpDir();
         ChronicleReaderMain main = new ChronicleReaderMain();
-        main.run(new String[]{"-d", dir.getAbsolutePath(), "-cbl", "not.a.RealClass"});
+        assertThrows(IllegalArgumentException.class,
+                () -> main.run(new String[]{"-d", dir.getAbsolutePath(), "-cbl", "not.a.RealClass"}),
+                "content based limiter: invalid class");
     }
 
-    @Test(expected = ClassNotFoundException.class)
+    @Test
     public void invalidBinarySearchComparatorClassThrows() {
         final java.io.File dir = getTmpDir();
         ChronicleReaderMain main = new ChronicleReaderMain();
-        main.run(new String[]{"-d", dir.getAbsolutePath(), "-b", "not.a.RealClass"});
+        assertThrows(ClassNotFoundException.class,
+                () -> main.run(new String[]{"-d", dir.getAbsolutePath(), "-b", "not.a.RealClass"}),
+                "binary search comparator: invalid class");
     }
 
     @Test
@@ -77,15 +81,15 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         }
 
         final String out = capture.toString();
-        assertTrue(out.contains("second"));
-        assertTrue(out.contains("third"));
-        assertFalse("Start index should skip earlier entries", out.contains("first"));
+        assertTrue(out.contains("second"), "CLI output should contain second message when starting from second index");
+        assertTrue(out.contains("third"), "CLI output should contain third message when starting from second index");
+        assertFalse(out.contains("first"), "Start index should skip earlier entries");
     }
 
     @Test
     public void methodReaderOptionsEnableMessageHistory() {
         final java.io.File dir = getTmpDir();
-        TestChronicleReaderMain main = new TestChronicleReaderMain();
+        ChronicleReaderMainStub main = new ChronicleReaderMainStub();
 
         main.run(new String[]{
                 "-d", dir.getAbsolutePath(),
@@ -95,14 +99,13 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         });
 
         RecordingChronicleReader reader = main.reader;
-        assertTrue(reader.executed);
-        assertTrue(reader.showHistory);
-        assertSame(Runnable.class, reader.methodReaderInterfaceSnapshot);
-        assertSame(WireType.TEXT, reader.wireTypeSnapshot);
+        assertTrue(reader.executed, "ChronicleReader should have executed when run with method reader options");
+        assertTrue(reader.showHistory, "Message history should be enabled when -g flag is provided");
+        assertSame(Runnable.class, reader.methodReaderInterfaceSnapshot, "Method reader interface should be set to Runnable when specified via -r flag");
+        assertSame(WireType.TEXT, reader.wireTypeSnapshot, "Wire type should be set to TEXT when specified via -w flag");
     }
 
-    @SuppressWarnings("PMD.TestClassWithoutTestCases")
-    private static final class TestChronicleReaderMain extends ChronicleReaderMain {
+    private static final class ChronicleReaderMainStub extends ChronicleReaderMain {
         final RecordingChronicleReader reader = new RecordingChronicleReader();
 
         @Override

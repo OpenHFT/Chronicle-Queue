@@ -11,28 +11,28 @@ class IndexingMoveToIndexTest extends IndexingTestCommon {
 
     @Test
     void noDataNegativeIndex() {
-        assertFalse(tailer.moveToIndex(-1));
-        assertEquals(0, tailer.index());
+        assertFalse(tailer.moveToIndex(-1), "tailer.moveToIndex(-1)");
+        assertEquals(0, tailer.index(), "tailer.index()");
     }
 
     @Test
     void someDataNegativeIndex() {
         appender.writeText("a");
-        assertFalse(tailer.moveToIndex(-1));
-        assertEquals(0, tailer.index());
+        assertFalse(tailer.moveToIndex(-1), "tailer.moveToIndex(-1)");
+        assertEquals(0, tailer.index(), "tailer.index()");
     }
 
     @Test
     void noData() {
-        assertFalse(tailer.moveToIndex(0));
-        assertEquals(0, tailer.index());
+        assertFalse(tailer.moveToIndex(0), "tailer.moveToIndex(0)");
+        assertEquals(0, tailer.index(), "tailer.index()");
     }
 
     @Test
     void onEntry() {
         appender.writeText("test");
-        assertTrue(tailer.moveToIndex(0));
-        assertEquals(0, tailer.index());
+        assertTrue(tailer.moveToIndex(0), "tailer.moveToIndex(0)");
+        assertEquals(0, tailer.index(), "tailer.index()");
     }
 
     /**
@@ -42,9 +42,9 @@ class IndexingMoveToIndexTest extends IndexingTestCommon {
     @Test
     void moveNonExistent() {
         appender.writeText("test");
-        assertFalse(tailer.moveToIndex(1));
-        assertEquals(1, tailer.index());
-        assertNull(tailer.readText());
+        assertFalse(tailer.moveToIndex(1), "tailer.moveToIndex(1)");
+        assertEquals(1, tailer.index(), "tailer.index()");
+        assertNull(tailer.readText(), "tailer.readText()");
     }
 
     /**
@@ -59,7 +59,7 @@ class IndexingMoveToIndexTest extends IndexingTestCommon {
         appender.writeText("c");
         timeProvider.advanceMillis(1_001);
         long nonExistentIndex = queue.rollCycle().toIndex(1, 10);
-        assertFalse(tailer.moveToIndex(nonExistentIndex));
-        assertEquals(nonExistentIndex, tailer.index());
+        assertFalse(tailer.moveToIndex(nonExistentIndex), "tailer.moveToIndex(nonExistentIndex)");
+        assertEquals(nonExistentIndex, tailer.index(), "tailer.index()");
     }
 }

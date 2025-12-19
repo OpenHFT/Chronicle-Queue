@@ -9,7 +9,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,8 +22,8 @@ import java.util.stream.Stream;
 
 import static java.util.stream.IntStream.range;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public final class TailerIndexingQueueTest extends QueueTestCommon {
     private final File path = getTmpDir();
@@ -74,14 +74,14 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
                 final ExcerptTailer tailer = queue.createTailer().toEnd();
                 // move to END_OF_CYCLE
                 try (final DocumentContext readCtx = tailer.readingDocument()) {
-                    assertFalse(readCtx.isPresent());
+                    assertFalse(readCtx.isPresent(), "tailer: no document at end of cycle");
                 }
-                assertEquals(TailerState.END_OF_CYCLE, tailer.state());
+                assertEquals(TailerState.END_OF_CYCLE, tailer.state(), "tailer: state after reaching end of cycle");
 
                 tailer.direction(TailerDirection.BACKWARD);
 
                 tailer.toEnd();
-                assertTrue(tailer.readingDocument().isPresent());
+                assertTrue(tailer.readingDocument().isPresent(), "tailer: can read when moving backward from end of cycle");
             }
         }
     }

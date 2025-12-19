@@ -12,20 +12,25 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@ExtendWith(FieldlessMethodReaderTest.FieldlessMethodReaderTemplateProvider.class)
 public class FieldlessMethodReaderTest extends QueueTestCommon {
 
     private final CustomEnumType enumType;
@@ -35,7 +40,59 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
         this.enumType = enumType;
     }
 
-    @Test
+    private static Stream<CustomEnumType> cases() {
+        return Stream.concat(Stream.of((CustomEnumType) null), Arrays.stream(CustomEnumType.values()));
+    }
+
+    static final class FieldlessMethodReaderTemplateProvider implements TestTemplateInvocationContextProvider {
+        @Override
+        public boolean supportsTestTemplate(ExtensionContext context) {
+            return true;
+        }
+
+        @Override
+        public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context) {
+            return cases().map(FieldlessMethodReaderInvocationContext::new);
+        }
+    }
+
+    private static final class FieldlessMethodReaderInvocationContext implements TestTemplateInvocationContext {
+        private final CustomEnumType enumType;
+
+        private FieldlessMethodReaderInvocationContext(CustomEnumType enumType) {
+            this.enumType = enumType;
+        }
+
+        @Override
+        public String getDisplayName(int invocationIndex) {
+            return "enumType=" + enumType;
+        }
+
+        @Override
+        public java.util.List<Extension> getAdditionalExtensions() {
+            return Collections.singletonList(new FieldlessMethodReaderParameterResolver(enumType));
+        }
+    }
+
+    private static final class FieldlessMethodReaderParameterResolver implements ParameterResolver {
+        private final CustomEnumType enumType;
+
+        private FieldlessMethodReaderParameterResolver(CustomEnumType enumType) {
+            this.enumType = enumType;
+        }
+
+        @Override
+        public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            return parameterContext.getParameter().getType() == CustomEnumType.class;
+        }
+
+        @Override
+        public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            return enumType;
+        }
+    }
+
+    @TestTemplate
     public void test() {
         File path = new File(getTmpDir(), "enum_test_" + enumType);
 
@@ -50,16 +107,10 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
             while (methodReader.readOne()) {
                 Jvm.nanoPause();
             }
-            Assert.assertEquals(2, msgCounter.get());
+            assertEquals(2, msgCounter.get(), "methodReader: message count");
         } finally {
             IOTools.deleteDirWithFilesOrWait(1000, path);
         }
-    }
-
-    @Parameterized.Parameters
-    public static Collection<CustomEnumType> enums() {
-        return Stream.concat(Stream.of((CustomEnumType) null), Arrays.stream(CustomEnumType.values()))
-                .collect(Collectors.toList());
     }
 
     public enum CustomEnumType {

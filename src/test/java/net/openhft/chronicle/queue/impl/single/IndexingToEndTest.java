@@ -18,30 +18,30 @@ class IndexingToEndTest extends IndexingTestCommon {
     @MethodSource("tailerDirections")
     void fromStart_noData(TailerDirection tailerDirection) {
         tailer.direction(tailerDirection);
-        assertEquals(0, tailer.index());
+        assertEquals(0, tailer.index(), "tailer should start at index 0 on empty queue");
         tailer.toEnd();
-        assertEquals(0, tailer.index());
+        assertEquals(0, tailer.index(), "toEnd should keep index at 0 when queue has no data");
     }
 
     @ParameterizedTest
     @MethodSource("tailerDirections")
     void fromStart_manyEntriesSingleCycle(TailerDirection tailerDirection) {
         tailer.direction(tailerDirection);
-        assertEquals(0, tailer.index());
+        assertEquals(0, tailer.index(), "tailer should start at index 0 before writing entries");
         long lastIndexAppended = 0;
         for (int i = 0; i < 1_000; i++) {
             appender.writeText("<test>");
             lastIndexAppended = appender.lastIndexAppended();
         }
         tailer.toEnd();
-        assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index());
+        assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index(), "toEnd should position tailer at expected index after last entry in single cycle");
     }
 
     @ParameterizedTest
     @MethodSource("tailerDirections")
     void fromStart_manyEntriesSingleCycle_idempotent(TailerDirection tailerDirection) {
         tailer.direction(tailerDirection);
-        assertEquals(0, tailer.index());
+        assertEquals(0, tailer.index(), "tailer should start at index 0 before writing entries");
         long lastIndexAppended = 0;
         for (int i = 0; i < 1_000; i++) {
             appender.writeText("<test>");
@@ -50,7 +50,7 @@ class IndexingToEndTest extends IndexingTestCommon {
 
         for (int i = 0; i < 100; i++) {
             tailer.toEnd();
-            assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index());
+            assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index(), "repeated toEnd calls should produce consistent index position");
         }
     }
 
@@ -59,8 +59,8 @@ class IndexingToEndTest extends IndexingTestCommon {
     void fromStart_manyEntriesMultiCycle(TailerDirection tailerDirection) {
         long lastIndexAppended = populateQueue(tailerDirection);
         tailer.toEnd();
-        assertEquals(2, rollCycle().toCycle(lastIndexAppended));
-        assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index());
+        assertEquals(2, rollCycle().toCycle(lastIndexAppended), "test should populate queue across 3 cycles with last entry in cycle 2");
+        assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index(), "toEnd should position tailer at expected index after last entry across multiple cycles");
     }
 
     @ParameterizedTest
@@ -69,8 +69,8 @@ class IndexingToEndTest extends IndexingTestCommon {
         long lastIndexAppended = populateQueue(tailerDirection);
         moveToMidpoint(lastIndexAppended);
         tailer.toEnd();
-        assertEquals(2, rollCycle().toCycle(lastIndexAppended));
-        assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index());
+        assertEquals(2, rollCycle().toCycle(lastIndexAppended), "test should populate queue across 3 cycles with last entry in cycle 2");
+        assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index(), "toEnd should position tailer at expected index when starting from middle of queue");
     }
 
     private void moveToMidpoint(long lastIndexAppended) {
@@ -78,14 +78,14 @@ class IndexingToEndTest extends IndexingTestCommon {
         int middleCycle = cycle / 2;
         long desiredIndex = queue.rollCycle().toIndex(middleCycle, 0);
         boolean moveToIndexResult = tailer.moveToIndex(desiredIndex);
-        assertTrue(moveToIndexResult);
-        assertEquals(desiredIndex, tailer.index());
+        assertTrue(moveToIndexResult, "moveToIndex should succeed when positioning to middle cycle");
+        assertEquals(desiredIndex, tailer.index(), "tailer should be positioned at start of middle cycle");
     }
 
     private long populateQueue(TailerDirection tailerDirection) {
         tailer.direction(tailerDirection);
         appender.writeText("<init>");
-        assertEquals(0, tailer.index());
+        assertEquals(0, tailer.index(), "tailer should start at index 0 after initialization");
         long lastIndexAppended = 0;
         for (int i = 0; i < 3; i++) {
             appender.writeText("<test>");

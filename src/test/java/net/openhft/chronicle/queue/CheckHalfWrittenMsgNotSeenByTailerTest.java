@@ -7,16 +7,16 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
     public static class HalfWriteAMessage {
@@ -61,7 +61,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
 
     @Test
     public void checkTailerOnlyReadsTwoMessageOneProcess() throws InterruptedException {
-        Assume.assumeTrue(!OS.isWindows());
+        Assumptions.assumeTrue(!OS.isWindows());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
         HalfWriteAMessage.writeIncompleteMessage(queueDirectory.toString(), false);
@@ -79,7 +79,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
 
     @Test
     public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
-        Assume.assumeTrue(OS.isLinux() && OS.is64Bit());
+        Assumptions.assumeTrue(OS.isLinux() && OS.is64Bit());
         ignoreException("Forced unlocking `chronicle.write.lock` in lock file:target/halfWritten");
 
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
@@ -97,15 +97,15 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
 
     private void assertHalfWrittenReads(ExcerptTailer tailer) {
         try (final DocumentContext dc = tailer.readingDocument()) {
-            Assert.assertTrue(dc.isPresent());
-            Assert.assertEquals("hello world 1", dc.wire().read("key1").text());
-            Assert.assertEquals("hello world 2", dc.wire().read("key2").text());
+            Assertions.assertTrue(dc.isPresent(), "dc.isPresent()");
+            Assertions.assertEquals("hello world 1", dc.wire().read("key1").text(), "dc.wire().read(\"key1\").text()");
+            Assertions.assertEquals("hello world 2", dc.wire().read("key2").text(), "dc.wire().read(\"key2\").text()");
         }
 
         try (final DocumentContext dc = tailer.readingDocument()) {
-            Assert.assertTrue(dc.isPresent());
-            Assert.assertEquals("hello world 3", dc.wire().read("key1").text());
-            Assert.assertEquals("hello world 4", dc.wire().read("key2").text());
+            Assertions.assertTrue(dc.isPresent(), "dc.isPresent()");
+            Assertions.assertEquals("hello world 3", dc.wire().read("key1").text(), "dc.wire().read(\"key1\").text()");
+            Assertions.assertEquals("hello world 4", dc.wire().read("key2").text(), "dc.wire().read(\"key2\").text()");
         }
 
         try (final DocumentContext dc = tailer.readingDocument()) {

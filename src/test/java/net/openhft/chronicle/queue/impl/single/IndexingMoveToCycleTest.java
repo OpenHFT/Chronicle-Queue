@@ -16,21 +16,21 @@ class IndexingMoveToCycleTest extends IndexingTestCommon {
      */
     @Test
     void noDataMoveToNegativeCycle() {
-        assertFalse(tailer.moveToCycle(-1));
-        assertEquals(-2147483648, tailer.cycle());
+        assertFalse(tailer.moveToCycle(-1), "tailer.moveToCycle(-1)");
+        assertEquals(-2147483648, tailer.cycle(), "tailer.cycle()");
     }
 
     @Test
     void noDataMoveToNonExistentCycle() {
-        assertFalse(tailer.moveToCycle(1));
-        assertEquals(-2147483648, tailer.cycle());
+        assertFalse(tailer.moveToCycle(1), "tailer.moveToCycle(1)");
+        assertEquals(-2147483648, tailer.cycle(), "tailer.cycle()");
     }
 
     @Test
     void someDataMoveToNonExistentCycle() {
         appender.writeText("test");
-        assertFalse(tailer.moveToCycle(1));
-        assertEquals(-2147483648, tailer.cycle());
-        assertEquals("test", tailer.readText());
+        assertFalse(tailer.moveToCycle(1), "tailer.moveToCycle(1)");
+        assertEquals(-2147483648, tailer.cycle(), "tailer.cycle()");
+        assertEquals("test", tailer.readText(), "tailer.readText()");
     }
 }

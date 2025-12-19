@@ -11,10 +11,10 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @RequiredForClient
 public class WriteReadTextTest extends QueueTestCommon {
@@ -24,8 +24,7 @@ public class WriteReadTextTest extends QueueTestCommon {
     @NotNull
     private static final String EXTREMELY_LARGE;
     private static final String MINIMAL = "[\"abc\"]";
-    private static final String REALISTIC = "" +
-            "[\"abc\",\"comm_link\",[[1469743199691,1469743199691],"
+    private static final String REALISTIC = "[\"abc\",\"comm_link\",[[1469743199691,1469743199691],"
             + "[\"ABCDEFXH\",\"ABCDEFXH\"],"
             + "[321,456],"
             + "[-1408156298,-841885387],"
@@ -125,29 +124,34 @@ public class WriteReadTextTest extends QueueTestCommon {
 
     @Test
     public void testConstructed() {
-        doTest(CONSTRUCTED);
+        int lastReadLength = doTest(CONSTRUCTED);
+        Assertions.assertEquals(CONSTRUCTED.length(), lastReadLength, "write/readText: constructed length");
     }
 
     @Test
     public void testExtremelyLarge() {
         assumeTrue(Jvm.is64bit());
-        doTest(EXTREMELY_LARGE);
+        int lastReadLength = doTest(EXTREMELY_LARGE);
+        Assertions.assertEquals(EXTREMELY_LARGE.length(), lastReadLength, "write/readText: extremely large length");
     }
 
     @Test
     public void testMinimal() {
-        doTest(MINIMAL);
+        int lastReadLength = doTest(MINIMAL);
+        Assertions.assertEquals(MINIMAL.length(), lastReadLength, "write/readText: minimal length");
     }
 
     @Test
     public void testRealistic() {
-        doTest(REALISTIC);
+        int lastReadLength = doTest(REALISTIC);
+        Assertions.assertEquals(REALISTIC.length(), lastReadLength, "write/readText: realistic length");
     }
 
-    private void doTest(@NotNull String... problematic) {
+    private int doTest(@NotNull String... problematic) {
 
         String myPath = OS.getTarget() + "/writeReadText-" + Time.uniqueId();
 
+        int lastReadLength = -1;
         try (ChronicleQueue theQueue = SingleChronicleQueueBuilder
                 .single(myPath)
                 .blockSize(Maths.nextPower2(EXTREMELY_LARGE.length() * 4, 256 << 10))
@@ -169,7 +173,7 @@ public class WriteReadTextTest extends QueueTestCommon {
                 }
                 for (String s : problematic) {
                     tailer.readText(tmpReadback);
-                    Assert.assertEquals("write/readText", s, tmpReadback.toString());
+                    Assertions.assertEquals(s, tmpReadback.toString(), "write/readText");
                 }
             }
 
@@ -179,13 +183,15 @@ public class WriteReadTextTest extends QueueTestCommon {
 
                     tailer.readDocument(reader -> reader.getValueIn().textTo(tmpReadback));
                     String actual = tmpReadback.toString();
-                    Assert.assertEquals(tmpText.length(), actual.length());
+                    lastReadLength = actual.length();
+                    Assertions.assertEquals(tmpText.length(), actual.length(), "readDocument: text length");
                     for (int i = 0; i < actual.length(); i += 1024)
-                        Assert.assertEquals("i: " + i, tmpText.substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)));
-                    Assert.assertEquals(tmpText, actual);
+                        Assertions.assertEquals(tmpText.substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)), "i: " + i);
+                    Assertions.assertEquals(tmpText, actual, "readDocument: roundtrip");
                 }
             }
         }
         IOTools.deleteDirWithFiles(myPath);
+        return lastReadLength;
     }
 }

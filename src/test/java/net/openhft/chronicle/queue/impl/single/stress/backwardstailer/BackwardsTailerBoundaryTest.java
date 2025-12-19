@@ -10,64 +10,52 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(Parameterized.class)
 public class BackwardsTailerBoundaryTest extends QueueTestCommon {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerBoundaryTest.class);
 
     private SetTimeProvider timeProvider;
 
-    private final RollCycle rollCycle;
-
-    public BackwardsTailerBoundaryTest(RollCycle rollCycle) {
-        this.rollCycle = rollCycle;
-    }
-
-    @Parameterized.Parameters(name = "{0}")
-    public static Collection<Object[]> data() {
-        final List<Object[]> data = new ArrayList<>();
-        data.add(new Object[]{TestRollCycles.TEST4_DAILY});
-        return data;
-    }
-
-    @Before
+    @BeforeEach
     public void before() {
         timeProvider = new SetTimeProvider();
     }
 
-    @Test
-    public void verifyConsistency() {
+    private static Stream<RollCycle> rollCycles() {
+        return Stream.of(TestRollCycles.TEST4_DAILY);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("rollCycles")
+    public void verifyConsistency(RollCycle rollCycle) {
         @NotNull File path = getTmpDir();
         IOTools.deleteDirWithFiles(path);
         try (SingleChronicleQueue queue = createQueue(path, rollCycle);
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD)) {
 
-            assertEquals("Backwards tailer should start at index 0 when no queue data", 0, tailer.index());
+            assertEquals(0, tailer.index(), "Backwards tailer should start at index 0 when no queue data");
 
             long messagesPerCycle = (long) rollCycle.defaultIndexSpacing() * rollCycle.defaultIndexCount() * 5;
 
             for (int i = 0; i < messagesPerCycle * 5; i++) {
-                advanceTimeBeforeRollCycleFills(i, messagesPerCycle, queue);
+                advanceTimeBeforeRollCycleFills(i, messagesPerCycle, queue, rollCycle);
                 long lastIndexAppended = writeDataToQueue(appender, i, queue);
 
                 // Move to end
                 tailer.toEnd();
-                assertEquals(lastIndexAppended, tailer.index());
+                assertEquals(lastIndexAppended, tailer.index(), "tailer toEnd index at i=" + i);
 
                 // Move to beginning
                 tailer.moveToIndex(0);
@@ -87,7 +75,7 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
         return lastIndexAppended;
     }
 
-    private void advanceTimeBeforeRollCycleFills(int i, long messagesPerCycle, SingleChronicleQueue queue) {
+    private void advanceTimeBeforeRollCycleFills(int i, long messagesPerCycle, SingleChronicleQueue queue, RollCycle rollCycle) {
         if (i > 0 && i % messagesPerCycle == 0) {
             log.info("Advancing time to move to next cycle. Current cycle={}", queue.cycle());
             timeProvider.advanceMillis(rollCycle.lengthInMillis());

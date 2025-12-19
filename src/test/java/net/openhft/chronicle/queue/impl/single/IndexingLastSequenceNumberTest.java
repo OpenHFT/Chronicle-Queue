@@ -19,7 +19,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     @Test
     void checkIndexingSpacing() {
         appender.writeText("test");
-        assertEquals(rollCycle().defaultIndexSpacing(), indexing(queue).indexSpacing());
+        assertEquals(rollCycle().defaultIndexSpacing(), indexing(queue).indexSpacing(), "index spacing should match roll cycle default");
     }
 
     @Test
@@ -27,10 +27,10 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         appender.writeText("hello");
         Indexing indexing = indexing(queue);
         int linearScanByPositionCountStart = indexing.linearScanByPositionCount();
-        assertEquals(0, linearScanByPositionCountStart);
+        assertEquals(0, linearScanByPositionCountStart, "linear scan count should be zero before approximate lookup");
         long lastSequenceNumber = indexing.lastSequenceNumber(appender);
-        assertEquals(0, lastSequenceNumber);
-        assertEquals(1, indexing.linearScanByPositionCount());
+        assertEquals(0, lastSequenceNumber, "last sequence number should be zero for single entry with approximate lookup");
+        assertEquals(1, indexing.linearScanByPositionCount(), "linear scan should have been invoked once for approximate lookup");
     }
 
     @Test
@@ -38,10 +38,10 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         appender.writeText("hello");
         Indexing indexing = indexing(queue);
         int linearScanByPositionCountStart = indexing.linearScanByPositionCount();
-        assertEquals(0, linearScanByPositionCountStart);
+        assertEquals(0, linearScanByPositionCountStart, "linear scan count should be zero before precise lookup");
         long lastSequenceNumber = indexing.lastSequenceNumber(appender);
-        assertEquals(0, lastSequenceNumber);
-        assertEquals(1, indexing.linearScanByPositionCount());
+        assertEquals(0, lastSequenceNumber, "last sequence number should be zero for single entry with precise lookup");
+        assertEquals(1, indexing.linearScanByPositionCount(), "linear scan should have been invoked once for precise lookup");
     }
 
     @Test
@@ -50,8 +50,8 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         appender.writeText("world");
         Indexing indexing = indexing(queue);
         long lastSequenceNumber = indexing.lastSequenceNumber(appender);
-        assertEquals(1, lastSequenceNumber);
-        assertEquals(1, indexing.linearScanByPositionCount());
+        assertEquals(1, lastSequenceNumber, "last sequence number should be 1 when two entries exist");
+        assertEquals(1, indexing.linearScanByPositionCount(), "linear scan should have been invoked once for two-entry queue");
     }
 
     @Test
@@ -62,7 +62,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         timeProvider.advanceMillis(1_001);
         appender.writeText("c");
         long lastSequenceNumber = indexing(queue).lastSequenceNumber(appender);
-        assertEquals(0, lastSequenceNumber);
+        assertEquals(0, lastSequenceNumber, "last sequence number should be 0 for first entry in latest cycle file");
     }
 
     @Test
@@ -74,6 +74,6 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
         appender.writeText("c");
         appender.writeText("d");
         long lastSequenceNumber = indexing(queue).lastSequenceNumber(appender);
-        assertEquals(1, lastSequenceNumber);
+        assertEquals(1, lastSequenceNumber, "last sequence number should be 1 for second entry in latest cycle file");
     }
 }

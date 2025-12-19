@@ -11,37 +11,39 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate") // JUnit4 annotations require public class
-public class StoreAppenderTest extends QueueTestCommon {
+class StoreAppenderTest extends QueueTestCommon {
 
     private static final String TEST_TEXT = "Some text some text some text";
     private static final long ONE_DAY = TimeUnit.DAYS.toMillis(1);
 
-    @Rule
-    public final TemporaryFolder queueDirectory = new TemporaryFolder();
+    @TempDir
+    File queueDirectory;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
     public void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException, IOException {
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
+        File queuePath = new File(queueDirectory, "queue");
+        assertTrue(queuePath.mkdir(), "temp queue dir");
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queuePath).build()) {
             final BlockingWriter blockingWriter = new BlockingWriter(queue);
             final BlockedWriter blockedWriter = new BlockedWriter(queue);
 
@@ -58,7 +60,8 @@ public class StoreAppenderTest extends QueueTestCommon {
 
             blockedWriter.makePostInterruptAttemptToWrite();
 
-            expectTestText(queue, 16);
+            expectTestText(queue, 17);
+            assertEquals(17, queue.entryCount(), "queue should contain 17 entries after interrupted write recovery");
         }
     }
 
@@ -68,7 +71,9 @@ public class StoreAppenderTest extends QueueTestCommon {
 
         clock.addAndGet(-clock.get() % ONE_DAY);
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+        File queuePath = new File(queueDirectory, "queue");
+        assertTrue(queuePath.mkdir(), "temp queue dir");
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queuePath)
                 .timeProvider(clock::get)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -83,21 +88,20 @@ public class StoreAppenderTest extends QueueTestCommon {
             // The code now throws WriteAfterEOFException for the old cycle:
             clock.addAndGet(-1); // One millisecond earlier
 
-            assertThrows(WriteAfterEOFException.class, // is this a race?
-                    () -> appender.writingDocument().close());
+            assertThrows(WriteAfterEOFException.class, () -> appender.writingDocument().close(), "writingDocument: write after EOF");
 
             // advance back to the latest cycle and write
             clock.addAndGet(2);
             appender.writingDocument().close();
 
-            assertEquals(3, queue.entryCount());
+            assertEquals(3, queue.entryCount(), "entryCount after write-after-EOF retry");
         }
     }
 
     private void expectTestText(ChronicleQueue chronicleQueue, int times) {
         try (final ExcerptTailer tailer = chronicleQueue.createTailer()) {
             for (int i = 0; i < times; i++) {
-                assertEquals(TEST_TEXT, tailer.readText());
+                assertEquals(TEST_TEXT, tailer.readText(), "tailer should read expected test text at position " + i);
             }
         }
     }

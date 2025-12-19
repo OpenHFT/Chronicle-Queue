@@ -13,10 +13,10 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -24,13 +24,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class RollCycleTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -68,7 +68,7 @@ public class RollCycleTest extends QueueTestCommon {
             thread.interrupt();
         }
 
-        assertEquals(1, observer.documentsRead);
+        assertEquals(1, observer.documentsRead, "observer.documentsRead");
         observer.queue.close();
     }
 
@@ -76,12 +76,12 @@ public class RollCycleTest extends QueueTestCommon {
     public void newRollCycleIgnored2() throws InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
+        Assumptions.assumeFalse(PageUtil.isHugePage(path.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
 
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
         try (ChronicleQueue queue0 = observer.queue) {
-            assertNotNull(queue0);
+            assertNotNull(queue0, "queue0");
             int cyclesToWrite = 3;
             Thread thread = new Thread(observer);
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
@@ -101,8 +101,7 @@ public class RollCycleTest extends QueueTestCommon {
                     timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
                     appender.writeText(Integer.toString(i));
                 }
-                assertEquals("" +
-                                "--- !!meta-data #binary\n" +
+                assertEquals("--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +
                                 "  metadata: !SCQMeta {\n" +
@@ -274,7 +273,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "\"3\"\n" +
                                 "...\n" +
                                 "# 130660 bytes remaining\n",
-                        queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
+                        queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"), "queue.dump().replaceAll(\"listing.modCount: \\\\d+\", \"listing.modCount: 9\")");
 
                 // allow parallel tailer to finish iteration
                 for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
@@ -284,12 +283,12 @@ public class RollCycleTest extends QueueTestCommon {
                 thread.interrupt();
             }
 
-            assertEquals(1 + cyclesToWrite, observer.documentsRead);
+            assertEquals(1 + cyclesToWrite, observer.documentsRead, "observer.documentsRead");
         }
         finishedNormally = true;
     }
 
-    @After
+    @AfterEach
     public void clearInterrupt() {
         Thread.interrupted();
     }
@@ -326,7 +325,7 @@ public class RollCycleTest extends QueueTestCommon {
                     // System.out.println("Read a document " + readText);
                     documentsRead++;
                     int docId = Integer.parseInt(readText);
-                    assertEquals(docId, lastDocId + 1);
+                    assertEquals(docId, lastDocId + 1, "lastDocId + 1");
                     lastDocId = docId;
                 }
             }

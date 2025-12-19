@@ -20,9 +20,9 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,11 +36,11 @@ import java.util.stream.Collectors;
 import static java.lang.Thread.currentThread;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
-public class RollCycleMultiThreadStressTest extends QueueTestCommon {
+public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     private final long sleepPerWriteNanos;
     private final int testTime;
@@ -105,7 +105,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressTest().run();
+        new RollCycleMultiThreadStressVanillaTest().run();
     }
 
     private static void shutdownAll(int waitSecs, ExecutorService... ess) throws InterruptedException {
@@ -119,7 +119,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -136,6 +136,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         // System.out.println("Test complete");
         finishedNormally = true;
+        assertTrue(finishedNormally, "roll-cycle stress: finished");
     }
 
     void run() throws InterruptedException {
@@ -172,7 +173,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         if (readersReadOnly)
             try (ChronicleQueue queue = createQueue(file)) {
-                assertNotNull(queue);
+                assertNotNull(queue, "createQueue should succeed");
             }
 
         if (sharedWriteQueue)
@@ -231,8 +232,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         final StringBuilder writerExceptions = new StringBuilder(128);
         writers.stream().filter(w -> w.exception != null).forEach(w -> writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append('\n'));
 
-        assertTrue("Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
-                wrote.get() >= expectedNumberOfMessages);
+        assertTrue(wrote.get() >= expectedNumberOfMessages, "Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions);
 
         readers.stream().filter(r -> r.exception != null).findAny().ifPresent(reader -> {
             throw new AssertionError("Reader encountered exception, so stopped reading messages",
@@ -271,8 +271,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 // System.out.printf("Not all readers are complete. Waiting...%n");
                 Jvm.pause(2000);
             }
-            assertTrue("Readers did not catch up",
-                    areAllReadersComplete(expectedNumberOfMessages, readers));
+            assertTrue(areAllReadersComplete(expectedNumberOfMessages, readers), "Readers did not catch up");
 
         } finally {
 
@@ -333,9 +332,9 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         return sharedWriterQueue != null ? sharedWriterQueue : createQueue(path);
     }
 
-    @Before
+    @BeforeEach
     public void multiCPU() {
-        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+        Assumptions.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
     }
 
     enum StressTestType {

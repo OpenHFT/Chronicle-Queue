@@ -7,13 +7,13 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class TableStorePutGetTest extends QueueTestCommon {
@@ -34,16 +34,15 @@ public class TableStorePutGetTest extends QueueTestCommon {
 
             try (ExcerptTailer tailer = cq.createTailer()) {
                 long index = cq.tableStoreGet("=hello");
-                assertEquals(0x487600000000L, index);
-                assertTrue(tailer.moveToIndex(index));
-                assertEquals(index, tailer.index());
+                assertEquals(0x487600000000L, index, "table store should return expected index value for stored entry key '=hello'");
+                assertTrue(tailer.moveToIndex(index), "tailer should successfully move to index retrieved from table store");
+                assertEquals(index, tailer.index(), "tailer should be positioned at the index retrieved from table store");
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertEquals("hello", dc.wire().readEvent(String.class));
-                    assertEquals("world", dc.wire().getValueIn().text());
+                    assertEquals("hello", dc.wire().readEvent(String.class), "document should contain event key 'hello' at indexed position");
+                    assertEquals("world", dc.wire().getValueIn().text(), "document should contain text value 'world' for event key 'hello'");
                 }
             }
-            assertEquals("" +
-                    "--- !!meta-data #binary\n" +
+            assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -98,7 +97,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "]\n" +
                     "--- !!data #binary\n" +
                     "hello: world\n" +
-                    "...\n", cq.dump().replaceAll("(?m)^#.+$\\n", ""));
+                    "...\n", cq.dump().replaceAll("(?m)^#.+$\\n", ""), "queue dump should match expected structure with table store entry and message data");
         }
     }
 
@@ -115,7 +114,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
             }
             for (int j = 0; j < count; j++) {
                 final long l = cq.tableStoreGet("=hello" + j);
-                assertEquals(j, l);
+                assertEquals(j, l, "table store should return correct value " + j + " for key '=hello" + j + "' among 2280 stored entries");
             }
         }
         IOTools.deleteDirWithFiles(tempDir);
@@ -132,9 +131,13 @@ public class TableStorePutGetTest extends QueueTestCommon {
                 .rollCycle(TEST_DAILY)
                 .testBlockSize()
                 .build()) {
-            for (int j = 0; j < 1_800; j++) {
-                cq.tableStorePut("=this_is_a_long_key_to_try_and_consume_space_quicker_" + j, j);
+            String keyPrefix = "=this_is_a_long_key_to_try_and_consume_space_quicker_";
+            int count = 1_800;
+            for (int j = 0; j < count; j++) {
+                cq.tableStorePut(keyPrefix + j, j);
             }
+            assertEquals(0L, cq.tableStoreGet(keyPrefix + 0), "tableStore: first entry");
+            assertEquals(count - 1L, cq.tableStoreGet(keyPrefix + (count - 1)), "tableStore: last entry");
         }
     }
 }

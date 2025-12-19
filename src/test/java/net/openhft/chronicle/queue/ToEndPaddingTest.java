@@ -6,11 +6,11 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST8_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ToEndPaddingTest extends QueueTestCommon {
     @Test
@@ -26,11 +26,11 @@ public class ToEndPaddingTest extends QueueTestCommon {
 
             DocumentContext dc;
             try (final DocumentContext documentContext = tailer.readingDocument(false)) {
-                assertTrue(documentContext.isPresent());
+                assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
 
                 final String text = documentContext.wire().read().text();
 
-                assertEquals("start", text);
+                assertEquals("start", text, "read message text should match written start content");
 
                 // cache for later
                 dc = documentContext;
@@ -45,20 +45,20 @@ public class ToEndPaddingTest extends QueueTestCommon {
             // System.out.println(queue.dump());
 
             // toEnd just before adding one more entry
-            assertEquals(2336, dc.wire().bytes().readPosition());
+            assertEquals(2336, dc.wire().bytes().readPosition(), "dc.wire().bytes().readPosition()");
             tailer.toEnd();
-            assertEquals(2368, dc.wire().bytes().readPosition());
+            assertEquals(2368, dc.wire().bytes().readPosition(), "dc.wire().bytes().readPosition()");
 
             try (final DocumentContext documentContext = appender.acquireWritingDocument(false)) {
                 documentContext.wire().write("key").text("value");
             }
 
             try (final DocumentContext documentContext = tailer.readingDocument(false)) {
-                assertTrue(documentContext.isPresent());
+                assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
 
                 final String text = documentContext.wire().read().text();
 
-                assertEquals("value", text);
+                assertEquals("value", text, "read message text should match written value content after toEnd");
             }
         }
     }

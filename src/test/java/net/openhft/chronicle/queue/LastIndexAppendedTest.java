@@ -9,13 +9,13 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
 public class LastIndexAppendedTest extends QueueTestCommon {
@@ -34,12 +34,12 @@ public class LastIndexAppendedTest extends QueueTestCommon {
 
                     try (DocumentContext documentContext = appender.writingDocument()) {
                         int index = (int) documentContext.index();
-                        assertEquals(i, index);
+                        assertEquals(i, index, "document context index should match current iteration number");
 
                         documentContext.wire().write().text("hello world");
                     }
 
-                    assertEquals(i, (int) appender.lastIndexAppended());
+                    assertEquals(i, (int) appender.lastIndexAppended(), "lastIndexAppended should return most recent write index matching iteration number");
                 }
             }
         } finally {
@@ -72,7 +72,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
             tailer = tailer.toStart();
             long tailIndex;
             tailIndex = doRead(tailer, 5);
-            assertEquals(appendedIndex, tailIndex);
+            assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
             // System.out.println("Continue appending");
             try (ChronicleQueue appender_queue = single(path)
                     .testBlockSize()
@@ -85,18 +85,18 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                             m.write("msg").text("hello world2 ")));
                 }
                 appendedIndex = appender.lastIndexAppended();
-                assertTrue(appendedIndex > tailIndex);
+                assertTrue(appendedIndex > tailIndex, "appendedIndex > tailIndex");
             }
             // if the tailer continues as well it should see the 5 new messages
             // System.out.println("Reading messages added");
             tailIndex = doRead(tailer, 5);
-            assertEquals(appendedIndex, tailIndex);
+            assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
 
             // if the tailer is expecting to read all the message again
             // System.out.println("Reading all the messages again");
             tailer.toStart();
             tailIndex = doRead(tailer, 10);
-            assertEquals(appendedIndex, tailIndex);
+            assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
         } finally {
             IOTools.deleteDirWithFiles(path, 2);
         }
@@ -112,13 +112,13 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 tailIndex = tailer.index();
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
-                    assertNotNull(msg);
+                    assertNotNull(msg, "message text read from queue should not be null");
                     // System.out.println("msg:" + msg);
                     i[0]++;
                 });
             }
         }
-        assertEquals(expected, i[0]);
+        assertEquals(expected, i[0], "number of messages read should match expected count");
         return tailIndex;
     }
 }

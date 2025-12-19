@@ -8,9 +8,9 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BareSyncTest extends QueueTestCommon {
     @Test
@@ -21,6 +21,6 @@ public class BareSyncTest extends QueueTestCommon {
             appender.writeBytes(BytesStore.wrap(new byte[1024]));
             appender.sync();
         }
-        assertTrue(true); // if we got here without an exception, the test passes
+        assertTrue(true, "Sync operations should complete without exception before and after write"); // if we got here without an exception, the test passes
     }
 }

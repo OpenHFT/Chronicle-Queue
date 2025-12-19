@@ -10,12 +10,12 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for ExcerptAppender interface implementations.
@@ -93,7 +93,7 @@ public class ExcerptAppenderTest extends QueueTestCommon {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanup() {
         IOTools.deleteDirWithFiles(TEST_QUEUE);
     }
@@ -105,33 +105,33 @@ public class ExcerptAppenderTest extends QueueTestCommon {
 
         appender.writeBytes(bytes);
 
-        assertEquals(1, appender.lastIndexAppended());
+        assertEquals(1, appender.lastIndexAppended(), "appender.lastIndexAppended()");
     }
 
     @Test
     public void testLastIndexAppended() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
-        assertEquals(0, appender.lastIndexAppended());
+        assertEquals(0, appender.lastIndexAppended(), "appender.lastIndexAppended()");
 
         Bytes<byte[]> bytes = Bytes.wrapForRead("Test data".getBytes(StandardCharsets.UTF_8));
         appender.writeBytes(bytes);
 
-        assertEquals(1, appender.lastIndexAppended());
+        assertEquals(1, appender.lastIndexAppended(), "appender.lastIndexAppended()");
     }
 
     @Test
     public void testCycle() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
-        assertEquals(1, appender.cycle());
+        assertEquals(1, appender.cycle(), "appender.cycle()");
     }
 
     @Test
     public void testWire() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
-        assertNull(appender.wire());  // As wire is not set in this example
+        assertNull(appender.wire(), "appender.wire()");  // As wire is not set in this example
     }
 
     @Test
@@ -140,7 +140,7 @@ public class ExcerptAppenderTest extends QueueTestCommon {
         long before = appender.lastIndexAppended();
         appender.pretouch();
         // Verify no side-effect on default no-op implementation
-        assertEquals(before, appender.lastIndexAppended());
+        assertEquals(before, appender.lastIndexAppended(), "appender.lastIndexAppended()");
     }
 
     @Test
@@ -149,6 +149,6 @@ public class ExcerptAppenderTest extends QueueTestCommon {
         long before = appender.lastIndexAppended();
         appender.normaliseEOFs();
         // Verify no side-effect on default no-op implementation
-        assertEquals(before, appender.lastIndexAppended());
+        assertEquals(before, appender.lastIndexAppended(), "appender.lastIndexAppended()");
     }
 }

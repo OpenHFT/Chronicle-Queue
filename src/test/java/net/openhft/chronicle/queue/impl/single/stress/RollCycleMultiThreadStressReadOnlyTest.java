@@ -4,10 +4,10 @@
 package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.core.OS;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThreadStressTest {
 
@@ -18,9 +18,9 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
     @Test
     @Override
     public void stress() throws Exception {
-        Assume.assumeFalse("Windows does not support read only", OS.isWindows());
+        Assumptions.assumeFalse(OS.isWindows(), "Windows does not support read only");
         super.stress();
-        assertTrue(true); // parent has asserts
+        assertTrue(true, "stress: assertions are in parent"); // parent has asserts
     }
 
     public static void main(String[] args) throws Exception {

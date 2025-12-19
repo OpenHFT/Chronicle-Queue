@@ -13,8 +13,8 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -27,37 +27,40 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.String.format;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNotNull;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
     private static final int MESSAGES_TO_WRITE = 200;
 
-    @Before
+    @BeforeEach
     public void check64bit() {
-        assumeTrue(Jvm.is64bit());
+        assumeTrue(Jvm.is64bit(), "requires 64-bit JVM");
     }
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
     public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
-        testInternalWriteBytes(5, true);
+        int compared = testInternalWriteBytes(5, true);
+        assertEquals(MESSAGES_TO_WRITE, compared, "internalWriteBytes: compared messages (concurrent)");
     }
 
     @Test
     public void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
-        testInternalWriteBytes(5, false);
+        int compared = testInternalWriteBytes(5, false);
+        assertEquals(MESSAGES_TO_WRITE, compared, "internalWriteBytes: compared messages (single thread)");
     }
 
-    private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
+    private int testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
 
@@ -65,10 +68,11 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         copySourceToDestination(numCopiers, concurrent, sourceDir, destinationDir);
 
-        assertQueueContentsAreTheSame(sourceDir, destinationDir);
+        int compared = assertQueueContentsAreTheSame(sourceDir, destinationDir);
 
         IOTools.deleteDirWithFiles(sourceDir.toFile());
         IOTools.deleteDirWithFiles(destinationDir.toFile());
+        return compared;
     }
 
     private void copySourceToDestination(int numCopiers, boolean concurrent, Path sourceDir, Path destinationDir) throws InterruptedException {
@@ -87,11 +91,11 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
             });
         } finally {
             es.shutdown();
-            assert es.awaitTermination(30, TimeUnit.SECONDS) : "Copier threads didn't stop";
+            assertTrue(es.awaitTermination(30, TimeUnit.SECONDS), "copier threads stopped");
         }
     }
 
-    private void assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
+    private int assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
         try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
              final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
             // System.out.println(destinationQueue.dump());
@@ -116,11 +120,11 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     assert sourceTailer.readBytes(sourceBuffer) : "Source queue is shorter than expected";
                     assert destinationTailer.readBytes(destinationBuffer) : "Destination queue is shorter than expected";
                     final String s = destinationBuffer.toString();
-                    assertEquals(format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s),
-                            sourceBuffer.toString(), s.replaceAll(" - .*", ""));
+                    assertEquals(sourceBuffer.toString(), s.replaceAll(" - .*", ""), format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s));
                 }
             }
         }
+        return MESSAGES_TO_WRITE;
     }
 
     private class QueueCopier implements Runnable {
@@ -163,13 +167,13 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                             }
                             final long dtIndex = destinationTailer.index();
                             if (dtIndex != index)
-                                assertEquals(Long.toHexString(index), Long.toHexString(dtIndex));
+                                assertEquals(Long.toHexString(index), Long.toHexString(dtIndex), "tailer index matches written index");
                         }
                         prev.clear().append(buffer);
                         try (final ChronicleQueue dq = createQueue(destinationDir, null);
                              final ExcerptAppender da = dq.createAppender()) {
-                            assumeNotNull(dq);
-                            assumeNotNull(da);
+                            assertNotNull(dq, "destination queue reopened");
+                            assertNotNull(da, "destination appender reopened");
                         }
                     }
                 }

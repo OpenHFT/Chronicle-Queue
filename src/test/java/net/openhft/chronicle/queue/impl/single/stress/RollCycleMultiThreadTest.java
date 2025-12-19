@@ -11,15 +11,15 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RollCycleMultiThreadTest extends QueueTestCommon {
 
@@ -50,15 +50,15 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     .build();
                  ExcerptAppender appender = queue.createAppender()) {
 
-                Assert.assertEquals(-2, (int) scheduledExecutorService.submit(observer).get());
+                Assertions.assertEquals(-2, (int) scheduledExecutorService.submit(observer).get(), "(int) scheduledExecutorService.submit(observer).get()");
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("say").text("Day 3 data");
                 }
-                Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer).get());
-                assertEquals(1, observer.documentsRead);
+                Assertions.assertEquals(1, (int) scheduledExecutorService.submit(observer).get(), "(int) scheduledExecutorService.submit(observer).get()");
+                assertEquals(1, observer.documentsRead, "observer.documentsRead");
 
             }
         } finally {
@@ -72,7 +72,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
     public void testRead2() throws ExecutionException, InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
+        Assumptions.assumeFalse(PageUtil.isHugePage(path.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         final ExecutorService es = Executors.newSingleThreadExecutor(
@@ -98,10 +98,9 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 1 data");
                 }
 
-                Assert.assertEquals(1, (int) es.submit(observer).get());
+                Assertions.assertEquals(1, (int) es.submit(observer).get(), "(int) es.submit(observer).get()");
 
-                assertEquals("" +
-                                "--- !!meta-data #binary\n" +
+                assertEquals("--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +
                                 "  metadata: !SCQMeta {\n" +
@@ -168,7 +167,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "say: Day 1 data\n" +
                                 "...\n" +
                                 "# 130648 bytes remaining\n",
-                        queue.dump());
+                        queue.dump(), "queue.dump()");
 
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
@@ -177,8 +176,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 3 data");
                 }
 
-                assertEquals("" +
-                                "--- !!meta-data #binary\n" +
+                assertEquals("--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +
                                 "  metadata: !SCQMeta {\n" +
@@ -280,11 +278,11 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "say: Day 3 data\n" +
                                 "...\n" +
                                 "# 130648 bytes remaining\n",
-                        queue.dump());
-                Assert.assertEquals(2, (int) es.submit(observer).get());
+                        queue.dump(), "queue.dump()");
+                Assertions.assertEquals(2, (int) es.submit(observer).get(), "(int) es.submit(observer).get()");
 
                 // System.out.println(queue.dump());
-                assertEquals(2, observer.documentsRead);
+                assertEquals(2, observer.documentsRead, "observer.documentsRead");
             }
         } finally {
             es.shutdown();

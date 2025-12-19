@@ -7,12 +7,12 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Files;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InternalAppenderTest extends QueueTestCommon {
 
@@ -39,7 +39,7 @@ public class InternalAppenderTest extends QueueTestCommon {
             appender.writeBytes(index + 2, Bytes.from("Replicated 2"));
 
             // We should have three messages in our queue.
-            assertEquals(3, queue.entryCount());
+            assertEquals(3, queue.entryCount(), "queue should contain replicated and local entries");
 
         } finally {
             IOTools.deleteDirWithFiles(file);

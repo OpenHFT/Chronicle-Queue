@@ -10,27 +10,28 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MicroToucherTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
     public void touchPageTestBlockSize() {
-        touchPage(b -> b.blockSize(64 << 20), 66561);
+        int pages = touchPage(b -> b.blockSize(64 << 20));
+        assertEquals(66561, pages, "micro-touch: pages touched");
     }
 
-    private void touchPage(Consumer<SingleChronicleQueueBuilder> configure, int pagesExpected) {
+    private int touchPage(Consumer<SingleChronicleQueueBuilder> configure) {
         long start = System.nanoTime();
         String path = OS.getTarget() + "/touchPage-" + System.nanoTime();
         int pages = 0;
@@ -62,15 +63,15 @@ public class MicroToucherTest extends QueueTestCommon {
                 boolean touch = page != lastPage && appender.wire().bytes().bytesStore().inside(page, 8);
                 lastPage = page;
                 if (touch != appender.microTouch())
-                    assertEquals("i: " + i, touch, appender.microTouch());
+                    assertEquals(touch, appender.microTouch(), "i: " + i);
                 if (touch)
                     pages++;
             }
         } finally {
             System.out.println("pages = " + pages);
-            // assertEquals(pagesExpected, pages);
             System.out.println("Time = " + (System.nanoTime() - start) / 1000000 / 1e3);
             IOTools.deleteDirWithFiles(path);
         }
+        return pages;
     }
 }

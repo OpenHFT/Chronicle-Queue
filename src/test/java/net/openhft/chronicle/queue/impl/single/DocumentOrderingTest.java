@@ -8,9 +8,9 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public final class DocumentOrderingTest extends QueueTestCommon {
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
@@ -31,15 +31,15 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     private static void expectValue(final int expectedValue, final ExcerptTailer tailer) {
 
         try (final DocumentContext documentContext = tailer.readingDocument()) {
-            assertTrue(documentContext.isPresent());
-            assertEquals(expectedValue, documentContext.wire().getValueIn().int32());
+            assertTrue(documentContext.isPresent(), "DocumentContext should be present when expecting value " + expectedValue);
+            assertEquals(expectedValue, documentContext.wire().getValueIn().int32(), "Document value should match expected counter value " + expectedValue);
         }
     }
 
     private Thread thread;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -78,7 +78,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             expectValue(0, tailer);
             expectValue(1, tailer);
             expectValue(2, tailer);
-            assertFalse(tailer.readingDocument().isPresent());
+            assertFalse(tailer.readingDocument().isPresent(), "Tailer should have no more documents after reading all records in order");
         }
     }
 
@@ -128,6 +128,9 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             expectValue(1, tailer);
             expectValue(2, tailer);
             expectValue(3, tailer);
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                assertFalse(documentContext.isPresent(), "Tailer should reach end of queue after reading all ordered documents from multiple threads");
+            }
         }
         finishedNormally = true;
     }
@@ -157,7 +160,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(1, tailer);
-            assertFalse(tailer.readingDocument().isPresent());
+            assertFalse(tailer.readingDocument().isPresent(), "Tailer should have no more documents after unfinished first message was force-unlocked");
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }
@@ -191,6 +194,9 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             final ExcerptTailer tailer = queue.createTailer();
             expectValue(0, tailer);
             expectValue(1, tailer);
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                assertFalse(documentContext.isPresent(), "Tailer should reach end of queue after reading ordered documents when queue was empty");
+            }
         }
         finishedNormally = true;
     }
@@ -222,7 +228,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
             try (final ExcerptTailer tailer = queue.createTailer()) {
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
-                    assertTrue(documentContext.isPresent());
+                    assertTrue(documentContext.isPresent(), "DocumentContext should be present for initial pre-written document");
                 }
                 expectValue(0, tailer);
                 expectValue(1, tailer);
@@ -238,7 +244,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     private void expectCounterVaueOne(Future<RecordInfo> otherDocumentWriter) throws InterruptedException, ExecutionException, TimeoutException {
         try {
-            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue);
+            assertEquals(1, otherDocumentWriter.get(5L, TimeUnit.SECONDS).counterValue, "Other document writer should complete with counter value 1 after waiting for prior document");
         } catch (TimeoutException e) {
             StackTrace.forThread(thread).printStackTrace();
             throw e;
@@ -258,7 +264,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             }
             return new RecordInfo(counterValue);
         });
-        assertTrue("Task did not start", startedLatch.await(1, TimeUnit.MINUTES));
+        assertTrue(startedLatch.await(1, TimeUnit.MINUTES), "Write task should start within timeout period");
         return future;
     }
 
@@ -276,8 +282,8 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         }
     }
 
-    @Before
+    @BeforeEach
     public void multiCPU() {
-        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+        Assumptions.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
     }
 }

@@ -8,14 +8,14 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
 import java.nio.file.Path;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ToEndInvalidIndexTest extends QueueTestCommon {
 
@@ -23,14 +23,14 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
     private Path queuePath;
     private SetTimeProvider setTimeProvider;
 
-    @Before
+    @BeforeEach
     public void setUp() throws StreamCorruptedException {
         queuePath = IOTools.createTempDirectory("partialIndex");
         setTimeProvider = new SetTimeProvider();
         createQueueWithZeroFirstSubIndexValue(setTimeProvider, queuePath);
     }
 
-    @After
+    @AfterEach
     @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(queuePath.toFile());
@@ -42,12 +42,12 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
              ExcerptTailer tailer = queue.createTailer()) {
 
             StoreTailer storeTailer = (StoreTailer) tailer;
-            assertEquals(0, storeTailer.store.indexing.linearScanCount());
+            assertEquals(0, storeTailer.store.indexing.linearScanCount(), "precondition: no linear scan");
 
             // Moving toEnd results in linearScan because we have a zero value in the first sub-index.
             tailer.direction(TailerDirection.BACKWARD).toEnd();
 
-            assertEquals(1, storeTailer.store.indexing.linearScanCount());
+            assertEquals(1, storeTailer.store.indexing.linearScanCount(), "toEnd triggers linear scan");
         }
     }
 

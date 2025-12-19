@@ -9,24 +9,26 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("deprecation")
-public class ChronicleQueueTest extends QueueTestCommon {
+class ChronicleQueueTest extends QueueTestCommon {
 
     private static final String PATH_NAME = OS.getTarget() + "/test-path";
 
-    @AfterClass
-    public static void cleanup() {
+    @AfterAll
+    static void cleanup() {
         // Clean up the test directory
         IOTools.deleteDirWithFiles(PATH_NAME);
     }
@@ -35,14 +37,14 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testSingleBuilderCreatesNewInstance() {
         // Test that the singleBuilder() method returns a valid SingleChronicleQueueBuilder instance
         SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder();
-        assertNotNull(builder);
+        assertNotNull(builder, "singleBuilder: builder");
     }
 
     @Test
     public void testIndexForIdThrowsUnsupportedOperationException() {
         // Test that indexForId(String id) throws an UnsupportedOperationException as expected
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertThrows(UnsupportedOperationException.class, () -> queue.indexForId("someId"));
+            assertThrows(UnsupportedOperationException.class, () -> queue.indexForId("someId"), "indexForId: unsupported");
         }
     }
 
@@ -50,7 +52,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testCreateTailerThrowsUnsupportedOperationExceptionForNamedTailer() {
         // Test that createTailer(String id) throws an UnsupportedOperationException for the default implementation
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertThrows(UnsupportedOperationException.class, () -> queue.createTailer("namedTailer"));
+            assertThrows(UnsupportedOperationException.class, () -> queue.createTailer("namedTailer"), "createTailer(id): unsupported");
         }
     }
 
@@ -59,7 +61,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
         // Assuming createTailer() creates a valid ExcerptTailer when not overridden
         try (ChronicleQueue queue = ChronicleQueue.single(PATH_NAME);  // Adjust with a proper path
              ExcerptTailer tailer = queue.createTailer()) {
-            assertNotNull(tailer);
+            assertNotNull(tailer, "createTailer: tailer");
         }
     }
 
@@ -68,26 +70,34 @@ public class ChronicleQueueTest extends QueueTestCommon {
         // Assuming fileAbsolutePath() returns the correct absolute path of the Chronicle Queue
         try (ChronicleQueue queue = ChronicleQueue.single(PATH_NAME)) {  // Use a test path
             String path = queue.fileAbsolutePath();
-            assertNotNull(path);
-            assertTrue(path.replace('\\', '/').endsWith(PATH_NAME));  // Adjust based on actual path structure
+            assertNotNull(path, "fileAbsolutePath: path");
+            assertTrue(path.replace('\\', '/').endsWith(PATH_NAME), "fileAbsolutePath: endsWith target path");
         }
     }
 
     @Test
     public void testDumpCallsOutputStreamWriter() {
         // Test that dump(OutputStream stream, long fromIndex, long toIndex) calls the writer version correctly
+        AtomicBoolean called = new AtomicBoolean();
+        AtomicReference<Writer> writerRef = new AtomicReference<>();
+        AtomicLong fromIndexRef = new AtomicLong();
+        AtomicLong toIndexRef = new AtomicLong();
         try (ChronicleQueue queue = new StubChronicleQueue() {
 
             @Override
             public void dump(Writer writer, long fromIndex, long toIndex) {
-                // Validate that this method is called with the correct parameters
-                assertNotNull(writer);
-                assertEquals(0, fromIndex);
-                assertEquals(10, toIndex);
+                called.set(true);
+                writerRef.set(writer);
+                fromIndexRef.set(fromIndex);
+                toIndexRef.set(toIndex);
             }
         }) {
             OutputStream stream = new ByteArrayOutputStream();
             queue.dump(stream, 0, 10);  // Expect that this calls the other dump method
+            assertTrue(called.get(), "dump: delegate invoked");
+            assertNotNull(writerRef.get(), "dump: writer");
+            assertEquals(0L, fromIndexRef.get(), "dump: fromIndex");
+            assertEquals(10L, toIndexRef.get(), "dump: toIndex");
         }
     }
 
@@ -95,7 +105,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testLastIndexReplicatedReturnsMinusOne() {
         // Test that lastIndexReplicated() returns -1
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertEquals(-1, queue.lastIndexReplicated());
+            assertEquals(-1, queue.lastIndexReplicated(), "lastIndexReplicated");
         }
     }
 
@@ -103,7 +113,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testLastAcknowledgedIndexReplicatedReturnsMinusOne() {
         // Test that lastAcknowledgedIndexReplicated() returns -1
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertEquals(-1, queue.lastAcknowledgedIndexReplicated());
+            assertEquals(-1, queue.lastAcknowledgedIndexReplicated(), "lastAcknowledgedIndexReplicated");
         }
     }
 
@@ -111,7 +121,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testLastIndexMSyncedReturnsMinusOne() {
         // Test that lastIndexMSynced() returns -1
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertEquals(-1, queue.lastIndexMSynced());
+            assertEquals(-1, queue.lastIndexMSynced(), "lastIndexMSynced");
         }
     }
 
@@ -119,7 +129,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testLastIndexMSyncedThrowsUnsupportedOperationException() {
         // Test that lastIndexMSynced(long lastIndexMSynced) throws UnsupportedOperationException
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertThrows(UnsupportedOperationException.class, () -> queue.lastIndexMSynced(100L));
+            assertThrows(UnsupportedOperationException.class, () -> queue.lastIndexMSynced(100L), "lastIndexMSynced(value): unsupported");
         }
     }
 
@@ -127,7 +137,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testAwaitAsyncReturnsTrue() {
         // Test that awaitAsync() always returns true
         try (ChronicleQueue queue = new StubChronicleQueue()) {
-            assertTrue(queue.awaitAsync());
+            assertTrue(queue.awaitAsync(), "awaitAsync");
         }
     }
 
@@ -135,7 +145,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     public void testNonAsyncTailerCallsCreateTailer() {
         // Test that nonAsyncTailer() calls createTailer()
         try (ChronicleQueue queue = ChronicleQueue.single(PATH_NAME)) {  // Adjust with a proper path
-            assertNotNull(queue.nonAsyncTailer());
+            assertNotNull(queue.nonAsyncTailer(), "nonAsyncTailer");
         }
     }
 

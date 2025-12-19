@@ -11,8 +11,8 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
@@ -38,13 +38,14 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
         }
 
         try (final ChronicleQueue myRead = myBuilder.build()) {
-            read(myRead, messages);
+            int readCount = read(myRead);
+            Assertions.assertEquals(messages, readCount, "move-index: documents read");
         } finally {
             IOTools.deleteDirWithFiles(basePath);
         }
     }
 
-    private void read(@NotNull ChronicleQueue aChronicle, int expected) {
+    private int read(@NotNull ChronicleQueue aChronicle) {
         final ExcerptTailer myTailer = aChronicle.createTailer();
         final int myLast = HOURLY.toCycle(myTailer.toEnd().index());
         final int myFirst = HOURLY.toCycle(myTailer.toStart().index());
@@ -60,7 +61,7 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
             }
             myIndex = HOURLY.toIndex(++myCycle, 0);
         }
-        Assert.assertEquals(expected, count);
+        return count;
     }
 
     private ReadMarshallable read() {

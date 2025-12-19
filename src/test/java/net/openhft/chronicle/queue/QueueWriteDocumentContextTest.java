@@ -12,13 +12,13 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.WriteDocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueueWriteDocumentContextTest extends QueueTestCommon {
 
@@ -98,7 +98,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                 try (DocumentContext dc = wire.acquireWritingDocument(false)) {
                     dc.wire().write("key").int32(i);
                 }
-                assertTrue(dc0.isNotComplete());
+                assertTrue(dc0.isNotComplete(), "outer document should remain open");
             }
         }
     }
@@ -117,9 +117,9 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         String s = "/nestedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
-            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
+            Assumptions.assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
             writeThreeKeys(appender);
-            assertEquals("queue dump after nested writes", EXPECTED_QUEUE_DUMP, cq.dump());
+            assertEquals(EXPECTED_QUEUE_DUMP, cq.dump(), "queue dump after nested writes");
         }
     }
 
@@ -128,9 +128,9 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         String s = "/chainedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
-            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
+            Assumptions.assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
             writeThreeChainedKeys(appender);
-            assertEquals("queue dump after chained writes", EXPECTED_QUEUE_DUMP, cq.dump());
+            assertEquals(EXPECTED_QUEUE_DUMP, cq.dump(), "queue dump after chained writes");
         }
     }
 

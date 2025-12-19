@@ -9,19 +9,30 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 
 import java.io.StreamCorruptedException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
+@ExtendWith(PartialUpdateTest.PartialUpdateTemplateProvider.class)
 @SuppressWarnings({"deprecation", "removal"})
 public class PartialUpdateTest extends QueueTestCommon {
 
@@ -58,91 +69,137 @@ public class PartialUpdateTest extends QueueTestCommon {
         this.queueCreator = queueCreator;
     }
 
-    @Parameterized.Parameters(name = "state={0}")
-    public static PartialQueueCreator[] params() {
-        return PartialQueueCreator.values();
+    private static Stream<PartialQueueCreator> cases() {
+        return Arrays.stream(PartialQueueCreator.values());
     }
 
-    @Before
+    static final class PartialUpdateTemplateProvider implements TestTemplateInvocationContextProvider {
+        @Override
+        public boolean supportsTestTemplate(ExtensionContext context) {
+            return true;
+        }
+
+        @Override
+        public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context) {
+            return cases().map(PartialUpdateInvocationContext::new);
+        }
+    }
+
+    private static final class PartialUpdateInvocationContext implements TestTemplateInvocationContext {
+        private final PartialQueueCreator queueCreator;
+
+        private PartialUpdateInvocationContext(PartialQueueCreator queueCreator) {
+            this.queueCreator = queueCreator;
+        }
+
+        @Override
+        public String getDisplayName(int invocationIndex) {
+            return "state=" + queueCreator;
+        }
+
+        @Override
+        public java.util.List<Extension> getAdditionalExtensions() {
+            return Collections.singletonList(new PartialUpdateParameterResolver(queueCreator));
+        }
+    }
+
+    private static final class PartialUpdateParameterResolver implements ParameterResolver {
+        private final PartialQueueCreator queueCreator;
+
+        private PartialUpdateParameterResolver(PartialQueueCreator queueCreator) {
+            this.queueCreator = queueCreator;
+        }
+
+        @Override
+        public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            return parameterContext.getParameter().getType() == PartialQueueCreator.class;
+        }
+
+        @Override
+        public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            return queueCreator;
+        }
+    }
+
+    @BeforeEach
     public void setUp() {
         queuePath = IOTools.createTempDirectory("partialUpdate");
         setTimeProvider = new SetTimeProvider();
         queueCreator.createQueue(setTimeProvider, queuePath);
     }
 
-    @After
     @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(queuePath.toFile());
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void disableCheckIndexAssertions() {
         // This turns off assertions, so we see what would happen in the real world
         originalCheckIndexValue = QueueSystemProperties.checkIndex();
         QueueSystemProperties.setCheckIndex(false);
     }
 
-    @AfterClass
+    @AfterAll
     public static void restoreCheckIndexAssertions() {
         QueueSystemProperties.setCheckIndex(originalCheckIndexValue);
     }
 
-    @Test
+    @TestTemplate
     public void testBackwardsToEndArrivesAtCorrectPosition() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.direction(TailerDirection.BACKWARD).toEnd();
             // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
-            assertEquals("Six", tailer.readText());
+            assertEquals("Six", tailer.readText(), "tailer.readText()");
         }
     }
 
-    @Test
+    @TestTemplate
     public void testBackwardsToEndReportsCorrectIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.direction(TailerDirection.BACKWARD).toEnd();
             // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
-            assertEquals(LAST_INDEX, tailer.index());
+            assertEquals(LAST_INDEX, tailer.index(), "tailer.index()");
         }
     }
 
-    @Test
+    @TestTemplate
     public void testForwardsToEndArrivesAtCorrectPosition() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.toEnd();
             // toEnd in the forward direction positions the cursor AFTER the last excerpt
-            assertNull(tailer.readText());
+            assertNull(tailer.readText(), "tailer.readText()");
         }
     }
 
-    @Test
+    @TestTemplate
     public void testForwardsToEndReportsCorrectIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.toEnd();
             // toEnd in the forward direction positions the cursor AFTER the last excerpt
-            assertEquals(LAST_INDEX + 1, tailer.index());
+            assertEquals(LAST_INDEX + 1, tailer.index(), "tailer.index()");
         }
     }
 
-    @Test
+    @TestTemplate
     public void testLastIndexIsCorrect() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath)) {
             // Should report last index correctly
-            assertEquals(LAST_INDEX, queue.lastIndex());
+            assertEquals(LAST_INDEX, queue.lastIndex(), "queue.lastIndex()");
         }
     }
 
-    @Test
+    @TestTemplate
     public void testAppendReturnsCorrectLastAppendedIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptAppender appender = queue.createAppender()) {
             // Should report last index correctly
             appender.writeText("Seven");
-            assertEquals(LAST_INDEX + 1, appender.lastIndexAppended());
+            assertEquals(LAST_INDEX + 1, appender.lastIndexAppended(), "appender.lastIndexAppended()");
         }
     }
 
@@ -171,11 +228,11 @@ public class PartialUpdateTest extends QueueTestCommon {
             appender.writeText("Five");
             int currentCycle = RollCycles.FAST_DAILY.toCycle(appender.lastIndexAppended());
             try (SingleChronicleQueueStore secondRollCycle = queue.storeForCycle(currentCycle, 0, false, null)) {
-                assertNotNull(secondRollCycle);
+                assertNotNull(secondRollCycle, "secondRollCycle");
                 final long previousWritePosition = secondRollCycle.writePosition();
                 long previousSequence = secondRollCycle.lastSequenceNumber(tailer);
                 printLastWritePositionAndSequence("before append last excerpt", tailer, secondRollCycle);
-                assertEquals(1, previousSequence);
+                assertEquals(1, previousSequence, "previousSequence");
                 appender.writeText("Six");
                 printLastWritePositionAndSequence("after append last excerpt", tailer, secondRollCycle);
 

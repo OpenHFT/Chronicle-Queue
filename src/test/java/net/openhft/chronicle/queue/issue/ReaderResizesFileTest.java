@@ -15,8 +15,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ReaderResizesFileTest {
     private static final File QUEUE_DIR = new File(OS.getTarget(), "ReaderResizesFileTest-" + System.nanoTime());
 
-    @After
+    @AfterEach
     public void cleanup() {
         IOTools.deleteDirWithFiles(QUEUE_DIR);
     }
@@ -51,7 +51,7 @@ public class ReaderResizesFileTest {
             assertEquals(1, files.length, "Expected exactly one cycle file");
             File firstFile = files[0];
 
-            assertEquals(actualChunkSize, firstFile.length());
+            assertEquals(actualChunkSize, firstFile.length(), "Queue cycle file should have initial size equal to one chunk after first write");
 
             // Trigger a potential resize by writing more data
             try (DocumentContext dc = appender.writingDocument()) {
@@ -60,16 +60,16 @@ public class ReaderResizesFileTest {
                 for (int i = 0; i < blockSize; i += 8)
                     bytes.writeLong(i);
             }
-            assertEquals(actualChunkSize, firstFile.length());
+            assertEquals(actualChunkSize, firstFile.length(), "Queue cycle file should remain at one chunk size after writing additional data");
 
             try (RandomAccessFile raf = new RandomAccessFile(firstFile, "rw");
                  FileLock lockFile = raf.getChannel().lock()) {
-                assertNotNull(lockFile);
+                assertNotNull(lockFile, "File lock should be successfully acquired on queue cycle file");
                 for (int i = 1; i <= 2; i++) {
                     try (DocumentContext dc = tailer.readingDocument()) {
                         assertTrue(dc.isPresent(), "Document should be present");
                     }
-                    assertEquals(actualChunkSize, firstFile.length());
+                    assertEquals(actualChunkSize, firstFile.length(), "Queue cycle file should maintain consistent size while reading with external file lock");
                 }
 
                 try (DocumentContext dc = tailer.readingDocument()) {
@@ -111,13 +111,11 @@ public class ReaderResizesFileTest {
                     }
                 }
 
-                assertEquals(openRefCount, heldStore.refCount(),
-                        "RefCount should remain unchanged while the tailer document is held open");
+                assertEquals(openRefCount, heldStore.refCount(), "RefCount should remain unchanged while the tailer document is held open");
             }
 
-            assertNotNull(heldStore);
-            assertTrue(heldStore.refCount() <= openRefCount,
-                    "RefCount should not increase after closing the tailer document");
+            assertNotNull(heldStore, "BytesStore reference should be held for verification");
+            assertTrue(heldStore.refCount() <= openRefCount, "RefCount should not increase after closing the tailer document");
         }
     }
 

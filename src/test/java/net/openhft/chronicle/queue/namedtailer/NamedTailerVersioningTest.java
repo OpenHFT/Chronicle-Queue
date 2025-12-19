@@ -12,8 +12,8 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +24,7 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class NamedTailerVersioningTest extends QueueTestCommon {
 
@@ -44,7 +44,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             tailer.readText();
 
             LongValue longValue = queue.metaStore().acquireValueFor(String.format(SingleChronicleQueue.INDEX_VERSION_FORMAT, "named_1"));
-            assertEquals(Long.MIN_VALUE, longValue.getValue());
+            assertEquals(Long.MIN_VALUE, longValue.getValue(), "non-replicated named tailer: version unset");
             longValue.close();
 
             finishedNormally = true;
@@ -55,7 +55,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
     public void verifyBackwardsCompatibility_tailerPositionsAreRetained() throws IOException, URISyntaxException {
-        Assume.assumeFalse("This test must be ignored on hugetlbfs because the test file was generated on a standard linux file system", PageUtil.isHugePage(OS.getTarget()));
+        Assumptions.assumeFalse(PageUtil.isHugePage(OS.getTarget()), "This test must be ignored on hugetlbfs because the test file was generated on a standard linux file system");
 
         // Copy the data from src/test/resources
         Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").toURI());
@@ -67,16 +67,16 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
              ExcerptTailer tailerTwo = queue.createTailer("replicated:tailerTwo");
              ExcerptTailer tailerThree = queue.createTailer("replicated:tailerThree")) {
 
-            assertEquals(84512071483394L, tailerOne.index());
-            assertEquals(84512071483394L, tailerTwo.index());
-            assertEquals(84512071483394L, tailerThree.index());
+            assertEquals(84512071483394L, tailerOne.index(), "backwards compat: tailerOne index");
+            assertEquals(84512071483394L, tailerTwo.index(), "backwards compat: tailerTwo index");
+            assertEquals(84512071483394L, tailerThree.index(), "backwards compat: tailerThree index");
 
             try (LongValue tailerOneVersion = queue.indexVersionForId("replicated:tailerOne");
                  LongValue tailerTwoVersion = queue.indexVersionForId("replicated:tailerTwo");
                  LongValue tailerThreeVersion = queue.indexVersionForId("replicated:tailerThree")) {
-                assertEquals(0, tailerOneVersion.getValue());
-                assertEquals(0, tailerTwoVersion.getValue());
-                assertEquals(0, tailerThreeVersion.getValue());
+                assertEquals(0, tailerOneVersion.getValue(), "backwards compat: tailerOne version");
+                assertEquals(0, tailerTwoVersion.getValue(), "backwards compat: tailerTwo version");
+                assertEquals(0, tailerThreeVersion.getValue(), "backwards compat: tailerThree version");
             }
 
         } finally {
@@ -103,7 +103,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         // Open for the second time ensure that the tailer position was retained
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
-            assertEquals(index, tailer.index());
+            assertEquals(index, tailer.index(), "tailer restart: retained index");
         } finally {
             IOTools.deleteDirWithFiles(queuePath);
         }
@@ -115,11 +115,11 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
-            assertNotNull(appender);
-            assertNotNull(tailer);
+            assertNotNull(appender, "no version increments: appender created");
+            assertNotNull(tailer, "no version increments: tailer created");
 
             LongValue indexVersion = queue.indexVersionForId("replicated:named_1");
-            assertEquals(-1, indexVersion.getValue());
+            assertEquals(-1, indexVersion.getValue(), "no version increments: initial version");
             indexVersion.close();
 
         } finally {
@@ -141,7 +141,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             }
 
             LongValue indexVersion = queue.indexVersionForId("replicated:named_1");
-            assertEquals(100, indexVersion.getValue());
+            assertEquals(100, indexVersion.getValue(), "multiple version increments: version");
             indexVersion.close();
 
         } finally {
@@ -159,11 +159,11 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             for (int i = 0; i < 3; i++) {
                 appender.writeText("msg-" + i);
             }
-            assertEquals("msg-0", tailer.readText());
-            assertEquals("msg-1", tailer.readText());
+            assertEquals("msg-0", tailer.readText(), "rewind: first read");
+            assertEquals("msg-1", tailer.readText(), "rewind: second read");
 
             tailer.toStart();
-            assertEquals("msg-0", tailer.readText());
+            assertEquals("msg-0", tailer.readText(), "rewind: after toStart");
         } finally {
             IOTools.deleteDirWithFiles(queuePath);
         }
@@ -183,8 +183,8 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptTailer tailer = queue.createTailer("replicated:resumer")) {
-            assertTrue("moveToIndex should succeed", tailer.moveToIndex(indexes[2]));
-            assertEquals("payload-2", tailer.readText());
+            assertTrue(tailer.moveToIndex(indexes[2]), "moveToIndex should succeed");
+            assertEquals("payload-2", tailer.readText(), "moveToIndex: reads expected");
         } finally {
             IOTools.deleteDirWithFiles(queuePath);
         }

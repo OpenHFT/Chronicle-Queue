@@ -10,13 +10,17 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 public class ChronicleWriterTest extends QueueTestCommon {
     private static final String METHOD_NAME = "doit";
@@ -32,7 +36,9 @@ public class ChronicleWriterTest extends QueueTestCommon {
         dir = IOTools.createTempFile(this.getClass().getSimpleName());
     }
 
-    @Test(timeout = 5000)
+    @Test
+
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testWireMarshallingMapAndDTO() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(null, cw1, cw2);
         chronicleWriter.execute();
@@ -40,10 +46,10 @@ public class ChronicleWriterTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
             StringBuilder sb = new StringBuilder();
             @NotNull MethodReader mr = queue.createTailer().methodReader(Mocker.intercepting(MyInterface.class, "*", sb::append));
-            Assert.assertTrue(mr.readOne());
-            Assert.assertTrue(mr.readOne());
-            Assert.assertFalse(mr.readOne());
-            Assert.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
+            Assertions.assertTrue(mr.readOne(), "first message with Henry DTO should be read successfully");
+            Assertions.assertTrue(mr.readOne(), "second message with Percy DTO should be read successfully");
+            Assertions.assertFalse(mr.readOne(), "no more messages should remain after reading two DTOs");
+            Assertions.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
                     "  age: 19,\n" +
                     "  name: Henry\n" +
                     "}\n" +
@@ -51,13 +57,15 @@ public class ChronicleWriterTest extends QueueTestCommon {
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +
-                    "]", sb.toString());
+                    "]", sb.toString(), "intercepted output should contain both Henry and Percy DTOs");
         } finally {
             IOTools.deleteDirWithFiles(dir);
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testWireMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface.class.getTypeName(), cw2);
         chronicleWriter.execute();
@@ -65,19 +73,21 @@ public class ChronicleWriterTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
             StringBuilder sb = new StringBuilder();
             @NotNull MethodReader mr = queue.createTailer().methodReader(Mocker.intercepting(MyInterface.class, "*", sb::append));
-            Assert.assertTrue(mr.readOne());
-            Assert.assertFalse(mr.readOne());
-            Assert.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
+            Assertions.assertTrue(mr.readOne(), "single Percy DTO message should be read successfully via wire marshalling");
+            Assertions.assertFalse(mr.readOne(), "no more messages should remain after reading single DTO");
+            Assertions.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +
-                    "]", sb.toString());
+                    "]", sb.toString(), "wire marshalled output should contain Percy DTO with age 42");
         } finally {
             IOTools.deleteDirWithFiles(dir);
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testBytesMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface2.class.getTypeName(), cw3);
         chronicleWriter.execute();
@@ -85,13 +95,13 @@ public class ChronicleWriterTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
             StringBuilder sb = new StringBuilder();
             @NotNull MethodReader mr = queue.createTailer().methodReader(Mocker.intercepting(MyInterface2.class, "*", sb::append));
-            Assert.assertTrue(mr.readOne());
-            Assert.assertFalse(mr.readOne());
-            Assert.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO2 {\n" +
+            Assertions.assertTrue(mr.readOne(), "single Percy DTO2 message should be read successfully via bytes marshalling");
+            Assertions.assertFalse(mr.readOne(), "no more messages should remain after reading single DTO2");
+            Assertions.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO2 {\n" +
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +
-                    "]", sb.toString());
+                    "]", sb.toString(), "bytes marshalled output should contain Percy DTO2 with age 42");
         } finally {
             IOTools.deleteDirWithFiles(dir);
         }

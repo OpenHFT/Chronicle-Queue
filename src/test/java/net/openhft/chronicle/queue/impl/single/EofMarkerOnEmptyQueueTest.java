@@ -15,42 +15,42 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @SuppressWarnings({"deprecation", "removal"})
 public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
-    @Rule
-    public final TemporaryFolder tmpFolder = new TemporaryFolder();
+    @TempDir
+    Path tmpFolder;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
     public void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        Assume.assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Windows does not support this test");
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");
         expectException("Forced unlock for the lock");
 
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         try (final RollingChronicleQueue queue =
-                     ChronicleQueue.singleBuilder(tmpFolder.newFolder()).
+                     ChronicleQueue.singleBuilder(tmpFolder.toFile()).
                              rollCycle(TEST_SECONDLY).
                              timeProvider(clock::get).
                              timeoutMS(1_000).
@@ -85,7 +85,7 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
 
                 final long firstCycleWritePosition = firstCycleStore.writePosition();
                 // assert that no write was completed
-                assertEquals(0L, firstCycleWritePosition);
+                assertEquals(0L, firstCycleWritePosition, "First cycle write position should be zero as incomplete write was not committed");
                 // firstCycleStore.release(test);
 
                 final ExcerptTailer tailer = queue.createTailer();
@@ -103,8 +103,8 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
                         lastItem = field.int32();
                     }
                 }
-                assertEquals(1, recordCount);
-                assertEquals(7, lastItem);
+                assertEquals(1, recordCount, "Tailer should read exactly one completed record after recovering from crashed writer");
+                assertEquals(7, lastItem, "Last item value should be 7 from completed write in next cycle");
             }
         } finally {
             System.clearProperty("queue.force.unlock.mode");

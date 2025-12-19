@@ -7,11 +7,11 @@ import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class PretouchUtilTest extends QueueTestCommon {
 
@@ -21,7 +21,7 @@ public class PretouchUtilTest extends QueueTestCommon {
         final File dir = getTmpDir();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
             final EventHandler handler = PretouchUtil.createEventHandler(q);
-            assertNotNull(handler);
+            assertNotNull(handler, "pretouch: handler");
             // Exercise handler once. In enterprise builds this may perform work and return true;
             // in OSS fallback it returns false. Only assert that it does not throw.
             try {
@@ -42,6 +42,7 @@ public class PretouchUtilTest extends QueueTestCommon {
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
             handler = PretouchUtil.createEventHandler(q);
         }
+        assertNotNull(handler, "pretouch: handler");
         try {
             handler.action();
         } catch (net.openhft.chronicle.core.threads.InvalidEventHandlerException ignored) {

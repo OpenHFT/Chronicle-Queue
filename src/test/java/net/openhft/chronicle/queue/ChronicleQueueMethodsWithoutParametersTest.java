@@ -5,13 +5,13 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon {
 
@@ -33,12 +33,12 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
             someListener.methodWithoutParams();
 
             Jvm.debug().on(getClass(), "Reading from queue");
-            assertTrue(reader.readOne());
-            assertTrue(reader.readOne());
-            assertFalse(reader.readOne());
+            assertTrue(reader.readOne(), "reader.readOne()");
+            assertTrue(reader.readOne(), "reader.readOne()");
+            assertFalse(reader.readOne(), "reader.readOne()");
 
-            assertTrue(someManager.methodWithOneParamInvoked);       // one param method was invoked
-            assertTrue(someManager.methodWithoutParamsInvoked);      // no params method was NOT invoked
+            assertTrue(someManager.methodWithOneParamInvoked, "someManager.methodWithOneParamInvoked");       // one param method was invoked
+            assertTrue(someManager.methodWithoutParamsInvoked, "someManager.methodWithoutParamsInvoked");      // no params method was NOT invoked
 
             // Jvm.warn().on(getClass(), queue.dump());
         }

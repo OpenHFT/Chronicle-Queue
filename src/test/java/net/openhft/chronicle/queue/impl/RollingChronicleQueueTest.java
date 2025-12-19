@@ -8,7 +8,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST2_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class RollingChronicleQueueTest extends QueueTestCommon {
@@ -49,8 +49,7 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
             appender.writeText("5. some text - second cycle");
             appender.writeText("some more text");
             long end = appender.lastIndexAppended();
-            final String expected = "" +
-                    "--- !!meta-data #binary\n" +
+            final String expected = "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -197,14 +196,15 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
                     "some more text\n" +
                     "...\n" +
                     "# X bytes remaining\n";
-            assertEquals(5, q.countExcerpts(start, end));
+            assertEquals(5, q.countExcerpts(start, end), "countExcerpts between start and end");
 
             Thread.yield();
             // on a roll, the file might be truncated making the size remaining just a few bytes
             assertEquals(expected
                             .replaceAll(" \\d+ (bytes remaining)", " X $1"),
                     q.dump()
-                            .replaceAll(" \\d+ (bytes remaining)", " X $1"));
+                            .replaceAll(" \\d+ (bytes remaining)", " X $1"),
+                    "dump: expected output (size normalised)");
         }
     }
 

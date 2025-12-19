@@ -4,10 +4,10 @@
 package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThreadStressTest {
 
@@ -18,9 +18,9 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
     @Test
     @Override
     public void stress() throws Exception {
-        Assume.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
+        Assumptions.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
         super.stress();
-        assertTrue(true); // parent has asserts
+        assertTrue(true, "stress: assertions are in parent"); // parent has asserts
     }
 
     public static void main(String[] args) throws Exception {

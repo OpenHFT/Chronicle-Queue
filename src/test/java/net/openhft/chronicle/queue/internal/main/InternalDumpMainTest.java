@@ -8,7 +8,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -16,8 +16,8 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class InternalDumpMainTest extends QueueTestCommon {
 
@@ -39,9 +39,9 @@ public class InternalDumpMainTest extends QueueTestCommon {
         final ByteArrayOutputStream captureDir = new ByteArrayOutputStream();
         InternalDumpMain.dump(dir, new PrintStream(captureDir), Long.MAX_VALUE);
         final String outDir = captureDir.toString();
-        assertTrue(outDir.contains("## "));
-        assertTrue(outDir.contains(".cq4"));
-        assertTrue(outDir.contains("metadata.cq4t"));
+        assertTrue(outDir.contains("## "), "dump: includes markdown heading");
+        assertTrue(outDir.contains(".cq4"), "dump: includes cq4 files");
+        assertTrue(outDir.contains("metadata.cq4t"), "dump: includes metadata file");
 
         // dump single file
         final ByteArrayOutputStream captureFile = new ByteArrayOutputStream();

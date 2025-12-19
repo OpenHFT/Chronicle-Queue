@@ -10,25 +10,26 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
+@ExtendWith(MessageHistoryTest.MessageHistoryTemplateProvider.class)
 public final class MessageHistoryTest extends QueueTestCommon {
-    @Rule
-    public final TestName testName = new TestName();
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private File inputQueueDir;
     private File middleQueueDir;
@@ -39,15 +40,68 @@ public final class MessageHistoryTest extends QueueTestCommon {
         this.named = named;
     }
 
-    @Parameterized.Parameters(name = "named={0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(
-                new Object[]{true},
-                new Object[]{false}
-        );
+    private static Stream<MessageHistoryCase> cases() {
+        return Stream.of(new MessageHistoryCase(true), new MessageHistoryCase(false));
     }
 
-    @Before
+    private static final class MessageHistoryCase {
+        private final boolean named;
+
+        private MessageHistoryCase(boolean named) {
+            this.named = named;
+        }
+    }
+
+    static final class MessageHistoryTemplateProvider implements TestTemplateInvocationContextProvider {
+        @Override
+        public boolean supportsTestTemplate(ExtensionContext context) {
+            return true;
+        }
+
+        @Override
+        public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context) {
+            return cases().map(MessageHistoryInvocationContext::new);
+        }
+    }
+
+    private static final class MessageHistoryInvocationContext implements TestTemplateInvocationContext {
+        private final MessageHistoryCase testCase;
+
+        private MessageHistoryInvocationContext(MessageHistoryCase testCase) {
+            this.testCase = testCase;
+        }
+
+        @Override
+        public String getDisplayName(int invocationIndex) {
+            return "named=" + testCase.named;
+        }
+
+        @Override
+        public java.util.List<Extension> getAdditionalExtensions() {
+            return Collections.singletonList(new MessageHistoryParameterResolver(testCase));
+        }
+    }
+
+    private static final class MessageHistoryParameterResolver implements ParameterResolver {
+        private final MessageHistoryCase testCase;
+
+        private MessageHistoryParameterResolver(MessageHistoryCase testCase) {
+            this.testCase = testCase;
+        }
+
+        @Override
+        public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            Class<?> type = parameterContext.getParameter().getType();
+            return type == boolean.class || type == Boolean.class;
+        }
+
+        @Override
+        public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            return testCase.named;
+        }
+    }
+
+    @BeforeEach
     public void setUp() {
         inputQueueDir = getTmpDir();
         middleQueueDir = getTmpDir();
@@ -57,7 +111,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
         MessageHistory.set(messageHistory);
     }
 
-    @Test
+    @TestTemplate
     public void shouldAccessMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
@@ -68,12 +122,12 @@ public final class MessageHistoryTest extends QueueTestCommon {
             final ValidatingSecond validatingSecond = new ValidatingSecond();
             final MethodReader validator = tailer.methodReader(validatingSecond);
 
-            assertTrue(validator.readOne());
-            assertTrue(validatingSecond.messageHistoryPresent());
+            assertTrue(validator.readOne(), "messageHistory: read one");
+            assertTrue(validatingSecond.messageHistoryPresent(), "messageHistory: present");
         }
     }
 
-    @Test
+    @TestTemplate
     public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
@@ -85,12 +139,12 @@ public final class MessageHistoryTest extends QueueTestCommon {
             final ValidatingSecond validatingSecond = new ValidatingSecond();
             final MethodReader validator = tailer.methodReader(validatingSecond);
 
-            assertTrue(validator.readOne());
-            assertTrue(validatingSecond.messageHistoryPresent());
+            assertTrue(validator.readOne(), "messageHistory: read one from end");
+            assertTrue(validatingSecond.messageHistoryPresent(), "messageHistory: present from end");
         }
     }
 
-    @Test
+    @TestTemplate
     public void chainedMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);
@@ -99,24 +153,24 @@ public final class MessageHistoryTest extends QueueTestCommon {
 
             ExcerptTailer tailerM1 = middleQueue.createTailer(named ? "named" : null);
             MethodReader reader = tailerM1.methodReader(outputQueue.methodWriter(First.class));
-            assertTrue(reader.readOne());
+            assertTrue(reader.readOne(), "chained history: read one");
             tailerM1.toStart();
             MethodReader reader2nd = tailerM1.methodReader(outputQueue.methodWriter(Second.class));
             for (int i = 0; i < 3; i++)
-                assertTrue("i: " + i, reader2nd.readOne());
-            assertFalse(reader2nd.readOne());
+                assertTrue(reader2nd.readOne(), "i: " + i);
+            assertFalse(reader2nd.readOne(), "chained history: end of queue (second)");
 
             MethodReader reader2 = outputQueue.createTailer(named ? "named2" : null).methodReader((First) this::say3);
             for (int i = 0; i < 3; i++)
-                assertTrue("i: " + i, reader2.readOne());
-            assertFalse(reader2.readOne());
+                assertTrue(reader2.readOne(), "i: " + i);
+            assertFalse(reader2.readOne(), "chained history: end of queue (first)");
         }
     }
 
     private void say3(String text) {
         final MessageHistory messageHistory = MessageHistory.get();
-        assertNotNull(messageHistory);
-        assertEquals(2, messageHistory.sources());
+        assertNotNull(messageHistory, "say3: message history");
+        assertEquals(2, messageHistory.sources(), "say3: sources");
     }
 
     private void generateTestData(final ChronicleQueue inputQueue, final ChronicleQueue outputQueue) {
@@ -132,14 +186,14 @@ public final class MessageHistoryTest extends QueueTestCommon {
         final MethodReader reader = inputQueue.createTailer(named ? "named" : null).
                 methodReaderBuilder().build(loggingFirst);
 
-        assertTrue(reader.readOne());
-        assertTrue(reader.readOne());
+        assertTrue(reader.readOne(), "generate test data: read one");
+        assertTrue(reader.readOne(), "generate test data: read two");
 
         // roll queue file
         clock.addAndGet(TimeUnit.DAYS.toMillis(2));
 
-        assertTrue(reader.readOne());
-        assertFalse(reader.readOne());
+        assertTrue(reader.readOne(), "generate test data: read three");
+        assertFalse(reader.readOne(), "generate test data: end");
     }
 
     private ChronicleQueue createQueue(final File queueDir, final int sourceId) {
@@ -178,8 +232,8 @@ public final class MessageHistoryTest extends QueueTestCommon {
         @Override
         public void count(final int value) {
             final MessageHistory messageHistory = MessageHistory.get();
-            assertNotNull(messageHistory);
-            assertEquals(2, messageHistory.sources());
+            assertNotNull(messageHistory, "count: message history");
+            assertEquals(2, messageHistory.sources(), "count: sources");
             messageHistoryPresent = true;
         }
 

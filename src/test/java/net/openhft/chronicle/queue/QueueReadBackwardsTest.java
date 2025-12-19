@@ -4,28 +4,28 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class QueueReadBackwardsTest extends QueueTestCommon {
-    @Rule
-    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    Path temporaryFolder;
 
     private File dataDir;
     private SetTimeProvider timeProvider;
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
-        this.dataDir = temporaryFolder.newFolder();
+        this.dataDir = temporaryFolder.toFile();
         this.timeProvider = new SetTimeProvider(new Date().getTime());
     }
 
@@ -52,7 +52,7 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer().toEnd().direction(TailerDirection.BACKWARD);
             // An exception is thrown here
             String read = tailer.readText();
-            assertEquals("42", read);
+            assertEquals("42", read, "tailer: last message");
         }
     }
 }

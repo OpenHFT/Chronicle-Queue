@@ -17,16 +17,16 @@ import net.openhft.chronicle.values.Values;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.queue.QueuePerfTestSupport.TestReader;
 import net.openhft.chronicle.queue.QueuePerfTestSupport.TestWriter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static net.openhft.chronicle.queue.TestFacadeInterfaces.IFacade;
+import static net.openhft.chronicle.queue.FacadeInterfaces.IFacade;
 import static net.openhft.chronicle.queue.QueuePerfTestSupport.readMany;
 import static net.openhft.chronicle.queue.QueuePerfTestSupport.writeMany;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class SingleChroniclePerfMainTest extends QueueTestCommon {
@@ -71,7 +71,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
             for (int i = 0; i < count; i++) {
                 long start2 = System.nanoTime();
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue(dc.isPresent());
+                    assertTrue(dc.isPresent(), "tailer: document should be present");
                     Bytes<?> bytes0 = dc.wire().bytes();
                     bytes.setBytes(bytes0);
                     reader.readFrom(bytes);
@@ -94,8 +94,8 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
         long capacity = byteable.maxSize();
         BytesStore<?, Void> bytesStore = BytesStore.nativeStore(capacity);
         byteable.bytesStore(bytesStore, 0, capacity);
-        assertEquals(bytesStore, byteable.bytesStore());
-        assertEquals(0, byteable.offset());
+        assertEquals(bytesStore, byteable.bytesStore(), "facade: bytesStore");
+        assertEquals(0, byteable.offset(), "facade: offset");
         bytesStore.releaseLast();
     }
 }

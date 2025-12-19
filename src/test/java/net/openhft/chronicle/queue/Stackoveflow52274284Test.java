@@ -7,11 +7,15 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Stackoveflow52274284Test extends QueueTestCommon {
     @Test
@@ -35,32 +39,23 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
 
             // Write
             for (int i = 0; i <= numberOfRecords; i++) {
-                // System.out.println("Writing " + i);
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("msg").text("Hello World!");
-                    // System.out.println("your data was store to index=" + dc.index());
-                } catch (Exception e) {
-                    System.err.println("Unable to store value to chronicle");
-                    e.printStackTrace();
                 }
             }
             // Read
+            int reads = 0;
             for (int i = 0; i <= numberOfRecords; i++) {
-                // System.out.println("Reading " + i);
                 try (DocumentContext documentContext = tailer.readingDocument()) {
-                    long currentOffset = documentContext.index();
-                    // System.out.println("Current offset: " + currentOffset);
-
+                    assertTrue(documentContext.isPresent(), "stackoverflow-52274284: document present i=" + i);
                     Wire wire = documentContext.wire();
-
-                    if (wire != null) {
-                        String msg = wire
-                                .read("msg")
-                                .text();
-                        // System.out.println(msg);
-                    }
+                    assertNotNull(wire, "stackoverflow-52274284: wire i=" + i);
+                    String msg = wire.read("msg").text();
+                    assertEquals("Hello World!", msg, "stackoverflow-52274284: msg i=" + i);
+                    reads++;
                 }
             }
+            assertEquals(numberOfRecords + 1, reads, "stackoverflow-52274284: documents read");
         }
         IOTools.deleteDirWithFiles(path);
     }

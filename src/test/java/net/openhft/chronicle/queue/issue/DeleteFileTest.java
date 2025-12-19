@@ -13,12 +13,12 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class DeleteFileTest {
@@ -39,7 +39,7 @@ public class DeleteFileTest {
 
                 appender.writeText("1");
 
-                assertEquals("1", tailer0.readText());
+                assertEquals("1", tailer0.readText(), "tailer: first message");
                 final File firstCycleFile = appender.currentFile();
                 clock[0] += queue.rollCycle().lengthInMillis();
                 appender.writeText("2");
@@ -50,7 +50,7 @@ public class DeleteFileTest {
                 if (!OS.isLinux())
                     tailer0.close();
                 BackgroundResourceReleaser.releasePendingResources();
-                assertTrue(firstCycleFile.delete());
+                assertTrue(firstCycleFile.delete(), "delete first cycle file");
 
                 // sanity after deletion: continue reading across roll cycle
 
@@ -80,7 +80,7 @@ public class DeleteFileTest {
                     twoC = tailer.readText();
                 }
 
-                assertEquals("2 2 2 2 2", twoA2 + " " + twoA + " " + two0 + " " + twoB + " " + twoC);
+                assertEquals("2 2 2 2 2", twoA2 + " " + twoA + " " + two0 + " " + twoB + " " + twoC, "tailers: read after deleting first cycle");
             }
         } finally {
             BackgroundResourceReleaser.releasePendingResources();

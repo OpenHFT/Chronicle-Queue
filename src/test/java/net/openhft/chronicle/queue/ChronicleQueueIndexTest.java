@@ -10,8 +10,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import java.util.stream.IntStream;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class ChronicleQueueIndexTest extends QueueTestCommon {
@@ -38,7 +38,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 wd.wire().write("key").writeDouble(1);
             }
         };
-        checkTheEOFisWrittenToPreQueueFileInner(writer, (tp, rollCycle) -> tp.advanceMillis(2 * rollCycle.lengthInMillis()), writer);
+        checkTheEOFisWrittenToPreQueueFileInner(writer, (tp, rollCycle) -> tp.advanceMillis(2L * rollCycle.lengthInMillis()), writer);
     }
 
     @Test
@@ -48,7 +48,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 wd.wire().write("key").writeDouble(1);
             }
         };
-        checkTheEOFisWrittenToPreQueueFileInner(writer, (tp, rollCycle) -> tp.advanceMillis(2 * rollCycle.lengthInMillis()), writer);
+        checkTheEOFisWrittenToPreQueueFileInner(writer, (tp, rollCycle) -> tp.advanceMillis(2L * rollCycle.lengthInMillis()), writer);
     }
 
     private void checkTheEOFisWrittenToPreQueueFileInner(Consumer<InternalAppender> writer1,
@@ -68,7 +68,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
             writer1.accept(appender);
 
-            Assert.assertFalse(hasEOFAtEndOfFile(file1));
+            Assertions.assertFalse(hasEOFAtEndOfFile(file1), "queue file should not have EOF marker before cycle roll");
         }
 
         tpConsumer.accept(tp, rollCycle);
@@ -88,7 +88,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             // Simulate the end of the day i.e the queue closes the day rolls
             // (note the change of index from 18264 to 18265)
 
-            assertTrue(hasEOFAtEndOfFile(file1));
+            assertTrue(hasEOFAtEndOfFile(file1), "previous queue file should have EOF marker after cycle roll");
         }
     }
 
@@ -143,13 +143,13 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     results.add(forRead.to8bitString());
                     forRead.clear();
                 }
-                assertTrue(results.toString(), results.contains("Hello World 1"));
-                assertTrue(results.contains("Hello World 2"));
+                assertTrue(results.contains("Hello World 1"), results.toString());
+                assertTrue(results.contains("Hello World 2"), "tailer should read second message from same cycle");
                 // The reader fails to read the third message. The reason for this is
                 // that there was no EOF marker placed at end of the 18264 indexed file
                 // so when the reader started reading through the queues it got stuck on
                 // that file and never progressed to the latest queue file.
-                assertTrue(results.contains("Hello World 3"));
+                assertTrue(results.contains("Hello World 3"), "tailer should read message from next cycle when EOF marker present");
             } finally {
                 forRead.releaseLast();
             }
@@ -186,28 +186,28 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             }
 
             long index = queue.rollCycle().toIndex(cycle, 5);
-            assertFalse(tailer.moveToIndex(index));
+            assertFalse(tailer.moveToIndex(index), "tailer should not move to non-existent 5th message in cycle");
             try (DocumentContext dc = tailer.readingDocument()) {
                 // there is no 5th message in that cycle.
-                assertFalse(dc.isPresent());
+                assertFalse(dc.isPresent(), "document context should not be present for non-existent message");
             }
 
             // wind to start
             long index0 = queue.rollCycle().toIndex(cycle, 0);
-            assertTrue(tailer.moveToIndex(index0));
+            assertTrue(tailer.moveToIndex(index0), "tailer should move to first message in cycle");
 
             // skip four messages
             for (int j = 0; j < 4; j++)
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue(dc.isPresent());
+                    assertTrue(dc.isPresent(), "document context should be present for message " + j + " in cycle");
                     final String hello = dc.wire().read("hello").text();
                     System.out.println(hello);
                 }
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent());
+                assertTrue(dc.isPresent(), "document context should be present for 5th message after skipping 4");
                 String s5 = dc.wire().read("hello").text();
                 // System.out.println(s5);
-                assertEquals(msg + 4, s5);
+                assertEquals(msg + 4, s5, "5th message content should match expected value");
             }
         }
     }
@@ -229,12 +229,22 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 dc.wire().write("a").text("hello");
             }
             try (DocumentContext dc = tailer.readingDocument(metadata)) {
-                Assert.assertTrue(dc.isPresent());
+                Assertions.assertTrue(dc.isPresent(), "tailer should read metadata document when includeMetaData is true");
             }
         }
     }
 
-    private void driver0(String[] strings, boolean[] meta, SetTimeProvider stp, long millis) {
+    private static final class ReadCounts {
+        private final int allReadsCount;
+        private final int dataReadsCount;
+
+        private ReadCounts(int allReadsCount, int dataReadsCount) {
+            this.allReadsCount = allReadsCount;
+            this.dataReadsCount = dataReadsCount;
+        }
+    }
+
+    private ReadCounts driver0(String[] strings, boolean[] meta, SetTimeProvider stp, long millis) {
 
         assert (strings.length == meta.length);
 
@@ -255,7 +265,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
             // read all (meta + data)
             List<String> allReads = readKeyed(queue, true);
-            assertEquals(Arrays.asList(strings), allReads);
+            assertEquals(Arrays.asList(strings), allReads, "tailer with includeMetaData should read all written entries");
 
             // just data
             List<String> dataReads = readKeyed(queue, false);
@@ -263,7 +273,8 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     .filter(i -> !meta[i])
                     .mapToObj(i -> strings[i])
                     .collect(Collectors.toList());
-            assertEquals(expectedData, dataReads);
+            assertEquals(expectedData, dataReads, "tailer without includeMetaData should read only data entries");
+            return new ReadCounts(allReads.size(), dataReads.size());
         }
     }
 
@@ -287,90 +298,91 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         }
     }
 
-    private void driver(String[] strings, boolean[] meta) {
+    private ReadCounts[] driver(String[] strings, boolean[] meta) {
         // run each test twice - once with all entries in the same cycle, and again with just one entry per cycle
         SetTimeProvider stp = new SetTimeProvider(1000_000_000L);
-        driver0(strings, meta, stp, 0);
-        driver0(strings, meta, stp, 1500);
+        ReadCounts sameCycle = driver0(strings, meta, stp, 0);
+        ReadCounts multiCycle = driver0(strings, meta, stp, 1500);
+        return new ReadCounts[]{sameCycle, multiCycle};
     }
 
     @Test
     public void singleDataEntry() {
-        driver(
-                new String[]{"data-1"},
-                new boolean[]{false}
-        );
+        String[] strings = new String[]{"data-1"};
+        boolean[] meta = new boolean[]{false};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "single data entry should be readable via index in same cycle");
     }
 
     @Test
     public void singleMetaEntry() {
-        driver(
-                new String[]{"data-1"},
-                new boolean[]{true}
-        );
+        String[] strings = new String[]{"data-1"};
+        boolean[] meta = new boolean[]{true};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "single meta entry should be readable via index in same cycle");
     }
 
     @Test
     public void dataDataData() {
-        driver(
-                new String[]{"data-1", "data-2", "data-3"},
-                new boolean[]{false, false, false}
-        );
+        String[] strings = new String[]{"data-1", "data-2", "data-3"};
+        boolean[] meta = new boolean[]{false, false, false};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "three data entries should be readable via index in same cycle");
     }
 
     @Test
     public void dataDataMeta() {
-        driver(
-                new String[]{"data-1", "data-2", "meta-1"},
-                new boolean[]{false, false, true}
-        );
+        String[] strings = new String[]{"data-1", "data-2", "meta-1"};
+        boolean[] meta = new boolean[]{false, false, true};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "data-data-meta pattern should be readable via index in same cycle");
     }
 
     @Test
     public void dataMetaData() {
-        driver(
-                new String[]{"data-1", "meta-1", "data-2"},
-                new boolean[]{false, true, false}
-        );
+        String[] strings = new String[]{"data-1", "meta-1", "data-2"};
+        boolean[] meta = new boolean[]{false, true, false};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "data-meta-data pattern should be readable via index in same cycle");
     }
 
     @Test
     public void dataMetaMeta() {
-        driver(
-                new String[]{"data-1", "meta-1", "meta-2"},
-                new boolean[]{false, true, true}
-        );
+        String[] strings = new String[]{"data-1", "meta-1", "meta-2"};
+        boolean[] meta = new boolean[]{false, true, true};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "data-meta-meta pattern should be readable via index in same cycle");
     }
 
     @Test
     public void metaMetaMeta() {
-        driver(
-                new String[]{"meta-1", "meta-2", "meta-3"},
-                new boolean[]{true, true, true}
-        );
+        String[] strings = new String[]{"meta-1", "meta-2", "meta-3"};
+        boolean[] meta = new boolean[]{true, true, true};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "three meta entries should be readable via index in same cycle");
     }
 
     @Test
     public void metaMetaData() {
-        driver(
-                new String[]{"meta-1", "meta-2", "data-1"},
-                new boolean[]{true, true, false}
-        );
+        String[] strings = new String[]{"meta-1", "meta-2", "data-1"};
+        boolean[] meta = new boolean[]{true, true, false};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "meta-meta-data pattern should be readable via index in same cycle");
     }
 
     @Test
     public void metaDataMeta() {
-        driver(
-                new String[]{"meta-1", "data-1", "meta-2"},
-                new boolean[]{true, false, true}
-        );
+        String[] strings = new String[]{"meta-1", "data-1", "meta-2"};
+        boolean[] meta = new boolean[]{true, false, true};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "meta-data-meta pattern should be readable via index in same cycle");
     }
 
     @Test
     public void metaDataData() {
-        driver(
-                new String[]{"meta-1", "data-1", "data-2"},
-                new boolean[]{true, false, false}
-        );
+        String[] strings = new String[]{"meta-1", "data-1", "data-2"};
+        boolean[] meta = new boolean[]{true, false, false};
+        ReadCounts[] counts = driver(strings, meta);
+        assertEquals(strings.length, counts[0].allReadsCount, "meta-data-data pattern should be readable via index in same cycle");
     }
 }

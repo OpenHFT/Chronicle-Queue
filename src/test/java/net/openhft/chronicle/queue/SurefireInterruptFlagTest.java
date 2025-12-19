@@ -15,10 +15,10 @@ class SurefireInterruptFlagTest extends QueueTestCommon {
      */
     @Test
     void testSurefireLeavesInterruptFlagIntactOnOutput() {
-        assertFalse(Thread.currentThread().isInterrupted());
+        assertFalse(Thread.currentThread().isInterrupted(), "precondition: interrupt flag clear");
         Thread.currentThread().interrupt();
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag set");
         System.out.println("Hello world!");
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag remains set after stdout");
     }
 }

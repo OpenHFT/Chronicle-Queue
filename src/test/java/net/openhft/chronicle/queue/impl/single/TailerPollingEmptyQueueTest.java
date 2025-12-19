@@ -7,10 +7,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.GcControls;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
@@ -21,21 +21,21 @@ public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
         try (final SingleChronicleQueue queue = createQueue()) {
             queue.path.mkdirs();
-            assertEquals(0, queue.path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
+            assertEquals(0, queue.path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length, "setup: no queue files exist");
 
             final ExcerptTailer tailer = queue.createTailer();
 
             for (int i = 0; i < 50; i++) {
-                assertFalse(tailer.readingDocument().isPresent());
+                assertFalse(tailer.readingDocument().isPresent(), "empty queue: readingDocument should not be present");
             }
 
             final long startCollectionCount = GcControls.getGcCount();
 
             for (int i = 0; i < 1_000_000; i++) {
-                assertFalse(tailer.readingDocument().isPresent());
+                assertFalse(tailer.readingDocument().isPresent(), "empty queue: readingDocument should not be present");
             }
 
-            assertEquals(0L, GcControls.getGcCount() - startCollectionCount);
+            assertEquals(0L, GcControls.getGcCount() - startCollectionCount, "polling should not trigger GC");
         }
     }
 

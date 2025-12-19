@@ -12,21 +12,27 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
+import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 
 import java.text.ParseException;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiredForClient
-@RunWith(Parameterized.class)
+@ExtendWith(SparseBinarySearchTest.SparseBinarySearchTemplateProvider.class)
 public class SparseBinarySearchTest extends QueueTestCommon {
 
     private static final GapTolerantComparator GAP_TOLERANT_COMPARATOR = new GapTolerantComparator();
@@ -39,35 +45,100 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         this.percentageWithValues = percentageWithValues;
     }
 
-    @Parameterized.Parameters(name = "items in queue: {0}, percentage with values: {1}")
-    public static Collection<Object[]> data() {
-        List<Object[]> parameters = new ArrayList<>();
+    private static Stream<SparseBinarySearchCase> cases() {
+        List<SparseBinarySearchCase> parameters = new ArrayList<>();
         List<Integer> numbersOfMessages = Arrays.asList(0, 1, 2, 100);
         List<Float> percentagesWithValues = Arrays.asList(0.0f, 0.1f, 0.9f);
 
         for (int nom : numbersOfMessages) {
             for (float pwv : percentagesWithValues) {
-                parameters.add(new Object[]{nom, pwv});
+                parameters.add(new SparseBinarySearchCase(nom, pwv));
             }
         }
-        return parameters;
+        return parameters.stream();
     }
 
-    @Test
+    private static final class SparseBinarySearchCase {
+        private final int numberOfMessages;
+        private final float percentageWithValues;
+
+        private SparseBinarySearchCase(int numberOfMessages, float percentageWithValues) {
+            this.numberOfMessages = numberOfMessages;
+            this.percentageWithValues = percentageWithValues;
+        }
+    }
+
+    static final class SparseBinarySearchTemplateProvider implements TestTemplateInvocationContextProvider {
+        @Override
+        public boolean supportsTestTemplate(ExtensionContext context) {
+            return true;
+        }
+
+        @Override
+        public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context) {
+            return cases().map(SparseBinarySearchInvocationContext::new);
+        }
+    }
+
+    private static final class SparseBinarySearchInvocationContext implements TestTemplateInvocationContext {
+        private final SparseBinarySearchCase testCase;
+
+        private SparseBinarySearchInvocationContext(SparseBinarySearchCase testCase) {
+            this.testCase = testCase;
+        }
+
+        @Override
+        public String getDisplayName(int invocationIndex) {
+            return "items=" + testCase.numberOfMessages + ", percentage=" + testCase.percentageWithValues;
+        }
+
+        @Override
+        public java.util.List<Extension> getAdditionalExtensions() {
+            return Collections.singletonList(new SparseBinarySearchParameterResolver(testCase));
+        }
+    }
+
+    private static final class SparseBinarySearchParameterResolver implements ParameterResolver {
+        private final SparseBinarySearchCase testCase;
+
+        private SparseBinarySearchParameterResolver(SparseBinarySearchCase testCase) {
+            this.testCase = testCase;
+        }
+
+        @Override
+        public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            Class<?> type = parameterContext.getParameter().getType();
+            return type == int.class || type == Integer.class || type == float.class || type == Float.class;
+        }
+
+        @Override
+        public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+            Class<?> type = parameterContext.getParameter().getType();
+            if (type == int.class || type == Integer.class) {
+                return testCase.numberOfMessages;
+            }
+            return testCase.percentageWithValues;
+        }
+    }
+
+    @TestTemplate
     public void testBinarySearchWithManyGapsAndManyRollCycles() throws ParseException {
-        runWithTimeParameters(TEST_SECONDLY, 300);
+        int searches = runWithTimeParameters(TEST_SECONDLY, 300);
+        assertEquals(numberOfMessages + 1, searches, "binary-search: searches (test-secondly)");
     }
 
-    @Test
+    @TestTemplate
     public void testBinarySearchWithManyGaps() throws ParseException {
-        runWithTimeParameters(DAILY, 1);
+        int searches = runWithTimeParameters(DAILY, 1);
+        assertEquals(numberOfMessages + 1, searches, "binary-search: searches (daily)");
     }
 
     // CPD-OFF - mirrored in TestBinarySearch
-    private void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) {
+    private int runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
 
+        int searches = 0;
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(rollCycle)
                 .timeProvider(stp)
@@ -94,22 +165,25 @@ public class SparseBinarySearchTest extends QueueTestCommon {
                  final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
-                        assertNotNull(ignored);
+                        assertNotNull(ignored, "readingDocument returned context");
                         Wire key = toWire(j);
                         long index = BinarySearch.search(binarySearchTailer, key, GAP_TOLERANT_COMPARATOR);
+                        searches++;
                         if (entriesWithValues.contains(j)) {
-                            Assert.assertEquals(tailer.index(), index);
+                            assertEquals(tailer.index(), index, "binary search returns current index for present key");
                         } else {
-                            assertTrue(index < 0);
+                            assertTrue(index < 0, "binary search returns negative for missing key");
                         }
                         key.bytes().releaseLast();
                     }
                 }
 
                 Wire key = toWire(numberOfMessages);
-                assertTrue("Should not find non-existent", BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0);
+                assertTrue(BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0, "Should not find non-existent");
+                searches++;
             }
         }
+        return searches;
     }
 
     static class GapTolerantComparator implements Comparator<Wire> {

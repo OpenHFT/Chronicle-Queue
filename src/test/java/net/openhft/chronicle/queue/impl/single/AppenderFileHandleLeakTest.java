@@ -19,9 +19,9 @@ import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -30,6 +30,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -38,8 +39,8 @@ import java.util.stream.IntStream;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.testframework.GcControls.requestGcCycle;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
@@ -64,7 +65,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                 tailer.toStart().readBytes(bytes);
             }
             refHolder.accept(tailer);
-            assertTrue(Math.signum(bytes.readInt()) >= 0);
+            assertTrue(Math.signum(bytes.readInt()) >= 0, "Read message value should be non-negative");
 
             if (manuallyReleaseResources) {
                 Closeable.closeQuietly(tailer);
@@ -82,7 +83,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
      * These only run on Linux because {@link MappedFileUtil#getAllMappedFiles()} only works
      * on Linux
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         assumeTrue(OS.isLinux());
         System.gc();
@@ -114,20 +115,25 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             }
 
             for (Future<Boolean> future : futures) {
-                assertTrue(future.get(1, TimeUnit.MINUTES));
+                assertTrue(future.get(1, TimeUnit.MINUTES), "All appender and tailer tasks should complete successfully within timeout");
             }
-            assertFalse(gcGuard.isEmpty());
+            assertFalse(gcGuard.isEmpty(), "Should have created tailers to test garbage collection behavior");
             gcGuard.clear();
 
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        Assertions.assertTrue(queueFilesAreAllClosed(), "All queue files should be closed after appender and tailer resources are released by GC");
         finishedNormally = true;
     }
 
     @Test
     public void tailerResourcesCanBeReleasedManually() throws Exception {
-        FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
+        AtomicBoolean executed = new AtomicBoolean();
+        FlakyTestRunner.builder(() -> {
+            tailerResourcesCanBeReleasedManually0();
+            executed.set(true);
+        }).build().run();
+        assertTrue(executed.get(), "Tailer manual resource release test should execute successfully");
     }
 
     private void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
@@ -150,13 +156,13 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             }
 
             for (Future<Boolean> future : futures) {
-                assertTrue(future.get(1, TimeUnit.MINUTES));
+                assertTrue(future.get(1, TimeUnit.MINUTES), "All manual resource release tasks should complete successfully within timeout");
             }
 
-            assertFalse(gcGuard.isEmpty());
+            assertFalse(gcGuard.isEmpty(), "Should have created tailers to verify manual resource release");
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        Assertions.assertTrue(queueFilesAreAllClosed(), "All queue files should be closed after manually releasing tailer resources");
 
     }
 
@@ -195,25 +201,30 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                 }
             }
 
-            assertEquals(messagesPerThread, messageCount);
+            assertEquals(messagesPerThread, messageCount, "Tailer should read all messages that were written to the queue");
 
             // StoreFileListener#onAcquired() is called on the background resource releaser thread
             BackgroundResourceReleaser.releasePendingResources();
             Jvm.debug().on(getClass(), "storeFileListener " + storeFileListener);
 
-            assertEquals(acquiredBefore, storeFileListener.acquiredCounts.size());
+            assertEquals(acquiredBefore, storeFileListener.acquiredCounts.size(), "Tailer should release file handles for rolled cycles, maintaining same number of acquired files");
 
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        Assertions.assertTrue(queueFilesAreAllClosed(), "All queue files should be closed after tailer releases rolled cycle file handles");
     }
 
     @Test
     public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() throws Throwable {
-        FlakyTestRunner.builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
+        AtomicBoolean executed = new AtomicBoolean();
+        FlakyTestRunner.builder(() -> {
+                    appenderShouldOnlyKeepCurrentRollCycleOpen();
+                    executed.set(true);
+                })
                 .withMaxIterations(3)
                 .build()
                 .run();
+        assertTrue(executed.get(), "Appender roll cycle resource management test should execute successfully");
     }
 
     private void appenderShouldOnlyKeepCurrentRollCycleOpen() {
@@ -231,10 +242,15 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Test
     public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() throws Throwable {
-        FlakyTestRunner.builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
+        AtomicBoolean executed = new AtomicBoolean();
+        FlakyTestRunner.builder(() -> {
+                    tailerShouldOnlyKeepCurrentRollCycleOpen();
+                    executed.set(true);
+                })
                 .withMaxIterations(3)
                 .build()
                 .run();
+        assertTrue(executed.get(), "Tailer roll cycle resource management test should execute successfully");
     }
 
     private void tailerShouldOnlyKeepCurrentRollCycleOpen() {
@@ -251,7 +267,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             }
         }
         // there should be no file handles open now
-        assertTrue(queueFilesAreAllClosed());
+        assertTrue(queueFilesAreAllClosed(), "All queue files should be closed after queue is closed and before reading");
 
         timeProvider.set(startTime);
 
@@ -259,7 +275,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         try (ChronicleQueue queue = createQueue(timeProvider::get);
              final ExcerptTailer tailer = queue.createTailer()) {
             IntStream.range(0, messageCount).forEach(i -> {
-                tailer.readBytes(b -> assertEquals(i, b.readInt()));
+                tailer.readBytes(b -> assertEquals(i, b.readInt(), "Message read from queue should match expected sequence number"));
                 assertOnlyCurrentRollCycleIsOpen(timeProvider.get());
                 timeProvider.addAndGet(1_000);
             });
@@ -302,7 +318,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     public void assertReferencesReleased() {
         threadPool.shutdownNow();
         try {
-            assertTrue(threadPool.awaitTermination(5L, SECONDS));
+            assertTrue(threadPool.awaitTermination(5L, SECONDS), "Thread pool should terminate all threads within timeout after shutdown");
         } catch (InterruptedException e) {
             throw new AssertionError(e);
         }

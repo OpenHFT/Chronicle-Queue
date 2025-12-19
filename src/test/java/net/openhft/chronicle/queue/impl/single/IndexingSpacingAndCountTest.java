@@ -16,9 +16,9 @@ class IndexingSpacingAndCountTest extends IndexingTestCommon {
         appender.writeText("hello");
         long lastIndexAppended = appender.lastIndexAppended();
         Indexing indexing = indexing(queue);
-        assertEquals(0, lastIndexAppended);
-        assertTrue(indexing.indexable(lastIndexAppended));
-        assertTrue(indexing.indexable(lastIndexAppended));
+        assertEquals(0, lastIndexAppended, "first append: lastIndexAppended");
+        assertTrue(indexing.indexable(lastIndexAppended), "first append: entry should be indexable");
+        assertTrue(indexing.indexable(lastIndexAppended), "first append: entry should be indexable");
     }
 
     @Test
@@ -28,7 +28,7 @@ class IndexingSpacingAndCountTest extends IndexingTestCommon {
         for (int i = 0; i < indexing.indexSpacing() * indexing.indexCount(); i++) {
             long lastIndexAppended = appender.lastIndexAppended();
             if (lastIndexAppended % indexing.indexSpacing() == 0) {
-                assertTrue(indexing.indexable(lastIndexAppended));
+                assertTrue(indexing.indexable(lastIndexAppended), "index spacing: entry should be indexable");
             }
             appender.writeText("<test>");
         }

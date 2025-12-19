@@ -9,12 +9,12 @@ import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * test reading the queue backwards using readOne
@@ -23,18 +23,23 @@ public class ReadOneBackwardsTest extends QueueTestCommon {
 
     @Test
     public void test() {
-        doTest(false);
+        SnapshotDTO snapshotDTO = doTest(false);
+        assertNotNull(snapshotDTO, "Snapshot should be successfully read when reading queue backwards");
+        assertEquals("data", snapshotDTO.data, "Snapshot data should match expected value when reading backwards");
     }
 
     @Test
     public void testScanning() {
-        doTest(true);
+        SnapshotDTO snapshotDTO = doTest(true);
+        assertNotNull(snapshotDTO, "Snapshot should be successfully read when scanning queue backwards");
+        assertEquals("data", snapshotDTO.data, "Snapshot data should match expected value when scanning backwards");
     }
 
-    private void doTest(boolean scanning) {
+    private SnapshotDTO doTest(boolean scanning) {
 
         final BlockingQueue<SnapshotDTO> blockingQueue = new ArrayBlockingQueue<>(128);
 
+        SnapshotDTO snapshotDTO;
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(getTmpDir()).sourceId(1).build()) {
 
             MyDtoListener myOut = q.methodWriter(MyDtoListener.class);
@@ -59,22 +64,21 @@ public class ReadOneBackwardsTest extends QueueTestCommon {
                     .build((SnapshotListener) blockingQueue::add);
 
             if (!scanning) {
-                assertTrue(reader.readOne());
-                assertTrue(reader.readOne());
+                assertTrue(reader.readOne(), "MethodReader should read first DTO when reading backwards in non-scanning mode");
+                assertTrue(reader.readOne(), "MethodReader should read snapshot when reading backwards in non-scanning mode");
             }
 
-            assertTrue(blockingQueue.isEmpty());
-            assertTrue(reader.readOne());
+            assertTrue(blockingQueue.isEmpty(), "Snapshot should not yet be delivered to blocking queue before final readOne");
+            assertTrue(reader.readOne(), "MethodReader should successfully deliver snapshot to listener when reading backwards");
 
-            SnapshotDTO snapshotDTO = blockingQueue.poll();
-            assertNotNull(snapshotDTO);
-            assertEquals("data", snapshotDTO.data);
+            snapshotDTO = blockingQueue.poll();
 
             if (!scanning)
-                assertTrue(reader.readOne());
+                assertTrue(reader.readOne(), "MethodReader should read second DTO when reading backwards in non-scanning mode");
 
-            assertFalse(reader.readOne());
+            assertFalse(reader.readOne(), "MethodReader should reach end of queue when reading backwards");
         }
+        return snapshotDTO;
     }
 
     @NotNull

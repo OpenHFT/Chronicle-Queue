@@ -6,7 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -14,58 +14,57 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
 
     @Test
     public void runConfiguresReaderFromArguments() throws Exception {
         final Path queueDir = Files.createTempDirectory("history-reader");
-        final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
+        final ChronicleHistoryReaderMainStub main = new ChronicleHistoryReaderMainStub();
 
         main.run(new String[]{"-d", queueDir.toString(), "-p", "-m", "-t", "SECONDS", "-i", "2", "-w", "5", "-u", "1"});
 
         RecordingChronicleHistoryReader reader = main.reader;
-        assertTrue(reader.executeCalled);
-        assertTrue(reader.closed);
-        assertEquals(queueDir, reader.basePath());
-        assertTrue(reader.progress());
-        assertTrue(reader.histosByMethod());
-        assertEquals(TimeUnit.SECONDS, reader.timeUnit());
-        assertEquals(2L, reader.ignoreCount());
-        assertEquals(TimeUnit.SECONDS.toNanos(5), reader.measurementWindowNanos());
-        assertEquals(1, reader.summaryOutputOffset());
-        assertNotNull(reader.messageSink());
+        assertTrue(reader.executeCalled, "ChronicleHistoryReader execute method should be called when run completes");
+        assertTrue(reader.closed, "ChronicleHistoryReader should be closed after run completes");
+        assertEquals(queueDir, reader.basePath(), "Base path should be set to queue directory from -d argument");
+        assertTrue(reader.progress(), "Progress reporting should be enabled when -p flag is provided");
+        assertTrue(reader.histosByMethod(), "Histograms by method should be enabled when -m flag is provided");
+        assertEquals(TimeUnit.SECONDS, reader.timeUnit(), "Time unit should be set to SECONDS from -t argument");
+        assertEquals(2L, reader.ignoreCount(), "Ignore count should be set to 2 from -i argument");
+        assertEquals(TimeUnit.SECONDS.toNanos(5), reader.measurementWindowNanos(), "Measurement window should be set to 5 seconds in nanos from -w argument");
+        assertEquals(1, reader.summaryOutputOffset(), "Summary output offset should be set to 1 from -u argument");
+        assertNotNull(reader.messageSink(), "Message sink should be configured for output");
     }
 
     @Test
     public void parseCommandLineWithHelpOption() {
-        final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
+        final ChronicleHistoryReaderMainStub main = new ChronicleHistoryReaderMainStub();
 
         try {
             main.parseCommandLine(new String[]{"-h"}, main.options());
             fail("Expected HelpExit");
         } catch (HelpExit e) {
-            assertEquals(0, e.status);
-            assertTrue(main.helpOutput.toString().contains("ChronicleHistoryReaderMain"));
+            assertEquals(0, e.status, "Help option should trigger exit with success status code 0");
+            assertTrue(main.helpOutput.toString().contains("ChronicleHistoryReaderMain"), "Help output should contain ChronicleHistoryReaderMain class name");
         }
     }
 
     @Test
     public void parseCommandLineMissingDirectoryPrintsError() {
-        final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
+        final ChronicleHistoryReaderMainStub main = new ChronicleHistoryReaderMainStub();
 
         try {
             main.parseCommandLine(new String[]{"-t", "SECONDS"}, main.options());
             fail("Expected HelpExit");
         } catch (HelpExit e) {
-            assertEquals(1, e.status);
-            assertTrue(main.helpOutput.toString().contains("Missing required option"));
+            assertEquals(1, e.status, "Missing required directory option should trigger exit with error status code 1");
+            assertTrue(main.helpOutput.toString().contains("Missing required option"), "Help output should contain error message about missing required option");
         }
     }
 
-    @SuppressWarnings("PMD.TestClassWithoutTestCases")
-    private static final class TestChronicleHistoryReaderMain extends ChronicleHistoryReaderMain {
+    private static final class ChronicleHistoryReaderMainStub extends ChronicleHistoryReaderMain {
         final RecordingChronicleHistoryReader reader = new RecordingChronicleHistoryReader();
         final StringBuilder helpOutput = new StringBuilder();
 

@@ -14,39 +14,21 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
 public class TestBinarySearch extends QueueTestCommon {
 
-    private final int numberOfMessages;
-
-    public TestBinarySearch(int numberOfMessages) {
-        this.numberOfMessages = numberOfMessages;
-    }
-
-    @Parameterized.Parameters(name = "items in queue: {0}")
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {0},
-                {1},
-                {2},
-                {100}
-        });
-    }
-
-    @Test
-    public void testBinarySearch() {
+    @ParameterizedTest(name = "items in queue: {0}")
+    @ValueSource(ints = {0, 1, 2, 100})
+    public void testBinarySearch(int numberOfMessages) {
         final SetTimeProvider stp = new SetTimeProvider();
         long time = 0;
         stp.currentTimeMillis(time);
@@ -93,16 +75,16 @@ public class TestBinarySearch extends QueueTestCommon {
                  final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
-                        assert ignored != null;
+                        assertNotNull(ignored, "tailer reading document context");
                         Wire key = toWire(j);
                         long index = BinarySearch.search(binarySearchTailer, key, comparator);
-                        Assert.assertEquals(tailer.index(), index);
+                        assertEquals(tailer.index(), index, "binary search: index at j=" + j);
                         key.bytes().releaseLast();
                     }
                 }
 
                 Wire key = toWire(numberOfMessages);
-                Assert.assertTrue("Should not find non-existent", BinarySearch.search(tailer, key, comparator) < 0);
+                assertTrue(BinarySearch.search(tailer, key, comparator) < 0, "binary search: should not find non-existent");
             }
         }
     }

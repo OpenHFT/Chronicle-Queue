@@ -7,9 +7,9 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.io.File;
@@ -18,19 +18,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class SingleTableStoreIntegrationTests extends QueueTestCommon {
 
-    private TestContext context;
+    private QueueContext context;
 
-    @Before
+    @BeforeEach
     public void beforeEach() {
-        context = new TestContext();
+        context = new QueueContext();
     }
 
-    @After
+    @AfterEach
     public void after() throws IOException {
         context.close();
     }
@@ -38,12 +38,12 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     @Test
     public void baseCasePutAndGet() {
         context.newQueueInstance().tableStorePut("a", 1);
-        assertEquals(1, context.newQueueInstance().tableStoreGet("a"));
+        assertEquals(1, context.newQueueInstance().tableStoreGet("a"), "table store should return value 1 for key 'a' stored in previous queue instance");
     }
 
     @Test
     public void getMissingKeyWithoutDefault() {
-        assertEquals(Long.MIN_VALUE, context.newQueueInstance().tableStoreGet("test"));
+        assertEquals(Long.MIN_VALUE, context.newQueueInstance().tableStoreGet("test"), "table store should return Long.MIN_VALUE for missing key without default value");
     }
 
     @Test
@@ -56,9 +56,9 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         queue2.tableStorePut("c", 3);
 
         SingleChronicleQueue queue3 = context.newQueueInstance();
-        assertEquals(1, queue3.tableStoreGet("a"));
-        assertEquals(2, queue3.tableStoreGet("b"));
-        assertEquals(3, queue3.tableStoreGet("c"));
+        assertEquals(1, queue3.tableStoreGet("a"), "table store should return value 1 for key 'a' stored by first queue instance");
+        assertEquals(2, queue3.tableStoreGet("b"), "table store should return value 2 for key 'b' stored by first queue instance");
+        assertEquals(3, queue3.tableStoreGet("c"), "table store should return value 3 for key 'c' stored by second queue instance");
     }
 
     @Test
@@ -70,7 +70,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
             queue1.tableStorePut("key.prefix." + i, i);
         }
         for (int i = 0; i < count; i++) {
-            assertEquals(i, queue1.tableStoreGet("key.prefix." + i));
+            assertEquals(i, queue1.tableStoreGet("key.prefix." + i), "table store should return correct value for key at index " + i + " after storing 4000 key-value pairs");
         }
         finishedNormally = true;
     }
@@ -85,11 +85,10 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         }
         String key = keyBuffer.toString();
         queue1.tableStorePut(key, 1);
-        assertEquals(1, context.newQueueInstance().tableStoreGet(key));
+        assertEquals(1, context.newQueueInstance().tableStoreGet(key), "table store should return value 1 for long key (100+ characters) stored in previous queue instance");
     }
 
-    @SuppressWarnings("PMD.TestClassWithoutTestCases")
-    class TestContext implements Closeable {
+    class QueueContext implements Closeable {
 
         private final File queuePath = getTmpDir();
         private final List<SingleChronicleQueue> queues = new ArrayList<>();

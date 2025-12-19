@@ -17,11 +17,10 @@ import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.*;
-import org.junit.runner.Description;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -33,8 +32,9 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.core.onoes.LogLevel.DEBUG;
 import static net.openhft.chronicle.core.onoes.LogLevel.PERF;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
+@Timeout(60)
 public class QueueTestCommon {
     private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
@@ -50,48 +50,32 @@ public class QueueTestCommon {
         System.setProperty("queue.check.index", "true");
     }
 
-    // JUNIT Rules
-    // catch-all timeout for when it has not been specified
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(60);
-
-    @Rule
-    public final TestName testName = new TestName();
-
-    @Rule
-    public final ErrorCollector errorCollector = new ErrorCollector();
-
-    @NotNull
-    @Rule
-    public TestRule watcher = new TestWatcher() {
-        @Override
-        protected void starting(@NotNull Description description) {
-            if (TRACE_TEST_EXECUTION) {
-                Jvm.debug().on(getClass(), "Starting test: "
-                        + description.getClassName() + "."
-                        + description.getMethodName()
-                );
-            }
-        }
-    };
-
     private static final AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
     private long freeSpace;
+    private String jupiterTestName;
 
     @NotNull
     protected File getTmpDir() {
-        final String methodName = testName.getMethodName();
-        String name = methodName == null ? "unknown" : methodName;
+        String name = currentTestName();
         final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
         tmpDirs.add(tmpDir);
         return tmpDir;
     }
 
+    @BeforeEach
+    void setJupiterTestName(TestInfo testInfo) {
+        jupiterTestName = testInfo.getTestMethod().map(m -> m.getName()).orElse("unknown");
+        if (TRACE_TEST_EXECUTION) {
+            String className = testInfo.getTestClass().map(Class::getName).orElse(getClass().getName());
+            Jvm.debug().on(getClass(), "Starting test: " + className + "." + jupiterTestName);
+        }
+    }
+
     /**
      * @see #deleteTargetDirTestArtifacts()
      */
-    @Before
+    @BeforeEach
     public void recordTargetDirContents() {
         String target = OS.getTarget();
         File[] files = new File(target).listFiles();
@@ -104,12 +88,12 @@ public class QueueTestCommon {
         }
     }
 
-    @Before
+    @BeforeEach
     public void recordDiskSpace() {
         freeSpace = new File(OS.getTarget()).getFreeSpace();
     }
 
-    @After
+    @AfterEach
     public void checkSpaceUsed() {
         long spaceLeft = new File(OS.getTarget()).getFreeSpace();
         if (freeSpace - spaceLeft > 2L << 30) {
@@ -117,17 +101,17 @@ public class QueueTestCommon {
         }
     }
 
-    @Before
+    @BeforeEach
     public void assumeFinishedNormally() {
         finishedNormally = true;
     }
 
-    @Before
+    @BeforeEach
     public void clearMessageHistory() {
         MessageHistory.get().reset();
     }
 
-    @Before
+    @BeforeEach
     public void enableReferenceTracing() {
         AbstractReferenceCounted.enableReferenceTracing();
     }
@@ -136,7 +120,7 @@ public class QueueTestCommon {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
-    // add @Before to sub class where a thread might be added
+    // add @BeforeEach to sub class where a thread might be added
     public void threadDump() {
         threadDump = new ThreadDump();
     }
@@ -146,7 +130,7 @@ public class QueueTestCommon {
             threadDump.assertNoNewThreads();
     }
 
-    @Before
+    @BeforeEach
     public void recordExceptions() {
         recordedExceptions = Jvm.recordExceptions(false);
         exceptionTracker = ExceptionTracker.create(
@@ -203,7 +187,7 @@ public class QueueTestCommon {
      *
      * @see #recordTargetDirContents() which tracks the original contents of target and avoids deleting unrelated files
      */
-    @After
+    @AfterEach
     public void deleteTargetDirTestArtifacts() {
         if (HugetlbfsTestUtil.isHugetlbfsAvailable()) {
             String target = OS.getTarget();
@@ -227,7 +211,7 @@ public class QueueTestCommon {
         }
     }
 
-    @After
+    @AfterEach
     public void afterChecks() {
         preAfter();
         SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
@@ -262,13 +246,17 @@ public class QueueTestCommon {
                     String diag = String.format(
                             "Method writer codegen failure captured (count=%d, test=%s, java.version=%s, wire.generator.v2=%s, disableProxyCodegen=%s): %s",
                             e.getValue(),
-                            testName.getMethodName(),
+                            currentTestName(),
                             System.getProperty("java.version"),
                             System.getProperty("wire.generator.v2"),
                             System.getProperty("disableProxyCodegen"),
                             key.message());
                     Jvm.warn().on(getClass(), diag, key.throwable());
                 });
+    }
+
+    private String currentTestName() {
+        return jupiterTestName == null ? "unknown" : jupiterTestName;
     }
 
     protected void preAfter() {

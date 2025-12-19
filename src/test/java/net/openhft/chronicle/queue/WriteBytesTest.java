@@ -13,16 +13,16 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiredForClient
 public class WriteBytesTest extends QueueTestCommon {
@@ -43,7 +43,9 @@ public class WriteBytesTest extends QueueTestCommon {
             outgoingMsgBytes[0] = 'A';
             outgoingBytes.write(outgoingMsgBytes);
             postOneMessage(appender);
-            fetchOneMessage(tailer, incomingMsgBytes);
+            int bytesRead1 = fetchOneMessage(tailer, incomingMsgBytes);
+            assertEquals(outgoingMsgBytes.length, bytesRead1, "writeBytes: message #1 bytes read");
+            assertEquals((byte) 'A', incomingMsgBytes[0], "writeBytes: message #1 first byte");
             // System.out.println(new String(incomingMsgBytes));
 
             outgoingBytes.clear();
@@ -53,7 +55,10 @@ public class WriteBytesTest extends QueueTestCommon {
             outgoingBytes.write(outgoingMsgBytes);
 
             postOneMessage(appender);
-            fetchOneMessage(tailer, incomingMsgBytes);
+            int bytesRead2 = fetchOneMessage(tailer, incomingMsgBytes);
+            assertEquals(outgoingMsgBytes.length, bytesRead2, "writeBytes: message #2 bytes read");
+            assertEquals((byte) 'A', incomingMsgBytes[0], "writeBytes: message #2 first byte");
+            assertEquals((byte) 'B', incomingMsgBytes[1], "writeBytes: message #2 second byte");
             // System.out.println(new String(incomingMsgBytes));
 
         } finally {
@@ -68,7 +73,7 @@ public class WriteBytesTest extends QueueTestCommon {
     @Test
     public void testWriteBytesAndDump() {
         File dir = getTmpDir();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(dir.getAbsolutePath()));
+        Assumptions.assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         final SingleChronicleQueueBuilder builder = binary(dir)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .rollCycle(TEST4_DAILY)
@@ -82,8 +87,7 @@ public class WriteBytesTest extends QueueTestCommon {
                         b.writeLong(finalI * 0x0101010101010101L));
             }
 
-            assertEquals("" +
-                    "--- !!meta-data #binary\n" +
+            assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  metadata: !SCQMeta {\n" +
@@ -1041,7 +1045,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     "--- !!data\n" +
                     "\u007F\u007F\u007F\u007F\u007F\u007F\u007F\u007F\n" +
                     "...\n" +
-                    "# 126928 bytes remaining\n", queue.dump());
+                    "# 126928 bytes remaining\n", queue.dump(), "dump: writeBytes output");
 
         } finally {
             try {
@@ -1070,8 +1074,8 @@ public class WriteBytesTest extends QueueTestCommon {
                     directPayload.readPositionRemaining(0, directPayload.writePosition());
                     appender.writeBytes(directPayload);
 
-                    assertTrue("entry " + i + " should be readable", tailer.readBytes(readBuffer));
-                    assertEquals("direct-entry-" + i, readBuffer.readUtf8());
+                    assertTrue(tailer.readBytes(readBuffer), "entry " + i + " should be readable");
+                    assertEquals("direct-entry-" + i, readBuffer.readUtf8(), "entry " + i + " payload");
                     readBuffer.clear();
                 }
             } finally {
@@ -1115,7 +1119,7 @@ public class WriteBytesTest extends QueueTestCommon {
                 postRollCapacity = bytes.bytesStore().capacity();
                 bytes.writeUtf8("cycle-2");
             }
-            assertEquals("Wire buffer capacity should remain stable across rolls", initialCapacity, postRollCapacity);
+            assertEquals(initialCapacity, postRollCapacity, "Wire buffer capacity should remain stable across rolls");
             assertNextUtf8(tailer, "cycle-2");
         } finally {
             try {
@@ -1128,8 +1132,8 @@ public class WriteBytesTest extends QueueTestCommon {
 
     private static void assertNextUtf8(ExcerptTailer tailer, String expected) {
         try (DocumentContext dc = tailer.readingDocument()) {
-            assertTrue("Document should be present for " + expected, dc.isPresent());
-            assertEquals(expected, dc.wire().bytes().readUtf8());
+            assertTrue(dc.isPresent(), "Document should be present for " + expected);
+            assertEquals(expected, dc.wire().bytes().readUtf8(), "readUtf8 for " + expected);
         }
     }
 

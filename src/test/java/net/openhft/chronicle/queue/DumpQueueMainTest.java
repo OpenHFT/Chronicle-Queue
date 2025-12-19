@@ -7,15 +7,15 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.main.DumpMain;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class DumpQueueMainTest extends QueueTestCommon {
@@ -38,7 +38,7 @@ public class DumpQueueMainTest extends QueueTestCommon {
                         filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX)).
                         findFirst().orElseThrow(() ->
                                 new AssertionError("Could not find queue file in directory " + dataDir));
-                assertTrue(queueFile.toFile().setWritable(false));
+                assertTrue(queueFile.toFile().setWritable(false), "test setup: make queue file read-only");
 
                 final CountingOutputStream countingOutputStream = new CountingOutputStream();
                 DumpMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
@@ -63,8 +63,8 @@ public class DumpQueueMainTest extends QueueTestCommon {
 
             final String capturedOutput = capture.toString();
 
-            assertTrue(capturedOutput.contains("listing.highestCycle"));
-            assertTrue(capturedOutput.contains("listing.lowestCycle"));
+            assertTrue(capturedOutput.contains("listing.highestCycle"), "dump should include directory listing highestCycle");
+            assertTrue(capturedOutput.contains("listing.lowestCycle"), "dump should include directory listing lowestCycle");
 
         }
     }
