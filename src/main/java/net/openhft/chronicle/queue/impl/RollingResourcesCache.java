@@ -21,6 +21,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
+/**
+ * Cache of roll cycle resources keyed by cycle number and file name.
+ * <p>
+ * {@code RollingResourcesCache} maps roll cycle indices to formatted date-based file names
+ * and {@link File} instances, and provides the inverse mapping from file to cycle number.
+ * It keeps a small, size-bounded cache to avoid repeated string formatting and date parsing
+ * when rotating queue files, and normalises timestamps against a configured epoch.
+ */
 public class RollingResourcesCache {
     public static final ParseCount NO_PARSE_COUNT = new ParseCount("", Integer.MIN_VALUE);
     private static final int CACHE_SIZE = Jvm.getInteger("chronicle.queue.rollingResourceCache.size", 128);
@@ -162,6 +170,7 @@ public class RollingResourcesCache {
         public final long millis;
         public final String text;
         public final File path;
+        @Deprecated(/* to be removed in 2027 */)
         public final File parentPath;
         public boolean pathExists;
 

@@ -13,8 +13,20 @@ package net.openhft.chronicle.queue.util;
  * </ul>
  */
 public enum FileState {
-    OPEN,           // The file is open and being used
-    CLOSED,         // The file is closed and not in use
-    NON_EXISTENT,   // The file does not exist
-    UNDETERMINED    // The state of the file cannot be determined
+    /**
+     * The file is open and being used.
+     */
+    OPEN,
+    /**
+     * The file is closed and not in use.
+     */
+    CLOSED,
+    /**
+     * The file does not exist.
+     */
+    NON_EXISTENT,
+    /**
+     * The state of the file cannot be determined.
+     */
+    UNDETERMINED
 }

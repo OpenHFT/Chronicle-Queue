@@ -40,6 +40,7 @@ import static net.openhft.chronicle.wire.Wires.isEndOfFile;
  * the queue in both forward and backward directions, ensuring efficient retrieval
  * of entries by utilizing the appropriate WireStore and cycle mechanism.
  */
+@SuppressWarnings({"deprecation", "removal"})
 class StoreTailer extends AbstractCloseable
         implements ExcerptTailer, SourceContext, ExcerptContext {
     static final int INDEXING_LINEAR_SCAN_THRESHOLD = 70;
@@ -51,6 +52,7 @@ class StoreTailer extends AbstractCloseable
     private final IndexUpdater indexUpdater;
     private final StoreTailerContext context = new StoreTailerContext();
     private final MoveToState moveToState = new MoveToState();
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private final Finalizer finalizer;
     long index; // index of the next read.
     long lastReadIndex; // index of the last read message
@@ -724,7 +726,6 @@ class StoreTailer extends AbstractCloseable
                  * that did not exist, that is what this is reporting. If you are using daily rolling,
                  * and writing every day, you should not see this message.
                  */
-
                 Jvm.debug().on(getClass(), "Rolled " + (nextIndexCycle - cycle) + " " + "times to find the " +
                         "next cycle file. This can occur if your appenders have not written " +
                         "anything for a while, leaving the cycle files with a gap.");
@@ -1307,6 +1308,7 @@ class StoreTailer extends AbstractCloseable
                 break;
 
             case FOUND:
+                //noinspection TextLabelInSwitchStatement
                 LoopForward: // NOSONAR
                 while (originalToEndLoopCondition(approximateLastIndex, index)) {
                     final ScanResult result = moveToIndexResult(++index);
@@ -1640,7 +1642,7 @@ class StoreTailer extends AbstractCloseable
     @NotNull
     private SingleChronicleQueueStore store() {
         if (store == null)
-            if (!cycle(cycle()))
+            if (!cycle(cycle())) // sets the store as a side effect
                 Jvm.warn().on(getClass(), "Unable to find cycle=" + cycle() + ", queue=" + queue.fileAbsolutePath());
         return store;
     }

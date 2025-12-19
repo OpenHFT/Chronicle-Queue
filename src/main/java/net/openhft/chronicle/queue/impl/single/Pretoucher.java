@@ -29,7 +29,6 @@ public interface Pretoucher extends Closeable {
      * <p>
      * If the underlying queue has been closed, this method will throw an {@link InvalidEventHandlerException}.
      *
-     *
      * @throws InvalidEventHandlerException if the queue has been closed or if there is an issue during the pre-touch operation.
      */
     void execute() throws InvalidEventHandlerException;

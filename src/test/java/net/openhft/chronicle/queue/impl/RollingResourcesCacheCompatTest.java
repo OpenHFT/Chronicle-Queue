@@ -9,12 +9,6 @@ import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import org.junit.Test;
 
 import java.io.File;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
 import static org.junit.Assert.assertEquals;

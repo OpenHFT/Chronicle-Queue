@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -14,7 +13,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -28,6 +26,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECOND
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);

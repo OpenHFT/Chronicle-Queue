@@ -22,6 +22,10 @@ import java.io.PrintStream;
  */
 public final class DumpMain {
 
+    private DumpMain() {
+        // utility holder
+    }
+
     /**
      * The main method that triggers the dump process.
      * Delegates the execution to {@link InternalDumpMain#main(String[])}.

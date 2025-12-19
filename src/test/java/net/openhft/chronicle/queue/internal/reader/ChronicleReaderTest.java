@@ -53,6 +53,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleReaderTest extends QueueTestCommon {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
     private static final long TOTAL_EXCERPTS_IN_QUEUE = 24;
@@ -187,6 +188,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         return indices;
     }
 
+    // CPD-OFF - duplicated setup for metadata deletion variants
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
@@ -228,6 +230,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add).execute();
         assertFalse(capturedOutput.isEmpty());
     }
+    // CPD-ON
 
     @Test
     public void shouldNotFailOnEmptyQueue() {
@@ -283,13 +286,6 @@ public class ChronicleReaderTest extends QueueTestCommon {
             }
         }
     }
-
-//        basicReader()
-//                .asMethodReader(SayWhen.class.getName())
-//                .execute();
-//
-//        assertTrue(capturedOutput.isEmpty());
-//    }
 
     @Test
     public void canReadPastEmptyMessageInReverseOrder() {

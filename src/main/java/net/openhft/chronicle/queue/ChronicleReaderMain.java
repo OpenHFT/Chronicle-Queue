@@ -26,6 +26,12 @@ import static java.util.Arrays.stream;
 public class ChronicleReaderMain {
 
     /**
+     * Creates a new runner for the command-line reader.
+     */
+    public ChronicleReaderMain() {
+    }
+
+    /**
      * Entry point of the application. Initializes the {@link ChronicleReaderMain} instance and
      * passes command-line arguments for execution.
      *
@@ -124,6 +130,7 @@ public class ChronicleReaderMain {
      * @param status  Exit status code
      * @param message Optional message to display before help
      */
+    @SuppressWarnings("deprecation")
     protected void printHelpAndExit(final Options options, int status, String message) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(

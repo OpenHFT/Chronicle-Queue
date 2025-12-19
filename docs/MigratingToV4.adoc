@@ -1,9 +1,11 @@
 = Migrating Chronicle Logger to Queue V4
 Peter Lawrey
+:lang: en-GB
+:source-highlighter: rouge
 
-These are the steps which were taken to migrate Chornicle Logger from using Chronicle Queue v3 to v4.
+These are the steps which were taken to migrate Chronicle Logger from using Chronicle Queue v3 to v4.
 
-=== Update the artifactId
+== Update the artifactId
 
 .Artifact and package for Chronicle v3.
 [source, xml]
@@ -27,11 +29,11 @@ to the following artifactId.
 
 NOTE: As Chronicle Queue v3 and v4 use different packages you can use both versions at the same time.
 
-=== Rename the Chronicle class to ChronicleQueue
+== Rename the Chronicle class to ChronicleQueue
 
 As Chronicle is the name of a family of products, the interface is now called ChronicleQueue to distinguish it from ChronicleMap for example.
 
-=== createAppender() has been replaced with acquireAppender()
+== createAppender() has been replaced with acquireAppender()
 
 We use the term `acquire` to indicate an object will be created only as needed.
 In this case, the method will create a new `ExcerptAppender` for each thread once.
@@ -39,7 +41,7 @@ A thread cannot have more than one appender in use at once as this would cause a
 
 This method no longer throws an `IOException`
 
-=== An Appender cannot be used as Bytes directly.
+== An Appender cannot be used as Bytes directly.
 
 Conflating the `ExcerptAppender` and `Bytes` cause a number of problems
 including the use of `flush()` and `close()` which had different meanings between these two classes.
@@ -77,7 +79,7 @@ tailer.readBytes(b -> {
 });
 ----
 
-=== Using the Wire API instead of the Bytes API
+== Using the Wire API instead of the Bytes API
 
 There is two ways to use the Wire API
 
@@ -99,7 +101,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-=== Changes to the Bytes API.
+== Changes to the Bytes API.
 
 Chronicle Bytes distinguishes between the read and write position, remaining and limit.
 

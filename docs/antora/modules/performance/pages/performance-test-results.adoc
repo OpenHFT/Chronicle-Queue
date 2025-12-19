@@ -31,7 +31,7 @@ image::cqz-performance-java.png[cqz-performance-java.png]
 
 === Chronicle Queue vs Chronicle Queue Zero
 
-To make the comparison between Chronicle Queue ( abbreviated to Queue ) and Chronicle Queue Zero ( abbreviated to Queue Zero ) performance even clearer, the below plots show the end-to-end latencies for sending a 1024-byte message using Queue and Queue Zero, for C++ and Java respectively.
+To make the comparison between Chronicle Queue ( abbreviated to Queue ) and Chronicle Queue Zero ( abbreviated to Queue Zero ) performance even clearer, the below plots show the end-to-end latencies for sending a 1024-byte message using Queue and Queue Zero, for C{pp} and Java respectively.
 These plots again show both the much reduced latency using Queue Zero, as well as the reduction of outliers at higher percentiles.
 
 image::cq-vs-cqz.png[cq-vs-cqz.png]

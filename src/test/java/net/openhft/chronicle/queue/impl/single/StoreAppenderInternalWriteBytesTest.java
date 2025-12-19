@@ -60,12 +60,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
         final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
         final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
-        /**
-         final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
-         final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
-         IOTools.deleteDirWithFiles(sourceDir.toFile());
-         IOTools.deleteDirWithFiles(destinationDir.toFile());
-         */
 
         populateSourceQueue(sourceDir);
 
@@ -173,13 +167,11 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                                 assertEquals(Long.toHexString(index), Long.toHexString(dtIndex));
                         }
                         prev.clear().append(buffer);
-//                        if (false && index %17 == 0) {
                         try (final ChronicleQueue dq = createQueue(destinationDir, null);
                              final ExcerptAppender da = dq.createAppender()) {
                             assumeNotNull(dq);
                             assumeNotNull(da);
                         }
-                        //                      }
                     }
                 }
             }

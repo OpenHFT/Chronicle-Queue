@@ -55,6 +55,7 @@ public class OrderManagerTest extends QueueTestCommon {
         verify(listener);
     }
 
+    // CPD-OFF - queue-backed scenarios mirror each other
     @Test
     public void testWithQueue() {
         File queuePath = new File(OS.getTarget(), "testWithQueue-" + Time.uniqueId());
@@ -236,4 +237,5 @@ public class OrderManagerTest extends QueueTestCommon {
             }
         }
     }
+    // CPD-ON
 }

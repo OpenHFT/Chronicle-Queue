@@ -21,6 +21,7 @@ Backing the buffer with a persistent BytesStore (that is, one backed with a memo
 All processes can write to, and read from, the buffer.
 
 ==== Common scenarios:
+
 * Back the buffer with an in-memory BytesStore. +
 You can have multiple writers and multiple readers in the same process.
 The buffer does not survive longer than the process.
@@ -90,6 +91,7 @@ NOTE: if you want multiple buffered queues to share the same drainer thread you 
 `SingleChronicleQueueBuilder`s `eventLoop` to share the same event loop.
 
 ====== Example:
+
 [source,java]
 ----
     try (ChronicleQueue queue = SingleChronicleQueueBuilder
@@ -151,10 +153,12 @@ NOTE: This example won't work on Windows as it uses /dev/shm.
 ----
 
 ===== Drainer thread
+
 When the queue's event loop is closed, the drainer thread will wait up to 5 seconds to finish draining to the underlying queue.
 If draining can not complete, a warning message is logged
 
 ===== Unsupported operations
+
 The following operations are unsupported when using EnterpriseSingleChronicleQueue backed by an asynchronous buffer:
 
 * writing and reading of metadata
@@ -168,9 +172,9 @@ from some methods.
 It does not contain the full functionality of EnterpriseSingleChronicleQueue - it does not drain to an underlying queue, for example.
 It is created as in the example below, where:
 
-- `ringBuffer` is the buffer to back this queue with,
-- `wireType` is the wire type to use when appending and tailing,
-- `pauser` is the pauser to use by the appender when waiting for readers.
+* `ringBuffer` is the buffer to back this queue with,
+* `wireType` is the wire type to use when appending and tailing,
+* `pauser` is the pauser to use by the appender when waiting for readers.
 
 [source,java]
 ----
@@ -188,4 +192,4 @@ The exception may be thrown at either read or write time depending on how the bu
 === Licence
 
 Chronicle Async Mode is a licenced product and is licenced separately to chronicle queue enterprise.
-If you would like further details on Async Mode, please contact sales@chronicle.software
+If you would like further details on Async Mode, please contact mailto:sales@chronicle.software[sales@chronicle.software]

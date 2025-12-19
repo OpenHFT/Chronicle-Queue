@@ -32,29 +32,91 @@ import java.util.stream.Collectors;
  * histograms and timing windows. Various options such as progress reporting, time unit settings, and
  * histogram management are available for customization.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReader implements HistoryReader, Closeable {
 
+    /**
+     * Marker used to indicate summary output has not been configured.
+     */
     private static final int SUMMARY_OUTPUT_UNSET = -999;
+    /**
+     * Separator used when composing histogram keys.
+     */
     public static final String SEPARATOR = "_";
+    /**
+     * Queue base path to read from.
+     */
     protected Path basePath;
+    /**
+     * Consumer that receives each rendered message.
+     */
     protected Consumer<String> messageSink;
+    /**
+     * Whether to log periodic progress markers.
+     */
     protected boolean progress = false;
+    /**
+     * Time unit used for windowing and reporting.
+     */
     protected TimeUnit timeUnit = TimeUnit.NANOSECONDS;
+    /**
+     * Whether to maintain histograms per method.
+     */
     protected boolean histosByMethod = false;
+    /**
+     * Collected histograms keyed by method or stream.
+     */
     protected Map<String, Histogram> histos = new LinkedHashMap<>();
+    /**
+     * Number of initial messages to skip.
+     */
     protected long ignore = 0;
+    /**
+     * Counter of messages processed.
+     */
     protected long counter = 0;
+    /**
+     * Measurement window in nanoseconds; zero disables windowing.
+     */
     protected long measurementWindowNanos = 0;
+    /**
+     * First timestamp observed in the current window.
+     */
     protected long firstTimeStampNanos = 0;
+    /**
+     * Count at the previous window boundary.
+     */
     protected long lastWindowCount = 0;
+    /**
+     * Offset to use when printing the summary block.
+     */
     protected int summaryOutputOffset = SUMMARY_OUTPUT_UNSET;
+    /**
+     * Optional starting index to begin reading from.
+     */
     protected Long startIndex;
+    /**
+     * Supplier used to create new histograms.
+     */
     protected Supplier<Histogram> histoSupplier = () -> new Histogram(60, 4);
+    /**
+     * Size of histograms on the previous read pass.
+     */
     protected int lastHistosSize = 0;
+    /**
+     * Tailer used to read messages.
+     */
     protected ExcerptTailer tailer;
 
     static {
         ToolsUtil.warnIfResourceTracing();
+    }
+
+    /**
+     * Creates a new history reader with default settings.
+     */
+    public ChronicleHistoryReader() {
+        // defaults configured via field initialisers
     }
 
     /**

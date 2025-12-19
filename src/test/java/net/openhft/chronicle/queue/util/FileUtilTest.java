@@ -34,6 +34,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class FileUtilTest extends QueueTestCommon {
 
     @Test(timeout = 30_000)

@@ -27,6 +27,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECOND
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test
@@ -244,7 +245,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .testBlockSize()
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
-
             for (int i = 0; i < strings.length; ++i) {
                 try (DocumentContext dc = appender.writingDocument(meta[i])) {
                     dc.wire().write("key").text(strings[i]);

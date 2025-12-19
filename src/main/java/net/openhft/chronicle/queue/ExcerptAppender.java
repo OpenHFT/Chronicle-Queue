@@ -125,6 +125,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @return a raw wire for low level direct access
      */
     @Nullable
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     Wire wire();
 
     /**

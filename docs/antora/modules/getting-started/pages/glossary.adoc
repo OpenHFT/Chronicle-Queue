@@ -8,7 +8,7 @@ author: Julia Gustafsson
 [#a]
 == A
 
-* *Appender:* An appender is the message source.You add data by appending it to the Chronicle Queue.Sequential writes can be performed by appending to the end of queue only.There is no way to insert, or delete excerpts.
+* *Appender:* An appender is the message source. You add data by appending it to the Chronicle Queue. Sequential writes can be performed by appending to the end of queue only. There is no way to insert or delete excerpts.
 
 [#d]
 == D
@@ -18,7 +18,7 @@ author: Julia Gustafsson
 [#e]
 == E
 
-* *Exerpt:* An excerpt is the part of the documents that Chronicle Queue writes, that contains the actual data.When writing message to a Chronicle Queue, a new xref:advanced:advanced.adoc#_queue_documents[document] (containing an excerpt) is created and written to.
+* *Excerpt:* An excerpt is the part of the documents that Chronicle Queue writes that contains the actual data. When writing a message to a Chronicle Queue, a new xref:advanced:advanced.adoc#_queue_documents[document] (containing an excerpt) is created and written to.
 
 [#m]
 == M

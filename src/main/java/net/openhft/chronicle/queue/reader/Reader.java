@@ -26,6 +26,7 @@ public interface Reader {
     /**
      * Stops the Reader, halting further processing.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     void stop();
 
     /**

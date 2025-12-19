@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class NoMessageHistoryTest extends QueueTestCommon {
 
     @Test

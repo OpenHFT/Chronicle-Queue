@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate") // JUnit4 annotations require public class
 public class NormaliseEOFsTest extends QueueTestCommon {
 
     private static final String LOG_LEVEL_PROPERTY = "org.slf4j.simpleLogger.log." + StoreAppender.class.getName();

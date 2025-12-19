@@ -6,7 +6,6 @@ package net.openhft.chronicle.queue.util;
 import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 

@@ -15,6 +15,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class TableStorePutGetTest extends QueueTestCommon {
     @Test
     public void indexEntry() {

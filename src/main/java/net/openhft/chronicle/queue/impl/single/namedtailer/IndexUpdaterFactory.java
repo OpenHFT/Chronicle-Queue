@@ -70,8 +70,6 @@ public class IndexUpdaterFactory {
 
         /**
          * Closes this {@code StandardIndexUpdater}, releasing any resources held.
-         *
-         * @throws IOException if an I/O error occurs
          */
         @Override
         public void close() throws IOException {

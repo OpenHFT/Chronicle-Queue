@@ -21,6 +21,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
+@SuppressWarnings({"deprecation", "removal"})
 public final class RollAtEndOfCycleTest extends QueueTestCommon {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 

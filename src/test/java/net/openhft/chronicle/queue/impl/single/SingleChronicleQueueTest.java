@@ -58,7 +58,7 @@ import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
-@SuppressWarnings({"try", "serial"})
+@SuppressWarnings({"try", "serial", "deprecation", "removal"})
 public class SingleChronicleQueueTest extends QueueTestCommon {
 
     private static final long TIMES = (4L << 20L);
@@ -859,6 +859,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
+    // CPD-OFF - metadata scenarios mirror each other
     @Test
     public void testMetaData() {
         assumeFalse(named);
@@ -2791,7 +2792,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             long[] indexs = new long[10];
             for (int i = 0; i < indexs.length; i++) {
-                // System.out.println(".");
                 try (DocumentContext writingContext = appender.writingDocument()) {
                     writingContext.wire().write().text("some-text-" + i);
                     indexs[i] = writingContext.index();
@@ -2807,7 +2807,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             for (int lower = 0; lower < indexs.length; lower++) {
                 for (int upper = lower; upper < indexs.length; upper++) {
-                    // System.out.println("lower=" + lower + ",upper=" + upper);
                     assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
                             indexs[upper]));
                 }

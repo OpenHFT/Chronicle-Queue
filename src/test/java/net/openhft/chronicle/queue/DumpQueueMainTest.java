@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class DumpQueueMainTest extends QueueTestCommon {
 
     @Test
@@ -72,7 +73,7 @@ public class DumpQueueMainTest extends QueueTestCommon {
         private long bytes;
 
         @Override
-        public void write(final int b) throws IOException {
+        public void write(final int b) {
             bytes++;
         }
     }
