@@ -71,6 +71,7 @@ public class ChronicleWriterMain {
      * @param status  Exit status code
      * @param message Optional message to display before the help
      */
+    @SuppressWarnings("deprecation")
     private void printHelpAndExit(final Options options, int status, String message) {
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
