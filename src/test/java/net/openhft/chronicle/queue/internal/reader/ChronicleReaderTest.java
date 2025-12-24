@@ -198,7 +198,6 @@ public class ChronicleReaderTest extends QueueTestCommon {
     @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
-        // expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).

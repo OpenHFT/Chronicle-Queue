@@ -36,7 +36,6 @@ public class ValueStringArrayTest extends QueueTestCommon {
             try (DocumentContext dc = queue.createTailer().readingDocument()) {
                 dc.wire().read("data").marshallable(using);
                 CharSequence actual = using.getCsArr().getCharSequenceWrapperAt(1).getCharSequence();
-                // System.out.println(actual);
                 Assertions.assertEquals(EXPECTED, actual.toString(), "read back value");
             }
         }

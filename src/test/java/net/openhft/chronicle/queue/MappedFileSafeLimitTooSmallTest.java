@@ -33,7 +33,6 @@ public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
 
             for (int i = 0; i < 5; i++) {
                 try (DocumentContext dc = excerptAppender.writingDocument()) {
-                    // System.out.println(dc.wire().bytes().writeRemaining());
                     dc.wire().write("data").bytes(data);
                 }
             }

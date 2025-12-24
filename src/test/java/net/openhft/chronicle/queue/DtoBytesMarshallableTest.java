@@ -64,10 +64,8 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
 
             try (DocumentContext dc = q.createTailer().readingDocument()) {
                 String yaml = dc.toString();
-                // System.out.println(yaml);
 
                 DtoAbstractMarshallable who = (DtoAbstractMarshallable) dc.wire().read("who").object();
-                // System.out.println(who);
 
                 Assertions.assertTrue(yaml.contains(who.toString()), "yaml: should contain dto");
             }

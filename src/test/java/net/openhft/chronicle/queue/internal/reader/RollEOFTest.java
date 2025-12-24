@@ -73,9 +73,6 @@ public class RollEOFTest extends QueueTestCommon {
     public void testRollWritesEOF() throws IOException {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
-        // expectException("Overriding roll length from existing metadata");
-        // expectException("Overriding roll cycle from");
-
         final File path = getTmpDir();
         try {
             path.mkdirs();

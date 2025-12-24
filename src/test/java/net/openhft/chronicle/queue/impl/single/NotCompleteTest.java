@@ -103,7 +103,6 @@ public class NotCompleteTest extends QueueTestCommon {
                 try (final ChronicleQueue queue = createQueue(tmpDir)) {
                     String dump = cleanQueueDump(queue.dump());
                     assertEquals(cleanedQueueDump, dump, "queue should be unchanged by the failed (exception) write");
-                    // System.err.println(queue.dump());
                 }
 
                 // check nothing else written

@@ -111,8 +111,7 @@ public class ContendedWriterTest extends QueueTestCommon {
         assertTrue(totalCount > 0, "contended-writer: large/fast and small/slow deferred samples");
     }
 
-    private long test(String name, Config... configs) {
-        // System.out.println(name);
+    private void test(String name, Config... configs) {
         File path = getTmpDir();
         SingleChronicleQueue[] queues = new SingleChronicleQueue[configs.length];
         StartAndMonitor[] startAndMonitors = new StartAndMonitor[configs.length];
@@ -181,8 +180,7 @@ public class ContendedWriterTest extends QueueTestCommon {
         public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
             ValueIn valueIn = wire.getValueIn();
             for (int i = 0; i < NUMBER_OF_LONGS; i++)
-                assertEquals(i, valueIn.int64(), "deserialise: value at i=" + i);
-            //Jvm.pause(PAUSE_READ_MS);
+                assertEquals(i, valueIn.int64());
         }
 
         @Override
@@ -203,13 +201,9 @@ public class ContendedWriterTest extends QueueTestCommon {
                 try (final ExcerptAppender appender = queue.createAppender()) {
                     while (running.get()) {
                         long loopStart = System.nanoTime();
-                        // System.out.println("about to open");
                         try (final DocumentContext ctx = appender.writingDocument()) {
-                            // System.out.println("about to write");
                             ctx.wire().getValueOut().marshallable(object);
-                            // System.out.println("about to close");
                         }
-                        // System.out.println("closed");
                         long timeTaken = System.nanoTime() - loopStart;
                         histo.sampleNanos(timeTaken);
                         Jvm.pause(sleepBetweenMillis);

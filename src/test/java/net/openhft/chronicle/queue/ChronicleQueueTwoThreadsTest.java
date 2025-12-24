@@ -97,7 +97,6 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                 if (rlock != null) {
                     rlock.release();
                 }
-                // System.out.printf("Read %,d messages", counter.intValue());
             }
         }, "tailer thread");
 

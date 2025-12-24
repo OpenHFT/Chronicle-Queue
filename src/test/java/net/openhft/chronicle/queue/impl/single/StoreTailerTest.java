@@ -105,19 +105,13 @@ public class StoreTailerTest extends QueueTestCommon {
              ChronicleQueue chronicle2 = minutely(dir, timeProvider).build();
              final ExcerptAppender append = chronicle2.createAppender()) {
 
-            //ExcerptAppender append = chronicle2.acquireAppender();
-            //append.writeDocument(w -> w.write("test").text("before text"));
-
             ExcerptTailer tailer = chronicle.createTailer();
-            //tailer.toEnd();
 
             timeProvider.addTime(10, TimeUnit.MINUTES);
 
             append.writeDocument(w -> w.write("test").text("text"));
 
             if (!tailer.readDocument(w -> w.read("test").text("text", org.junit.jupiter.api.Assertions::assertEquals))) {
-                // System.out.println("dump chronicle:\n" + chronicle.dump());
-                // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("Tailer should successfully read document written after cycle roll (time advanced by 10 minutes)");
             }
         }
@@ -235,7 +229,6 @@ public class StoreTailerTest extends QueueTestCommon {
                     fail("Tailer should throw IllegalStateException when accessed from a different thread without disabling thread safety check");
                 } catch (IllegalStateException expected) {
                     illegalStateThrown.set(true);
-                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
                 tailer.readText();
@@ -263,7 +256,6 @@ public class StoreTailerTest extends QueueTestCommon {
                     fail("MethodReader should throw IllegalStateException when tailer is accessed from a different thread without disabling thread safety check");
                 } catch (IllegalStateException expected) {
                     illegalStateThrown.set(true);
-                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
                 assertEquals("Testing2", readMethodCall(tailer), "MethodReader should read 'Testing2' after disabling thread safety check");
@@ -289,7 +281,6 @@ public class StoreTailerTest extends QueueTestCommon {
                     fail("Tailer should throw IllegalStateException when accessed from a different thread without resetting thread ownership");
                 } catch (IllegalStateException expected) {
                     illegalStateThrown.set(true);
-                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckReset();
                 tailer.readText();
@@ -318,7 +309,6 @@ public class StoreTailerTest extends QueueTestCommon {
                     fail("MethodReader should throw IllegalStateException when tailer is accessed from a different thread without resetting thread ownership");
                 } catch (IllegalStateException expected) {
                     illegalStateThrown.set(true);
-                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckReset();
                 assertEquals("Testing2", readMethodCall(tailer), "MethodReader should read 'Testing2' after resetting thread ownership");

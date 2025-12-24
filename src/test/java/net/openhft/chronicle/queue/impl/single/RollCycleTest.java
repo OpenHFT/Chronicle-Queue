@@ -322,7 +322,6 @@ public class RollCycleTest extends QueueTestCommon {
 
                 String readText = tailer.readText();
                 if (readText != null) {
-                    // System.out.println("Read a document " + readText);
                     documentsRead++;
                     int docId = Integer.parseInt(readText);
                     assertEquals(docId, lastDocId + 1, "lastDocId + 1");

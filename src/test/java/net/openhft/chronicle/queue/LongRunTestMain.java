@@ -38,12 +38,8 @@ public class LongRunTestMain {
                 for (int i = 0; i < 100000; ++i) {
                     appender.writeBytes(output);
                 }
-
-                // System.out.println((j + 1) * 100000);
-                // Jvm.pause(100L);
             }
         }
-        // System.out.println("took " + (System.currentTimeMillis() - start) / 1e3);
     }
 
     static class TLogEntry {

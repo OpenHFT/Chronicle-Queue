@@ -34,7 +34,6 @@ public class StridingAQueueTest extends QueueTestCommon {
                 for (int i = 0; i < 6 + j; i++)
                     writer.hi(j, i);
                 timeProvider.advanceMillis(j * 500);
-                // System.out.println(timeProvider.currentTimeMillis());
             }
         }
 

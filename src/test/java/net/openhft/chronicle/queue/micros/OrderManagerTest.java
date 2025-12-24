@@ -90,7 +90,6 @@ public class OrderManagerTest extends QueueTestCommon {
                     assertTrue(reader.readOne(), "reader.readOne()");
 
                 assertFalse(reader.readOne(), "reader.readOne()");
-                // System.out.println(queue.dump());
             }
 
             verify(listener);
@@ -157,14 +156,12 @@ public class OrderManagerTest extends QueueTestCommon {
                     assertTrue(reader.readOne(), "reader.readOne()");
 
                 assertFalse(reader.readOne(), "reader.readOne()");
-                // System.out.println(out.dump());
             }
 
             try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build()) {
                 MethodReader reader = in.createTailer().methodReader((OrderListener) order -> {
                     MessageHistory x = MessageHistory.get();
                     // Note: this will have one extra timing, the time it was written to the console.
-                    // System.out.println(x);
                     assertEquals(1, x.sourceId(0), "x.sourceId(0)");
                     assertEquals(2, x.sourceId(1), "x.sourceId(1)");
                     assertEquals(4, x.timings(), "x.timings()");
@@ -204,8 +201,7 @@ public class OrderManagerTest extends QueueTestCommon {
                     combiner.onSidedPrice(new SidedPrice("EURUSD3", 123456789100L, Side.Sell, 1.1173, 2.5e6));
                     combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
                 }
-                }
-            // DumpQueueMain.dump(queuePath.getAbsolutePath());
+            }
 
             for (int i = 0; i < 10; i++) {
                 // read one message at a time
@@ -229,9 +225,7 @@ public class OrderManagerTest extends QueueTestCommon {
                     MethodReader reader = tailer
                             .methodReader(combiner);
 
-                    // System.out.println("#### IN\n" + in.dump());
-                    // System.out.println("#### OUT:\n" + out.dump());
-                    assertTrue(reader.readOne(), "i: " + i);
+                    assertTrue("i: " + i, reader.readOne());
                 }
             }
         } finally {

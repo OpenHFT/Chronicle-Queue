@@ -40,9 +40,7 @@ public class ToEndPaddingTest extends QueueTestCommon {
                 try (final DocumentContext documentContext = appender.acquireWritingDocument(true)) {
                     documentContext.wire().write("metakey" + i).text(Bytes.wrapForRead(new byte[i + 1]));
                 }
-                }
-
-            // System.out.println(queue.dump());
+            }
 
             // toEnd just before adding one more entry
             assertEquals(2336, dc.wire().bytes().readPosition(), "dc.wire().bytes().readPosition()");

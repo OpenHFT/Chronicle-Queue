@@ -39,8 +39,6 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
 
             assertTrue(someManager.methodWithOneParamInvoked, "someManager.methodWithOneParamInvoked");       // one param method was invoked
             assertTrue(someManager.methodWithoutParamsInvoked, "someManager.methodWithoutParamsInvoked");      // no params method was NOT invoked
-
-            // Jvm.warn().on(getClass(), queue.dump());
         }
     }
 

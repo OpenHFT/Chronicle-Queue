@@ -58,7 +58,6 @@ public class MessageReaderWriterTest extends QueueTestCommon {
                 assertTrue(reader2.readOne(), "reader2.readOne()");
                 assertFalse(reader2.readOne(), "reader2.readOne()");
             }
-            // System.out.println(queue1.dump());
         }
     }
 

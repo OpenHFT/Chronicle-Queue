@@ -70,7 +70,6 @@ public class CheckIndicesTest extends QueueTestCommon {
                 }
                 if (index != dc.index())
                     throw new AssertionError();
-                // System.out.println("reading index=" + Long.toHexString(index));
                 if (queue0.rollCycle().toSequenceNumber(index) != dc.wire().read("value").readLong())
                     throw new AssertionError();
             }
@@ -88,7 +87,6 @@ public class CheckIndicesTest extends QueueTestCommon {
             for (int i = 0; i < BATCH_SIZE; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     long seq = appender.queue().rollCycle().toSequenceNumber(dc.index());
-                    // System.out.println("write=" + Long.toHexString(dc.index()));
                     dc.wire().write("value").writeLong(seq);
                 }
             }

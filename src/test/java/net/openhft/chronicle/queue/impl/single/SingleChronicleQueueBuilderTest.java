@@ -62,7 +62,6 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                              .build();
              final ExcerptTailer tailer = queue.createTailer();
              final DocumentContext dc = tailer.readingDocument()) {
-            // System.out.println(queue.dump());
             assertFalse(dc.isPresent(), "queue file path: no document present");
 
         } finally {

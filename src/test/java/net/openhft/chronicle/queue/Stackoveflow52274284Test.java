@@ -24,7 +24,6 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
         String path = Files.createTempDirectory(Paths.get(basePath), "chronicle-")
                 .toAbsolutePath()
                 .toString();
-        // System.out.printf("Using temp path '%s'%n", path);
 
         try (ChronicleQueue chronicleQueue = ChronicleQueue.singleBuilder(path).testBlockSize().build();
 
@@ -41,6 +40,9 @@ public class Stackoveflow52274284Test extends QueueTestCommon {
             for (int i = 0; i <= numberOfRecords; i++) {
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("msg").text("Hello World!");
+                } catch (Exception e) {
+                    System.err.println("Unable to store value to chronicle");
+                    e.printStackTrace();
                 }
             }
             // Read

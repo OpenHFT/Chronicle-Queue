@@ -105,7 +105,6 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
         // use CQ dir in current directory, not tmp as that is often tmpfs
         final File tmpDir = new File(this.getClass().getSimpleName() + "_" + System.currentTimeMillis());
         tmpDir.deleteOnExit();
-        // System.out.println("Queue dir: " + tmpDir.getCanonicalPath());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(tmpDir, WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
                 .build()) {

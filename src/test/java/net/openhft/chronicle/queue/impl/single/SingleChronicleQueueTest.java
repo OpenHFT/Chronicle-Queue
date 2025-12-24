@@ -2172,7 +2172,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
                 long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
                 assertEquals(i, seq, "sequence number should match iteration index after appending message");
-                // System.out.println(chronicle.dump());
                 tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> assertEquals((long) a, b, "read int64 value should match expected value from document")));
             }
         }
@@ -2187,7 +2186,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             appender.writeDocument(w -> {
             });
-            // System.out.println(chronicle.dump());
             ExcerptTailer tailer = chronicle.createTailer(named ? "named" : null);
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertFalse(dc.wire().hasMore(), "dc.wire().hasMore()");
@@ -2257,7 +2255,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
             final long nextIndexToWrite = appender.lastIndexAppended() + 1;
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
-            // System.out.println(chronicle.dump());
             assertEquals(nextIndexToWrite,
                     appender.lastIndexAppended(), "appender.lastIndexAppended()");
         }
@@ -2444,7 +2441,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
                 assertTrue(terminated, "random concurrent read/write: executor terminated");
 
-                // System.out.println(". " + i);
                 Jvm.pause(1000);
             }
         }
@@ -3316,7 +3312,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             });
 
             f1.get(10, TimeUnit.SECONDS);
-            // System.out.println(queue.dump().replaceAll("(?m)^#.+$\\n", ""));
             f2.get(10, TimeUnit.SECONDS);
 
             executorService.shutdownNow();

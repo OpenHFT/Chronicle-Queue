@@ -97,8 +97,6 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
         for (Reader reader : readers) {
             if (reader.lastRead < expectedNumberOfMessages - 1) {
                 allReadersComplete = false;
-                // System.out.printf("Reader #%d last read: %d%n", count, reader.lastRead);
-                break;
             }
         }
         return allReadersComplete;
@@ -134,7 +132,6 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
         finishedNormally = false;
         stress0();
 
-        // System.out.println("Test complete");
         finishedNormally = true;
         assertTrue(finishedNormally, "roll-cycle stress: finished");
     }
@@ -149,7 +146,6 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
         assert warnIfAssertsAreOn();
 
         File file = DirectoryUtils.tempDir("stress");
-        // System.out.printf("Queue dir: %s at %s%n", file.getAbsolutePath(), Instant.now());
         final int numThreads = cores;
         final int numWriters = numThreads / 4 + 1;
         // leave one core for other threads
@@ -268,7 +264,6 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
                     break;
                 }
 
-                // System.out.printf("Not all readers are complete. Waiting...%n");
                 Jvm.pause(2000);
             }
             assertTrue(areAllReadersComplete(expectedNumberOfMessages, readers), "Readers did not catch up");
@@ -369,7 +364,6 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
             for (int i = 0; i < numberOfInts; i++) {
                 int v = valueIn.int32();
                 if (v != expected) {
-                    // System.out.println(dc.wire());
                     StringBuilder failureMessage = new StringBuilder(128).append("Expected: ")
                             .append(expected)
                             .append(", actual: ").append(v)
@@ -444,7 +438,6 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
                             if (now > last + 2000) {
                                 if (lastRead < 0)
                                     throw new AssertionError("read nothing after 2 seconds");
-                                // System.out.println(Thread.currentThread() + " - Last read: " + lastRead);
                                 last = now;
                             }
                             continue;

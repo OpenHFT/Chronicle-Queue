@@ -88,12 +88,10 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 assertTrue(appendedIndex > tailIndex, "appendedIndex > tailIndex");
             }
             // if the tailer continues as well it should see the 5 new messages
-            // System.out.println("Reading messages added");
             tailIndex = doRead(tailer, 5);
             assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
 
             // if the tailer is expecting to read all the message again
-            // System.out.println("Reading all the messages again");
             tailer.toStart();
             tailIndex = doRead(tailer, 10);
             assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
@@ -113,7 +111,6 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
                     assertNotNull(msg, "message text read from queue should not be null");
-                    // System.out.println("msg:" + msg);
                     i[0]++;
                 });
             }

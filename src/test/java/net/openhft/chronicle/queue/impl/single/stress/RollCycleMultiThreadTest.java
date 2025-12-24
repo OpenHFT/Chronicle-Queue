@@ -281,7 +281,6 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                         queue.dump(), "queue.dump()");
                 Assertions.assertEquals(2, (int) es.submit(observer).get(), "(int) es.submit(observer).get()");
 
-                // System.out.println(queue.dump());
                 assertEquals(2, observer.documentsRead, "observer.documentsRead");
             }
         } finally {

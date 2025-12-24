@@ -119,7 +119,6 @@ public class CycleNotFoundTest extends QueueTestCommon {
         });
         submit.get();
 
-        // System.out.println("appender is done.");
 
         // wait for all the tailer to finish
         for (Future<?> f : tailers) {

@@ -77,14 +77,12 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
 
         try (DocumentContext dc = appender.writingDocument()) {
             dc.wire().bytes().write(datumBytes);
-            //datum.writeMarshallable(dc.wire().bytes());
         }
 
         try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.wire() != null) {
                 datumWrite.writePosition(0);
                 dc.wire().readBytes(datumWrite);
-                //datum.readMarshallable(dc.wire().bytes());
                 jlbh.sample(System.nanoTime() - datum.getValue10());
             }
         }

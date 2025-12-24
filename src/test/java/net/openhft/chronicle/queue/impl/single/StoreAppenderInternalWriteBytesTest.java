@@ -98,12 +98,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     private int assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
         try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
              final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
-            // System.out.println(destinationQueue.dump());
-            /*
-             * Normalise destination EOFs first
-             *
-             * part of the contract with {@link net.openhft.chronicle.queue.impl.single.StoreAppender.writeBytes(long, net.openhft.chronicle.bytes.BytesStore)}
-             */
+
+            // Normalise destination EOFs first part of the contract with {@link net.openhft.chronicle.queue.impl.single.StoreAppender.writeBytes(long, net.openhft.chronicle.bytes.BytesStore)}
             try (final ExcerptAppender appender = destinationQueue.createAppender()) {
                 appender.normaliseEOFs();
             }
@@ -141,7 +137,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         @Override
         public void run() {
-            // LOGGER.info("Starting copier...");
             try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
                  final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
@@ -178,7 +173,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     }
                 }
             }
-            // LOGGER.info("Copier finished");
         }
     }
 

@@ -40,10 +40,6 @@ public class StuckQueueTest extends QueueTestCommon {
         expectException("Failback to readonly tablestore");
         ignoreException("reading control code as text");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
-        // expectException("Unable to copy TimedStoreRecovery safely will try anyway");
-        // expectException("Unable to copy SCQStore safely will try anyway");
-        // expectException("Unable to copy SCQSRoll safely");
-        // expectException("Unable to copy SCQSIndexing safely");
 
         tmpDir.toFile().mkdirs();
 
@@ -53,25 +49,19 @@ public class StuckQueueTest extends QueueTestCommon {
 
         try (RollingChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).rollCycle(MINUTELY).readOnly(true).build();
              ExcerptTailer tailer = q.createTailer()) {
-            // System.out.println(q.dump());
+//            System.out.println(q.dump());
 
             int cycle = q.rollCycle().toCycle(0x18406e100000000L);
 
             try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
                 String absolutePath = wireStore.file().getAbsolutePath();
-                // System.out.println(absolutePath);
                 assertTrue(absolutePath.endsWith("20180508-1249.cq4"), "queue file ends with template name");
             }
 
-            // Assert.assertTrue(tailer.moveToIndex(0x18406e100000000L));
-
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertNotNull(dc, "tailer reading document context");
-                // Assert.assertTrue(!dc.isPresent());
-                // System.out.println(Long.toHexString(dc.index()));
             }
 
-            // Assert.assertTrue(tailer.moveToIndex(0x183efe300000000L));
             try (final SingleChronicleQueue q2 = ChronicleQueue.singleBuilder(tmpDir).rollCycle(MINUTELY).build();
                  final ExcerptAppender appender = q2.createAppender()) {
                 try (DocumentContext dc = appender.writingDocument()) {
@@ -83,7 +73,6 @@ public class StuckQueueTest extends QueueTestCommon {
                 assertTrue(dc.isPresent(), "tailer2 document present");
                 String actual = dc.wire().read("hello").text();
                 assertEquals("world", actual, "tailer2 reads appended world");
-                // System.out.println(Long.toHexString(dc.index()));
             }
         }
     }

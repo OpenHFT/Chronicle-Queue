@@ -86,7 +86,6 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
                 final long firstCycleWritePosition = firstCycleStore.writePosition();
                 // assert that no write was completed
                 assertEquals(0L, firstCycleWritePosition, "First cycle write position should be zero as incomplete write was not committed");
-                // firstCycleStore.release(test);
 
                 final ExcerptTailer tailer = queue.createTailer();
                 int recordCount = 0;

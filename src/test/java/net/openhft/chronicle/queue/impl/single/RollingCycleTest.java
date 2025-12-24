@@ -325,7 +325,6 @@ public class RollingCycleTest extends QueueTestCommon {
             }
             assertFalse(currentPosTailer.readBytes(reusableData), "tailer: readBytes at end should be false");
 
-            // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
             // was it truncated

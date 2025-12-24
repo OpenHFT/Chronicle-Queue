@@ -81,8 +81,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
-            // assertFalse(hasEOFAtEndOfFile(file1));
-
             writer2.accept(appender);
 
             // Simulate the end of the day i.e the queue closes the day rolls
@@ -97,7 +95,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                 .path(file).build()) {
             String dump = queue123.dump();
-            // System.out.println(dump);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }
     }
@@ -172,7 +169,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             for (int j = 0; j < 8; j++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("hello").text(msg + (i++));
-                    // long indexWritten = dc.index();
                 }
                 stp.advanceMillis(1500);
             }
@@ -206,7 +202,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent(), "document context should be present for 5th message after skipping 4");
                 String s5 = dc.wire().read("hello").text();
-                // System.out.println(s5);
                 assertEquals(msg + 4, s5, "5th message content should match expected value");
             }
         }
@@ -261,7 +256,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 }
                 stp.advanceMillis(millis);
             }
-            // System.out.println(queue.dump());
 
             // read all (meta + data)
             List<String> allReads = readKeyed(queue, true);
