@@ -3,7 +3,6 @@ Neil Clifford
 :toc:
 :toclevels: 3
 :css-signature: demo
-:icons: font
 :lang: en-GB
 :source-highlighter: rouge
 

@@ -1,13 +1,7 @@
 = Chronicle Queue
-:toc:
-:lang: en-GB
-:source-highlighter: rouge
 Peter Lawrey, Rob Austin
 :toc:
-:toc: macro
-:icons: font
 :lang: en-GB
-:toclevels: 2
 :css-signature: demo
 :source-highlighter: rouge
 
@@ -687,7 +681,7 @@ The size of each index array, as well as the total number of index arrays per qu
 [NOTE]
 indexCount^2^ is the maximum number of indexed queue entries.
 
-NOTE: See Section link:#excerpt-indexing-in-chronicle-queue[Excerpt indexing in Chronicle Queue] of this User Guide for more information and examples of using indexes.
+NOTE: See Section link:#_excerpt_indexing_in_chronicle_queue[Excerpt indexing in Chronicle Queue] of this User Guide for more information and examples of using indexes.
 
 * _readBufferMode, writeBufferMode_
 
@@ -1086,14 +1080,7 @@ If this is prevented by an error, the same message will be read on each restart.
 '''
 ==== Command line tools - reading and writing a Chronicle Queue
 
-Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
-
-----
-\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
-ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂
-SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
-���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß����������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������
-----
+Chronicle Queue stores its data in binary format, with a file extension of `cq4`.
 
 This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.
 This can also help you fix your production issues, as it gives you the visibility as to what has been stored in the queue, and in what order.
@@ -1286,29 +1273,35 @@ Missing required options: m, d
 If you want to write to the below "doit" method
 
 [source,java,opts=novalidate]
+----
 public interface MyInterface {
     void doit(DTO dto);
 }
 
 public class DTO extends SelfDescribingMarshallable {
-private int age;
-private String name;
+    private int age;
+    private String name;
 }
+----
 
 Then you can call `ChronicleWriterMain -d queue doit x.yaml` with either (or both) of the below Yamls:
 
 [source,yaml]
+----
 {
   age: 19,
   name: Henry
 }
+----
 
 or
 [source,yaml]
+----
 !x.y.z.DTO {
   age: 42,
   name: Percy
 }
+----
 
 If `DTO` makes use of custom serialisation then you should specify the interface to write to with `-i`
 
@@ -1432,7 +1425,7 @@ combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172
 A timestamp is added for each read and write as it passes from service to service.
 
 .Downstream message triggered by the event above
-[source,Yaml]
+[source,yaml]
 ----
 --- !!data #binary
 history: {
@@ -1461,6 +1454,7 @@ onTopOfBookPrice: {
 <4> What triggered this event.
 
 ''''
+[#_excerpt_indexing_in_chronicle_queue]
 ==== Excerpt indexing in Chronicle Queue
 
 In the following section you will find how to work with the excerpt index.

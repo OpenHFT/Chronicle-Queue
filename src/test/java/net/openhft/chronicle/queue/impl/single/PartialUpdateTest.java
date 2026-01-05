@@ -128,6 +128,7 @@ public class PartialUpdateTest extends QueueTestCommon {
         queueCreator.createQueue(setTimeProvider, queuePath);
     }
 
+    @After
     @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(queuePath.toFile());

@@ -88,6 +88,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         assertEquals(1, context.newQueueInstance().tableStoreGet(key), "table store should return value 1 for long key (100+ characters) stored in previous queue instance");
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     class QueueContext implements Closeable {
 
         private final File queuePath = getTmpDir();

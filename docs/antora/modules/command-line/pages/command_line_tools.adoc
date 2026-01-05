@@ -146,6 +146,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleHistoryRe
 ----
 
 Invocation via shell script from the `Chronicle-Queue` root folder.
+
 [source,shell script]
 ----
 $ ./bin/history_reader.sh <options>

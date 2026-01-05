@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class StoreAppenderTest extends QueueTestCommon {
+@SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate") // JUnit4 annotations require public class
+public class StoreAppenderTest extends QueueTestCommon {
 
     private static final String TEST_TEXT = "Some text some text some text";
     private static final long ONE_DAY = TimeUnit.DAYS.toMillis(1);

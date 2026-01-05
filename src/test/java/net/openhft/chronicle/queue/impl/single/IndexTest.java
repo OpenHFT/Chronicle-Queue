@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings({"deprecation", "removal"})
 @ExtendWith(IndexTest.IndexTestTemplateProvider.class)
+@SuppressWarnings({"deprecation", "removal"})
 public class IndexTest extends QueueTestCommon {
 
     @NotNull

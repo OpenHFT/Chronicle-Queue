@@ -105,6 +105,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         assertSame(WireType.TEXT, reader.wireTypeSnapshot, "Wire type should be set to TEXT when specified via -w flag");
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private static final class ChronicleReaderMainStub extends ChronicleReaderMain {
         final RecordingChronicleReader reader = new RecordingChronicleReader();
 

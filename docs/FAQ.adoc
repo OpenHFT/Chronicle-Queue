@@ -6,7 +6,6 @@
 :source-highlighter: rouge
 :css-signature: demo
 :toc-placement: preamble
-:icons: font
 
 This document provides information for some common questions about Chronicle Queue.
 
@@ -759,8 +758,8 @@ Java Queue has similar functional requirements which should ultimately use simil
 +
 [source]
 ----
-env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 PATH=/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin:$PATH mvn clean install | tee build-java8.log
-env JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64 PATH=/usr/lib/jvm/java-1.21.0-openjdk-amd64/bin:$PATH mvn clean install | tee build-java21.log
+env JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 PATH=/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin:$PATH mvn clean install -l build-java8.log
+env JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64 PATH=/usr/lib/jvm/java-1.21.0-openjdk-amd64/bin:$PATH mvn clean install -l build-java21.log
 ----
 * Capture the full log (using `tee` as above) when reporting failures.
 * If you see a `Failed to compile generated method writer` warning, see the next section for additional diagnostics.
@@ -772,6 +771,5 @@ If you see warnings such as `Failed to compile generated method writer - falling
 * The tests now log additional context from `QueueTestCommon` when this occurs: test name, `java.version`, `wire.generator.v2`, and `disableProxyCodegen` system properties, plus the original throwable.
 * Reproduce with the focused test on Java 8 to collect a small log: `JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 mvn -Dtest=MessageHistoryTest test -DfailIfNoTests=false`.
 * Review the emitted warning in the test output to see the captured properties; if it repeats reliably, capture the full build log and the warning line for triage.
-* To force newer codegen, set `-Dwire.generator.v2=true`; to opt out of proxy fallback for experiment only, set `-DdisableProxyCodegen=true` (may fail if codegen still misbehaves).
 
 <<../README.adoc#,Back to ReadMe>>

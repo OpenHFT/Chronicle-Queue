@@ -297,12 +297,6 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertTrue(capturedOutput.isEmpty(), "method reader should not display indices for history-only messages");
     }
 
-    // basicReader()
-    //         .asMethodReader(SayWhen.class.getName())
-    //         .execute();
-    //
-    // assertTrue(capturedOutput.isEmpty());
-    // }
     @Test
     public void canReadPastEmptyMessageInReverseOrder() {
         dataDir = getTmpDir().toPath();
