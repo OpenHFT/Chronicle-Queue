@@ -44,7 +44,7 @@ public final class InternalPingPongMain {
      */
     public static void main(String[] args) {
         System.out.println(
-//                "-Dthroughput=" + throughput
+                // "-Dthroughput=" + throughput
                 " -Druntime=" + runtime
                         + " -Dpath=" + basePath);
         MappedFile.warmup();

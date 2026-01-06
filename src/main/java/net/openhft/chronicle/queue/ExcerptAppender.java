@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
 
     /**
-     * Writes (i.e. appends) the provided {@code bytes} to the queue.
+     * Writes the supplied {@code bytes} to the queue as a new excerpt.
      *
      * @param bytes to write to excerpt.
      * @throws UnrecoverableTimeoutException if the operation times out.
@@ -29,7 +29,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     void writeBytes(@NotNull BytesStore<?, ?> bytes);
 
     /**
-     * Writes (i.e. appends) the provided {@code bytes} to the queue.
+     * Writes the supplied {@code bytes} to the queue via the {@link BytesStore} overload.
      *
      * @param bytes to write to excerpt.
      * @throws UnrecoverableTimeoutException if the operation times out.
@@ -39,7 +39,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * Returns the index last written.
+     * Returns the last appended index for this appender.
      * <p>
      * The index includes the cycle and the sequence number.
      *
@@ -49,7 +49,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     long lastIndexAppended();
 
     /**
-     * Returns the cycle this appender is on.
+     * Returns the roll cycle for the current appender file.
      * <p>
      * Usually with chronicle-queue each cycle will have its
      * own unique data file to store the excerpts

@@ -83,7 +83,7 @@ public class ChronicleReaderMain {
     }
 
     /**
-     * Creates and returns a new instance of {@link ChronicleReader}.
+     * Creates a new {@link ChronicleReader} with default settings before CLI options are applied.
      *
      * @return A new instance of {@link ChronicleReader}
      */

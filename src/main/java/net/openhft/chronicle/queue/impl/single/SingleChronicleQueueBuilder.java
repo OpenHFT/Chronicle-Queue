@@ -63,7 +63,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     static final boolean DEBUG_FILE_RELEASED = Jvm.getBoolean("debug.file.released", false);
     private static final long DEFAULT_BLOCK_SIZE = Math.min(
             Jvm.getSize("SingleChronicleQueueBuilder.blocksize", OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE),
-            OS.is64Bit() && OS.isLinux() ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
+            OS.is64Bit() && OS.isLinux() && !isWsl() ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
 
     @Deprecated(/* to be removed in 2027 */)
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
@@ -219,7 +219,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Creates a new builder with a binary wire type for the specified base path.
+     * Creates a new builder with a binary wire type using the provided string base path.
      *
      * @param basePath the base path for the queue
      * @return a {@link SingleChronicleQueueBuilder} instance
@@ -229,7 +229,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Creates a new builder with a binary wire type for the specified base path as a {@link File}.
+     * Creates a new builder with a binary wire type using the provided {@link File} base directory.
      *
      * @param basePath the base path for the queue
      * @return a {@link SingleChronicleQueueBuilder} instance
@@ -330,7 +330,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                             return (RollCycle) instance;
                         } else {
                             Jvm.warn().on(SingleChronicleQueueBuilder.class,
-                                    "Configured default rollcycle is not a subclass of RollCycle");
+                                    "Configured default roll cycle does not implement RollCycle: " + rollCyclePropertyParts[0]);
                         }
                     }
                 } else {
@@ -743,7 +743,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Returns the metadata store for the queue.
+     * Returns the metadata store that persists queue header and roll information.
      *
      * @return the {@link TableStore} containing the queue's metadata
      */
@@ -842,7 +842,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Sets the path for the queue using a {@link File} object.
+     * Sets the queue base directory using a {@link File} object.
      *
      * @param path the file representing the path
      * @return the current builder instance for method chaining
@@ -853,7 +853,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Sets the path for the queue using a {@link Path} object.
+     * Sets the queue base directory using a {@link Path}, resolving it to a file system path.
      *
      * @param path the path object
      * @return the current builder instance for method chaining
@@ -885,7 +885,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Returns the path set for this queue.
+     * Returns the configured base directory for queue file storage.
      *
      * @return the file representing the path of the queue
      */
@@ -997,7 +997,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * sets epoch offset in milliseconds
+     * Sets the epoch offset in milliseconds to align roll cycle calculations with a custom start time.
      *
      * @param epoch sets an epoch offset as the number of number of milliseconds since January 1,
      *              1970,  00:00:00 GMT
@@ -1285,7 +1285,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Sets the {@link TimeProvider} for the queue.
+     * Sets the TimeProvider used for queue roll timing.
      *
      * @param timeProvider the time provider to set
      * @return the current builder instance for method chaining
@@ -1337,7 +1337,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Sets the {@link StoreFileListener} for the queue.
+     * Sets the {@link StoreFileListener} callback used to observe store file lifecycle events.
      *
      * @param storeFileListener the store file listener to set
      * @return the current builder instance for method chaining
@@ -1361,7 +1361,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Sets the source ID for the queue. The source ID must be a positive integer.
+     * Sets the source ID used in message history records for this queue. The source ID must be positive.
      *
      * @param sourceId the source ID to set
      * @return the current builder instance for method chaining
@@ -1563,7 +1563,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         try {
             return (SingleChronicleQueueBuilder) super.clone();
         } catch (Exception e) {
-            throw new AssertionError(e);
+            throw new AssertionError("Builder clone failed", e);
         }
     }
 
@@ -1624,7 +1624,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Returns the {@link AppenderListener} currently set for the queue.
+     * Returns the {@link AppenderListener} configured for write callbacks, or {@code null} if unset.
      *
      * @return the appender listener
      */

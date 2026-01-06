@@ -9,8 +9,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import java.io.Closeable;
 
 /**
- * A class designed to be called from a long-lived thread.
- * To get an instance of a Pretoucher, call {@link ChronicleQueue#createPretoucher()}
+ * A pretoucher is designed to run in a long-lived thread and pre-touch queue pages.
+ * To get an instance, call {@link ChronicleQueue#createPretoucher()}
  * <p>
  * Upon invocation of the {@code execute()} method, this object will pre-touch pages in the supplied queue's underlying store file, attempting to keep
  * ahead of any appenders to the queue.

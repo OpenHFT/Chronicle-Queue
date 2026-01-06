@@ -42,7 +42,7 @@ public enum StoreFileListeners implements StoreFileListener {
         @Override
         public void onReleased(int cycle, File file) {
             if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "File released " + file);
+                Jvm.debug().on(getClass(), "Store file released: " + file);
         }
 
         @Override

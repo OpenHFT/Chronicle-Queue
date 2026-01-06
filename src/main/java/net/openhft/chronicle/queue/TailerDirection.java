@@ -13,22 +13,22 @@ package net.openhft.chronicle.queue;
  */
 public enum TailerDirection {
     /**
-     * Do not move after a read.
+     * Does not advance the tailer after a read, so repeated reads return the same index.
      */
     NONE(0),
     /**
-     * Move to the next entry after a read.
+     * Advances to the next entry after each read, moving forward through the queue.
      */
     FORWARD(+1),
     /**
-     * Move to the previous entry after a read.
+     * Moves to the previous entry after each read, enabling reverse traversal.
      */
     BACKWARD(-1);
 
     private final int add;
 
     /**
-     * Constructor for the TailerDirection enum.
+     * Creates a direction with its index delta for tailer movement.
      *
      * @param add The value to be added to the current position (0 for NONE, +1 for FORWARD, -1 for BACKWARD)
      */
@@ -37,7 +37,7 @@ public enum TailerDirection {
     }
 
     /**
-     * Returns the adjustment value for the direction, used to change the tailer's position.
+     * Returns the position delta applied after each read to update the tailer index.
      *
      * @return The value indicating the direction's adjustment
      */

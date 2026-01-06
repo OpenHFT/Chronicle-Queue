@@ -36,7 +36,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     }
 
     /**
-     * Returns the metadata associated with this store.
+     * Returns the metadata view associated with this store without permitting mutation.
      *
      * @return the metadata
      */
@@ -139,7 +139,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     }
 
     /**
-     * Returns true indicating that this store is read-only.
+     * Returns true to indicate this store is read-only and rejects write operations.
      *
      * @return true, as this store is read-only
      */

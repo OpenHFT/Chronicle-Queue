@@ -22,13 +22,13 @@ public interface WireStoreSupplier {
      * Enum defining the strategy for creating or initializing a store.
      */
     enum CreateStrategy {
-        /** Always create a new file. */
+        /** Always create a new store file for the requested cycle. */
         CREATE,
 
         /** Reinitialize existing file if the header is not ready, used for normalizing EOF. */
         REINITIALIZE_EXISTING,
 
-        /** Open the file in read-only mode. */
+        /** Open the store file in read-only mode for tailers. */
         READ_ONLY
     }
 

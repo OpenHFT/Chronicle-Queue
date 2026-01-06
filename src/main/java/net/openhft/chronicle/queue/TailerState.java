@@ -11,7 +11,7 @@ package net.openhft.chronicle.queue;
  *     <li>{@link #BEYOND_START_OF_CYCLE} - The tailer has moved beyond the start of the cycle.</li>
  *     <li>{@link #CYCLE_NOT_FOUND} - The requested cycle could not be found.</li>
  *     <li>{@link #NOT_REACHED_IN_CYCLE} - The tailer has not yet reached an entry in the cycle.</li>
- *     <li>{@link #UNINITIALISED} - The tailer has not been initialized yet.</li>
+ *     <li>{@link #UNINITIALISED} - The tailer has not been initialised yet.</li>
  * </ul>
  */
 public enum TailerState {
@@ -36,7 +36,7 @@ public enum TailerState {
      */
     NOT_REACHED_IN_CYCLE,
     /**
-     * The tailer has not been initialised yet.
+     * The tailer has not been initialised yet and has no position.
      */
     UNINITIALISED
 }

@@ -21,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.locks.LockSupport;
 
 /**
- * Internal benchmark utility for testing Chronicle Queue throughput.
+ * Internal benchmark utility for measuring Chronicle Queue throughput and latency under load.
  * <p>
  * The benchmark can be configured via system properties:
  * <ul>
@@ -118,14 +118,14 @@ public class InternalBenchmarkMain {
             }
             long written = System.nanoTime();
             long time = written - start;
-//                System.out.println(time);
+            //                System.out.println(time);
             writeTime.sample(time);
 
             long diff = writeTime.totalCount() - readTime.totalCount();
             Thread.yield();
             if (diff >= 200) {
-//                long rlt = readerLoopTime;
-//                long delay = System.nanoTime() - rlt;
+                //                long rlt = readerLoopTime;
+                //                long delay = System.nanoTime() - rlt;
                 System.out.println("diff=" + diff /* +" delay= " + delay*/);
                 StringBuilder sb = new StringBuilder(128);
                 sb.append("Reader: profile of the thread");
@@ -145,7 +145,7 @@ public class InternalBenchmarkMain {
         pretoucher.interrupt();
         reader.interrupt();
         running = false;
-//        monitor.interrupt();
+        //        monitor.interrupt();
 
         System.out.println("Loop times " + loopTime.toMicrosFormat());
         System.out.println("messageSize " + messageSize);

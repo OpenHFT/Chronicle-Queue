@@ -13,7 +13,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
  */
 public enum DefaultCycleCalculator implements CycleCalculator {
     /**
-     * The single instance of the {@code DefaultCycleCalculator}.
+     * The single {@code DefaultCycleCalculator} instance used when no custom calculator is provided.
      */
     INSTANCE;
 

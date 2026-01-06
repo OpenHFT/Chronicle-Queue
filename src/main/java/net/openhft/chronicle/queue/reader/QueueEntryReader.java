@@ -4,7 +4,7 @@
 package net.openhft.chronicle.queue.reader;
 
 /**
- * Interface for reading and processing entries from a queue.
+ * Interface for reading and processing entries from a queue with per-entry handling.
  * <p>Implementations of this interface are responsible for reading the next available entry
  * from the queue and processing it as necessary.
  */

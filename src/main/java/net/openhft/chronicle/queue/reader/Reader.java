@@ -123,7 +123,7 @@ public interface Reader {
     Reader historyRecords(final long maxHistoryRecords);
 
     /**
-     * Sets the method reader interface for this Reader.
+     * Sets the method reader interface name used to decode method calls.
      * <p>If the provided interface name is empty, a dummy method reader will be created.
      *
      * @param methodReaderInterface The fully qualified class name of the method reader interface.
@@ -165,28 +165,28 @@ public interface Reader {
     Reader showMessageHistory(boolean showMessageHistory);
 
     /**
-     * Retrieves the argument set for this Reader.
+     * Returns the raw argument configured for this Reader.
      *
      * @return The argument as a string.
      */
     String arg();
 
     /**
-     * Retrieves the argument set for the content-based limiter in this Reader.
+     * Returns the limiter argument used for content-based filtering.
      *
      * @return The limiter argument as a string.
      */
     String limiterArg();
 
     /**
-     * Retrieves the method reader interface for this Reader.
+     * Returns the interface class used for method reader decoding.
      *
      * @return The method reader interface class.
      */
     Class<?> methodReaderInterface();
 
     /**
-     * Creates a new instance of {@link Reader}.
+     * Creates a new Reader with default {@link ChronicleReader} settings.
      *
      * @return A new Reader instance.
      */

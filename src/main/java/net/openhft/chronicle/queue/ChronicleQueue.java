@@ -72,7 +72,7 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Creates and returns a new {@link SingleChronicleQueueBuilder}.
+     * Creates and returns a new {@link SingleChronicleQueueBuilder} with default settings.
      * <p>
      * The builder can be used to build a ChronicleQueue.
      *
@@ -100,14 +100,12 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Creates and returns a new {@link SingleChronicleQueueBuilder} that will
-     * be pre-configured to use files located in the directory of the
-     * provided {@code path}.
+     * Creates and returns a new {@link SingleChronicleQueueBuilder} using the provided {@link File} as the queue base
+     * directory.
      *
      * @param path of the directory to pre-configure for storing the queue
      * @return a new {@link SingleChronicleQueueBuilder} that will
-     * be pre-configured to use files located in the directory named by the
-     * provided {@code pathName}
+     * be pre-configured to use files located in the provided directory
      * @throws NullPointerException if the provided {@code path} is {@code null}.
      */
     @NotNull
@@ -116,14 +114,12 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Creates and returns a new {@link SingleChronicleQueueBuilder} that will
-     * be pre-configured to use files located in the directory of the
-     * provided {@code path}.
+     * Creates and returns a new {@link SingleChronicleQueueBuilder} using the provided {@link Path} and resolving it to
+     * a file system directory for the queue.
      *
      * @param path of the directory to pre-configure for storing the queue
      * @return a new {@link SingleChronicleQueueBuilder} that will
-     * be pre-configured to use files located in the directory named by the
-     * provided {@code pathName}
+     * be pre-configured to use files located in the provided directory
      * @throws NullPointerException if the provided {@code path} is {@code null}.
      */
     @NotNull
@@ -182,7 +178,7 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Creates and returns a new ExcerptAppender for this ChronicleQueue
+     * Creates and returns a new ExcerptAppender for sequential writes on this ChronicleQueue.
      * <p>
      * An Appender can be used to store new excerpts sequentially to the queue.
      * <p>
@@ -222,7 +218,7 @@ public interface ChronicleQueue extends Closeable {
     long lastIndex();
 
     /**
-     * Returns the {@link WireType} used for this ChronicleQueue.
+     * Returns the {@link WireType} used to serialise data for this ChronicleQueue.
      * <p>
      * For example, the WireType could be WireTypes.TEXT or WireTypes.BINARY.
      *
@@ -279,14 +275,14 @@ public interface ChronicleQueue extends Closeable {
     void dump(Writer writer, long fromIndex, long toIndex);
 
     /**
-     * Dumps a representation of this ChronicleQueue to the provided {@code stream} in YAML-format.
-     * Dumping will be made from the provided (@code fromIndex) (inclusive) to the provided
+     * Dumps a representation of this ChronicleQueue to the provided {@code stream} in YAML-format using UTF-8 encoding.
+     * Dumping will be made from the provided {@code fromIndex} (inclusive) to the provided
      * {@code toIndex} (inclusive).
      *
-     * @param stream    to write to
+     * @param stream    output stream to write to
      * @param fromIndex first index (inclusive)
      * @param toIndex   last index  (inclusive)
-     * @throws NullPointerException if the provided {@code writer} is {@code null}
+     * @throws NullPointerException if the provided {@code stream} is {@code null}
      */
     @Deprecated(/* to be removed in 2027, only used in tests */)
     default void dump(@NotNull OutputStream stream, long fromIndex, long toIndex) {
@@ -352,7 +348,7 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Returns the {@link RollCycle} for this ChronicleQueue.
+     * Returns the configured {@link RollCycle} used to translate indices into cycle and sequence values.
      *
      * @return the {@link RollCycle} for this ChronicleQueue
      * @see RollCycle
@@ -361,7 +357,7 @@ public interface ChronicleQueue extends Closeable {
     RollCycle rollCycle();
 
     /**
-     * Returns the {@link TimeProvider} for this ChronicleQueue.
+     * Returns the {@link TimeProvider} supplying timestamps for this ChronicleQueue.
      *
      * @return the {@link TimeProvider} for this ChronicleQueue
      * @see TimeProvider
@@ -424,7 +420,7 @@ public interface ChronicleQueue extends Closeable {
     void lastIndexReplicated(long lastIndex);
 
     /**
-     * Sets the last index that has been sent to a remote host.
+     * Sets the last replicated index acknowledged by all remote hosts.
      *
      * @param lastAcknowledgedIndexReplicated last acknowledged index that has been sent to the remote host(s).
      * @see #lastAcknowledgedIndexReplicated()
@@ -492,7 +488,7 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Create non-async tailer.
+     * Creates a non-async tailer for enterprise queue operations.
      * <p>Enterprise Queue only
      *
      * @return tailer

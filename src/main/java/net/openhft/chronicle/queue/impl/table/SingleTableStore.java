@@ -269,7 +269,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
 
         if (mappedBytes.isClosed())
-            throw new ClosedIllegalStateException("Closed");
+            throw new ClosedIllegalStateException("Table store is closed");
 
         mappedBytes.reserve(this);
         try {
@@ -308,7 +308,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             return longValue;
 
         } catch (StreamCorruptedException | EOFException e) {
-            throw new IORuntimeException(e);
+            throw new IORuntimeException("Failed to read table store entry for key " + key, e);
 
         } finally {
             mappedBytes.release(this);
@@ -346,7 +346,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             }
 
         } catch (EOFException e) {
-            throw new IORuntimeException(e);
+            throw new IORuntimeException("Failed to iterate table store entries", e);
 
         } finally {
             mappedBytes.release(this);

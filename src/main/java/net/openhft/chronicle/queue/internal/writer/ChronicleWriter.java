@@ -15,7 +15,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * The {@code ChronicleWriter} class is responsible for writing objects to a Chronicle Queue.
+ * The {@code ChronicleWriter} class writes payloads from input files to a Chronicle Queue as replayable documents.
  * <p>
  * It reads data from a list of files and writes the contents to the queue, optionally using a method writer
  * if an interface class is provided.

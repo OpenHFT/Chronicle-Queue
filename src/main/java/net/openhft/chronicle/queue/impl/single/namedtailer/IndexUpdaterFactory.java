@@ -69,7 +69,7 @@ public class IndexUpdaterFactory {
         }
 
         /**
-         * Closes this {@code StandardIndexUpdater}, releasing any resources held.
+         * Closes this updater and releases the underlying index value.
          *
          * @throws IOException if an I/O error occurs
          */
@@ -89,7 +89,7 @@ public class IndexUpdaterFactory {
         }
 
         /**
-         * Returns the current index value.
+         * Returns the {@link LongValue} that stores the current index for the versioned tailer.
          *
          * @return the {@link LongValue} representing the current index
          */
@@ -128,7 +128,7 @@ public class IndexUpdaterFactory {
         }
 
         /**
-         * Closes this {@code VersionedIndexUpdater}, releasing any resources held.
+         * Closes this updater and releases the versioned index resources.
          *
          */
         @Override
@@ -154,7 +154,7 @@ public class IndexUpdaterFactory {
         }
 
         /**
-         * Returns the current index value.
+         * Returns the {@link LongValue} that stores the current tailer index.
          *
          * @return the {@link LongValue} representing the current index
          */

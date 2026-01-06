@@ -86,7 +86,7 @@ public final class QueueOffsetSpec {
                 expectArgs(tokens, 1);
                 return new QueueOffsetSpec(type, new String[]{});
             default:
-                throw new IllegalArgumentException("Unknown type: " + type);
+                throw new IllegalArgumentException("Unknown offset type in apply: " + type);
         }
     }
 
@@ -151,7 +151,7 @@ public final class QueueOffsetSpec {
             case NONE:
                 break;
             default:
-                throw new IllegalArgumentException("Unknown type: " + type);
+                throw new IllegalArgumentException("Unknown offset type in validate: " + type);
         }
     }
 

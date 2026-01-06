@@ -134,10 +134,9 @@ public final class InternalFileUtil {
     }
 
     /**
-     * Returns if the given {@code file } is used by any process (i.e.
-     * has the file open for reading or writing).
+     * Determines whether the given {@code file} is open using a supplied open-file snapshot.
      * <p>
-     * If the open state of the given {@code file} can not be determined, {@code true }
+     * If the open state of the given {@code file} cannot be determined, {@code true}
      * is returned.
      *
      * @param file         to check
@@ -156,8 +155,7 @@ public final class InternalFileUtil {
     }
 
     /**
-     * Returns if the given {@code file } is used by any process (i.e.
-     * has the file open for reading or writing).
+     * Checks file open state on Windows by attempting an exclusive lock.
      *
      * @param file to check
      * @return FileState if the given {@code file } is used by any process
@@ -232,7 +230,7 @@ public final class InternalFileUtil {
                 } catch (NoSuchFileException | AccessDeniedException e) {
                     // Ignore, sometimes they disappear & we can't access all the files
                 } catch (IOException e) {
-                    Jvm.warn().on(ProcFdWalker.class, "Error resolving " + file, e);
+                    Jvm.warn().on(ProcFdWalker.class, "Failed to resolve /proc entry for " + file, e);
                 }
             }
             return FileVisitResult.CONTINUE;
@@ -243,7 +241,7 @@ public final class InternalFileUtil {
             // we definitely won't be able to access all the files, and it's common for a file to go missing mid-traversal
             // so don't log when one of those things happens
             if (!((exc instanceof AccessDeniedException) || (exc instanceof NoSuchFileException))) {
-                Jvm.warn().on(ProcFdWalker.class, "Error visiting file", exc);
+                Jvm.warn().on(ProcFdWalker.class, "Failed to visit /proc entry " + file, exc);
             }
             return FileVisitResult.CONTINUE;
         }

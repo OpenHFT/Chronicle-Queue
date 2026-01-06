@@ -180,7 +180,7 @@ public class ChronicleReader implements Reader {
     }
 
     /**
-     * Validates the arguments for the {@link ChronicleReader}.
+     * Validates ChronicleReader arguments and rejects named tailers on read-only queues.
      * <p>Throws an {@link IllegalArgumentException} if a named tailer is used with a read-only queue.
      */
     private void validateArgs() {
@@ -520,7 +520,7 @@ public class ChronicleReader implements Reader {
     }
 
     /**
-     * Returns the argument passed to the reader.
+     * Returns the raw argument provided to the reader on the command line.
      *
      * @return The current argument as a string
      */
@@ -530,7 +530,7 @@ public class ChronicleReader implements Reader {
     }
 
     /**
-     * Returns the argument passed to the content-based limiter.
+     * Returns the limiter argument used to configure the content-based filter.
      *
      * @return The limiter argument as a string
      */
@@ -540,7 +540,7 @@ public class ChronicleReader implements Reader {
     }
 
     /**
-     * Returns the class used for the method reader interface.
+     * Returns the interface used to decode method reader messages.
      *
      * @return The method reader interface class
      */

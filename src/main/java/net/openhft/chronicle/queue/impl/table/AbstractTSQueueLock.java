@@ -44,7 +44,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
     private final String lockKey;
 
     /**
-     * Constructor for creating an AbstractTSQueueLock.
+     * Constructs the queue lock using the supplied table store and lock key.
      *
      * @param lockKey        The unique key associated with this lock.
      * @param tableStore     The table store this lock will manage.

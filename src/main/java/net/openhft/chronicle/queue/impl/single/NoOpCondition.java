@@ -30,14 +30,14 @@ public final class NoOpCondition implements Condition, IgnoresEverything {
     private NoOpCondition() { }
 
     /**
-     * Does nothing, returns immediately.
+     * Returns immediately without blocking or changing thread state.
      */
     @Override
     public void await() {
     }
 
     /**
-     * Does nothing, returns immediately.
+     * Returns immediately and ignores interrupts because no wait occurs.
      */
     @Override
     public void awaitUninterruptibly() {
@@ -55,7 +55,7 @@ public final class NoOpCondition implements Condition, IgnoresEverything {
     }
 
     /**
-     * Returns {@code true} without blocking.
+     * Returns {@code true} immediately and does not wait for the timeout.
      *
      * @param l The maximum time to wait.
      * @param timeUnit The time unit of the {@code l} argument.
@@ -78,14 +78,14 @@ public final class NoOpCondition implements Condition, IgnoresEverything {
     }
 
     /**
-     * Does nothing, returns immediately.
+     * No-op signal; there are no waiters to wake.
      */
     @Override
     public void signal() {
     }
 
     /**
-     * Does nothing, returns immediately.
+     * No-op broadcast signal; there are no waiters to wake.
      */
     @Override
     public void signalAll() {

@@ -82,7 +82,7 @@ public class ChronicleHistoryReaderMain {
     }
 
     /**
-     * Initializes a new instance of {@link ChronicleHistoryReader}.
+     * Initialises a new {@link ChronicleHistoryReader} with default configuration before CLI overrides.
      *
      * @return A new {@link ChronicleHistoryReader} instance
      */

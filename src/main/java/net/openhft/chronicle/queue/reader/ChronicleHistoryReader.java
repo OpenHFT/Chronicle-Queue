@@ -44,7 +44,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
      */
     public static final String SEPARATOR = "_";
     /**
-     * Queue base path to read from.
+     * Queue base path used to open the source queue.
      */
     protected Path basePath;
     /**
@@ -72,7 +72,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
      */
     protected long ignore = 0;
     /**
-     * Counter of messages processed.
+     * Counter of messages processed in the current read.
      */
     protected long counter = 0;
     /**
@@ -104,7 +104,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
      */
     protected int lastHistosSize = 0;
     /**
-     * Tailer used to read messages.
+     * Tailer used to read messages from the queue.
      */
     protected ExcerptTailer tailer;
 
@@ -144,7 +144,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     }
 
     /**
-     * Enables or disables progress reporting.
+     * Enables or disables progress reporting for long-running reads.
      *
      * @param p True to enable progress reporting, false otherwise
      * @return The current instance of {@link ChronicleHistoryReader}
@@ -277,7 +277,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
             while (!Thread.currentThread().isInterrupted() && mr.readOne()) {
                 ++counter;
                 if (this.progress && counter % 1_000_000L == 0) {
-                    Jvm.debug().on(getClass(), "Progress: " + counter);
+                    Jvm.debug().on(getClass(), "Progress: processed " + counter + " messages");
                 }
             }
         } finally {
@@ -335,7 +335,7 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     }
 
     /**
-     * Prints a summary of the histograms.
+     * Prints a summary line for the configured histogram percentiles.
      */
     private void printSummary() {
         if (histos.size() > lastHistosSize) {

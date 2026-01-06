@@ -8,7 +8,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import java.util.function.Consumer;
 
 /**
- * Plugin interface for handling documents read from the queue in {@code ChronicleReader}.
+ * Plugin interface for handling documents read from the queue by {@code ChronicleReader} callbacks and custom hooks.
  * <p>This interface allows for custom handling of the documents, which can be particularly useful when working with non-textual
  * queues, such as those written in binary format. Implementing this plugin provides a way to process the raw {@link DocumentContext}
  * from the queue.

@@ -80,7 +80,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             if (fieldName == null || MetaDataField.dataFormat.name().equals(fieldName))
                 version = wire.getValueIn().int32();
             else
-                Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
+                Jvm.warn().on(getClass(), "Unexpected metadata field while loading queue store: " + fieldName);
             this.dataVersion = version > 1 ? 0 : version;
 
             singleThreadedCheckDisabled(true);
@@ -186,7 +186,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     /**
-     * Returns the file associated with the store.
+     * Returns the backing file for this queue store instance.
      *
      * @return the file used by the queue store
      */
@@ -345,7 +345,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             try {
                 mappedFile.release(this);
             } catch (IllegalStateException e) {
-                Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
+                Jvm.warn().on(getClass(), "Trouble releasing mapped file for queue store: " + mappedFile, e);
             }
         }
     }
@@ -439,7 +439,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         try {
             indexing.initIndex(wire);
         } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
+            throw new UncheckedIOException("Failed to initialise index for queue store", ex);
         }
     }
 
@@ -550,7 +550,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     /**
-     * Sets the cycle for this store.
+     * Sets the roll cycle number for this store instance.
      *
      * @param cycle the cycle to set
      * @return the updated {@link SingleChronicleQueueStore}
@@ -563,7 +563,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     }
 
     /**
-     * Returns the current cycle of the store.
+     * Returns the current roll cycle number for this store.
      *
      * @return the current cycle
      */

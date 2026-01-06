@@ -18,11 +18,11 @@ public enum FileState {
      */
     OPEN,
     /**
-     * The file is closed and not in use.
+     * The file is closed and not in use by the queue.
      */
     CLOSED,
     /**
-     * The file does not exist.
+     * The file does not exist in the file system for this queue path.
      */
     NON_EXISTENT,
     /**

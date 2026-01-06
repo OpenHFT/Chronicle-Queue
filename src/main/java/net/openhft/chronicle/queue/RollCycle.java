@@ -146,7 +146,7 @@ public interface RollCycle {
     }
 
     /**
-     * Returns the cycle for the given {@code index}.
+     * Returns the roll cycle component for the given {@code index} value.
      * <p>
      * An index comprises both a cycle and a sequence number but the way the index is composed of said properties may vary. This method
      * decomposes the provided {@code index} and extracts the cycle.
@@ -154,7 +154,7 @@ public interface RollCycle {
      * Default implementation delegates to {@link #arithmetic()}.
      *
      * @param index to use when extracting the cycle
-     * @return the sequence number for the given {@code index}
+     * @return the cycle for the given {@code index}
      */
     default int toCycle(long index) {
         return arithmetic().toCycle(index);

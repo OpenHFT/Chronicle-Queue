@@ -286,7 +286,7 @@ class StoreTailer extends AbstractCloseable
             readingDocumentCycleNotFound(next);
 
         } catch (StreamCorruptedException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Stream corruption while reading document", e);
         } catch (UnrecoverableTimeoutException notComplete) {
             // Treat the document as empty if the operation timed out.
         } catch (DecoratedBufferUnderflowException e) {
@@ -711,7 +711,7 @@ class StoreTailer extends AbstractCloseable
                 }
 
             } catch (ParseException e) {
-                throw new IllegalStateException(e);
+                throw new IllegalStateException("Failed to parse next cycle while scanning directory listing", e);
             }
 
         if (Jvm.isResourceTracing()) {
@@ -752,7 +752,7 @@ class StoreTailer extends AbstractCloseable
                 return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
 
             } catch (Exception e) {
-                throw new AssertionError(e);
+                throw new AssertionError("Failed to resolve last sequence number for cycle " + nextCycle, e);
             }
         } else {
             throw new IllegalStateException("direction=" + direction);
@@ -771,7 +771,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     /**
-     * Retrieves the current cycle number.
+     * Retrieves the current cycle number used to compute index positions.
      *
      * @return The current cycle number
      */
@@ -848,9 +848,9 @@ class StoreTailer extends AbstractCloseable
         if (cycle < 0)
             return NOT_REACHED;
         final RollCycle rollCycle = queue.rollCycle();
-//        if (Jvm.isResourceTracing()) {
-//            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
-//        }
+        //        if (Jvm.isResourceTracing()) {
+        //            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+        //        }
 
         // moves to the expected cycle
         if (!cycle(cycle))
@@ -879,9 +879,9 @@ class StoreTailer extends AbstractCloseable
         final RollCycle rollCycle = queue.rollCycle();
         final int cycle = rollCycle.toCycle(index);
         final long sequenceNumber = rollCycle.toSequenceNumber(index);
-//        if (Jvm.isResourceTracing()) {
-//            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
-//        }
+        //        if (Jvm.isResourceTracing()) {
+        //            Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+        //        }
 
         // moves to the expected cycle
         if (!cycle(cycle))
@@ -1009,7 +1009,7 @@ class StoreTailer extends AbstractCloseable
             return approximateLastCycle2(lastCycle);
 
         } catch (@NotNull StreamCorruptedException | UnrecoverableTimeoutException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Failed to approximate last index for tailer", e);
         }
     }
 
@@ -1276,7 +1276,7 @@ class StoreTailer extends AbstractCloseable
             index(rollCycle.toIndex(wireStore.cycle(), sequenceNumber));
 
         } catch (@NotNull UnrecoverableTimeoutException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Timed out while moving tailer to end", e);
         }
 
         return this;
@@ -1324,7 +1324,7 @@ class StoreTailer extends AbstractCloseable
                             state = END_OF_CYCLE;
                             break LoopForward;
                         default:
-                            throw new IllegalStateException("Unknown ScanResult: " + result);
+                            throw new IllegalStateException("Unexpected ScanResult in originalToEnd loop: " + result);
                     }
                 }
 
@@ -1335,7 +1335,7 @@ class StoreTailer extends AbstractCloseable
                 state = END_OF_CYCLE;
                 break;
             default:
-                throw new IllegalStateException("Unknown ScanResult: " + scanResult);
+                throw new IllegalStateException("Unexpected ScanResult in originalToEnd switch: " + scanResult);
         }
 
         return this;
@@ -1392,7 +1392,7 @@ class StoreTailer extends AbstractCloseable
     }
 
     /**
-     * Returns the associated {@link ChronicleQueue} instance.
+     * Returns the associated {@link ChronicleQueue} instance that provides the data being read.
      *
      * @return The ChronicleQueue that this tailer is reading from.
      */
@@ -1609,14 +1609,14 @@ class StoreTailer extends AbstractCloseable
         try {
             return moveToCycle(cycle) ? store.lastSequenceNumber(this) + 1 : -1;
         } catch (StreamCorruptedException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Stream corruption while counting excerpts in cycle " + cycle, e);
         } finally {
             releaseStore();
         }
     }
 
     /**
-     * Returns the current state of the tailer.
+     * Returns the current state of the tailer used to track read progress.
      *
      * @return The current {@link TailerState}.
      */
@@ -1808,7 +1808,7 @@ class StoreTailer extends AbstractCloseable
         }
 
         /**
-         * Returns the source ID of the tailer.
+         * Returns the source ID used by this tailer for message history.
          *
          * @return The source ID.
          */

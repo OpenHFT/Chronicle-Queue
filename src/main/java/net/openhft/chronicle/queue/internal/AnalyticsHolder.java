@@ -7,7 +7,8 @@ import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.pom.PomProperties;
 
 /**
- * The {@code AnalyticsHolder} class is a utility to manage the initialization and access to an {@link AnalyticsFacade} instance.
+ * The {@code AnalyticsHolder} class manages initialisation and access to the shared {@link AnalyticsFacade} instance
+ * for queue analytics and telemetry reporting.
  * <p>
  * It fetches the Chronicle Queue version and builds the analytics facade using standard configurations, including
  * a debug logger.

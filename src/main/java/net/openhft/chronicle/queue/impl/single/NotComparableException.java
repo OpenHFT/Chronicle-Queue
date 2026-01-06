@@ -17,7 +17,7 @@ public final class NotComparableException extends RuntimeException {
     private static final long serialVersionUID = 0L;
 
     /**
-     * Singleton instance of {@code NotComparableException}.
+     * Singleton instance used to avoid allocations during binary search fallback paths.
      */
     public static final NotComparableException INSTANCE = new NotComparableException();
 

@@ -41,10 +41,11 @@ public final class RollCycleArithmetic {
      */
     private RollCycleArithmetic(int indexCount, int indexSpacing) {
         this.indexCount = Maths.nextPower2(indexCount, 8);
-        assert this.indexCount <= MAX_INDEX_COUNT : "indexCount: " + indexCount;
+        assert this.indexCount <= MAX_INDEX_COUNT : "indexCount must be <= " + MAX_INDEX_COUNT
+                + ", got " + indexCount;
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
         cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
-        assert cycleShift < Long.SIZE : "cycleShift: " + cycleShift;
+        assert cycleShift < Long.SIZE : "cycleShift must be < Long.SIZE, got " + cycleShift;
         sequenceMask = (1L << cycleShift) - 1;
     }
 
@@ -89,7 +90,7 @@ public final class RollCycleArithmetic {
     }
 
     /**
-     * Returns the configured index spacing.
+     * Returns the configured index spacing used to skip entries when indexing.
      *
      * @return The index spacing
      */
@@ -98,7 +99,7 @@ public final class RollCycleArithmetic {
     }
 
     /**
-     * Returns the configured index count.
+     * Returns the configured index count for each cycle.
      *
      * @return The index count
      */

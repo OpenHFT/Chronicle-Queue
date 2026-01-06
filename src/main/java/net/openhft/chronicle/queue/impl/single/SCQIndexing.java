@@ -293,7 +293,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     /**
-     * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so the index2index tells chronicle where ( in other words
+     * Moves the read position to the indexed entry for {@code index}.
+     * <p>
+     * The indexes are stored in many excerpts, so the index2index tells chronicle where ( in other words
      * the addressForRead of where ) the root first level targetIndex is stored. The indexing works like a tree, but only 2 levels deep, the root of
      * the tree is at index2index ( this first level targetIndex is 1MB in size and there is only one of them, it only holds the addresses of the
      * second level indexes, there will be many second level indexes ( created on demand ), each is about 1MB in size  (this second level targetIndex
@@ -604,7 +606,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             if (headerType == WireIn.HeaderType.EOF) {
                 if (toPosition == Long.MAX_VALUE)
                     return i;
-                throw new EOFException();
+                throw new EOFException("Reached EOF before locating position " + toPosition);
             }
 
             if (!inclusive && toPosition == bytes.readPosition())
@@ -771,7 +773,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             // Perform a linear scan if no exact match is found.
             return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive);
         } catch (EOFException e) {
-            throw new UncheckedIOException(e);
+            throw new UncheckedIOException("Linear scan hit EOF while searching for position " + position, e);
         }
     }
 
@@ -849,7 +851,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             secondaryAddress = newIndex(wire, index2indexArr, index2);
             long sa = index2indexArr.getValueAt(index2);
             if (sa != secondaryAddress)
-                throw new AssertionError();
+                throw new AssertionError("Secondary address mismatch, expected " + secondaryAddress + ", found " + sa);
         }
 
         return secondaryAddress;
@@ -974,7 +976,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     Wire wireForIndex = ec.wireForIndex();
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {
-                    throw new UncheckedIOException(e);
+                    throw new UncheckedIOException("EOF while resolving last sequence for address " + address, e);
                 }
             }
         }
@@ -1117,7 +1119,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         /**
-         * Returns the {@link LongArrayValues} held by this holder.
+         * Returns the cached {@link LongArrayValues} instance held by this holder.
          *
          * @return The {@link LongArrayValues}.
          */

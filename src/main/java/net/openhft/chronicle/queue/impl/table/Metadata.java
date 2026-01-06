@@ -38,7 +38,7 @@ public interface Metadata extends Demarshallable, WriteMarshallable {
         INSTANCE;
 
         /**
-         * No-arg constructor for {@code NoMeta}.
+         * No-arg constructor for {@code NoMeta} used by enum initialisation.
          */
         NoMeta() {
         }

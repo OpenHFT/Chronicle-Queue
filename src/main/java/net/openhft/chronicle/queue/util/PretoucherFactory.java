@@ -9,7 +9,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Factory interface for creating {@link Pretoucher} and {@link EventHandler} instances.
+ * Factory interface for creating {@link Pretoucher} and {@link EventHandler} instances for queue pre-touching.
  * <p>
  * Pretouchers are used to preload and access resources in advance, reducing the likelihood of delays due to I/O or
  * memory access. This interface provides methods to create both event handlers and pretouchers for a specific

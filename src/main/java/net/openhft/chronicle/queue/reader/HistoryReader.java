@@ -39,7 +39,7 @@ public interface HistoryReader {
     HistoryReader withBasePath(final Path path);
 
     /**
-     * Enables or disables progress reporting.
+     * Enables or disables progress reporting while reading the queue.
      *
      * @param p {@code true} to enable progress reporting, {@code false} otherwise
      * @return The current instance of {@link HistoryReader}
@@ -56,7 +56,7 @@ public interface HistoryReader {
     HistoryReader withTimeUnit(TimeUnit p);
 
     /**
-     * Enables or disables histograms by method.
+     * Enables or disables per-method histograms for message timings.
      *
      * @param b {@code true} to enable histograms by method, {@code false} otherwise
      * @return The current instance of {@link HistoryReader}
@@ -82,7 +82,7 @@ public interface HistoryReader {
     HistoryReader withMeasurementWindow(long measurementWindow);
 
     /**
-     * Configures the offset for summary output.
+     * Configures the output offset used when printing summary histograms.
      *
      * @param offset The offset for summary output
      * @return The current instance of {@link HistoryReader}
@@ -99,7 +99,7 @@ public interface HistoryReader {
     HistoryReader withStartIndex(long startIndex);
 
     /**
-     * Sets the supplier for histograms.
+     * Sets the histogram supplier used for latency tracking.
      *
      * @param histoSupplier The supplier for providing histograms
      * @return The current instance of {@link ChronicleHistoryReader}

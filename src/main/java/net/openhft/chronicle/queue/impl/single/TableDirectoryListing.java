@@ -240,7 +240,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     }
 
     /**
-     * Returns the volatile value of the maximum cycle.
+     * Returns the volatile maximum cycle value cached in the directory listing.
      *
      * @return The maximum cycle value.
      */
@@ -249,7 +249,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     }
 
     /**
-     * Returns the volatile value of the minimum cycle.
+     * Returns the volatile minimum cycle value cached in the directory listing.
      *
      * @return The minimum cycle value.
      */

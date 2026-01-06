@@ -19,7 +19,7 @@ class RollCycleEncodeSequence implements Sequence {
     private final long sequenceMask;
 
     /**
-     * Constructs an instance of RollCycleEncodeSequence.
+     * Constructs an encoder that derives cycle and sequence masks from index spacing.
      *
      * @param writePositionAndSequence The value containing both write position and sequence.
      * @param indexCount The number of indices.
@@ -60,7 +60,7 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     /**
-     * gets the sequence for a writePosition
+     * Returns the sequence for the latest write position in the queue.
      * <p>
      * This method will only return a valid sequence number of the write position if the write position is the
      * last write position in the queue. YOU CAN NOT USE THIS METHOD TO LOOK UP RANDOM SEQUENCES FOR ANY WRITE POSITION.

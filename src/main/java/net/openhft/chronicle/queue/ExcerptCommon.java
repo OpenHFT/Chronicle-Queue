@@ -11,8 +11,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 
 /**
- * The ExcerptCommon is common to both ExcerptAppender
- * and ExcerptTailer.
+ * Shared operations for {@link ExcerptAppender} and {@link ExcerptTailer}, covering queue access,
+ * source identifiers, and synchronisation behaviour.
  *
  * @param <E> the concrete Excerpt type returned for fluent chaining
  */

@@ -11,7 +11,7 @@ import net.openhft.chronicle.wire.SourceContext;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
+ * The component that facilitates sequentially reading data from a {@link ChronicleQueue} using a tailer cursor.
  *
  * <p><b>NOTE:</b> Tailers are NOT thread-safe, sharing a Tailer between threads will lead to errors and unpredictable behaviour.
  */
@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
-     * Returns the {@link DocumentContext } for this ExcerptTailer.
+     * Returns the {@link DocumentContext} representing the next document for this tailer read operation.
      * <p>
      * This is equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but without the use of a
      * lambda expression.
@@ -36,7 +36,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
-     * Returns the {@link DocumentContext } for this ExcerptTailer.
+     * Returns the {@link DocumentContext } for this tailer, optionally including metadata.
      * <p>
      * This is equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but without the use of a
      * lambda expression.
@@ -50,7 +50,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     DocumentContext readingDocument(boolean includeMetaData);
 
     /**
-     * Returns the current index of this Tailer.
+     * Returns the current index for this tailer read position.
      * <p>
      * If this method is invoked within a {@code try (tailer.readingDocument(){ }} block, returns the index of
      * the current reading document. Otherwise, returns the next index to read.
@@ -72,7 +72,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
-     * Returns the current cycle for this Tailer.
+     * Returns the current roll cycle number for this tailer.
      * <p>
      * Usually, each cycle will have its own unique data file to store excerpts.
      *
@@ -148,7 +148,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer striding(boolean striding);
 
     /**
-     * Returns the striding property of this Tailer.
+     * Returns whether striding is enabled for this tailer.
      *
      * @return the striding property of this Tailer
      * @see #striding(boolean)
@@ -156,7 +156,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     boolean striding();
 
     /**
-     * Sets the direction of this ExcerptTailer.
+     * Sets the read direction for this ExcerptTailer to control forward or backward traversal.
      * <p>
      * The direction determines the direction of movement upon reading an excerpt.
      *
@@ -168,7 +168,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer direction(@NotNull TailerDirection direction);
 
     /**
-     * Returns the direction of this ExcerptTailer.
+     * Returns the current read direction for this tailer, which controls how indexes advance.
      * <p>
      * The direction determines the direction of movement upon reading an excerpt.
      *
@@ -252,7 +252,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     }
 
     /**
-     * Returns the {@link TailerState} of this Tailer.
+     * Returns the {@link TailerState} describing this tailer's read state.
      *
      * @return the {@link TailerState} of this Tailer
      */

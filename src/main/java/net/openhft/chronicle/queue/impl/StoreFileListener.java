@@ -35,7 +35,7 @@ public interface StoreFileListener {
     }
 
     /**
-     * Called when a file is acquired.
+     * Called when a store file is acquired for queue use.
      *
      * <p>This method is called asynchronously when a store file is acquired for use, allowing for any
      * necessary handling of the file acquisition event. By default, this method does nothing.
@@ -48,7 +48,7 @@ public interface StoreFileListener {
     }
 
     /**
-     * Called when a file is released.
+     * Called when a store file is released after queue use.
      *
      * <p>This method is called asynchronously when a store file is released, allowing for any
      * necessary handling of the file release event.

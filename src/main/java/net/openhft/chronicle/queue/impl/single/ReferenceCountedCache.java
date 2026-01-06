@@ -39,7 +39,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
     private final ReferenceChangeListener referenceChangeListener;
 
     /**
-     * Constructs a {@code ReferenceCountedCache} instance.
+     * Constructs a {@code ReferenceCountedCache} instance with reference-counted cleanup semantics.
      *
      * @param transformer A function to transform a cached object into the return type.
      * @param creator     A function that creates a new object if it is not present in the cache.

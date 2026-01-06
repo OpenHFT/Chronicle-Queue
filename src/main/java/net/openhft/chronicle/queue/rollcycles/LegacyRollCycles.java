@@ -6,7 +6,7 @@ package net.openhft.chronicle.queue.rollcycles;
 import net.openhft.chronicle.queue.RollCycle;
 
 /**
- * Enum representing legacy roll cycles, kept for historical reasons.
+ * Enum representing legacy roll cycles, kept for historical compatibility and migration support.
  * <p>These roll cycles were used in older versions of Chronicle Queue and retain their original
  * configurations for backward compatibility.
  */

@@ -56,7 +56,7 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
     }
 
     /**
-     * Reads and processes one method call from the queue.
+     * Reads and processes one method call from the queue entry.
      * <p>
      * If a method call is successfully read, it is passed to the {@link MessageConsumer} along with the last read index.
      *

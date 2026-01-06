@@ -131,12 +131,12 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         final String lockedBy = getLockedBy(currentLockValue);
         final String warningMsg = lockHandleTimeoutExCreateWarningMessage(lockedBy);
         if (forceUnlockOnTimeoutWhen == UnlockMode.NEVER)
-            throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
+            throw new UnrecoverableTimeoutException(/* reason: message stored in cause */ new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         else if (forceUnlockOnTimeoutWhen == UnlockMode.LOCKING_PROCESS_DEAD) {
             if (forceUnlockIfProcessIsDead())
                 lock();
             else
-                throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
+                throw new UnrecoverableTimeoutException(/* reason: message stored in cause */ new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         } else {
             warn().on(getClass(), warningMsg + UNLOCKING_FORCIBLY_MSG);
             forceUnlock(currentLockValue);

@@ -32,7 +32,7 @@ public class ReadOnlyWriteLock implements WriteLock {
      */
     @Override
     public void unlock() {
-        throw new IllegalStateException("Queue is read-only");
+        throw new IllegalStateException("Queue is read-only; unlock is not supported");
     }
 
     /**
@@ -51,7 +51,7 @@ public class ReadOnlyWriteLock implements WriteLock {
      */
     @Override
     public boolean forceUnlockIfProcessIsDead() {
-        throw new IllegalStateException("Queue is read-only");
+        throw new IllegalStateException("Queue is read-only; force unlock is not supported");
     }
 
     /**

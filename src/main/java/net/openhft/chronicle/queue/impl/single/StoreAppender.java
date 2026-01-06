@@ -354,7 +354,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Sets the cycle for this appender.
+     * Sets the roll cycle used by this appender.
      *
      * @param cycle The cycle to be set.
      */
@@ -472,7 +472,7 @@ class StoreAppender extends AbstractCloseable
             return originalHeaderNumber != wire.headerNumber();
 
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
-            throw new AssertionError(e);
+            throw new AssertionError("Failed to reset write header position", e);
         }
     }
 
@@ -778,7 +778,7 @@ class StoreAppender extends AbstractCloseable
             store.writePosition(positionOfHeader);
             writeIndexForPosition(lastIndex, positionOfHeader);
         } catch (StreamCorruptedException e) {
-            throw new AssertionError(e);
+            throw new AssertionError("Failed to write bytes for current header", e);
         } finally {
             writeLock.unlock();
         }
@@ -865,7 +865,7 @@ class StoreAppender extends AbstractCloseable
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
-            assert count == 0 : "count=" + count;
+            assert count == 0 : "append count should be 0 before opening context, count=" + count;
             openContext(metadata, safeLength);
 
             try {
@@ -932,7 +932,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Returns the associated {@link SingleChronicleQueue} for this appender.
+     * Returns the owning SingleChronicleQueue instance used by this appender.
      *
      * @return the queue associated with this appender
      */
@@ -971,7 +971,7 @@ class StoreAppender extends AbstractCloseable
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
-            throw new AssertionError();
+            throw new AssertionError("Roll target must differ from current cycle, current=" + this.cycle + ", target=" + cycle);
 
         if (!suppressEOF) {
             assert queue.writeLock().locked();
@@ -1026,14 +1026,12 @@ class StoreAppender extends AbstractCloseable
                                 " seq2: " + Long.toHexString(seq2) +
                                 " seq3: " + Long.toHexString(seq3));
 
-//                System.out.println(store.dump());
-
                 assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                 assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
             }
         } catch (@NotNull EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
-            throw new AssertionError(e);
+            throw new AssertionError("Failed to verify index sequence numbers", e);
         }
         return true;
     }
@@ -1196,7 +1194,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         /**
-         * Returns the wire associated with this context.
+         * Returns the wire used by this write context for the current store.
          *
          * @return the wire for this context
          */
@@ -1259,9 +1257,9 @@ class StoreAppender extends AbstractCloseable
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new InterruptedRuntimeException(e);
+                throw new InterruptedRuntimeException("Interrupted while closing write context", e);
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
-                throw new IllegalStateException(e);
+                throw new IllegalStateException("Failed to close write context", e);
             } finally {
                 closeCleanup(unlock);
             }
@@ -1314,7 +1312,7 @@ class StoreAppender extends AbstractCloseable
         private void handleInterrupts() throws InterruptedException {
             final boolean interrupted = checkInterrupts && Thread.currentThread().isInterrupted();
             if (interrupted)
-                throw new InterruptedException();
+                throw new InterruptedException("Thread interrupted before closing write context");
         }
 
         /**
@@ -1356,7 +1354,7 @@ class StoreAppender extends AbstractCloseable
          * @param unlock true if the {@link StoreAppender#writeLock} should be unlocked.
          */
         private void closeCleanup(boolean unlock) {
-            if (wire == null) throw new NullPointerException("Wire must not be null");
+            if (wire == null) throw new NullPointerException("Wire must not be null in close cleanup");
             Bytes<?> bytes = wire.bytes();
             bytes.writePositionForHeader(true);
             isClosed = true;
@@ -1364,7 +1362,7 @@ class StoreAppender extends AbstractCloseable
                 try {
                     writeLock.unlock();
                 } catch (Exception ex) {
-                    Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
+                    Jvm.warn().on(getClass(), "Exception while unlocking appender write lock", ex);
                 }
             }
         }
@@ -1433,7 +1431,7 @@ class StoreAppender extends AbstractCloseable
                     assert isInsideHeader(this.wire);
                     return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                 } catch (IOException e) {
-                    throw new IORuntimeException(e);
+                    throw new IORuntimeException("Failed to resolve context index from store", e);
                 }
             }
 
@@ -1457,13 +1455,13 @@ class StoreAppender extends AbstractCloseable
         }
 
         /**
-         * Unsupported operation in this context.
+         * Unsupported operation for metadata-only write contexts.
          *
          * @throws UnsupportedOperationException if this method is called
          */
         @Override
         public void start(boolean metaData) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Write context start is not supported for this context");
         }
 
         /**

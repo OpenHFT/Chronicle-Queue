@@ -99,9 +99,9 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     long countExcerpts(long fromIndex, long toIndex);
 
     /**
-     * Returns the current cycle number.
+     * Returns the current cycle number for the active store file.
      *
-     * @return the current cycle number.
+     * @return the current cycle number
      */
     int cycle();
 

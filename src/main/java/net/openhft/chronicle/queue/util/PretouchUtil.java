@@ -12,7 +12,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Utility class for creating {@link Pretoucher} and {@link EventHandler} instances.
+ * Utility class for creating {@link Pretoucher} and {@link EventHandler} instances for pre-touching support.
  * <p>
  * This class provides a factory-based mechanism to support both enterprise and non-enterprise pretoucher functionality.
  * If enterprise features are available, it attempts to load the enterprise implementation, otherwise, it falls back

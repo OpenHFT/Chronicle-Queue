@@ -313,7 +313,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the source ID of this queue.
+     * Returns the source ID used for message history tracking within this queue.
      *
      * @return the source ID as an integer
      */
@@ -542,7 +542,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the number of index entries.
+     * Returns the configured number of index entries for this queue.
      *
      * @return the index count
      */
@@ -620,10 +620,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Construct a new {@link ExcerptAppender}.
+     * Constructs a new {@link ExcerptAppender} and initialises a store pool for this queue.
      * <p>
-     * This is protected so sub-classes can override the creation of an appender,
-     * to create a new appender, sub-classes should call {@link #createNewAppenderOnceConditionIsMet()}
+     * This is protected so sub-classes can override the creation of an appender.
+     * To create a new appender, sub-classes should call {@link #createNewAppenderOnceConditionIsMet()}.
      *
      * @return the new ExcerptAppender
      */
@@ -634,7 +634,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the StoreFileListener used by the queue.
+     * Returns the StoreFileListener callback used for queue file lifecycle events.
      *
      * @return the StoreFileListener
      */
@@ -674,7 +674,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
         queue.throwExceptionIfClosed();
         if (queue.readOnly)
-            throw new IllegalStateException("Can't append to a read-only chronicle");
+            throw new IllegalStateException("Cannot acquire thread-local appender for read-only queue");
 
         ExcerptAppender res = strongExcerptAppenderThreadLocal.get();
 
@@ -697,7 +697,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         throwExceptionIfClosed();
 
         if (readOnly)
-            throw new IllegalStateException("Can't append to a read-only chronicle");
+            throw new IllegalStateException("Cannot create appender for read-only queue");
 
         return createNewAppenderOnceConditionIsMet();
     }
@@ -913,7 +913,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             try {
                 cycles = listCyclesBetween(lowerCycle, upperCycle);
             } catch (Exception e) {
-                throw new IllegalStateException(e);
+                throw new IllegalStateException("Failed to list cycles between lowerCycle=" + lowerCycle
+                        + " and upperCycle=" + upperCycle, e);
             }
 
             if (cycles.first() == lowerCycle) {
@@ -1014,7 +1015,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Closes the specified {@link SingleChronicleQueueStore}.
+     * Closes the specified {@link SingleChronicleQueueStore} and releases pooled resources if present.
      *
      * @param store the store to close, may be null
      */
@@ -1183,7 +1184,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the {@link WireType} used by the queue.
+     * Returns the {@link WireType} used to serialise and parse queue data.
      *
      * @return the WireType
      */
@@ -1220,7 +1221,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns whether the queue is in read-only mode.
+     * Returns whether the queue has been opened in read-only mode.
      *
      * @return true if the queue is read-only, false otherwise
      */
@@ -1243,7 +1244,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the {@link TimeProvider} used by the queue.
+     * Returns the {@link TimeProvider} supplying timestamps for roll cycle calculations.
      *
      * @return the TimeProvider
      */
@@ -1448,7 +1449,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 mappedBytes.singleThreadedCheckDisabled(true);
                 mappedBytes.chunkCount(chunkCount);
 
-//                pauseUnderload();
+                // pauseUnderload();
 
                 if (SHOULD_CHECK_CYCLE && cycle != rollCycle.current(time, epoch)) {
                     Jvm.warn().on(getClass(), new Exception("Creating cycle which is not the current cycle"));
@@ -1604,10 +1605,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
 
                 if (!path.createNewFile()) {
-                    Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath());
+                    Jvm.warn().on(getClass(), "Queue file already exists or cannot be created at " + path.getAbsolutePath());
                 }
             } catch (IOException ex) {
-                Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
+                Jvm.warn().on(getClass(), "Failed to create queue file at " + path.getAbsolutePath(), ex);
             }
         }
 
@@ -1672,7 +1673,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             if (direction == NONE)
                 throw new AssertionError("direction is NONE");
-            assert currentCycle >= 0 : "currentCycle=" + Integer.toHexString(currentCycle);
+            assert currentCycle >= 0 : "currentCycle should be non-negative, currentCycle=" + Integer.toHexString(currentCycle);
             NavigableMap<Long, File> tree = cycleTree(false);
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 

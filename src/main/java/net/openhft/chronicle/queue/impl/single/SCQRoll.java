@@ -122,7 +122,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
     }
 
     /**
-     * Returns the roll length in milliseconds.
+     * Returns the roll length in milliseconds for each cycle file.
      *
      * @return the length of the roll
      */
@@ -141,7 +141,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
     }
 
     /**
-     * Returns the time zone for the roll time, or null if not set.
+     * Returns the time zone used when applying the roll time, or null if not set.
      *
      * @return the roll time zone, nullable
      */
@@ -169,7 +169,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
     }
 
     /**
-     * Sets the roll time.
+     * Sets the roll time used to determine cycle boundaries.
      *
      * @param rollTime the new roll time to set, nullable
      */
@@ -178,7 +178,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
     }
 
     /**
-     * Sets the roll time zone.
+     * Sets the time zone used when applying the roll time, or null to use the default.
      *
      * @param rollTimeZone the new time zone to set, nullable
      */
@@ -187,7 +187,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
     }
 
     /**
-     * Sets the epoch time.
+     * Sets the epoch offset in milliseconds used for cycle calculations.
      *
      * @param epoch the new epoch to set in milliseconds
      */
