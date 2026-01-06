@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -34,6 +35,7 @@ public class TailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer recovery resumes from stored index offset")
     public void reproduce() {
         IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
 

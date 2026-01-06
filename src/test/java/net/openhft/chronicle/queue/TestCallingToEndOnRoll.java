@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -34,8 +35,9 @@ public class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvi
         closeQuietly(queue);
     }
 
-    @Disabled("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
     @Test
+    @Disabled("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
+    @DisplayName("Tailer toEnd remains safe across rolls")
     public void test() {
         assertNotNull(queue, "toEnd-on-roll: queue");
         Executors.newSingleThreadExecutor().submit(this::append);
@@ -67,7 +69,7 @@ public class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvi
         try {
             long index = tailer.toEnd().index();
         } catch (IllegalStateException e) {
-            throw new AssertionError(e);
+            throw new AssertionError("toEnd-on-roll: unexpected IllegalStateException", e);
         }
     }
 

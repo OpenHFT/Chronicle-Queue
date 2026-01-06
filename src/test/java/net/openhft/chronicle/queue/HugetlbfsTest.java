@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -17,8 +18,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class HugetlbfsTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Hugetlbfs queue round-trips a simple message")
     public void queueHugetlbfsEndToEndSimpleAcceptanceTest(TestInfo testInfo) {
-        assumeTrue(isHugetlbfsAvailable());
+        assumeTrue(isHugetlbfsAvailable(), "hugetlbfs is not available on this host");
         String methodName = testInfo.getTestMethod().map(m -> m.getName()).orElse("unknown");
         String path = getHugetlbfsQueueDirectory(methodName);
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single()

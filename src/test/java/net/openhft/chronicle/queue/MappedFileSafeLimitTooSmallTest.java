@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Mapped file safe limit allows full round-trip")
     public void testMappedFileSafeLimitTooSmall() {
 
         final int arraySize = 40_000;
@@ -43,7 +45,8 @@ public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
 
             for (int i = 0; i < 5; i++) {
                 try (DocumentContext dc = queue.createTailer().readingDocument()) {
-                    Assertions.assertArrayEquals(data, dc.wire().read("data").bytes(), "mapped file: round-trip data");
+                    Assertions.assertArrayEquals(data, dc.wire().read("data").bytes(),
+                            "mapped file: round-trip data at index " + i);
                 }
             }
         }

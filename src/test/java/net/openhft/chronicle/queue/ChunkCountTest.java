@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SuppressWarnings({"deprecation", "removal"})
 public class ChunkCountTest extends QueueTestCommon {
     @Test
+    @DisplayName("Chunk count increases as data is appended")
     public void chunks() {
         File tempFile = IOTools.createTempFile("chunks");
         Assumptions.assumeFalse(PageUtil.isHugePage(tempFile.getAbsolutePath()), "Ignored on hugetlbfs as chunk count will vary under huge pages");
@@ -28,9 +30,9 @@ public class ChunkCountTest extends QueueTestCommon {
                 .rollCycle(DAILY);
         try (SingleChronicleQueue queue = builder.build();
              ExcerptAppender appender = queue.createAppender()) {
-            assertEquals(0, queue.chunkCount(), "chunkCount: empty queue");
+            assertEquals(0, queue.chunkCount(), "chunk count should be zero for an empty queue");
             appender.writeText("Hello");
-            assertEquals(1, queue.chunkCount(), "chunkCount: after first write");
+            assertEquals(1, queue.chunkCount(), "chunk count should be one after the first write");
 
             for (int i = 0; i < 100; i++) {
                 long pos;
@@ -40,7 +42,7 @@ public class ChunkCountTest extends QueueTestCommon {
                 }
                 final long expected = 1 + (pos >> 18);
 
-                assertEquals(expected, queue.chunkCount(), "i: " + i);
+                assertEquals(expected, queue.chunkCount(), "chunk count mismatch at loop index " + i);
             }
         } finally {
             IOTools.deleteDirWithFiles(tempFile);

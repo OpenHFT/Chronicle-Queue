@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -26,7 +27,7 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 public final class RollAtEndOfCycleTest extends QueueTestCommon {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
-    private static void assertQueueFileCount(final Path path, final long expectedCount) throws IOException {
+    private static void checkQueueFileCount(final Path path, final long expectedCount) throws IOException {
         try (Stream<Path> list = Files.list(path)) {
             final long count = list.filter(p -> p.toString().
                     endsWith(SingleChronicleQueue.SUFFIX)).count();
@@ -36,8 +37,9 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue rolls to a new file at end of cycle")
     public void shouldRollAndAppendToNewFile() throws IOException {
-        assumeFalse(Jvm.isArm());
+        assumeFalse(Jvm.isArm(), "Test relies on non-ARM timing behaviour");
 
         try (final SingleChronicleQueue queue = createQueue();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -46,17 +48,17 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
 
             final ExcerptTailer tailer = queue.createTailer();
             try (final DocumentContext context = tailer.readingDocument()) {
-                assertTrue(context.isPresent(), "tailer should read first document successfully");
+                assertTrue(context.isPresent(), "tailer should read first document before rolling");
             }
 
-            assertQueueFileCount(queue.path.toPath(), 1);
+            checkQueueFileCount(queue.path.toPath(), 1);
             clock.addAndGet(TimeUnit.SECONDS.toMillis(2));
 
             assertFalse(tailer.readingDocument().isPresent(), "tailer should not find any more documents in current cycle after reading all entries");
 
             appender.writeDocument(2, ValueOut::int32);
 
-            assertQueueFileCount(queue.path.toPath(), 2);
+            checkQueueFileCount(queue.path.toPath(), 2);
             try (final DocumentContext context = tailer.readingDocument()) {
                 assertTrue(context.isPresent(), "tailer should read document from new roll cycle file after time boundary");
             }
@@ -66,7 +68,8 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
             while (true) {
                 final DocumentContext context = newTailer.readingDocument();
                 if (context.isPresent() && context.isData()) {
-                    assertNotEquals(0, context.wire().read().int32());
+                    assertNotEquals(0, context.wire().read().int32(),
+                            "new tailer should read non-zero document values");
                     totalCount++;
                 } else if (!context.isPresent()) {
                     break;
@@ -78,6 +81,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue appends to existing file within same cycle")
     public void shouldAppendToExistingQueueFile() throws IOException {
         try (final SingleChronicleQueue queue = createQueue();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -86,16 +90,16 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
 
             final ExcerptTailer tailer = queue.createTailer();
             try (final DocumentContext context = tailer.readingDocument()) {
-                assertTrue(context.isPresent(), "tailer should read first document successfully");
+                assertTrue(context.isPresent(), "tailer should read first document in existing cycle");
             }
 
-            assertQueueFileCount(queue.path.toPath(), 1);
+            checkQueueFileCount(queue.path.toPath(), 1);
 
             assertFalse(tailer.readingDocument().isPresent(), "tailer should not find any more documents after reading all entries in current cycle");
 
             appender.writeDocument(2, ValueOut::int32);
 
-            assertQueueFileCount(queue.path.toPath(), 1);
+            checkQueueFileCount(queue.path.toPath(), 1);
             try (final DocumentContext context = tailer.readingDocument()) {
                 assertTrue(context.isPresent(), "tailer should read second document appended to same roll cycle file");
             }

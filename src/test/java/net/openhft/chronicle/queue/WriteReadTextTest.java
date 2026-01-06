@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -123,25 +124,29 @@ public class WriteReadTextTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Write and read constructed text payloads")
     public void testConstructed() {
         int lastReadLength = doTest(CONSTRUCTED);
         Assertions.assertEquals(CONSTRUCTED.length(), lastReadLength, "write/readText: constructed length");
     }
 
     @Test
+    @DisplayName("Write and read extremely large text")
     public void testExtremelyLarge() {
-        assumeTrue(Jvm.is64bit());
+        assumeTrue(Jvm.is64bit(), "Extremely large text test requires a 64-bit JVM");
         int lastReadLength = doTest(EXTREMELY_LARGE);
         Assertions.assertEquals(EXTREMELY_LARGE.length(), lastReadLength, "write/readText: extremely large length");
     }
 
     @Test
+    @DisplayName("Write and read minimal text payloads")
     public void testMinimal() {
         int lastReadLength = doTest(MINIMAL);
         Assertions.assertEquals(MINIMAL.length(), lastReadLength, "write/readText: minimal length");
     }
 
     @Test
+    @DisplayName("Write and read realistic text payloads")
     public void testRealistic() {
         int lastReadLength = doTest(REALISTIC);
         Assertions.assertEquals(REALISTIC.length(), lastReadLength, "write/readText: realistic length");
@@ -173,7 +178,8 @@ public class WriteReadTextTest extends QueueTestCommon {
                 }
                 for (String s : problematic) {
                     tailer.readText(tmpReadback);
-                    Assertions.assertEquals(s, tmpReadback.toString(), "write/readText");
+                    Assertions.assertEquals(s, tmpReadback.toString(),
+                            "write/readText should round trip for iteration " + l + " and length " + s.length());
                 }
             }
 
@@ -184,10 +190,14 @@ public class WriteReadTextTest extends QueueTestCommon {
                     tailer.readDocument(reader -> reader.getValueIn().textTo(tmpReadback));
                     String actual = tmpReadback.toString();
                     lastReadLength = actual.length();
-                    Assertions.assertEquals(tmpText.length(), actual.length(), "readDocument: text length");
+                    Assertions.assertEquals(tmpText.length(), actual.length(),
+                            "readDocument text length should match for iteration " + l + " and length " + tmpText.length());
                     for (int i = 0; i < actual.length(); i += 1024)
-                        Assertions.assertEquals(tmpText.substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)), "i: " + i);
-                    Assertions.assertEquals(tmpText, actual, "readDocument: roundtrip");
+                        Assertions.assertEquals(tmpText.substring(i, Math.min(actual.length(), i + 1024)),
+                                actual.substring(i, Math.min(actual.length(), i + 1024)),
+                                "chunk at offset " + i + " should match for iteration " + l + " and length " + tmpText.length());
+                    Assertions.assertEquals(tmpText, actual,
+                            "readDocument should round trip for iteration " + l + " and length " + tmpText.length());
                 }
             }
         }

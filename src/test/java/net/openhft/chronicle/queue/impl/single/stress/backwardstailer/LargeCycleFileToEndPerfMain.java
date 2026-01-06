@@ -58,9 +58,9 @@ public class LargeCycleFileToEndPerfMain {
     }
 
     private static void cleanup(File path) {
-        log.info("Cleaning up {}", path);
+        log.info("Cleaning up queue directory {}", path);
         IOTools.deleteDirWithFiles(path);
-        log.info("Cleaned up {}", path);
+        log.info("Cleaned up queue directory {}", path);
     }
 
     private static void measureToEndPerf(ExcerptTailer tailer, ExcerptAppender appender) {
@@ -70,7 +70,7 @@ public class LargeCycleFileToEndPerfMain {
         long start = System.nanoTime();
         tailer.toEnd();
         long elapsed = System.nanoTime() - start;
-        log.info("lastIndexAppended: {}", appender.lastIndexAppended());
+        log.info("lastIndexAppended after populate: {}", appender.lastIndexAppended());
         log.info("tailer.index()[after]: {}", tailer.index());
         log.info("Elapsed time micros: {}us", TimeUnit.NANOSECONDS.toMicros(elapsed));
         log.info("Elapsed time millis: {}ms", TimeUnit.NANOSECONDS.toMillis(elapsed));
@@ -79,14 +79,14 @@ public class LargeCycleFileToEndPerfMain {
 
     private static void warmupToEnd(ExcerptTailer tailer) {
         line();
-        log.info("Running warm up");
+        log.info("Running warm up for tailer.toEnd()");
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
             writePercentComplete(i, WARMUP_ITERATIONS, 500, "tailer.toEnd() warmup");
             tailer.toEnd();
             tailer.toStart();
             System.gc();
         }
-        log.info("Warm up complete");
+        log.info("Warm up complete for tailer.toEnd()");
     }
 
     private static void populateQueueData(ExcerptAppender appender) {
@@ -108,6 +108,6 @@ public class LargeCycleFileToEndPerfMain {
     }
 
     private static void line() {
-        log.info("--------------------------------------------------------------------------------");
+        log.info("Results report separator line: ------------------------------------------------------------------------");
     }
 }

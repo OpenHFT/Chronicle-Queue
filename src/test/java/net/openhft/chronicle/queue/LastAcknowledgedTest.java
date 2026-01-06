@@ -13,6 +13,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SuppressWarnings({"deprecation", "removal"})
 public class LastAcknowledgedTest extends QueueTestCommon {
     @Test
+    @DisplayName("Replicated acknowledgement gates tailer reads until replicated index advances")
     public void testLastAcknowledge() {
         String name = OS.getTarget() + "/testLastAcknowledge-" + Time.uniqueId();
         long lastIndexAppended;
@@ -68,6 +70,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer honours read-before-acknowledgement rules for tolerated lag")
     public void testReadBeforeAcknowledgment() throws IOException {
 
         // Set up a Chronicle Queue and a StoreTailer for testing
@@ -132,6 +135,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
      * @throws IOException if the Chronicle Queue cannot be created
      */
     @Test
+    @DisplayName("Tailer blocks in-flight reads across roll boundaries during roll changes")
     public void testReadBeforeAcknowledgmentOnRoll() throws IOException {
 
         // Set up a Chronicle Queue and a StoreTailer for testing

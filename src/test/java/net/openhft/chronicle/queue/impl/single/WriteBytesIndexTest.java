@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class WriteBytesIndexTest extends QueueTestCommon {
     @Test
+    @DisplayName("Multiple appenders write bytes at expected indexes")
     public void writeMultipleAppenders() {
         File path = IOTools.createTempFile("writeMultipleAppenders");
         try (ChronicleQueue q0 = createQueue(path);
@@ -43,19 +45,25 @@ public class WriteBytesIndexTest extends QueueTestCommon {
 
                     // try a1
                     ((InternalAppender) a1).writeBytes(index, bytes);
-                    assertTrue(t1.readBytes(bytes2.clear()), "t1.readBytes(bytes2.clear())");
+                    assertTrue(t1.readBytes(bytes2.clear()),
+                            "t1 should read bytes for cycle " + cycle + ", seq " + seq);
                     if (!bytes.contentEquals(bytes2)) {
                         System.out.println(q2.dump());
-                        assertEquals(bytes.toString(), bytes2.toString(), "bytes2.toString()");
+                        assertEquals(bytes.toString(), bytes2.toString(),
+                                "t1 bytes should match for cycle " + cycle + ", seq " + seq);
                     }
-                    assertFalse(t1.readBytes(bytes2.clear()), "t1.readBytes(bytes2.clear())");
+                    assertFalse(t1.readBytes(bytes2.clear()),
+                            "t1 should have no extra bytes for cycle " + cycle + ", seq " + seq);
 
-                    assertTrue(t0.readBytes(bytes2.clear()), "t0.readBytes(bytes2.clear())");
+                    assertTrue(t0.readBytes(bytes2.clear()),
+                            "t0 should read bytes for cycle " + cycle + ", seq " + seq);
                     if (!bytes.contentEquals(bytes2)) {
                         System.out.println(q2.dump());
-                        assertEquals(bytes.toString(), bytes2.toString(), "bytes2.toString()");
+                        assertEquals(bytes.toString(), bytes2.toString(),
+                                "t0 bytes should match for cycle " + cycle + ", seq " + seq);
                     }
-                    assertFalse(t0.readBytes(bytes2.clear()), "t0.readBytes(bytes2.clear())");
+                    assertFalse(t0.readBytes(bytes2.clear()),
+                            "t0 should have no extra bytes for cycle " + cycle + ", seq " + seq);
                 }
             }
         } finally {

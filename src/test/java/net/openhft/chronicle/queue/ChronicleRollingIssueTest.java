@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Rolling multi-threaded appends are fully readable")
     public void test() throws InterruptedException {
         int threads = Math.min(64, Runtime.getRuntime().availableProcessors() * 4) - 1;
         int messages = 100;

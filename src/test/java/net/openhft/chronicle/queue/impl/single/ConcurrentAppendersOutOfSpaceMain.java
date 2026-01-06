@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
 /**
- * This is a test scenario for manual run.
+ * This is a manual test scenario for reproducing concurrent out-of-space and permission-change conditions.
  * <p>
  * creates 2 writers, launching the first immediately
  * The 1st writer creates a queue, then loops writing to it

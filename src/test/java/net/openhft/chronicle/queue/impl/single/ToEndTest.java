@@ -13,6 +13,7 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -33,6 +34,7 @@ public class ToEndTest extends QueueTestCommon {
     private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
 
     @Test
+    @DisplayName("Tailer reaches end across missing cycles")
     public void missingCyclesToEndTest() {
         String path = OS.getTarget() + "/missingCyclesToEndTest-" + Time.uniqueId();
         try {
@@ -61,7 +63,7 @@ public class ToEndTest extends QueueTestCommon {
                 final ExcerptTailer tailer = queue.createTailer().toEnd();
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (dc.isPresent()) {
-                        fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read("msg").int32());
+                        fail("tailer should be at end before append, but read: " + dc.wire().read("msg").int32());
                     }
                 }
 
@@ -69,9 +71,9 @@ public class ToEndTest extends QueueTestCommon {
                 appender.writeDocument(wire -> wire.write("msg").int32(4));
 
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue(dc.isPresent(), "Should be able to read entry in this cycle. Got NoDocumentContext.");
+                    assertTrue(dc.isPresent(), "tailer should read entry in same cycle after append");
                     int i = dc.wire().read("msg").int32();
-                    assertEquals(4, i, "Should've read 4, instead we read: " + i);
+                    assertEquals(4, i, "tailer should read value 4 after append, value=" + i);
                 }
 
                 // read from the beginning
@@ -87,7 +89,7 @@ public class ToEndTest extends QueueTestCommon {
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (dc.isPresent()) {
-                        fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read("msg").int32());
+                        fail("tailer should be at end after reread, but read: " + dc.wire().read("msg").int32());
                     }
                 }
 
@@ -111,6 +113,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer toEnd keeps store reference open")
     public void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
         String path = OS.getTarget() + "/toEndIncRefCount-" + Time.uniqueId();
         IOTools.shallowDeleteDirWithFiles(path);
@@ -147,6 +150,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("toEnd returns empty results until rewound")
     public void toEndTest() {
         File baseDir = getTmpDir();
 
@@ -191,6 +195,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("toEnd before write does not roll files")
     public void toEndBeforeWriteTest() {
         File baseDir = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(baseDir);
@@ -229,6 +234,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("toEnd after write reads end without data")
     public void toEndAfterWriteTest() {
         File file = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(file);
@@ -279,6 +285,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Empty queue returns expected toEnd index values")
     public void shouldReturnExpectedValuesForEmptyQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
@@ -288,6 +295,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue with only metadata returns expected index values")
     public void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
@@ -369,6 +377,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Non-empty queue keeps indices after metadata roll")
     public void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);

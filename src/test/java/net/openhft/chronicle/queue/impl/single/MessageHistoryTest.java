@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
@@ -112,6 +113,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Tailer exposes message history for standard reads")
     public void shouldAccessMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
@@ -122,12 +124,13 @@ public final class MessageHistoryTest extends QueueTestCommon {
             final ValidatingSecond validatingSecond = new ValidatingSecond();
             final MethodReader validator = tailer.methodReader(validatingSecond);
 
-            assertTrue(validator.readOne(), "messageHistory: read one");
-            assertTrue(validatingSecond.messageHistoryPresent(), "messageHistory: present");
+            assertTrue(validator.readOne(), "tailer should read one message with history");
+            assertTrue(validatingSecond.messageHistoryPresent(), "message history should be present after read");
         }
     }
 
     @TestTemplate
+    @DisplayName("Tailer exposes message history after moving to end")
     public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
@@ -139,12 +142,13 @@ public final class MessageHistoryTest extends QueueTestCommon {
             final ValidatingSecond validatingSecond = new ValidatingSecond();
             final MethodReader validator = tailer.methodReader(validatingSecond);
 
-            assertTrue(validator.readOne(), "messageHistory: read one from end");
-            assertTrue(validatingSecond.messageHistoryPresent(), "messageHistory: present from end");
+            assertTrue(validator.readOne(), "tailer should read one message from end");
+            assertTrue(validatingSecond.messageHistoryPresent(), "message history should be present after end read");
         }
     }
 
     @TestTemplate
+    @DisplayName("Chained queues preserve message history across hops")
     public void chainedMessageHistory() {
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);
@@ -153,24 +157,24 @@ public final class MessageHistoryTest extends QueueTestCommon {
 
             ExcerptTailer tailerM1 = middleQueue.createTailer(named ? "named" : null);
             MethodReader reader = tailerM1.methodReader(outputQueue.methodWriter(First.class));
-            assertTrue(reader.readOne(), "chained history: read one");
+            assertTrue(reader.readOne(), "chained history should read one message");
             tailerM1.toStart();
             MethodReader reader2nd = tailerM1.methodReader(outputQueue.methodWriter(Second.class));
             for (int i = 0; i < 3; i++)
-                assertTrue(reader2nd.readOne(), "i: " + i);
+                assertTrue(reader2nd.readOne(), "second reader should read entry at iteration " + i);
             assertFalse(reader2nd.readOne(), "chained history: end of queue (second)");
 
             MethodReader reader2 = outputQueue.createTailer(named ? "named2" : null).methodReader((First) this::say3);
             for (int i = 0; i < 3; i++)
-                assertTrue(reader2.readOne(), "i: " + i);
+                assertTrue(reader2.readOne(), "first reader should read entry at iteration " + i);
             assertFalse(reader2.readOne(), "chained history: end of queue (first)");
         }
     }
 
     private void say3(String text) {
         final MessageHistory messageHistory = MessageHistory.get();
-        assertNotNull(messageHistory, "say3: message history");
-        assertEquals(2, messageHistory.sources(), "say3: sources");
+        assertNotNull(messageHistory, "say3 should access message history");
+        assertEquals(2, messageHistory.sources(), "say3 should see two message history sources");
     }
 
     private void generateTestData(final ChronicleQueue inputQueue, final ChronicleQueue outputQueue) {
@@ -186,14 +190,14 @@ public final class MessageHistoryTest extends QueueTestCommon {
         final MethodReader reader = inputQueue.createTailer(named ? "named" : null).
                 methodReaderBuilder().build(loggingFirst);
 
-        assertTrue(reader.readOne(), "generate test data: read one");
-        assertTrue(reader.readOne(), "generate test data: read two");
+        assertTrue(reader.readOne(), "generate test data should read first entry");
+        assertTrue(reader.readOne(), "generate test data should read second entry");
 
         // roll queue file
         clock.addAndGet(TimeUnit.DAYS.toMillis(2));
 
-        assertTrue(reader.readOne(), "generate test data: read three");
-        assertFalse(reader.readOne(), "generate test data: end");
+        assertTrue(reader.readOne(), "generate test data should read third entry");
+        assertFalse(reader.readOne(), "generate test data should reach end of input");
     }
 
     private ChronicleQueue createQueue(final File queueDir, final int sourceId) {
@@ -232,8 +236,8 @@ public final class MessageHistoryTest extends QueueTestCommon {
         @Override
         public void count(final int value) {
             final MessageHistory messageHistory = MessageHistory.get();
-            assertNotNull(messageHistory, "count: message history");
-            assertEquals(2, messageHistory.sources(), "count: sources");
+            assertNotNull(messageHistory, "count should receive message history");
+            assertEquals(2, messageHistory.sources(), "count should see two message history sources");
             messageHistoryPresent = true;
         }
 

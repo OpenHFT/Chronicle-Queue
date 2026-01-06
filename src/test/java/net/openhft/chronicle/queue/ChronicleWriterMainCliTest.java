@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ChronicleWriterMainCliTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("CLI writes single YAML file to queue")
     public void mainWritesYamlFilesToQueue() throws Exception {
         final Path queueDir = getTmpDir().toPath();
         final Path payload = Files.createTempFile(Paths.get(OS.getTarget()), "writer-cli", ".yaml");
@@ -42,6 +44,7 @@ public class ChronicleWriterMainCliTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("CLI accepts multiple YAML files in one run")
     public void mainAcceptsMultipleFiles() throws Exception {
         final Path queueDir = getTmpDir().toPath();
         final Path payloadOne = Files.createTempFile(Paths.get(OS.getTarget()), "writer-cli", ".yaml");

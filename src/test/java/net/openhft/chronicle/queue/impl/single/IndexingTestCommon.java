@@ -20,7 +20,7 @@ import java.util.List;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 
 /**
- * Base test class for indexing related tests.
+ * Base test class for indexing related tests, setting up queue, appender, and tailer state.
  */
 class IndexingTestCommon extends QueueTestCommon {
 

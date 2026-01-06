@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class LastIndexAppendedTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("lastIndexAppended persists across restarts for queue data")
     public void testLastIndexAppendedAcrossRestarts() {
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
 
@@ -34,12 +36,13 @@ public class LastIndexAppendedTest extends QueueTestCommon {
 
                     try (DocumentContext documentContext = appender.writingDocument()) {
                         int index = (int) documentContext.index();
-                        assertEquals(i, index, "document context index should match current iteration number");
+                        assertEquals(i, index, "document context index should match iteration " + i);
 
                         documentContext.wire().write().text("hello world");
                     }
 
-                    assertEquals(i, (int) appender.lastIndexAppended(), "lastIndexAppended should return most recent write index matching iteration number");
+                    assertEquals(i, (int) appender.lastIndexAppended(),
+                            "lastIndexAppended should return most recent write index at iteration " + i);
                 }
             }
         } finally {
@@ -48,6 +51,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Two appenders update lastIndexAppended with tailer reads")
     public void testTwoAppenders() {
         File path = getTmpDir();
         long appendedIndex;
@@ -72,7 +76,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
             tailer = tailer.toStart();
             long tailIndex;
             tailIndex = doRead(tailer, 5);
-            assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
+            assertEquals(appendedIndex, tailIndex, "tailer index should match last appended index after initial reads");
             // System.out.println("Continue appending");
             try (ChronicleQueue appender_queue = single(path)
                     .testBlockSize()
@@ -85,16 +89,17 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                             m.write("msg").text("hello world2 ")));
                 }
                 appendedIndex = appender.lastIndexAppended();
-                assertTrue(appendedIndex > tailIndex, "appendedIndex > tailIndex");
+                assertTrue(appendedIndex > tailIndex,
+                        "appendedIndex should be greater than tailIndex, appendedIndex=" + appendedIndex + ", tailIndex=" + tailIndex);
             }
             // if the tailer continues as well it should see the 5 new messages
             tailIndex = doRead(tailer, 5);
-            assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
+            assertEquals(appendedIndex, tailIndex, "tailer index should match last appended index after new writes");
 
             // if the tailer is expecting to read all the message again
             tailer.toStart();
             tailIndex = doRead(tailer, 10);
-            assertEquals(appendedIndex, tailIndex, "tailer index after reading should match last appended index");
+            assertEquals(appendedIndex, tailIndex, "tailer index should match last appended index after re-reading");
         } finally {
             IOTools.deleteDirWithFiles(path, 2);
         }

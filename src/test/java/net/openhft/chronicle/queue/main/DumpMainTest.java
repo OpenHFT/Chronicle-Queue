@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DumpMainTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Dump prints queue messages to output")
     public void dumpDirectoryPrintsQueueContents() {
         final File dir = getTmpDir();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
@@ -37,9 +39,9 @@ public class DumpMainTest extends QueueTestCommon {
         DumpMain.dump(dir, out, Long.MAX_VALUE);
         final String dump = baos.toString();
 
-        assertFalse(dump.trim().isEmpty(), "Dump should not be empty");
-        assertTrue(dump.contains("## "), "Should include header with file path");
-        assertTrue(dump.contains("hello"), "Should include first message");
-        assertTrue(dump.contains("world"), "Should include second message");
+        assertFalse(dump.trim().isEmpty(), "Dump output should not be empty after writing messages");
+        assertTrue(dump.contains("## "), "Dump output should include header prefix '## '");
+        assertTrue(dump.contains("hello"), "Dump output should include message text 'hello'");
+        assertTrue(dump.contains("world"), "Dump output should include message text 'world'");
     }
 }

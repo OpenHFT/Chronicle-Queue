@@ -13,6 +13,7 @@ import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.WriteDocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
@@ -98,7 +99,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                 try (DocumentContext dc = wire.acquireWritingDocument(false)) {
                     dc.wire().write("key").int32(i);
                 }
-                assertTrue(dc0.isNotComplete(), "outer document should remain open");
+                assertTrue(dc0.isNotComplete(), "outer document should remain open after key write at index " + i);
             }
         }
     }
@@ -113,22 +114,26 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Nested plain text writes keep outer document open")
     public void nestedPlainText() {
         String s = "/nestedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
-            Assumptions.assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
+            Assumptions.assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()),
+                    "Ignored on hugetlbfs for nested plain text as byte offsets differ by page size");
             writeThreeKeys(appender);
             assertEquals(EXPECTED_QUEUE_DUMP, cq.dump(), "queue dump after nested writes");
         }
     }
 
     @Test
+    @DisplayName("Chained plain text writes keep queue dump consistent")
     public void chainedPlainText() {
         String s = "/chainedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
-            Assumptions.assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
+            Assumptions.assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()),
+                    "Ignored on hugetlbfs for chained plain text as byte offsets differ by page size");
             writeThreeChainedKeys(appender);
             assertEquals(EXPECTED_QUEUE_DUMP, cq.dump(), "queue dump after chained writes");
         }

@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -34,7 +35,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Multiple threads read and write without loss")
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
@@ -95,6 +96,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer handles empty queue then reads data")
     public void testTailerReadingEmptyQueue() {
         final File path = getTmpDir();
 

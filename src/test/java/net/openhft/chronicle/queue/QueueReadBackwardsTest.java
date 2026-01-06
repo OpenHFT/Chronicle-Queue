@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,6 +31,7 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer reads last message when reading backwards")
     public void testReadBackwardsAfterWriteJustOneMessage() {
         RollCycles rollingCycle = RollCycles.DEFAULT;
         // Write a message to the queue
@@ -52,7 +54,7 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
             ExcerptTailer tailer = queue.createTailer().toEnd().direction(TailerDirection.BACKWARD);
             // An exception is thrown here
             String read = tailer.readText();
-            assertEquals("42", read, "tailer: last message");
+            assertEquals("42", read, "tailer should read last message when moving backwards");
         }
     }
 }

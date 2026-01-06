@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.util.ThrowingConsumer;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -59,7 +60,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
 
         for (int i = 0; i < RECORD_COUNT; i++) {
             try (final DocumentContext ctx = tailer.readingDocument()) {
-                assertTrue(ctx.isPresent(), "Expected record at index " + i);
+                assertTrue(ctx.isPresent(), "Tailer should read a record at index " + i);
                 indices[i] = tailer.index();
             }
         }
@@ -67,6 +68,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Indexing occurs on append and scan results match")
     public void shouldPerformIndexingOnAppend() throws IOException {
         AtomicBoolean completed = new AtomicBoolean();
         runTest(queue -> {
@@ -76,7 +78,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
             }
             completed.set(true);
         });
-        assertTrue(completed.get(), "indexing: completed");
+        assertTrue(completed.get(), "Indexing test should complete successfully");
     }
 
     private <T extends Exception> void runTest(final ThrowingConsumer<RollingChronicleQueue, T> testMethod) throws T, IOException {

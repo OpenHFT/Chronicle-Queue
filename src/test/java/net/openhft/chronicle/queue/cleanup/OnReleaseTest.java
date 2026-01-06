@@ -15,6 +15,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OnReleaseTest extends QueueTestCommon {
     @Test
+    @DisplayName("Store file onRelease callbacks fire as expected")
     public void onRelease() throws Throwable {
         AtomicBoolean executed = new AtomicBoolean();
         FlakyTestRunner.builder(() -> {

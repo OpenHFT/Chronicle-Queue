@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.queue.main.RemovableRollFileCandidatesMain;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -24,20 +25,23 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class InternalRemovableRollFileCandidatesMainTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Internal main prints removable roll files")
     public void internalMainPrintsRemovableFiles() {
-        assumeTrue(OS.isLinux());
+        assumeTrue(OS.isLinux() && !isWsl(), "Test relies on Linux file handling for internal main output");
 
         final File dir = prepareQueueWithMultipleCycles();
 
         final String output = invokeMain(InternalRemovableRollFileCandidatesMain::main, dir.getAbsolutePath());
 
-        assertFalse(output.trim().isEmpty(), "Expected removable candidates to be printed");
-        assertTrue(output.contains(dir.getAbsolutePath()), "output: includes queue path");
+        assertFalse(output.trim().isEmpty(), "Removable candidates output should not be empty");
+        assertTrue(output.contains(dir.getAbsolutePath()),
+                "Output should include queue path " + dir.getAbsolutePath() + ": " + output);
     }
 
     @Test
+    @DisplayName("Public main delegates to internal main")
     public void publicMainDelegatesToInternal() {
-        assumeTrue(OS.isLinux());
+        assumeTrue(OS.isLinux() && !isWsl(), "Test relies on Linux file handling for public main delegation");
 
         final File dir = prepareQueueWithMultipleCycles();
 

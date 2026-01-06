@@ -63,7 +63,7 @@ public class MethodReaderSkipBenchmark implements JLBHTask {
             try {
                 queue = ChronicleQueue.single(Files.createTempDirectory("temp").toString());
             } catch (IOException e) {
-                throw new IORuntimeException(e);
+                throw new IORuntimeException(/* reason: queue dir creation failed */ e);
             }
         }
 

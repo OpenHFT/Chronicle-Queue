@@ -10,6 +10,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -41,7 +42,7 @@ public class CycleNotFoundTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Tailers handle missing cycles under concurrent load")
     @Timeout(value = 50_000L, unit = TimeUnit.MILLISECONDS)
     public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
         File path = getTmpDir();  // added nano time just to make
@@ -68,19 +69,20 @@ public class CycleNotFoundTest extends QueueTestCommon {
                         if (!dc.isPresent())
                             continue;
 
-                        Assertions.assertTrue(dc.isData(), "dc.isData()");
-                        Assertions.assertEquals(last + 1, last = dc.wire().read().int64(), "last = dc.wire().read().int64()");
+                        Assertions.assertTrue(dc.isData(), "DocumentContext should contain data when a message is present");
+                        Assertions.assertEquals(last + 1, last = dc.wire().read().int64(),
+                                "Tailer sequence should advance by one for each read");
                         count++;
                         counter.incrementAndGet();
                     }
 
                     if (executorService.isShutdown())
-                        Assertions.fail("unexpected failure");
+                        Assertions.fail("Executor should not shut down while tailers are active");
                 }
 
                 // check nothing after the NUMBER_OF_MSG
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    Assertions.assertFalse(dc.isPresent(), "dc.isPresent()");
+                    Assertions.assertFalse(dc.isPresent(), "DocumentContext should be absent after reading all messages");
                 }
             } finally {
                 Jvm.debug().on(CycleNotFoundTest.class,
@@ -129,6 +131,7 @@ public class CycleNotFoundTest extends QueueTestCommon {
         executorService.awaitTermination(5, TimeUnit.SECONDS);
         executorService1.awaitTermination(5, TimeUnit.SECONDS);
 
-        assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get(), "counter.get()");
+        assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get(),
+                "Total read count should match expected tailer reads");
     }
 }

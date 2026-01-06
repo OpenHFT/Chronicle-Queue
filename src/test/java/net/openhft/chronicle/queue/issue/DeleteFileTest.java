@@ -13,6 +13,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SuppressWarnings({"deprecation", "removal"})
 public class DeleteFileTest {
     @Test
+    @DisplayName("Tailers read across deleted cycle files")
     public void testMain() {
         final long[] clock = {1730366325_000L};
         final long delay = 1_000L;
@@ -39,7 +41,7 @@ public class DeleteFileTest {
 
                 appender.writeText("1");
 
-                assertEquals("1", tailer0.readText(), "tailer: first message");
+                assertEquals("1", tailer0.readText(), "tailer: first message should be readable");
                 final File firstCycleFile = appender.currentFile();
                 clock[0] += queue.rollCycle().lengthInMillis();
                 appender.writeText("2");

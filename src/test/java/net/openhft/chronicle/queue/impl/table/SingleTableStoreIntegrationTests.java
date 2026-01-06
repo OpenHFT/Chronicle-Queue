@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
@@ -36,17 +37,20 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Table store persists key across queue instances")
     public void baseCasePutAndGet() {
         context.newQueueInstance().tableStorePut("a", 1);
         assertEquals(1, context.newQueueInstance().tableStoreGet("a"), "table store should return value 1 for key 'a' stored in previous queue instance");
     }
 
     @Test
+    @DisplayName("Missing key returns Long.MIN_VALUE by default")
     public void getMissingKeyWithoutDefault() {
         assertEquals(Long.MIN_VALUE, context.newQueueInstance().tableStoreGet("test"), "table store should return Long.MIN_VALUE for missing key without default value");
     }
 
     @Test
+    @DisplayName("Table store grows across queue instances")
     public void growNumberOfKeys() {
         SingleChronicleQueue queue1 = context.newQueueInstance();
         queue1.tableStorePut("a", 1);
@@ -62,6 +66,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Table store handles thousands of keys")
     public void largeNumberOfKeyValuePairs() {
         finishedNormally = false;
         SingleChronicleQueue queue1 = context.newQueueInstance();
@@ -76,6 +81,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Table store handles long keys across queue instances")
     public void longKeyPutAndGet() {
         SingleChronicleQueue queue1 = context.newQueueInstance();
         StringBuilder keyBuffer = new StringBuilder("AAAA");

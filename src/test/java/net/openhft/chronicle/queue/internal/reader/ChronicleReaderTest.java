@@ -25,6 +25,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -71,7 +72,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     private static long getCurrentQueueFileLength(final Path dataDir) throws IOException {
         try (RandomAccessFile file = new RandomAccessFile(
                 Files.list(dataDir).filter(p -> p.toString().endsWith("cq4")).findFirst().
-                        orElseThrow(AssertionError::new).toFile(), "r")) {
+                        orElseThrow(() -> new AssertionError("Expected cq4 file in " + dataDir)).toFile(), "r")) {
             return file.length();
         }
     }
@@ -79,7 +80,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     @BeforeEach
     public void before(TestInfo testInfo) {
         testMethodName = testInfo.getTestMethod().map(method -> method.getName()).orElse("");
-        assumeFalse(Jvm.isArm());
+        assumeFalse(Jvm.isArm(), "ARM is not supported for these tests");
 
         // Reader opens queues in read-only mode
         if (OS.isWindows())
@@ -116,6 +117,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+    @DisplayName("Read queue in reverse order output messages")
     public void shouldReadQueueInReverse() {
         addCountToEndOfQueue();
 
@@ -129,6 +131,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse order ignores tail and history options")
     public void reverseOrderShouldIgnoreOptionsThatDontMakeSense() {
         addCountToEndOfQueue();
 
@@ -144,6 +147,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse order should honour start index")
     public void reverseOrderWorksWithStartPosition() {
         List<Long> indices = addCountToEndOfQueue();
 
@@ -158,6 +162,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse order rejects start index after end")
     public void reverseOrderThrowsWhenStartPositionIsAfterEndOfQueue() {
         assertThrows(IllegalArgumentException.class, () -> new ChronicleReader().withBasePath(dataDir)
                         .withMessageSink(capturedOutput::add)
@@ -169,6 +174,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse order rejects start index before start")
     public void reverseOrderThrowsWhenStartPositionIsBeforeStartOfQueue() {
         assertThrows(IllegalArgumentException.class, () -> new ChronicleReader().withBasePath(dataDir)
                         .withMessageSink(capturedOutput::add)
@@ -196,6 +202,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     // CPD-OFF - duplicated setup for metadata deletion variants
     @Test
     @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+    @DisplayName("Reads queue with non-default roll cycle")
     public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
         Path path = getTmpDir().toPath();
@@ -216,6 +223,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+    @DisplayName("Reads queue with non-default roll cycle after metadata deletion")
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
@@ -239,6 +247,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     // CPD-ON
 
     @Test
+    @DisplayName("Empty queue read should produce no output lines for reader")
     public void shouldNotFailOnEmptyQueue() {
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
@@ -249,6 +258,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reader should tolerate missing metadata records")
     public void shouldNotFailWhenNoMetadata() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
@@ -258,6 +268,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reader includes message history by default")
     public void shouldIncludeMessageHistoryByDefault() {
         basicReader().execute();
 
@@ -265,6 +276,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Inclusion regex filters history and content for method reader")
     public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessagesMethodReaderDummy() {
         basicReader()
                 // matches goodbye, but not hello or history
@@ -275,6 +287,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Filtered method reader should not show indices")
     public void shouldNotShowIndexForFilteredMessages() {
         basicReader()
                 .asMethodReader(SayWhen.class.getName())
@@ -284,6 +297,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("History-only messages should not show indices")
     public void shouldNotShowIndexForHistoryMessages() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -298,6 +312,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse reader skips empty history entries")
     public void canReadPastEmptyMessageInReverseOrder() {
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
@@ -358,6 +373,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Method reader omits history by default")
     public void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
         basicReader().
                 asMethodReader(Say.class.getName()).
@@ -367,6 +383,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Method reader includes history when enabled")
     public void shouldIncludeMessageHistoryMethodReaderShowHistory() {
         basicReader().
                 asMethodReader(Say.class.getName()).
@@ -374,7 +391,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 execute();
 
         String first = capturedOutput.poll();
-        assertTrue(first.startsWith("0x"), "method reader with history enabled should output index as first line");
+        assertTrue(first.startsWith("0x"), first + " should start with 0x for history output");
         String second = capturedOutput.poll();
         assertNotNull(second, "method reader with history enabled should output message content as second line");
         assertTrue(second.matches("VanillaMessageHistory *. *sources: ..,? timings: .[0-9]+.,? addSourceDetails=false ?}" +
@@ -386,6 +403,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+    @DisplayName("Read-only tailer observes new writes beyond initial limit")
     public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         IOTools.deleteDirWithFiles(dataDir.toFile());
         dataDir.toFile().mkdirs();
@@ -421,6 +439,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reader should read from read-only queue file entries successfully")
     public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
         assumeFalse(OS.isWindows(), "#460 read-only not supported on Windows");
 
@@ -435,6 +454,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reader should convert queue entries to text")
     public void shouldConvertEntriesToText() {
         basicReader().execute();
 
@@ -443,40 +463,45 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Inclusion regex should filter reader output")
     public void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size(), "inclusion regex should match expected number of messages");
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertTrue(msg.contains("goodbye"), "filtered output should only contain messages matching inclusion regex"));
+                forEach(msg -> assertTrue(msg.contains("goodbye"), msg + " should contain goodbye for inclusion filter"));
     }
 
     @Test
+    @DisplayName("Multiple inclusion regexes should filter output")
     public void shouldFilterByMultipleInclusionRegex() {
         basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size(), "multiple inclusion regexes should match expected number of messages");
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertTrue(msg.contains("goodbye"), "filtered output should contain messages matching all inclusion patterns"));
+                forEach(msg -> assertTrue(msg.contains("goodbye"), msg + " should contain goodbye for inclusion filter"));
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertFalse(msg.contains("hello"), "filtered output should exclude messages not matching all inclusion patterns"));
+                forEach(msg -> assertFalse(msg.contains("hello"), msg + " should not contain hello for inclusion filter"));
     }
 
     @Test
+    @DisplayName("Missing input directory should raise exception")
     public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
         assertThrows(IllegalArgumentException.class, () -> basicReader().withBasePath(Paths.get("/does/not/exist")).execute(),
                 "reader should throw exception when input directory does not exist");
     }
 
     @Test
+    @DisplayName("Exclusion regex should filter reader output")
     public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size(), "exclusion regex should produce expected number of output lines");
-        capturedOutput.forEach(msg -> assertFalse(msg.contains("goodbye"), "filtered output should not contain messages matching exclusion regex"));
+        capturedOutput.forEach(msg -> assertFalse(msg.contains("goodbye"), msg + " should not contain goodbye for exclusion filter"));
     }
 
     @Test
+    @DisplayName("Multiple exclusion regexes should filter output")
     public void shouldFilterByMultipleExclusionRegex() {
         basicReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
@@ -484,6 +509,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("History record limit bounds output size")
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReader().historyRecords(5).execute();
 
@@ -492,6 +518,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("History limit combines with inclusion filter")
     public void shouldCombineIncludeFilterAndMaxRecords() {
         basicReader().historyRecords(5).withInclusionRegex("hello").execute();
 
@@ -500,6 +527,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reader should forward to start index")
     public void shouldForwardToSpecifiedIndex() {
         final long knownIndex = Long.decode(findAnExistingIndex());
         basicReader().withStartIndex(knownIndex).execute();
@@ -509,12 +537,14 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Start index before first entry is rejected")
     public void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
         assertThrows(IllegalArgumentException.class, () -> basicReader().withStartIndex(1L).execute(),
                 "reader should throw exception when start index is before first available index");
     }
 
     @Test
+    @DisplayName("History display does not rewind past start")
     public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
@@ -524,6 +554,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tail mode polls empty documents until limit")
     public void shouldContinueToPollQueueWhenTailModeIsEnabled() {
         final int expectedPollCountWhenDocumentIsEmpty = 3;
         final FiniteDocumentPollMethod pollMethod = new FiniteDocumentPollMethod(expectedPollCountWhenDocumentIsEmpty);
@@ -536,9 +567,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertEquals(expectedPollCountWhenDocumentIsEmpty, pollMethod.invocationCount, "tail mode should continue polling empty documents until limit reached");
     }
 
-    @RequiredForClient
     @Test
+    @RequiredForClient
     @Timeout(value = 20_000L, unit = TimeUnit.MILLISECONDS)
+    @DisplayName("Prints timestamps using local time zone")
     public void shouldPrintTimestampsToLocalTime() throws IOException {
         finishedNormally = false;
         final File queueDir = getTmpDir();
@@ -556,16 +588,17 @@ public class ChronicleReaderTest extends QueueTestCommon {
             }
 
             // UTC by default
-            assertTimesAreInZone(queueDir, ZoneId.of("UTC"), timestamps);
+            verifyTimesAreInZone(queueDir, ZoneId.of("UTC"), timestamps);
 
             // Local timezone
-            assertTimesAreInZone(queueDir, ZoneId.systemDefault(), timestamps);
+            verifyTimesAreInZone(queueDir, ZoneId.systemDefault(), timestamps);
         }
         IOTools.deleteDirWithFiles(queueDir);
         finishedNormally = true;
     }
 
     @Test
+    @DisplayName("Match limit stops after filtered records")
     public void shouldOnlyOutputUpToMatchLimitAfterFiltering() {
         basicReader().withInclusionRegex("goodbye").withMatchLimit(3).execute();
 
@@ -577,6 +610,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Named tailer resumes after match limit")
     public void matchLimitThenNamedTailer() {
         final long maxRecords = 5;
         final String tailerId = "myTailer";
@@ -592,13 +626,15 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Named tailer requires read-write mode")
     public void namedTailerRequiresReadWrite() {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Named tailer is not supported on Windows");
         assertThrows(IllegalArgumentException.class, () -> basicReader().withTailerId("tailerId").withReadOnly(true).execute(),
                 "named tailer should throw exception when used with read-only mode");
     }
 
     @Test
+    @DisplayName("Content based limiter halts at threshold")
     public void shouldStopReadingWhenContentBasedLimitHasBeenReached() {
         AtomicInteger helloCount = new AtomicInteger();
         AtomicInteger goodbyeCount = new AtomicInteger();
@@ -631,7 +667,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertEquals(4, capturedOutput.stream().filter(msg -> msg.contains("hello")).count(), "content based limiter should stop reading after configured message threshold");
     }
 
-    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) throws IOException {
+    private void verifyTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) throws IOException {
         final Process readerProcess = JavaProcessBuilder.create(ChronicleReaderRunner.class)
                 .withProgramArguments(queueDir.toString())
                 .withJvmArguments("-D" + AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY + "=" + zoneId.toString())
@@ -650,6 +686,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search reads forward from timestamp")
     public void findByBinarySearch() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -665,6 +702,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search reads backward from timestamp")
     public void findByBinarySearchReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -680,6 +718,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search handles sparse repeated timestamps")
     public void findByBinarySearchSparseRepeated() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -692,6 +731,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse binary search handles sparse repeated timestamps")
     public void findByBinarySearchSparseRepeatedReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -704,6 +744,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search handles sparse approximate timestamps")
     public void findByBinarySearchSparseApprox() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -716,6 +757,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse binary search handles sparse approximate timestamps")
     public void findByBinarySearchSparseApproxReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -728,6 +770,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search handles approximate timestamp before match")
     public void findByBinarySearchApprox() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -743,6 +786,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse binary search handles approximate timestamp after match")
     public void findByBinarySearchApproxReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -758,6 +802,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search after end should return empty results")
     public void findByBinarySearchAfterEnd() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -772,6 +817,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse binary search after end returns all")
     public void findByBinarySearchAfterEndReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -786,6 +832,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search before start should return all results")
     public void findByBinarySearchBeforeStart() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -800,6 +847,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reverse binary search before start returns empty")
     public void findByBinarySearchBeforeStartReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -814,6 +862,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Binary search skips deleted roll cycles")
     public void findByBinarySearchWithDeletedRollCyles() {
         final File queueDir = getTmpDir();
         final SetTimeProvider timeProvider = new SetTimeProvider();
@@ -847,6 +896,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Method reader respects JSON wire type")
     public void shouldRespectWireType() {
         basicReader().
                 asMethodReader(Say.class.getName()).
@@ -858,6 +908,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Method reader respects JSON_ONLY wire type")
     public void shouldRespectWireType2() {
         basicReader()
                 .asMethodReader(Say.class.getName())

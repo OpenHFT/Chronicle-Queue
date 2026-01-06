@@ -13,6 +13,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.*;
@@ -21,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * Index runs away on double close - AM
+ * Index runs away on double close when tailer reuses the document context.
  */
 @RequiredForClient
 public class OvertakeTest extends QueueTestCommon {
@@ -82,6 +83,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Append and tail with and without additional close")
     public void appendAndTail() {
         try (ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
@@ -109,6 +111,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer thread reaches writer index during concurrent reads")
     public void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
         ExecutorService execService = Executors.newFixedThreadPool(2,
                 new NamedThreadFactory("test"));

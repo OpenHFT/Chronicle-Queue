@@ -127,6 +127,6 @@ public abstract class RollingResourcesCacheTestBase extends QueueTestCommon {
                 new RollingResourcesCache(rollCycle, epoch, File::new, File::getName);
 
         RollingResourcesCache.Resource resource = cache.resourceFor(cycle);
-        assertEquals(expectedLong, cache.toLong(resource.path), "toLong(resource.path)");
+        assertEquals(expectedLong, cache.toLong(resource.path), "toLong should parse resource path");
     }
 }

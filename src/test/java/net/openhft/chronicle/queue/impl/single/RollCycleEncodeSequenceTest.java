@@ -8,6 +8,7 @@ import net.openhft.chronicle.bytes.ref.BinaryTwoLongReference;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.Sequence;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
@@ -98,6 +99,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Write position maps to NOT_FOUND_RETRY")
     public void forWritePosition() {
         longValue.setOrderedValue(1);
         longValue.setOrderedValue2(2);
@@ -108,29 +110,32 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Sequence round-trips after set and get on position")
     public void setGet() {
         int sequenceInitial = 0xb;
         int position = 0x40284;
         rollCycleEncodeSequence.setSequence(sequenceInitial, position);
         long sequence = rollCycleEncodeSequence.getSequence(position);
-        assertEquals(sequenceInitial, sequence, "set/get sequence");
+        assertEquals(sequenceInitial, sequence, "Sequence should round-trip for set/get position");
     }
 
     @TestTemplate
+    @DisplayName("Sequence round-trips with masked position")
     public void setGetPositionNeedsMasking() {
         int sequenceInitial = 0xb;
         long position = 0x123456789abL;
         rollCycleEncodeSequence.setSequence(sequenceInitial, position);
         long sequence = rollCycleEncodeSequence.getSequence(position);
-        assertEquals(sequenceInitial, sequence, "set/get sequence (masked position)");
+        assertEquals(sequenceInitial, sequence, "Sequence should round-trip for masked position");
     }
 
     @TestTemplate
+    @DisplayName("Sequence round-trips at max masked position")
     public void setGetPositionMinus1() {
         int sequenceInitial = 0xb;
         long position = (1L << 48) - 1;
         rollCycleEncodeSequence.setSequence(sequenceInitial, position);
         long sequence = rollCycleEncodeSequence.getSequence(position);
-        assertEquals(sequenceInitial, sequence, "set/get sequence (max masked position)");
+        assertEquals(sequenceInitial, sequence, "Sequence should round-trip for max masked position");
     }
 }

@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("CLI configures history reader from arguments")
     public void runConfiguresReaderFromArguments() throws Exception {
         final Path queueDir = Files.createTempDirectory("history-reader");
         final ChronicleHistoryReaderMainStub main = new ChronicleHistoryReaderMainStub();
@@ -39,12 +41,13 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Help option prints usage and exits")
     public void parseCommandLineWithHelpOption() {
         final ChronicleHistoryReaderMainStub main = new ChronicleHistoryReaderMainStub();
 
         try {
             main.parseCommandLine(new String[]{"-h"}, main.options());
-            fail("Expected HelpExit");
+            fail("Help option should trigger HelpExit");
         } catch (HelpExit e) {
             assertEquals(0, e.status, "Help option should trigger exit with success status code 0");
             assertTrue(main.helpOutput.toString().contains("ChronicleHistoryReaderMain"), "Help output should contain ChronicleHistoryReaderMain class name");
@@ -52,12 +55,13 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Missing directory option prints error and exits")
     public void parseCommandLineMissingDirectoryPrintsError() {
         final ChronicleHistoryReaderMainStub main = new ChronicleHistoryReaderMainStub();
 
         try {
             main.parseCommandLine(new String[]{"-t", "SECONDS"}, main.options());
-            fail("Expected HelpExit");
+            fail("Missing directory option should trigger HelpExit");
         } catch (HelpExit e) {
             assertEquals(1, e.status, "Missing required directory option should trigger exit with error status code 1");
             assertTrue(main.helpOutput.toString().contains("Missing required option"), "Help output should contain error message about missing required option");

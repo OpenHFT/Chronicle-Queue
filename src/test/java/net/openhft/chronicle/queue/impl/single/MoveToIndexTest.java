@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,6 +27,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
     Path tmpFolder;
 
     @Test
+    @DisplayName("moveToIndex returns to previous index after document consumed")
     public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
         File queuePath = Files.createDirectories(tmpFolder.resolve("cq")).toFile();
 
@@ -36,18 +38,19 @@ public final class MoveToIndexTest extends QueueTestCommon {
             }
 
             ExcerptTailer tailer = queue.createTailer();
-            assertNext(tailer, "id1");
+            readAndCheckNext(tailer, "id1");
             long index = tailer.index();
-            assertNext(tailer, "id2");
+            readAndCheckNext(tailer, "id2");
             tailer.moveToIndex(index);
-            assertNext(tailer, "id2");
+            readAndCheckNext(tailer, "id2");
             tailer.moveToIndex(index);
-            assertNext(tailer, "id2");
+            readAndCheckNext(tailer, "id2");
         }
     }
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/401
     @Test
+    @DisplayName("Random moveToIndex reads expected messages reliably")
     public void testRandomMove() throws IOException {
         final Map<Long, String> messageByIndex = new HashMap<>();
 
@@ -70,7 +73,8 @@ public final class MoveToIndexTest extends QueueTestCommon {
                 final long randomIndex = indices.get(random.nextInt(messageByIndex.size()));
                 tailer.moveToIndex(randomIndex);
                 tailer.readDocument(w -> capturedMessage.set((String) w.read("message").object()));
-                assertEquals(messageByIndex.get(randomIndex), capturedMessage.get(), "moveToIndex: tailer should read expected message");
+                assertEquals(messageByIndex.get(randomIndex), capturedMessage.get(),
+                        "moveToIndex should read expected message at iteration " + i);
                 tailer.readDocument(w -> w.read("message").object());
             }
         }
@@ -84,6 +88,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
      * @throws Exception If failed.
      */
     @Test
+    @DisplayName("moveToIndex handles NOT_REACHED_IN_CYCLE state")
     public void testNotReachedInCycle() throws Exception {
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpFolder.toFile()).build();
              ExcerptAppender appender = q.createAppender()) {
@@ -124,13 +129,13 @@ public final class MoveToIndexTest extends QueueTestCommon {
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (dc.wire().getValueIn().readByte() != versionByte)
-                    throw new IllegalStateException("Illegal version bytes: " + dc.wire().bytes().readSkip(-1).toDebugString());
+                    throw new IllegalStateException("Illegal version bytes after additional writes: " + dc.wire().bytes().readSkip(-1).toDebugString());
             }
         }
     }
 
-    private void assertNext(ExcerptTailer tailer, String expected) {
+    private void readAndCheckNext(ExcerptTailer tailer, String expected) {
         String next = tailer.readText();
-        assertEquals(expected, next, "tailer readText");
+        assertEquals(expected, next, "tailer should read expected text: " + expected);
     }
 }

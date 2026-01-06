@@ -12,6 +12,7 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
@@ -122,12 +123,14 @@ public class SparseBinarySearchTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Binary search handles many gaps across multiple roll cycles")
     public void testBinarySearchWithManyGapsAndManyRollCycles() throws ParseException {
         int searches = runWithTimeParameters(TEST_SECONDLY, 300);
         assertEquals(numberOfMessages + 1, searches, "binary-search: searches (test-secondly)");
     }
 
     @TestTemplate
+    @DisplayName("Binary search handles many gaps within a daily roll cycle")
     public void testBinarySearchWithManyGaps() throws ParseException {
         int searches = runWithTimeParameters(DAILY, 1);
         assertEquals(numberOfMessages + 1, searches, "binary-search: searches (daily)");
@@ -165,21 +168,22 @@ public class SparseBinarySearchTest extends QueueTestCommon {
                  final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
-                        assertNotNull(ignored, "readingDocument returned context");
+                        assertNotNull(ignored, "readingDocument returned context at loop index " + j);
                         Wire key = toWire(j);
                         long index = BinarySearch.search(binarySearchTailer, key, GAP_TOLERANT_COMPARATOR);
                         searches++;
                         if (entriesWithValues.contains(j)) {
-                            assertEquals(tailer.index(), index, "binary search returns current index for present key");
+                            assertEquals(tailer.index(), index, "binary search returns current index for present key at loop index " + j);
                         } else {
-                            assertTrue(index < 0, "binary search returns negative for missing key");
+                            assertTrue(index < 0, "binary search returns negative for missing key at loop index " + j);
                         }
                         key.bytes().releaseLast();
                     }
                 }
 
                 Wire key = toWire(numberOfMessages);
-                assertTrue(BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0, "Should not find non-existent");
+                assertTrue(BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0,
+                        "Binary search should not find non-existent key " + numberOfMessages);
                 searches++;
             }
         }

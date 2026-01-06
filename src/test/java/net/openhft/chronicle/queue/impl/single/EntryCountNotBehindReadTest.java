@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -35,6 +36,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Excerpt count per cycle is not behind reads")
     public void testExcerptsPerCycleNotBehind() throws IOException {
         final File file = Files.createTempDirectory("exact-excerpts-per-cycle").toFile();
         try (final SingleChronicleQueue queue =
@@ -61,6 +63,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer toEnd does not lag behind reads")
     public void testToEndNotBehind() throws IOException {
         final File file = Files.createTempDirectory("to-end").toFile();
         try (final SingleChronicleQueue queue =
@@ -90,7 +93,8 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
         final int cycle = cycleType.toCycle(readIndex);
         final long readCount = cycleType.toSequenceNumber(readIndex) + 1;
         final long excerptCount = tailer.excerptsInCycle(cycle);
-        assertFalse(readCount > excerptCount, "readCount should not exceed excerptCount");
+        assertFalse(readCount > excerptCount,
+                "excerpt count from excerptsInCycle should keep up: readCount " + readCount + ", excerptCount " + excerptCount);
     }
 
     private void checkToEnd(SingleChronicleQueue queue, long readIndex) {
@@ -103,7 +107,8 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
                 excerptCount = cycleType.toSequenceNumber(tailer.toEnd().index());
             }
         }
-        assertFalse(readCount > excerptCount, "readCount should not exceed excerptCount");
+        assertFalse(readCount > excerptCount,
+                "excerpt count from toEnd should keep up: readCount " + readCount + ", excerptCount " + excerptCount);
     }
 
     private void startWriter(SingleChronicleQueue queue, CyclicBarrier startBarrier) {
@@ -136,7 +141,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
         try {
             barrier.await(10, TimeUnit.SECONDS);
         } catch (InterruptedException | BrokenBarrierException | TimeoutException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Barrier wait interrupted or timed out", e);
         }
     }
 }

@@ -13,6 +13,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -78,6 +79,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     // 3) Redo step 1)
     //
     @Test
+    @DisplayName("Tailer reads forward and backward across the same data")
     public void testTailerForwardBackwardRead() {
         String basePath = OS.getTarget() + "/tailerForwardBackward-" + Time.uniqueId();
 
@@ -130,6 +132,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Direction NONE prevents reads before initialisation")
     public void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
@@ -145,12 +148,13 @@ public class TailerDirectionTest extends QueueTestCommon {
             }
 
             DocumentContext document = tailer.readingDocument();
-            assertFalse(document.isPresent(), "document.isPresent()");
+            assertFalse(document.isPresent(), "document context should be absent with direction NONE");
         }
         IOTools.deleteDirWithFiles(path);
     }
 
     @Test
+    @DisplayName("Backward tailer reads across cycles with gaps")
     public void testTailerBackwardsReadBeyondCycle() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -194,7 +198,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Backward tailer stops at start when index is zero")
     @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
     public void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
         File basePath = getTmpDir();
@@ -218,7 +222,7 @@ public class TailerDirectionTest extends QueueTestCommon {
                 while (true) {
                     try (final DocumentContext documentContext = tailer.readingDocument()) {
                         if (!documentContext.isPresent()) {
-                            Jvm.startup().on(TailerDirection.class, "Reached the start");
+                            Jvm.startup().on(TailerDirection.class, "Reached start while reading backward");
                             break;
                         }
                     }
@@ -227,17 +231,17 @@ public class TailerDirectionTest extends QueueTestCommon {
                 // Try one more time, should still not be present and should not advance the index
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
                     if (!documentContext.isPresent()) {
-                        Jvm.startup().on(TailerDirection.class, "Reached the start");
+                        Jvm.startup().on(TailerDirection.class, "Reached start on extra backward read");
                     }
                 }
-                assertEquals(-1, tailer.index(), "tailer.index()");
-                assertEquals(0, tailer.lastReadIndex(), "tailer.lastReadIndex()");
+                assertEquals(-1, tailer.index(), "tailer index should remain -1 after backward reads");
+                assertEquals(0, tailer.lastReadIndex(), "tailer lastReadIndex should remain 0 at start");
 
                 // Check that we can change direction and read forward from there
                 tailer.direction(TailerDirection.FORWARD);
                 try (final DocumentContext documentContext = tailer.readingDocument()) {
-                    assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
-                    assertEquals(0, documentContext.index(), "documentContext.index()");
+                    assertTrue(documentContext.isPresent(), "document context should be present after switching to forward");
+                    assertEquals(0, documentContext.index(), "document context index should be first entry");
                 }
             }
         }

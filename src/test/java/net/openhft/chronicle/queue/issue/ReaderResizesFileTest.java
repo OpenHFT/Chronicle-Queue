@@ -16,6 +16,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -36,6 +37,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
+    @DisplayName("Reader does not resize cycle file during reads")
     public void testReaderResizesFile() throws IOException {
         // go for the smallest possible block size to ensure we can test resizing
         int blockSize = 1 << 10;
@@ -47,8 +49,8 @@ public class ReaderResizesFileTest {
             long actualChunkSize = appender.wire().bytes().bytesStore().capacity();
 
             File[] files = QUEUE_DIR.listFiles((d, n) -> n.endsWith(".cq4"));
-            assertNotNull(files, "Queue directory must exist");
-            assertEquals(1, files.length, "Expected exactly one cycle file");
+            assertNotNull(files, "Queue directory must exist after first write");
+            assertEquals(1, files.length, "Queue directory should contain exactly one cycle file after first write");
             File firstFile = files[0];
 
             assertEquals(actualChunkSize, firstFile.length(), "Queue cycle file should have initial size equal to one chunk after first write");
@@ -67,19 +69,21 @@ public class ReaderResizesFileTest {
                 assertNotNull(lockFile, "File lock should be successfully acquired on queue cycle file");
                 for (int i = 1; i <= 2; i++) {
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        assertTrue(dc.isPresent(), "Document should be present");
+                        assertTrue(dc.isPresent(), "Tailer should read document under lock at iteration " + i);
                     }
-                    assertEquals(actualChunkSize, firstFile.length(), "Queue cycle file should maintain consistent size while reading with external file lock");
+                    assertEquals(actualChunkSize, firstFile.length(),
+                            "Queue cycle file should maintain consistent size while reading with external file lock at iteration " + i);
                 }
 
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertFalse(dc.isPresent(), "Document should not be present");
+                    assertFalse(dc.isPresent(), "Tailer should not read an extra document after two reads");
                 }
             }
         }
     }
 
     @Test
+    @DisplayName("Tailer refCount stays stable during resize")
     public void testTailerRefCountStableDuringResize() {
         int blockSize = 1 << 12;
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR)
@@ -120,6 +124,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
+    @DisplayName("Held tailer document does not resize old cycle")
     public void testTailerHoldingDocumentAcrossRollsDoesNotResizeOldCycle() {
         File queuePath = new File(QUEUE_DIR, "tailer-hold");
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -137,17 +142,18 @@ public class ReaderResizesFileTest {
             writeSequence(appender, 32);
 
             try (DocumentContext held = tailer.readingDocument()) {
-                assertTrue(held.isPresent(), "First document should be present");
+                assertTrue(held.isPresent(), "Tailer should read first document before rolling");
 
                 File initialFile = soleCycleFile(queuePath);
                 long initialLength = initialFile.length();
-                assertTrue(initialLength >= chunkSize, "Initial cycle should allocate at least one chunk");
+                assertTrue(initialLength >= chunkSize,
+                        "Initial cycle file length " + initialLength + " should be >= chunk size " + chunkSize);
 
                 timeProvider.advanceMillis(TestRollCycles.TEST4_SECONDLY.lengthInMillis());
                 writeSequence(appender, 64);
 
                 File[] cycleFiles = cq4Files(queuePath);
-                assertEquals(2, cycleFiles.length, "Expected two cycle files after rolling");
+                assertEquals(2, cycleFiles.length, "Queue directory should contain two cycle files after rolling");
                 Arrays.sort(cycleFiles);
                 assertEquals(initialLength, cycleFiles[0].length(), "Old cycle should not be resized while a tailer holds a document");
                 assertEquals(initialLength, cycleFiles[1].length(), "New cycle should allocate the same chunk size");
@@ -161,6 +167,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
+    @DisplayName("Zero-length document does not block tailer")
     public void testZeroLengthDocumentDoesNotBlockTailer() {
         File queuePath = new File(QUEUE_DIR, "zero-length");
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder(queuePath, net.openhft.chronicle.wire.WireType.BINARY)
@@ -196,13 +203,13 @@ public class ReaderResizesFileTest {
 
     private static File soleCycleFile(File dir) {
         File[] files = cq4Files(dir);
-        assertEquals(1, files.length, "Expected exactly one cycle file");
+        assertEquals(1, files.length, "Queue directory should contain exactly one cycle file for tailer hold test");
         return files[0];
     }
 
     private static File[] cq4Files(File dir) {
         File[] files = dir.listFiles((d, name) -> name.endsWith(".cq4"));
-        assertNotNull(files, "Queue directory must exist");
+        assertNotNull(files, "Queue directory must exist for cycle file enumeration");
         return files;
     }
 }

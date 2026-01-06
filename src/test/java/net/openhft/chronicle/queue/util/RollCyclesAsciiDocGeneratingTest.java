@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.RollCyclesTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static java.lang.String.format;
@@ -18,6 +19,7 @@ public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
      * This generates the asciidoc for the table in /docs/FAQ.adoc
      */
     @Test
+    @DisplayName("Roll cycle table dumps to AsciiDoc")
     public void dumpAllRollCycles() {
         StringBuilder stringBuilder = new StringBuilder().append("\n\n");
         for (RollCycle cycle : RollCycles.all()) {
@@ -28,6 +30,6 @@ public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
                     cycle.maxMessagesPerCycle() / (cycle.lengthInMillis() / 1000)));
         }
         Jvm.startup().on(RollCyclesTest.class, stringBuilder.toString());
-        assertTrue(true, "dumped rollCycle table"); // if we got here without an exception, the test passes
+        assertTrue(true, "roll cycle table dumped without exception"); // if we got here without an exception, the test passes
     }
 }

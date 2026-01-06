@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.main.DumpMain;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DumpQueueMainTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Dump reads read-only queue file")
     public void shouldBeAbleToDumpReadOnlyQueueFile() throws IOException {
         if (OS.isWindows())
             return;
@@ -43,12 +45,14 @@ public class DumpQueueMainTest extends QueueTestCommon {
                 final CountingOutputStream countingOutputStream = new CountingOutputStream();
                 DumpMain.dump(queueFile.toFile(), new PrintStream(countingOutputStream), Long.MAX_VALUE);
 
-                assertNotEquals(0L, countingOutputStream.bytes);
+                assertNotEquals(0L, countingOutputStream.bytes,
+                        "dump should write data when reading a read-only queue file");
             }
         }
     }
 
     @Test
+    @DisplayName("Dump output includes directory listing fields")
     public void shouldDumpDirectoryListing() {
         final File dataDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
@@ -63,8 +67,10 @@ public class DumpQueueMainTest extends QueueTestCommon {
 
             final String capturedOutput = capture.toString();
 
-            assertTrue(capturedOutput.contains("listing.highestCycle"), "dump should include directory listing highestCycle");
-            assertTrue(capturedOutput.contains("listing.lowestCycle"), "dump should include directory listing lowestCycle");
+            assertTrue(capturedOutput.contains("listing.highestCycle"),
+                    "dump should include directory listing key listing.highestCycle");
+            assertTrue(capturedOutput.contains("listing.lowestCycle"),
+                    "dump should include directory listing key listing.lowestCycle");
 
         }
     }

@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class MessageReaderWriterTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Reader can write messages while reading")
     public void testWriteWhileReading() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class);
@@ -49,14 +51,14 @@ public class MessageReaderWriterTest extends QueueTestCommon {
                 writer1.method2(new Message2(234));
 
                 // read those messages
-                assertTrue(reader1.readOne(), "reader1.readOne()");
-                assertTrue(reader1.readOne(), "reader1.readOne()");
-                assertFalse(reader1.readOne(), "reader1.readOne()");
+                assertTrue(reader1.readOne(), "reader1 should read first message at iteration " + i);
+                assertTrue(reader1.readOne(), "reader1 should read second message at iteration " + i);
+                assertFalse(reader1.readOne(), "reader1 should have no further messages at iteration " + i);
 
                 // read the produced messages
-                assertTrue(reader2.readOne(), "reader2.readOne()");
-                assertTrue(reader2.readOne(), "reader2.readOne()");
-                assertFalse(reader2.readOne(), "reader2.readOne()");
+                assertTrue(reader2.readOne(), "reader2 should read first processed message at iteration " + i);
+                assertTrue(reader2.readOne(), "reader2 should read second processed message at iteration " + i);
+                assertFalse(reader2.readOne(), "reader2 should have no further messages at iteration " + i);
             }
         }
     }

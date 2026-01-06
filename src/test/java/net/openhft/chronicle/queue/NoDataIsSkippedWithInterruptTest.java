@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
@@ -22,6 +23,7 @@ public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Interrupt flag does not skip queued data")
     public void test() {
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(DirectoryUtils.tempDir("."))

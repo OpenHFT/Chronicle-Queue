@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class AppenderListenerTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Appender listener captures event text and offsets")
     public void appenderListenerTest() {
         String path = OS.getTarget() + "/appenderListenerTest";
         StringBuilder results = new StringBuilder(128);
@@ -38,7 +40,8 @@ public class AppenderListenerTest extends QueueTestCommon {
             IOTools.deleteDirWithFiles(path);
         }
         assertEquals("hello G'Day, addr:4a100000010114, index: 4a1000000000\n" +
-                "hello Bye-now, addr:4a100000010128, index: 4a1000000001\n", results.toString(), "appender listener output");
+                "hello Bye-now, addr:4a100000010128, index: 4a1000000001\n", results.toString(),
+                "appender listener output should include event text and offsets");
     }
 
     public interface HelloWorld {

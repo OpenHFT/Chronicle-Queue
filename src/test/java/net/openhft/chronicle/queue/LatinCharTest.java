@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
@@ -27,6 +28,7 @@ public class LatinCharTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Latin-1 characters round trip through queue")
     public void shouldCorrectlyEncodeDecode() {
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder

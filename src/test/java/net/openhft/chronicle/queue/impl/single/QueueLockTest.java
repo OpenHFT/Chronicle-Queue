@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -29,16 +30,18 @@ public class QueueLockTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue lock times out when recovery is disabled")
     public void testTimeout() throws InterruptedException {
         check(true);
     }
 
     @Test
+    @DisplayName("Queue lock recovers when forced unlock is enabled")
     public void testRecover() throws InterruptedException {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try {
             check(false);
-            fail("unexpected failure");
+            fail("Recovery test should throw IllegalStateException");
         } catch (IllegalStateException e) {
             assertTrue(e.getMessage().contains("overwritten? Expected:"), "e.getMessage().contains(\"overwritten? Expected:\")");
         } finally {
@@ -101,7 +104,7 @@ public class QueueLockTest extends QueueTestCommon {
                     long time = endTime - startTime;
                     assertEquals(shouldThrowException, threwException.get(), "lock acquisition should throw exception when recovery disabled and timeout when recovery enabled");
                     assertEquals(shouldThrowException, !recoveredAndAcquiredTheLock.get(), "lock should be recovered and acquired when recovery enabled, fail when recovery disabled");
-                    assertTrue(time >= timeoutMs, "timeout, time: " + time);
+                    assertTrue(time >= timeoutMs, "Lock acquisition should wait at least timeoutMs, elapsed=" + time);
                 }
             }
             finishedNormally = true;

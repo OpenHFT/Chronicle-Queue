@@ -14,6 +14,7 @@ import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
@@ -132,29 +133,33 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
         log.info("Baseline performance captured. rollCycle={}", rollCycle);
     }
 
-    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @Disabled("Disabled as too flaky for full suite: from beginning")
     @TestTemplate
+    @DisplayName("Tailer toEnd from beginning stays within baseline factor")
     public void fromBeginning() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration);
     }
 
-    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @Disabled("Disabled as too flaky for full suite: less than boundary")
     @TestTemplate
+    @DisplayName("Tailer toEnd from below boundary stays within baseline factor")
     public void lessThanBoundary() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration);
     }
 
-    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @Disabled("Disabled as too flaky for full suite: on boundary")
     @TestTemplate
+    @DisplayName("Tailer toEnd on boundary stays within baseline factor")
     public void onBoundary() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing(), TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration);
     }
 
-    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @Disabled("Disabled as too flaky for full suite: above boundary")
     @TestTemplate
+    @DisplayName("Tailer toEnd above boundary stays within baseline factor")
     public void greaterThanBoundary() {
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() - 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration);
@@ -174,7 +179,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
             appender.writeText("message_" + i);
 
             if (rollCycle.equals(TestRollCycles.TEST2_DAILY)) {
-                log.info("lastIndexAppended={}", appender.lastIndexAppended());
+                log.info("lastIndexAppended for TEST2_DAILY={}", appender.lastIndexAppended());
             }
         }
     }
@@ -193,7 +198,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
                     break;
                 case MIDDLE:
                     boolean result = tailer.moveToIndex(appender.lastIndexAppended() / 2);
-                    assertTrue(result, "tailer moveToIndex: middle");
+                    assertTrue(result, "tailer should move to middle index before toEnd");
                     break;
                 default:
                     throw new IllegalStateException("Unsupported tailerIndexStartPosition - " + tailerIndexStartPosition);

@@ -18,6 +18,7 @@ import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -69,6 +70,7 @@ class NormaliseEOFsTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Normalise EOFs resumes from previous state")
     public void normaliseShouldResumeFromPreviousNormalisation() {
         SetTimeProvider setTimeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(setTimeProvider);

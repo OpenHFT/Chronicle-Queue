@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -38,6 +39,7 @@ public class RollingResourcesCacheCompatTest extends RollingResourcesCacheTestBa
     }
 
     @Test
+    @DisplayName("RollingResourcesCache toLong matches legacy epoch arithmetic")
     public void testToLong() {
         RollingResourcesCache cache = new RollingResourcesCache(DAILY, getAmEpoch(), File::new, File::getName);
         RollingResourcesCache.Resource resource = cache.resourceFor(0);

@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class WeeklyRollCycleTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Weekly roll cycle changes on Sunday boundary")
     public void testWeekly() {
         @NotNull String tmpDir = OS.getTarget() + "/testWeekly";
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.WEEKLY).build()) {

@@ -26,6 +26,7 @@ import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -68,10 +69,10 @@ public class RollEOFTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Rolling writes EOF and creates new roll files")
     @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     public void testRollWritesEOF() throws IOException {
-        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows for roll EOF test");
 
         final File path = getTmpDir();
         try {
@@ -79,34 +80,34 @@ public class RollEOFTest extends QueueTestCommon {
             final SetTimeProvider timeProvider = new SetTimeProvider();
             timeProvider.currentTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1));
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(1, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
+            assertEquals(1, getNumberOfQueueFiles(path), "Queue directory should contain one queue file after first write");
 
             // adjust time
             timeProvider.currentTimeMillis(System.currentTimeMillis());
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(2, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
+            assertEquals(2, getNumberOfQueueFiles(path), "Queue directory should contain two queue files after roll in write test");
 
             List<String> l = new LinkedList<>();
             new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
             // 2 entries per message
-            assertEquals(4, l.size(), "l.size()");
+            assertEquals(4, l.size(), "Reader output should include four lines from two entries per message");
         } finally {
             IOTools.deleteDirWithFiles(path, 20);
         }
     }
 
     @Test
-
+    @DisplayName("Roll without EOF remains readable in read-only mode")
     @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     public void testRollWithoutEOFDoesntBlowup() throws IOException {
-        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows for roll without EOF");
 
         int messages = runRollWithoutEOF(-TimeUnit.DAYS.toMillis(1), true);
         assertEquals(4, messages, "roll without eof: messages read (read-only)");
     }
 
     @Test
-
+    @DisplayName("Roll without EOF reads all messages in write mode")
     @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     public void testRollWithoutEOF() throws IOException {
         // expectException("Overriding roll length from existing metadata");
@@ -123,16 +124,16 @@ public class RollEOFTest extends QueueTestCommon {
             final SetTimeProvider timeProvider = new SetTimeProvider();
             timeProvider.currentTimeMillis(System.currentTimeMillis() + initialOffsetMillis);
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(1, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
+            assertEquals(1, getNumberOfQueueFiles(path), "Queue directory should contain one queue file before roll");
 
             // adjust time
             timeProvider.currentTimeMillis(System.currentTimeMillis());
             createQueueAndWriteData(timeProvider, path);
-            assertEquals(2, getNumberOfQueueFiles(path), "getNumberOfQueueFiles(path)");
+            assertEquals(2, getNumberOfQueueFiles(path), "Queue directory should contain two queue files after roll for EOF removal");
 
             Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
 
-            assertTrue(firstQueueFile.isPresent(), "firstQueueFile.isPresent()");
+            assertTrue(firstQueueFile.isPresent(), "first queue file should be present for EOF removal");
 
             // remove EOF from first file
             removeEOF(firstQueueFile.get());
@@ -163,7 +164,7 @@ public class RollEOFTest extends QueueTestCommon {
             bytes.readSkip(4);
             // move past header
             try (final SingleChronicleQueueStore qs = loadStore(wire)) {
-                assertNotNull(qs, "qs");
+                assertNotNull(qs, "queue store should load from wire");
                 long l = qs.writePosition();
                 long len = Wires.lengthOf(bytes.readVolatileInt(l));
                 long eofOffset = l + len + 4L;

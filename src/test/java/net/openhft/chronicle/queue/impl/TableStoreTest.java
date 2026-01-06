@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class TableStoreTest extends QueueTestCommon {
     @Test
+    @DisplayName("Acquire values write and persist table entries")
     public void acquireValueFor() throws IOException {
 
         final File file = tempDir("table");
@@ -33,10 +35,12 @@ public class TableStoreTest extends QueueTestCommon {
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue a = table.acquireValueFor("a");
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(Long.MIN_VALUE, a.getVolatileValue(), "a.getVolatileValue()");
-            assertTrue(a.compareAndSwapValue(Long.MIN_VALUE, 1), "a.compareAndSwapValue(Long.MIN_VALUE, 1)");
-            assertEquals(Long.MIN_VALUE, b.getVolatileValue(), "b.getVolatileValue()");
-            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2), "b.compareAndSwapValue(Long.MIN_VALUE, 2)");
+            assertEquals(Long.MIN_VALUE, a.getVolatileValue(), "value for 'a' should start at Long.MIN_VALUE");
+            assertTrue(a.compareAndSwapValue(Long.MIN_VALUE, 1),
+                    "value for 'a' should CAS from Long.MIN_VALUE to 1");
+            assertEquals(Long.MIN_VALUE, b.getVolatileValue(), "read-only setup should initialise 'b' at Long.MIN_VALUE");
+            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2),
+                    "read-only setup should CAS 'b' from Long.MIN_VALUE to 2");
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT\n" +
@@ -48,16 +52,18 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "b: 2\n" +
                     "...\n" +
-                    "# 130972 bytes remaining\n", table.dump(WireType.BINARY_LIGHT), "table.dump(WireType.BINARY_LIGHT)");
+                    "# 130972 bytes remaining\n", table.dump(WireType.BINARY_LIGHT),
+                    "table dump should match expected initial values");
         }
 
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue c = table.acquireValueFor("c");
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(Long.MIN_VALUE, c.getVolatileValue(), "c.getVolatileValue()");
-            assertTrue(c.compareAndSwapValue(Long.MIN_VALUE, 3), "c.compareAndSwapValue(Long.MIN_VALUE, 3)");
-            assertEquals(2, b.getVolatileValue(), "b.getVolatileValue()");
-            assertTrue(b.compareAndSwapValue(2, 22), "b.compareAndSwapValue(2, 22)");
+            assertEquals(Long.MIN_VALUE, c.getVolatileValue(), "value for 'c' should start at Long.MIN_VALUE");
+            assertTrue(c.compareAndSwapValue(Long.MIN_VALUE, 3),
+                    "value for 'c' should CAS from Long.MIN_VALUE to 3");
+            assertEquals(2, b.getVolatileValue(), "value for 'b' should persist from earlier write");
+            assertTrue(b.compareAndSwapValue(2, 22), "value for 'b' should CAS from 2 to 22");
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT\n" +
@@ -72,11 +78,13 @@ public class TableStoreTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "c: 3\n" +
                     "...\n" +
-                    "# 130956 bytes remaining\n", table.dump(WireType.BINARY_LIGHT), "table.dump(WireType.BINARY_LIGHT)");
+                    "# 130956 bytes remaining\n", table.dump(WireType.BINARY_LIGHT),
+                    "table dump should match expected values after reopen");
         }
     }
 
     @Test
+    @DisplayName("Read-only table retains values and blocks new keys")
     public void acquireValueForReadOnly() throws IOException {
 
         final File file = tempDir("table");
@@ -86,14 +94,16 @@ public class TableStoreTest extends QueueTestCommon {
 
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).build();
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(Long.MIN_VALUE, b.getVolatileValue(), "b.getVolatileValue()");
-            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2), "b.compareAndSwapValue(Long.MIN_VALUE, 2)");
+            assertEquals(Long.MIN_VALUE, b.getVolatileValue(), "value for 'b' should start at Long.MIN_VALUE");
+            assertTrue(b.compareAndSwapValue(Long.MIN_VALUE, 2),
+                    "value for 'b' should CAS from Long.MIN_VALUE to 2");
         }
 
         try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tempFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
              LongValue b = table.acquireValueFor("b")) {
-            assertEquals(2, b.getVolatileValue(), "b.getVolatileValue()");
-            assertThrows(IllegalStateException.class, () -> table.acquireValueFor("d"));
+            assertEquals(2, b.getVolatileValue(), "value for 'b' should remain 2 in read-only mode");
+            assertThrows(IllegalStateException.class, () -> table.acquireValueFor("d"),
+                    "read-only table should reject acquiring new key 'd'");
         }
     }
 }

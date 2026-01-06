@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -14,10 +15,11 @@ class SurefireInterruptFlagTest extends QueueTestCommon {
      * Test for https://issues.apache.org/jira/browse/SUREFIRE-1863
      */
     @Test
+    @DisplayName("Surefire keeps interrupt flag after stdout")
     void testSurefireLeavesInterruptFlagIntactOnOutput() {
         assertFalse(Thread.currentThread().isInterrupted(), "precondition: interrupt flag clear");
         Thread.currentThread().interrupt();
-        assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag set");
+        assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag should be set after interrupt");
         System.out.println("Hello world!");
         assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag remains set after stdout");
     }

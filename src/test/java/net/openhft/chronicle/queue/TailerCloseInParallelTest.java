@@ -18,6 +18,7 @@ import net.openhft.chronicle.queue.QueuePerfTestSupport.TestReader;
 import net.openhft.chronicle.queue.QueuePerfTestSupport.TestWriter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
@@ -54,9 +55,10 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Parallel tailer close does not break reads")
     public void runTenTimes() throws InterruptedException {
         finishedNormally = false;
-        assumeTrue(OS.is64Bit());
+        assumeTrue(OS.is64Bit(), "Test requires a 64-bit JVM");
 
         for (int t = 10; t >= 1; t--) {
             try {
@@ -72,7 +74,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
         Paths.get(file).toFile().delete();
         finishedNormally = true;
-        assertTrue(finishedNormally, "tailer-close: finished");
+        assertTrue(finishedNormally, "Tailer close test should finish without unexpected failures");
     }
 
     // CPD-OFF - mirrors SingleChroniclePerfMainTest perf loop
@@ -89,7 +91,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
                 for (int i = 0; i < random.nextInt(10); i++) {
                     Jvm.pause(1);
                     try (DocumentContext dc = tailer0.readingDocument()) {
-                        assertNotNull(dc, "tailer0: readingDocument returned context");
+                        assertNotNull(dc, "tailer0 should return a DocumentContext at iteration " + i);
                     }
                 }
                 Closeable.closeQuietly(tailer0);
@@ -119,7 +121,7 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
                 for (int i = 0; i < count; i++) {
                     long start2 = System.nanoTime();
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        assertTrue(dc.isPresent(), "tailer: document should be present");
+                        assertTrue(dc.isPresent(), "tailer should read a document at iteration " + i);
                         Bytes<?> bytes0 = dc.wire().bytes();
                         bytes.setBytes(bytes0);
                         reader.readFrom(bytes);

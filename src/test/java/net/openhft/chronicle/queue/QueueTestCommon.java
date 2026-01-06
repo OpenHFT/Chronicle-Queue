@@ -39,6 +39,14 @@ public class QueueTestCommon {
     private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
     private static final String METHOD_WRITER_COMPILE_FAIL = "Failed to compile generated method writer";
+    private static final boolean IS_WSL =
+            System.getenv("WSL_DISTRO_NAME") != null
+                    || System.getenv("WSL_INTEROP") != null
+                    || System.getenv("WSLENV") != null;
+
+    protected static boolean isWsl() {
+        return IS_WSL;
+    }
     private final List<File> tmpDirs = new ArrayList<>();
 
     private ThreadDump threadDump;

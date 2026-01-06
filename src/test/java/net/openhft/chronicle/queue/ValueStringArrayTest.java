@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -16,6 +17,7 @@ public class ValueStringArrayTest extends QueueTestCommon {
     private final ValueStringArray using = new ValueStringArray();
 
     @Test
+    @DisplayName("ValueStringArray round-trips through wire format correctly")
     public void test() {
         // No explicit support of putting a Value into Wire.
         expectException("BytesMarshallable found in field which is not matching exactly");
@@ -36,7 +38,7 @@ public class ValueStringArrayTest extends QueueTestCommon {
             try (DocumentContext dc = queue.createTailer().readingDocument()) {
                 dc.wire().read("data").marshallable(using);
                 CharSequence actual = using.getCsArr().getCharSequenceWrapperAt(1).getCharSequence();
-                Assertions.assertEquals(EXPECTED, actual.toString(), "read back value");
+                Assertions.assertEquals(EXPECTED, actual.toString(), "read back value should match expected string");
             }
         }
     }

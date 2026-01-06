@@ -16,6 +16,7 @@ import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -36,12 +37,13 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
     private int appendMode;
 
-    private static void assertHexEquals(long a, long b) {
+    private static void assertHexEquals(long a, long b, String message) {
         if (a != b)
-            assertEquals(a, b, Long.toHexString(a) + " != " + Long.toHexString(b));
+            assertEquals(a, b, message + ": " + Long.toHexString(a) + " != " + Long.toHexString(b));
     }
 
     @Test
+    @DisplayName("Marshallable data round-trips in format2 queue")
     public void testMyData() {
         @NotNull File dir = getTmpDir();
         ClassAliasPool.CLASS_ALIASES.addAlias(MyData.class);
@@ -69,6 +71,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Writing three messages matches expected dump")
     public void testWritingThreeMessages() throws FileNotFoundException {
         for (int m = 0; m <= 2; m++) {
             appendMode = m;
@@ -276,6 +279,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Writing twenty messages with index spacing 1")
     public void testWritingTwentyMessagesTinyIndex1() throws FileNotFoundException {
         String expected = "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -378,6 +382,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Writing twenty messages with index spacing 2")
     public void testWritingTwentyMessagesTinyIndex2() throws FileNotFoundException {
         String expected = "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -465,6 +470,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Writing twenty messages with index spacing 4")
     public void testWritingTwentyMessagesTinyIndex4() throws FileNotFoundException {
         String expected = "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -569,10 +575,11 @@ public class SingleCQFormat2Test extends QueueTestCommon {
         }
 
         long index = appender.lastIndexAppended();
-        assertHexEquals(expectedIndex, index);
+        assertHexEquals(expectedIndex, index, "lastIndexAppended should match expected index");
     }
 
     @Test
+    @DisplayName("writeMap persists ordered map entries consistently")
     public void writeMap() {
         @NotNull Map<String, Object> map = new TreeMap<>();
         map.put("abc", "def");
@@ -666,6 +673,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("writeMarshallable persists custom objects in queue")
     public void writeMarshallable() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Order.class);
         @NotNull File dir = getTmpDir();
@@ -747,6 +755,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index writing is consistent after writes")
     public void testWritingIndex() {
         finishedNormally = false;
         @NotNull File dir = getTmpDir();

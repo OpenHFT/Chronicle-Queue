@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.DisplayName;
 
 import java.io.File;
 import java.util.Map;
@@ -36,6 +37,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue history initialises sources and timings")
     public void testWithQueueHistoryRecordHistoryInitial() {
         if (OS.isWindows())
             expectException("Read-only mode is not supported on Windows");
@@ -44,6 +46,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue history initialises sources and timings with method ids")
     public void testWithQueueHistoryRecordHistoryInitialMethodIds() {
         if (OS.isWindows())
             expectException("Read-only mode is not supported on Windows");
@@ -80,16 +83,18 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 DummyListenerId dummy = msg -> {
                     numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
-                    Assertions.assertEquals(1, history.sources(), "history: sources");
+                    Assertions.assertEquals(1, history.sources(),
+                            "history should report one source before first hop");
                     // written 1st then received by me
-                    Assertions.assertEquals(1 + extraTiming, history.timings(), "history: timings");
+                    Assertions.assertEquals(1 + extraTiming, history.timings(),
+                            "history timings should include first hop timestamps");
                     // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
-                assertTrue(reader.readOne(), "history: read one");
-                assertEquals(1, numberRead.get(), "check routed to correct dest");
-                assertFalse(reader.readOne(), "history: end of queue");
+                assertTrue(reader.readOne(), "history reader should read first document from queue 1");
+                assertEquals(1, numberRead.get(), "listener should route to correct destination for queue 1");
+                assertFalse(reader.readOne(), "history reader should be at end of queue 1");
             }
 
             try (ChronicleQueue in = queue(queuePath2, 2);
@@ -100,15 +105,17 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 DummyListenerId dummy = msg -> {
                     numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
-                    Assertions.assertEquals(2, history.sources(), "history: sources");
-                    Assertions.assertEquals(3 + extraTiming, history.timings(), "history: timings");
+                    Assertions.assertEquals(2, history.sources(),
+                            "history should report two sources before second hop");
+                    Assertions.assertEquals(3 + extraTiming, history.timings(),
+                            "history timings should include second hop timestamps");
                     // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
-                assertTrue(reader.readOne(), "history: read one");
-                assertEquals(1, numberRead.get(), "check routed to correct dest");
-                assertFalse(reader.readOne(), "history: end of queue");
+                assertTrue(reader.readOne(), "history reader should read first document from queue 2");
+                assertEquals(1, numberRead.get(), "listener should route to correct destination for queue 2");
+                assertFalse(reader.readOne(), "history reader should be at end of queue 2");
             }
 
             try (ChronicleHistoryReader chronicleHistoryReader = new ChronicleHistoryReader()
@@ -127,6 +134,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Predictable histogram output matches baseline timings")
     public void testPredictable() {
         String expected = "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
@@ -140,10 +148,11 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 "99.9999:                                                                         \n" +
                 "worst:                     9           19            9           19           60 \n";
         String actual = runPredictable(0, null);
-        Assertions.assertEquals(expected, actual, "predictable: output");
+        Assertions.assertEquals(expected, actual, "predictable output should match baseline timings");
     }
 
     @Test
+    @DisplayName("Predictable histogram output with a start index")
     public void testPredictableStartIndex() {
         String expected = "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
@@ -157,10 +166,11 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 "99.9999:                                                                         \n" +
                 "worst:                     9           19            9           19           60 \n";
         String actual = runPredictable(0, 33L);
-        Assertions.assertEquals(expected, actual, "predictable: output (start index)");
+        Assertions.assertEquals(expected, actual, "predictable output should match timings with start index");
     }
 
     @Test
+    @DisplayName("Predictable histogram output for measurement windows")
     public void testPredictableMeasurementWindow() {
         String expected = "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
@@ -207,7 +217,8 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 "99.9999:                                                                         \n" +
                 "worst:                     9           19            9           19           60 \n";
         String actual = runPredictable(2_800, null);
-        Assertions.assertEquals(expected, actual, "predictable: output (measurement window)");
+        Assertions.assertEquals(expected, actual,
+                "predictable output should match timings for measurement windows");
     }
 
     private String runPredictable(int mwMicros, Long startIndexOffset) {
@@ -241,10 +252,10 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
                 for (int i = 0; i < 100; i++) {
                     writer1.say("hello " + i);
-                    assertTrue(reader1.readOne(), "predictable: reader1 readOne");
-                    assertTrue(reader2.readOne(), "predictable: reader2 readOne");
-                    assertFalse(reader1.readOne(), "predictable: reader1 end");
-                    assertFalse(reader2.readOne(), "predictable: reader2 end");
+                    assertTrue(reader1.readOne(), "predictable reader1 readOne should succeed at i=" + i);
+                    assertTrue(reader2.readOne(), "predictable reader2 readOne should succeed at i=" + i);
+                    assertFalse(reader1.readOne(), "predictable reader1 should be at end at i=" + i);
+                    assertFalse(reader2.readOne(), "predictable reader2 should be at end at i=" + i);
                 }
 
                 if (startIndexOffset != null)
@@ -254,10 +265,10 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 initialOutput = sb.toString();
 
                 writer1.say("again");
-                assertTrue(reader1.readOne(), "predictable: reader1 readOne");
-                assertTrue(reader2.readOne(), "predictable: reader2 readOne");
-                assertFalse(reader1.readOne(), "predictable: reader1 end");
-                assertFalse(reader2.readOne(), "predictable: reader2 end");
+                assertTrue(reader1.readOne(), "predictable reader1 readOne should succeed after extra write");
+                assertTrue(reader2.readOne(), "predictable reader2 readOne should succeed after extra write");
+                assertFalse(reader1.readOne(), "predictable reader1 should be at end after extra write");
+                assertFalse(reader2.readOne(), "predictable reader2 should be at end after extra write");
 
                 sb.setLength(0);
                 chronicleHistoryReader.readChronicle();

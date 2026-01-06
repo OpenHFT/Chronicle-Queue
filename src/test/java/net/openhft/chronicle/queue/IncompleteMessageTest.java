@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -21,6 +22,7 @@ public class IncompleteMessageTest extends QueueTestCommon {
     Path tmpDir;
 
     @Test
+    @DisplayName("Incomplete message is skipped after reopen")
     public void incompleteMessageShouldBeSkipped() {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock after ");

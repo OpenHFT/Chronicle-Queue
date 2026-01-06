@@ -10,6 +10,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -45,6 +46,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queued writes in previous cycle preserve total ordering")
     public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 1_000L).build();
@@ -83,6 +85,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Concurrent writers wait until prior cycle file is complete")
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         final File dir = getTmpDir();
@@ -136,6 +139,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Recovers from unfinished first message in previous queue")
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
@@ -168,6 +172,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Prior document completes before subsequent document when queue is empty")
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (final ChronicleQueue queue =
@@ -202,6 +207,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Prior document completes before subsequent document when queue has data")
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (final ChronicleQueue queue =
@@ -284,6 +290,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     @BeforeEach
     public void multiCPU() {
-        Assumptions.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+        Assumptions.assumeTrue(Runtime.getRuntime().availableProcessors() > 1,
+                "Test requires more than one CPU core for concurrency checks");
     }
 }

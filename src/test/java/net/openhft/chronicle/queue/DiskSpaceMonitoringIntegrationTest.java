@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
     class EnsureThatPollIsCalledInDifferentScenarioTests {
 
         @Test
+        @DisplayName("New queue without writes is added to disk space monitor")
         void newQueueNoWrite() {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -55,6 +57,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
         }
 
         @Test
+        @DisplayName("New queue with write is added to disk space monitor")
         void newQueueWithWrite() {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -67,6 +70,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
         }
 
         @Test
+        @DisplayName("New queue with tailer is added to disk space monitor")
         void newQueueJustTail() {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -78,6 +82,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
         }
 
         @Test
+        @DisplayName("Existing queue without writes is added to disk space monitor")
         void existingQueueNoWrite() {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -93,6 +98,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
         }
 
         @Test
+        @DisplayName("Existing queue with write is added to disk space monitor")
         void existingQueueWithWrite() {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -111,6 +117,6 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
 
     private void assertMapped(File queuePath) {
         String path = queuePath.getAbsolutePath();
-        assertTrue(monitoredPaths.containsKey(path), "Expected that the following queue path should be monitored by the disk space monitor, but it was not. Path: " + path);
+        assertTrue(monitoredPaths.containsKey(path), "Disk space monitor should track queue path: " + path);
     }
 }

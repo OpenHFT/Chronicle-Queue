@@ -17,6 +17,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -41,19 +42,21 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Empty directory reports sentinel first/last cycles and index")
     public void testEmptyDirectory() {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
         try (RollingChronicleQueue queue = binary(dir).testBlockSize().build()) {
-            assertEquals(Integer.MAX_VALUE, queue.firstCycle(), "queue.firstCycle()");
-            assertEquals(Long.MAX_VALUE, queue.firstIndex(), "queue.firstIndex()");
-            assertEquals(Integer.MIN_VALUE, queue.lastCycle(), "queue.lastCycle()");
+            assertEquals(Integer.MAX_VALUE, queue.firstCycle(), "empty directory should have no first cycle");
+            assertEquals(Long.MAX_VALUE, queue.firstIndex(), "empty directory should have no first index");
+            assertEquals(Integer.MIN_VALUE, queue.lastCycle(), "empty directory should have no last cycle");
         }
 
         IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
     }
 
     @Test
+    @DisplayName("Invalid queue file yields StreamCorruptedException on read")
     public void testInvalidFile() throws FileNotFoundException {
         // based on the file name
         expectException("Overriding roll cycle from TEST4_DAILY to DAILY");
@@ -68,15 +71,15 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     .rollCycle(TEST4_DAILY)
                     .testBlockSize()
                     .build()) {
-                assertEquals(1, queue.firstCycle(), "queue.firstCycle()");
-                assertEquals(1, queue.lastCycle(), "queue.lastCycle()");
+                assertEquals(1, queue.firstCycle(), "invalid file should report first cycle 1");
+                assertEquals(1, queue.lastCycle(), "invalid file should report last cycle 1");
                 try {
                     final ExcerptTailer tailer = queue.createTailer();
                     tailer.toEnd();
-                    fail("unexpected failure");
+                    fail("tailer toEnd should fail for invalid queue file");
                 } catch (Exception e) {
                     assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
-                            e.toString(), "e.toString()");
+                            e.toString(), "invalid header should report the unexpected magic number");
                 }
             }
         }
@@ -89,10 +92,11 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue with no header yields no readable document")
     public void testNoHeader() throws IOException {
         ignoreException("Channel closed while unlocking");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
-        assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()));
+        assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()), "skip test when huge pages are enabled");
         dir.mkdir();
 
         final File file = new File(dir, "19700101" + SingleChronicleQueue.SUFFIX);
@@ -122,6 +126,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Dead header yields no readable document")
     public void testDeadHeader() throws IOException {
         ignoreException("Channel closed while unlocking");
         final File dir = getTmpDir();
@@ -149,6 +154,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Dead header append creates a discard file")
     public void testDeadHeaderAppend() throws IOException {
         ignoreException("Channel closed while unlocking");
         expectException("Renamed un-acquirable segment file to");
@@ -176,8 +182,8 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 }
             }
 
-            assertEquals(1,
-                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length, "dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith(\"discard\")).length");
+            int discardCount = dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length;
+            assertEquals(1, discardCount, "dead header append should create one discard file");
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
@@ -186,12 +192,13 @@ public class SingleCQFormatTest extends QueueTestCommon {
     private void testQueue(@NotNull final ChronicleQueue queue) {
         try (ExcerptTailer tailer = queue.createTailer();
              DocumentContext dc = tailer.readingDocument()) {
-            assertFalse(dc.isPresent(), "dc.isPresent()");
+            assertFalse(dc.isPresent(), "tailer should not see data in an empty queue");
         }
     }
 
     // "see https://github.com/OpenHFT/Chronicle-Queue/issues/719")
     @Test
+    @DisplayName("Complete header can be parsed without data")
     public void testCompleteHeader() throws FileNotFoundException {
         finishedNormally = false;
         ignoreException("reading control code as text");
@@ -300,7 +307,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
         assertEquals(bytes instanceof HexDumpBytes
                         ? expectedHexDump
                         : expected,
-                bytes.toHexString(), "bytes.toHexString()");
+                bytes.toHexString(), "binary header hex dump should match expected output");
 
         assertEquals("--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -318,10 +325,12 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 "    lastIndex: 0\n" +
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: 0\n" +
-                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)), "Wires.fromSizePrefixedBlobs(bytes.readPosition(0))");
+                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)),
+                "binary header wire format should match expected metadata");
     }
 
     @Test
+    @DisplayName("Complete header with hourly roll cycle can be parsed")
     public void testCompleteHeader2() throws FileNotFoundException {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
@@ -348,7 +357,8 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     "    lastIndex: 0\n" +
                     "  },\n" +
                     "  dataFormat: 1\n" +
-                    "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)), "Wires.fromSizePrefixedBlobs(bytes.readPosition(0))");
+                    "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)),
+                    "hourly header wire format should match expected metadata");
         }
 
         try (RollingChronicleQueue queue = binary(dir)
@@ -356,7 +366,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .rollCycle(HOURLY)
                 .build()) {
             testQueue(queue);
-            assertEquals(2, queue.firstCycle(), "queue.firstCycle()");
+            assertEquals(2, queue.firstCycle(), "hourly queue should start at cycle 2");
         }
 
         try {
@@ -367,6 +377,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Incomplete header throws when opening queue")
     public void testIncompleteHeader() throws FileNotFoundException {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
@@ -387,10 +398,10 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 .testBlockSize()
                 .build()) {
             testQueue(queue);
-            fail("unexpected failure");
+            fail("queue open should fail for incomplete header");
         } catch (Exception e) {
             assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required",
-                    e.toString(), "e.toString()");
+                    e.toString(), "incomplete header should report missing writePosition");
         }
         System.gc();
         try {

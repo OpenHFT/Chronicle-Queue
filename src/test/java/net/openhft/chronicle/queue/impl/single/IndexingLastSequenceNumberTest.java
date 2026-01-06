@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.ExcerptContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
@@ -11,18 +12,20 @@ import java.io.StreamCorruptedException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext)}.
+ * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext)} behaviour across cycle boundaries and lookup modes.
  */
 @SuppressWarnings({"deprecation", "removal"})
 class IndexingLastSequenceNumberTest extends IndexingTestCommon {
 
     @Test
+    @DisplayName("Index spacing matches roll cycle defaults")
     void checkIndexingSpacing() {
         appender.writeText("test");
         assertEquals(rollCycle().defaultIndexSpacing(), indexing(queue).indexSpacing(), "index spacing should match roll cycle default");
     }
 
     @Test
+    @DisplayName("Single cycle with one entry uses approximate lookup")
     void singleCycleOneEntryApproximateLookup() throws StreamCorruptedException {
         appender.writeText("hello");
         Indexing indexing = indexing(queue);
@@ -34,6 +37,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @DisplayName("Single cycle with one entry uses precise lookup")
     void singleCycleOneEntryPreciseLookup() throws StreamCorruptedException {
         appender.writeText("hello");
         Indexing indexing = indexing(queue);
@@ -45,6 +49,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @DisplayName("Single cycle with two entries yields last sequence number 1")
     void singleCycleTwoEntries() throws StreamCorruptedException {
         appender.writeText("hello");
         appender.writeText("world");
@@ -55,6 +60,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @DisplayName("Multiple cycle files report first entry in latest cycle")
     void multipleCycleFilesFirstEntry() throws StreamCorruptedException {
         appender.writeText("a");
         timeProvider.advanceMillis(1_001);
@@ -66,6 +72,7 @@ class IndexingLastSequenceNumberTest extends IndexingTestCommon {
     }
 
     @Test
+    @DisplayName("Multiple cycle files report second entry in latest cycle")
     void multipleCycleFilesSecondEntry() throws StreamCorruptedException {
         appender.writeText("a");
         timeProvider.advanceMillis(1_001);

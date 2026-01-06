@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutorService;
@@ -33,6 +34,7 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailers can always move to end under load")
     public void shouldAlwaysBeAbleToTail() throws InterruptedException {
         ChronicleQueue[] queues = new ChronicleQueue[10];
         for (int i = 0; i < 10; i++) {
@@ -50,7 +52,7 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
         }
 
         threadPool.shutdown();
-        assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS), "executor: terminated");
+        assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS), "executor should terminate within timeout");
         assertFalse(failedToMoveToEnd.get(), "tailer: should always be able to move to end");
         Closeable.closeQuietly((Object[]) queues);
     }

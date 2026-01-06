@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -20,11 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
- * Tests to demonstrate recovery from metadata file deletion.
+ * Tests recovery behaviour when metadata files are deleted between runs or during tailing.
  */
 class MetadataDeletionTests extends QueueTestCommon {
 
     @Test
+    @DisplayName("Single-cycle queue recovers after metadata deletion")
     void singleCycleFile() {
         File queuePath = getTmpDir();
         try {
@@ -40,10 +42,10 @@ class MetadataDeletionTests extends QueueTestCommon {
 
             // Imagine that system has shut down, delete metadata
             boolean delete = new File(queuePath, "metadata.cq4t").delete();
-            assertTrue(delete, "metadata file should be deleted");
+            assertTrue(delete, "single-cycle metadata file should be deleted");
 
             // Verify it has really been deleted
-            assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should not exist");
+            assertFalse(new File(queuePath, "metadata.cq4t").exists(), "single-cycle metadata file should not exist");
 
             // Open again and let's see what we get
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).build();
@@ -57,6 +59,7 @@ class MetadataDeletionTests extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Multiple cycle files recover after metadata deletion")
     void multipleCycleFiles() {
         File queuePath = getTmpDir();
         try {
@@ -68,18 +71,19 @@ class MetadataDeletionTests extends QueueTestCommon {
 
             // Imagine that system has shut down, delete metadata
             boolean delete = new File(queuePath, "metadata.cq4t").delete();
-            assertTrue(delete, "metadata file should be deleted");
+            assertTrue(delete, "multi-cycle metadata file should be deleted");
 
             // Verify it has really been deleted
-            assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should not exist");
+            assertFalse(new File(queuePath, "metadata.cq4t").exists(), "multi-cycle metadata file should not exist");
 
             // Verify that there are 4 cycle files
-            assertEquals(4, Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length, "There should be 4 cycle files");
+            assertEquals(4, Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length,
+                    "Queue directory should contain four cycle files after writeFourCycleFiles");
 
             // Open again and let's see what we get
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
                  ExcerptTailer tailer = queue.createTailer()) {
-                assertTailerReadsValuesWithCycle(tailer, 0, "1", "2", "3", "4");
+                verifyTailerReadsValuesWithCycle(tailer, 0, "1", "2", "3", "4");
             }
 
         } finally {
@@ -88,6 +92,7 @@ class MetadataDeletionTests extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer continues after metadata deletion while open")
     void multipleCycleFiles_deleteMetaDataWhilstTailing() {
         assumeFalse(OS.isWindows(), "Skip this test on Windows because we can't delete the metadata file while it's open.");
         File queuePath = getTmpDir();
@@ -101,15 +106,16 @@ class MetadataDeletionTests extends QueueTestCommon {
             // Open again and let's see what we get
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).timeProvider(setTimeProvider).build();
                  ExcerptTailer tailer = queue.createTailer()) {
-                assertTailerReadsValuesWithCycle(tailer, 0, "1", "2");
+                verifyTailerReadsValuesWithCycle(tailer, 0, "1", "2");
 
                 // Delete metadata here
                 boolean delete = new File(queuePath, "metadata.cq4t").delete();
-                assertTrue(delete, "metadata file should be deleted");
-                assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should not exist");
-                assertEquals(4, Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length, "There should be 4 cycle files");
+                assertTrue(delete, "metadata file should be deleted while tailer is open");
+                assertFalse(new File(queuePath, "metadata.cq4t").exists(), "metadata file should be absent after deletion");
+                assertEquals(4, Objects.requireNonNull(queuePath.listFiles((dir, name) -> name.endsWith(".cq4"))).length,
+                        "Queue directory should contain four cycle files while tailing");
 
-                assertTailerReadsValuesWithCycle(tailer, 2, "3", "4");
+                verifyTailerReadsValuesWithCycle(tailer, 2, "3", "4");
             }
 
         } finally {
@@ -132,7 +138,7 @@ class MetadataDeletionTests extends QueueTestCommon {
         }
     }
 
-    private void assertTailerReadsValuesWithCycle(ExcerptTailer tailer, int startingCycle, String... expected) {
+    private void verifyTailerReadsValuesWithCycle(ExcerptTailer tailer, int startingCycle, String... expected) {
         int cycle = startingCycle;
         for (String value : expected) {
             assertEquals(value, tailer.readText(), "tailer should read expected value '" + value + "' from queue");

@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -31,6 +32,7 @@ public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestC
     }
 
     @Test
+    @DisplayName("Tailer reads forward across skipped weekly cycles")
     public void testReadForwards() {
         RollCycle rollingCycle = WeeklyRollCycle.INSTANCE;
         // Write a message to the queue

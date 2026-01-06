@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class RollingChronicleQueueTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Counting excerpts works across rolled cycles")
     public void testCountExcerptsWhenTheCycleIsRolled() {
 
         final AtomicLong time = new AtomicLong();

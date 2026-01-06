@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -20,6 +21,7 @@ import java.io.File;
 public class ProxyTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Method reader returns messages written via proxy")
     public void testReadWrite() {
 
         File tempDir = getTmpDir();
@@ -74,7 +76,7 @@ public class ProxyTest extends QueueTestCommon {
                 "}\n" +
                 "!net.openhft.chronicle.queue.ProxyTest$Message {\n" +
                 "  message: test 9\n" +
-                "}\n", result.toString(), "method reader output");
+                "}\n", result.toString(), "method reader output should match written messages");
     }
 
     interface TestMessageListener {

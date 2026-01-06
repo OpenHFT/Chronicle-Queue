@@ -12,6 +12,7 @@ import net.openhft.chronicle.threads.Threads;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -56,7 +57,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Tailers move to cycle safely under contention")
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void test() throws ExecutionException, InterruptedException {
         final String path = OS.getTarget() + "/stressMoveToCycle-" + Time.uniqueId();
@@ -90,7 +91,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
                     future.get(1, TimeUnit.SECONDS);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    Assertions.fail("moveToCycle: reader task failed");
+                    Assertions.fail("moveToCycle: reader task failed for future " + future);
                 }
             }
             Assertions.assertTrue(last.get() >= firstCycle, "moveToCycle: last cycle updated");

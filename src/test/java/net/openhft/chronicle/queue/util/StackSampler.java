@@ -57,7 +57,7 @@ public class StackSampler {
     }
 
     /**
-     * Sets the thread to be sampled.
+     * Sets the target thread for stack trace sampling.
      *
      * @param thread the target thread whose stack trace should be sampled.
      */

@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -67,6 +68,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Empty queue produces no reader output lines")
     public void shouldNotFailOnEmptyQueue() {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
@@ -92,6 +94,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     // CPD-OFF - ChronicleReaderTest exercises the same behaviours
     @Test
+    @DisplayName("Reader continues when metadata file is missing")
     public void shouldNotFailWhenNoMetadata() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
@@ -101,6 +104,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Message history is included by default")
     public void shouldIncludeMessageHistoryByDefault() {
         basicReader().execute();
 
@@ -108,6 +112,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Include regex applies to history and business messages")
     public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
         basicReader()
                 .withInclusionRegex("goodbye") // matches goodbye, but not hello or history
@@ -118,6 +123,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Read-only queue file remains readable by reader")
     public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
         assumeFalse(OS.isWindows(), "#460 read-only not supported on Windows");
         final Path queueFile = Files.list(dataDir).
@@ -131,6 +137,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Method reader converts entries to text")
     public void shouldConvertEntriesToTextMethodReader() {
         basicReaderMethodReader().execute();
         long msgCount =
@@ -145,6 +152,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Raw reader does not convert entries to text")
     public void shouldNotConvertEntriesToText() {
         basicReader().execute();
         long msgCount =
@@ -165,16 +173,19 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Inclusion regex filters matching messages only")
     public void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
         assertEquals(24, capturedOutput.size(), "inclusion regex should match expected number of messages with indices");
         capturedOutput.stream()
                 .filter(msg -> !msg.startsWith("0x"))
-                .forEach(msg -> assertTrue(msg.contains("goodbye"), "filtered output should only contain messages matching inclusion regex pattern"));
+                .forEach(msg -> assertTrue(msg.contains("goodbye"),
+                        "filtered output should contain goodbye message, actual=" + msg));
     }
 
     @Test
+    @DisplayName("Multiple inclusion regexes filter matching messages")
     public void shouldFilterByMultipleInclusionRegex() {
         basicReader()
                 .withInclusionRegex(".*bye.*")
@@ -182,10 +193,12 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
                 .execute();
 
         assertEquals(24, capturedOutput.size(), "multiple inclusion regexes should match expected number of messages with indices");
-        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertTrue(msg.contains("goodbye"), "filtered output should contain messages matching all inclusion regex patterns"));
-        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertFalse(msg.contains("hello"), "filtered output should exclude messages not matching all inclusion regex patterns"));
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
+                .forEach(msg -> assertTrue(msg.contains("goodbye"),
+                        "filtered output should include goodbye message, actual=" + msg));
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
+                .forEach(msg -> assertFalse(msg.contains("hello"),
+                        "filtered output should exclude hello message, actual=" + msg));
     }
 
     public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
@@ -194,6 +207,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Exclusion regex removes matching business messages")
     public void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
@@ -203,7 +217,8 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
                         // .peek(System.out::println)
                         .count();
         assertEquals(12, msgCount, "exclusion regex should produce expected number of filtered messages");
-        capturedOutput.forEach(msg -> assertFalse(msg.contains("goodbye"), "filtered output should not contain messages matching exclusion regex pattern"));
+        capturedOutput.forEach(msg -> assertFalse(msg.contains("goodbye"),
+                "filtered output should exclude goodbye message, actual=" + msg));
     }
 
     @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
@@ -215,6 +230,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     // CPD-ON
 
     @Test
+    @DisplayName("History record limit caps output size")
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReaderMethodReader().historyRecords(5).execute();
 
@@ -228,6 +244,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("History display does not rewind before queue start")
     public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 

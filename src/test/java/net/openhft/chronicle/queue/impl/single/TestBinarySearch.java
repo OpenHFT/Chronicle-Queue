@@ -14,6 +14,7 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -26,7 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestBinarySearch extends QueueTestCommon {
 
-    @ParameterizedTest(name = "items in queue: {0}")
+    @DisplayName("Binary search locates queue entries by key")
+    @ParameterizedTest(name = "items in queue for search: {0}")
     @ValueSource(ints = {0, 1, 2, 100})
     public void testBinarySearch(int numberOfMessages) {
         final SetTimeProvider stp = new SetTimeProvider();
@@ -75,7 +77,7 @@ public class TestBinarySearch extends QueueTestCommon {
                  final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessages; j++) {
                     try (DocumentContext ignored = tailer.readingDocument()) {
-                        assertNotNull(ignored, "tailer reading document context");
+                        assertNotNull(ignored, "tailer reading document context at j=" + j);
                         Wire key = toWire(j);
                         long index = BinarySearch.search(binarySearchTailer, key, comparator);
                         assertEquals(tailer.index(), index, "binary search: index at j=" + j);

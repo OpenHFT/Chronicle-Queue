@@ -15,6 +15,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
@@ -95,6 +96,7 @@ public class RollingCycleTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Roll cycle updates listing as time advances")
     public void testRollCycle() {
         SetTimeProvider stp = new SetTimeProvider();
         long start = 19059 * 86_400_000L;
@@ -330,7 +332,7 @@ public class RollingCycleTest extends QueueTestCommon {
             // was it truncated
             if (dump.contains("\n4 bytes remaining"))
                 expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
-            assertEquals(expected, dump, "dump: expected output");
+            assertEquals(expected, dump, "dump should match expected output");
 
             try {
                 IOTools.deleteDirWithFiles(basePath, 2);

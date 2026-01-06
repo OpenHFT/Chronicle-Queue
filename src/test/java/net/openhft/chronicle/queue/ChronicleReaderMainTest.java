@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -14,11 +15,12 @@ import org.apache.commons.cli.Options;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for ChronicleReaderMain class.
+ * Unit tests cover ChronicleReaderMain CLI option wiring and execution behaviour.
  */
 public class ChronicleReaderMainTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("CLI main runs with a temporary directory")
     public void testMainWithValidArguments() {
         ignoreException("Metadata file not found in readOnly mode");
         try {
@@ -39,7 +41,7 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
 
                 ChronicleReaderMain.main(args);  // Run the main method with valid args
 
-                assertTrue(true, "Expected valid arguments to run without issues.");
+                assertEquals(0, errContent.size(), "stderr should remain empty for valid arguments");
             } finally {
                 // Reset System.out and System.err
                 System.setOut(originalOut);
@@ -58,28 +60,29 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reader options include all supported flags")
     public void testOptionsConfiguration() {
         ChronicleReaderMain main = new ChronicleReaderMain();
         Options options = main.options();
 
         // Verify options are set correctly
-        assertNotNull(options.getOption("d"), "options: directory");  // Directory option
-        assertNotNull(options.getOption("i"), "options: include regex");  // Include regex
-        assertNotNull(options.getOption("e"), "options: exclude regex");  // Exclude regex
-        assertNotNull(options.getOption("f"), "options: follow");  // Follow (tail) option
-        assertNotNull(options.getOption("m"), "options: max history");  // Max history
-        assertNotNull(options.getOption("n"), "options: start index");  // Start index
-        assertNotNull(options.getOption("b"), "options: binary search");  // Binary search
-        assertNotNull(options.getOption("a"), "options: binary arg");  // Binary argument
-        assertNotNull(options.getOption("r"), "options: as method reader");  // As method reader
-        assertNotNull(options.getOption("g"), "options: message history");  // Message history
-        assertNotNull(options.getOption("w"), "options: wire type");  // Wire type
-        assertNotNull(options.getOption("s"), "options: suppress index");  // Suppress index
-        assertNotNull(options.getOption("l"), "options: single line squash");  // Single line squash
-        assertNotNull(options.getOption("z"), "options: local timezone");  // Use local timezone
-        assertNotNull(options.getOption("k"), "options: reverse order");  // Reverse order
-        assertNotNull(options.getOption("x"), "options: max results");  // Max results
-        assertNotNull(options.getOption("cbl"), "options: content-based limiter");  // Content-based limiter
-        assertNotNull(options.getOption("named"), "options: named tailer");  // Named tailer ID
+        assertNotNull(options.getOption("d"), "options should include -d directory flag");  // Directory option
+        assertNotNull(options.getOption("i"), "options should include -i include regex flag");  // Include regex
+        assertNotNull(options.getOption("e"), "options should include -e exclude regex flag");  // Exclude regex
+        assertNotNull(options.getOption("f"), "options should include -f follow flag");  // Follow (tail) option
+        assertNotNull(options.getOption("m"), "options should include -m max history flag");  // Max history
+        assertNotNull(options.getOption("n"), "options should include -n start index flag");  // Start index
+        assertNotNull(options.getOption("b"), "options should include -b binary search flag");  // Binary search
+        assertNotNull(options.getOption("a"), "options should include -a binary argument flag");  // Binary argument
+        assertNotNull(options.getOption("r"), "options should include -r method reader flag");  // As method reader
+        assertNotNull(options.getOption("g"), "options should include -g message history flag");  // Message history
+        assertNotNull(options.getOption("w"), "options should include -w wire type flag");  // Wire type
+        assertNotNull(options.getOption("s"), "options should include -s suppress index flag");  // Suppress index
+        assertNotNull(options.getOption("l"), "options should include -l single line flag");  // Single line squash
+        assertNotNull(options.getOption("z"), "options should include -z local timezone flag");  // Use local timezone
+        assertNotNull(options.getOption("k"), "options should include -k reverse order flag");  // Reverse order
+        assertNotNull(options.getOption("x"), "options should include -x max results flag");  // Max results
+        assertNotNull(options.getOption("cbl"), "options should include -cbl content limiter flag");  // Content-based limiter
+        assertNotNull(options.getOption("named"), "options should include --named tailer flag");  // Named tailer ID
     }
 }

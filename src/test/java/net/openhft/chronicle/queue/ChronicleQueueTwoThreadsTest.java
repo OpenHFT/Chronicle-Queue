@@ -13,6 +13,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -38,32 +39,36 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         super.threadDump();
     }
 
-    @Disabled("long running test")
     @Test
+    @DisplayName("Unbuffered two-thread run completes expected reads")
+    @Disabled("Long running test disabled for standard runs")
     @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     public void testUnbuffered() throws InterruptedException {
         long reads = doTest(false, 50_000);
-        assertEquals(50_000, reads, "two-threads: unbuffered reads");
+        assertEquals(50_000, reads, "unbuffered run should read expected number of messages");
     }
 
     @Test
+    @DisplayName("Concurrent short run matches expected read count")
     public void testConcurrentShortRun() throws InterruptedException {
         long reads = doTest(false, 1_000);
-        assertEquals(1_000, reads, "two-threads: concurrent short run reads");
+        assertEquals(1_000, reads, "concurrent short run should read expected number of messages");
     }
 
     @Test
+    @DisplayName("Buffered short run matches expected read count")
     public void testBufferedShortRun() throws InterruptedException {
         assumeBufferingAvailable();
         long reads = doTest(BufferMode.Asynchronous, false, false, 1_000);
-        assertEquals(1_000, reads, "two-threads: buffered short run reads");
+        assertEquals(1_000, reads, "buffered short run should read expected number of messages");
     }
 
     @Test
+    @DisplayName("Buffered heap bytes run matches expected read count")
     public void testBufferedHeapBytes() throws InterruptedException {
         assumeBufferingAvailable();
         long reads = doTest(BufferMode.Asynchronous, true, true, 512);
-        assertEquals(512, reads, "two-threads: buffered heap bytes reads");
+        assertEquals(512, reads, "buffered heap bytes run should read expected number of messages");
     }
 
     private long doTest(boolean buffered, long runs) throws InterruptedException {

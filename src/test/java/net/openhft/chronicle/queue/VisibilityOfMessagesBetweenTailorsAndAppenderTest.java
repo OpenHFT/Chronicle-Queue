@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -35,6 +36,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
      * check if a message is written with an appender its visible to the tailor, without locks etc.
      */
     @Test
+    @DisplayName("Tailer sees appended messages without locks")
     public void test() throws InterruptedException, ExecutionException {
 
         try (ChronicleQueue x = SingleChronicleQueueBuilder

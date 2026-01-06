@@ -92,7 +92,7 @@ public class MethodReaderBenchmark implements JLBHTask {
             try {
                 queue = ChronicleQueue.single(Files.createTempDirectory(this.getClass().getSimpleName()).toString());
             } catch (IOException e) {
-                throw new IORuntimeException(e);
+                throw new IORuntimeException(/* reason: queue dir creation failed */ e);
             }
         }
 
@@ -104,7 +104,7 @@ public class MethodReaderBenchmark implements JLBHTask {
 
         consumerThread = new Thread(() -> {
             try (final AffinityLock affinityLock = AffinityLock.acquireCore()) {
-                assert affinityLock != null;
+                assert affinityLock != null : "Affinity lock should be available for benchmark reader";
 
                 tailer = queue.createTailer();
                 tailer.singleThreadedCheckDisabled(true);
@@ -136,7 +136,7 @@ public class MethodReaderBenchmark implements JLBHTask {
                     }
                 }
             } catch (Throwable e) {
-                Jvm.error().on(MethodReaderBenchmark.class, "Reading thread failed", e);
+                Jvm.error().on(MethodReaderBenchmark.class, "Reading thread failed during method reader benchmark", e);
             }
         });
         consumerThread.start();

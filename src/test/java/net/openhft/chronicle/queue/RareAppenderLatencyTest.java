@@ -11,6 +11,7 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -56,6 +57,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Rare appender latency stays within threshold after heavy writes")
     public void testRareAppenderLatency() throws InterruptedException, ExecutionException {
         System.setProperty("ignoreHeaderCountIfNumberOfExcerptsBehindExceeds", "" + (1 << 12));
 
@@ -122,7 +124,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
                         .write("msg").text(text);
             }
 
-            assertFalse(l > 150, "Appending from rare thread latency too high!");
+            assertFalse(l > 150, "rare appender latency " + l + " ms should not exceed 150 ms");
         }
     }
 

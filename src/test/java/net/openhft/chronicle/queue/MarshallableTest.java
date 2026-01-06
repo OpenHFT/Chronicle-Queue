@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MarshallableTest extends QueueTestCommon {
     @Test
+    @DisplayName("Write text marshallable is readable by tailers")
     public void testWriteText() {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)

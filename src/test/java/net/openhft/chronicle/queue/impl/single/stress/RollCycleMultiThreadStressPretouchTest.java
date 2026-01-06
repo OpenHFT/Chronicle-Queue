@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,9 +17,11 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
     }
 
     @Test
+    @DisplayName("Pretouch stress test runs under enterprise features")
     @Override
     public void stress() throws Exception {
-        Assumptions.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
+        Assumptions.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable(),
+                "Enterprise features are required for PRETOUCH");
         super.stress();
         assertTrue(true, "stress: assertions are in parent"); // parent has asserts
     }

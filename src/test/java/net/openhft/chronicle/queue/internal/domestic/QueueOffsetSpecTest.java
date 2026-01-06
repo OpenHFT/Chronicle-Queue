@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.internal.domestic;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalTime;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class QueueOffsetSpecTest {
 
     @Test
+    @DisplayName("Epoch offset applies to builder configuration")
     public void parseEpochAndApplySetsBuilderEpoch() {
         QueueOffsetSpec spec = QueueOffsetSpec.parse("EPOCH;12345");
         SingleChronicleQueueBuilder b = SingleChronicleQueueBuilder.single();
@@ -26,6 +28,7 @@ public class QueueOffsetSpecTest {
     }
 
     @Test
+    @DisplayName("Roll time applies to builder with time zone")
     public void parseRollTimeAndApplySetsRollTimeAndZone() {
         String def = "ROLL_TIME;12:34;Europe/London";
         QueueOffsetSpec spec = QueueOffsetSpec.parse(def);
@@ -42,6 +45,7 @@ public class QueueOffsetSpecTest {
     }
 
     @Test
+    @DisplayName("NONE format returns bare type token")
     public void formatNoneReturnsBareType() {
         assertEquals("NONE", QueueOffsetSpec.formatNone(), "none type should be formatted as bare keyword without parameters");
     }
@@ -51,6 +55,7 @@ public class QueueOffsetSpecTest {
     }
 
     @Test
+    @DisplayName("Epoch offset format parses round-trip")
     public void formatAndParseEpochRoundTrip() {
         long epoch = 42_000L;
         String formatted = QueueOffsetSpec.formatEpochOffset(epoch);
@@ -61,6 +66,7 @@ public class QueueOffsetSpecTest {
     }
 
     @Test
+    @DisplayName("NONE spec leaves builder configuration unchanged")
     public void applyNoneDoesNotChangeBuilder() {
         QueueOffsetSpec spec = QueueOffsetSpec.ofNone();
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single().queueOffsetSpec(spec);

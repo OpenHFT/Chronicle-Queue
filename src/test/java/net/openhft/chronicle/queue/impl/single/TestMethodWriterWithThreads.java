@@ -14,6 +14,7 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * check that method writes are thread safe when used with queue.methodWriter
+ * Verifies method writer calls remain thread-safe when used via queue.methodWriter.
  */
 @ExtendWith(TestMethodWriterWithThreads.TestMethodWriterWithThreadsTemplateProvider.class)
 @SuppressWarnings({"deprecation", "removal"})
@@ -121,7 +122,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
 
     @BeforeEach
     public void check64bit() {
-        assumeTrue(Jvm.is64bit());
+        assumeTrue(Jvm.is64bit(), "Test requires 64-bit JVM for concurrency checks");
     }
 
     @Override
@@ -131,6 +132,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Method writer remains thread-safe under parallel readers")
     @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
     public void test() throws FileNotFoundException {
 
@@ -154,7 +156,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
                             Closeable.closeQuietly(acquireThreadLocalAppender(q));
                         }
                         if (fail.get())
-                            fail("methodReader validation failed");
+                            fail("MethodReader validation failed during parallel reads");
                     });
             assertFalse(fail.get(), "methodWriter threads: no validation failures");
 
@@ -173,7 +175,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
             public void amend(final Amend amend) {
                 if (amend.type != AMEND) {
                     fail.set(true);
-                    fail("amend type=" + amend.type);
+                    fail("Amend entry type mismatch, actual type=" + amend.type);
                 }
             }
 
@@ -181,7 +183,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
             public void create(final Create create) {
                 if (create.type != CREATE) {
                     fail.set(true);
-                    fail("create type=" + create.type);
+                    fail("Create entry type mismatch, actual type=" + create.type);
                 }
             }
         };

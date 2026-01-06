@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.TimeProvider;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
@@ -132,31 +133,36 @@ public class RollCyclesTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Index encoding uses 32-bit shift for safety")
     public void shouldBe32bitShifted() {
         long factor = (long) cycle.defaultIndexCount() * cycle.defaultIndexCount() * cycle.defaultIndexSpacing();
         if (factor < 1L << 32)
             factor = 1L << 32;
-        assertEquals(factor, cycle.toIndex(1, 0), "cycle.toIndex(1, 0)");
+        assertEquals(factor, cycle.toIndex(1, 0), "cycle should use 32-bit shift for index encoding");
     }
 
     @TestTemplate
+    @DisplayName("Current cycle advances without epoch offset applied")
     public void shouldDetermineCurrentCycle() {
         assertCycleRollTimes(NO_EPOCH_OFFSET, withDelta(timeProvider, NO_EPOCH_OFFSET));
     }
 
     @TestTemplate
+    @DisplayName("Epoch offset affects current cycle calculation")
     public void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle() {
         assertCycleRollTimes(SOME_EPOCH_OFFSET, withDelta(timeProvider, SOME_EPOCH_OFFSET));
     }
 
     @TestTemplate
+    @DisplayName("Reasonable date range maps cycles consistently")
     public void shouldHandleReasonableDateRange() {
         final int currentCycle = DefaultCycleCalculator.INSTANCE.currentCycle(cycle, timeProvider, 0);
         // ~ 14 Jul 2017 to 18 May 2033
         for (long nowMillis = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += (long) 3e10) {
             clock.set(nowMillis);
             long index = cycle.toIndex(currentCycle, 0);
-            assertEquals(currentCycle, cycle.toCycle(index), "cycle.toCycle(index)");
+            assertEquals(currentCycle, cycle.toCycle(index),
+                    "cycle should map index back to currentCycle at nowMillis=" + nowMillis);
         }
     }
 
@@ -169,18 +175,25 @@ public class RollCyclesTest extends QueueTestCommon {
 
         clock.addAndGet(cycle.lengthInMillis());
 
-        assertEquals(startCycle + 1, cycle.current(timeProvider, epochOffset), "cycle.current(timeProvider, epochOffset)");
-        assertEquals(startCycle + 1, cycle.current(plusOneMillisecond(timeProvider), epochOffset), "cycle.current(plusOneMillisecond(timeProvider), epochOffset)");
-        assertEquals(startCycle, cycle.current(minusOneMillisecond(timeProvider), epochOffset), "cycle.current(minusOneMillisecond(timeProvider), epochOffset)");
+        assertEquals(startCycle + 1, cycle.current(timeProvider, epochOffset),
+                "cycle.current should advance to startCycle+1 at boundary");
+        assertEquals(startCycle + 1, cycle.current(plusOneMillisecond(timeProvider), epochOffset),
+                "cycle.current should advance to startCycle+1 with +1ms drift");
+        assertEquals(startCycle, cycle.current(minusOneMillisecond(timeProvider), epochOffset),
+                "cycle.current should remain startCycle with -1ms drift");
 
         clock.addAndGet(cycle.lengthInMillis());
 
-        assertEquals(startCycle + 2, cycle.current(timeProvider, epochOffset), "cycle.current(timeProvider, epochOffset)");
-        assertEquals(startCycle + 2, cycle.current(plusOneMillisecond(timeProvider), epochOffset), "cycle.current(plusOneMillisecond(timeProvider), epochOffset)");
-        assertEquals(startCycle + 1, cycle.current(minusOneMillisecond(timeProvider), epochOffset), "cycle.current(minusOneMillisecond(timeProvider), epochOffset)");
+        assertEquals(startCycle + 2, cycle.current(timeProvider, epochOffset),
+                "cycle.current should advance to startCycle+2 after two cycles");
+        assertEquals(startCycle + 2, cycle.current(plusOneMillisecond(timeProvider), epochOffset),
+                "cycle.current should advance to startCycle+2 with +1ms drift");
+        assertEquals(startCycle + 1, cycle.current(minusOneMillisecond(timeProvider), epochOffset),
+                "cycle.current should stay startCycle+1 with -1ms drift");
     }
 
     @TestTemplate
+    @DisplayName("Roll cycle naming order matches chronology")
     public void lexicographicOrderShouldCorrelateToChronologicalOrder() {
         String lastName = null;
         Instant lastDate = null;

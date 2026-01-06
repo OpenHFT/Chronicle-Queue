@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -41,9 +42,10 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Writing document succeeds after interrupted acquisition attempt")
     public void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException, IOException {
         File queuePath = new File(queueDirectory, "queue");
-        assertTrue(queuePath.mkdir(), "temp queue dir");
+        assertTrue(queuePath.mkdir(), "Temporary queue directory should be created for interrupted write test");
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queuePath).build()) {
             final BlockingWriter blockingWriter = new BlockingWriter(queue);
             final BlockedWriter blockedWriter = new BlockedWriter(queue);
@@ -67,13 +69,14 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Writes continue after WriteAfterEOFException is thrown")
     public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
         clock.addAndGet(-clock.get() % ONE_DAY);
 
         File queuePath = new File(queueDirectory, "queue");
-        assertTrue(queuePath.mkdir(), "temp queue dir");
+        assertTrue(queuePath.mkdir(), "Temporary queue directory should be created for EOF test");
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queuePath)
                 .timeProvider(clock::get)
                 .build();

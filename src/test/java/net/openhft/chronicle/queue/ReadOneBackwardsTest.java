@@ -9,6 +9,7 @@ import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ArrayBlockingQueue;
@@ -17,11 +18,12 @@ import java.util.concurrent.BlockingQueue;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * test reading the queue backwards using readOne
+ * Tests reading the queue backwards using readOne and snapshot delivery.
  */
 public class ReadOneBackwardsTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Read snapshot backwards with non-scanning reader")
     public void test() {
         SnapshotDTO snapshotDTO = doTest(false);
         assertNotNull(snapshotDTO, "Snapshot should be successfully read when reading queue backwards");
@@ -29,6 +31,7 @@ public class ReadOneBackwardsTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Read snapshot backwards with scanning reader")
     public void testScanning() {
         SnapshotDTO snapshotDTO = doTest(true);
         assertNotNull(snapshotDTO, "Snapshot should be successfully read when scanning queue backwards");

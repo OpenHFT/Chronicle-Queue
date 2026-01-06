@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Writing document after roll provides a wire")
     public void test() {
         int messages = 10;
 

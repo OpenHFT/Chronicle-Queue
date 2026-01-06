@@ -31,17 +31,19 @@ public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
 
                         @Override
                         public boolean ignoreMethodBasedOnFirstArg(final String methodName, final String firstArg) {
-                            assertEquals(EXPECTED_ENVELOPE, firstArg, "ignoreMethod: firstArg");
+                            assertEquals(EXPECTED_ENVELOPE, firstArg,
+                                    "ignoreMethodBasedOnFirstArg should receive the expected envelope");
                             return false;
                         }
 
                         @Override
                         public void print(String envelope, final String msg) {
-                            assertEquals(EXPECTED_ENVELOPE, envelope, "print: envelope");
-                            assertEquals(MSG, msg, "print: message");
+                            assertEquals(EXPECTED_ENVELOPE, envelope,
+                                    "Envelope should match expected value for printed message");
+                            assertEquals(MSG, msg, "Message payload should match expected value for printed message");
                         }
                     });
-            assertTrue(mr.readOne(), "methodReader: read one");
+            assertTrue(mr.readOne(), "Method reader should consume a message");
         }
     }
 }

@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -36,6 +37,7 @@ public class RollCycleTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer ignores new roll cycle after gap")
     public void newRollCycleIgnored() throws InterruptedException {
         File path = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -68,11 +70,12 @@ public class RollCycleTest extends QueueTestCommon {
             thread.interrupt();
         }
 
-        assertEquals(1, observer.documentsRead, "observer.documentsRead");
+        assertEquals(1, observer.documentsRead, "Observer should read one document after roll cycle gap");
         observer.queue.close();
     }
 
     @Test
+    @DisplayName("Tailer ignores new roll cycle with gaps and alignment")
     public void newRollCycleIgnored2() throws InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
@@ -81,7 +84,7 @@ public class RollCycleTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
         try (ChronicleQueue queue0 = observer.queue) {
-            assertNotNull(queue0, "queue0");
+            assertNotNull(queue0, "Observer queue should be initialised");
             int cyclesToWrite = 3;
             Thread thread = new Thread(observer);
             try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
@@ -324,7 +327,8 @@ public class RollCycleTest extends QueueTestCommon {
                 if (readText != null) {
                     documentsRead++;
                     int docId = Integer.parseInt(readText);
-                    assertEquals(docId, lastDocId + 1, "lastDocId + 1");
+                    assertEquals(docId, lastDocId + 1,
+                            "docId should increment by one, lastDocId=" + lastDocId + ", docId=" + docId);
                     lastDocId = docId;
                 }
             }

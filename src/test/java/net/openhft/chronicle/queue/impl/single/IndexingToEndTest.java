@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.TailerDirection;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class IndexingToEndTest extends IndexingTestCommon {
 
     @ParameterizedTest
+    @DisplayName("toEnd from start keeps index at zero for empty queue")
     @MethodSource("tailerDirections")
     void fromStart_noData(TailerDirection tailerDirection) {
         tailer.direction(tailerDirection);
@@ -24,6 +26,7 @@ class IndexingToEndTest extends IndexingTestCommon {
     }
 
     @ParameterizedTest
+    @DisplayName("toEnd from start reaches last index in single cycle")
     @MethodSource("tailerDirections")
     void fromStart_manyEntriesSingleCycle(TailerDirection tailerDirection) {
         tailer.direction(tailerDirection);
@@ -38,10 +41,11 @@ class IndexingToEndTest extends IndexingTestCommon {
     }
 
     @ParameterizedTest
+    @DisplayName("toEnd from start is idempotent in single cycle")
     @MethodSource("tailerDirections")
     void fromStart_manyEntriesSingleCycle_idempotent(TailerDirection tailerDirection) {
         tailer.direction(tailerDirection);
-        assertEquals(0, tailer.index(), "tailer should start at index 0 before writing entries");
+        assertEquals(0, tailer.index(), "tailer should start at index 0 for idempotent toEnd test");
         long lastIndexAppended = 0;
         for (int i = 0; i < 1_000; i++) {
             appender.writeText("<test>");
@@ -50,11 +54,13 @@ class IndexingToEndTest extends IndexingTestCommon {
 
         for (int i = 0; i < 100; i++) {
             tailer.toEnd();
-            assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index(), "repeated toEnd calls should produce consistent index position");
+            assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index(),
+                    "repeated toEnd calls should produce consistent index position at iteration " + i);
         }
     }
 
     @ParameterizedTest
+    @DisplayName("toEnd from start reaches last index across multiple cycles")
     @MethodSource("tailerDirections")
     void fromStart_manyEntriesMultiCycle(TailerDirection tailerDirection) {
         long lastIndexAppended = populateQueue(tailerDirection);
@@ -64,12 +70,14 @@ class IndexingToEndTest extends IndexingTestCommon {
     }
 
     @ParameterizedTest
+    @DisplayName("toEnd from middle reaches last index across multiple cycles")
     @MethodSource("tailerDirections")
     void fromMiddle_manyEntriesMultiCycle(TailerDirection tailerDirection) {
         long lastIndexAppended = populateQueue(tailerDirection);
         moveToMidpoint(lastIndexAppended);
         tailer.toEnd();
-        assertEquals(2, rollCycle().toCycle(lastIndexAppended), "test should populate queue across 3 cycles with last entry in cycle 2");
+        assertEquals(2, rollCycle().toCycle(lastIndexAppended),
+                "midpoint test should populate queue across 3 cycles with last entry in cycle 2");
         assertEquals(expectedIndexAfterToEnd(lastIndexAppended, tailerDirection), tailer.index(), "toEnd should position tailer at expected index when starting from middle of queue");
     }
 

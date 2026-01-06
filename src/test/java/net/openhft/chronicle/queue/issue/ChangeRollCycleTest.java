@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,12 +24,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 public class ChangeRollCycleTest {
 
     @Test
+    @DisplayName("Read-only tailer preserves existing roll cycle")
     public void changeRollCycleWithReadOnlyTailer() {
         int messagesRead = testChangeRollCycle(true);
         assertEquals(0, messagesRead, "roll cycle: messages read (read-only)");
     }
 
     @Test
+    @DisplayName("Read-write tailer preserves and reads across roll cycles")
     public void changeRollCycleWithReadWriteTailer() {
         int messagesRead = testChangeRollCycle(false);
         assertEquals(2, messagesRead, "roll cycle: messages read (read/write)");
@@ -75,7 +78,8 @@ public class ChangeRollCycleTest {
                     appender3.writeText("World");
 
                     if (readOnly && !OS.isWindows())
-                        assertEquals(RollCycles.WEEKLY, q3.rollCycle(), "Roll cycle should match WEEKLY for read-only mode");
+                        assertEquals(RollCycles.WEEKLY, q3.rollCycle(),
+                                "Read-only tailer should preserve WEEKLY roll cycle in q3");
                 }
 
                 // If the tailer is read-only, the roll cycle cannot not be changed
@@ -86,7 +90,8 @@ public class ChangeRollCycleTest {
                 assertEquals("Hello", tailer.readText(), "First message should match");
 
                 if (readOnly)
-                    assertEquals(RollCycles.WEEKLY, q1.rollCycle(), "Roll cycle should match WEEKLY for read-only mode");
+                    assertEquals(RollCycles.WEEKLY, q1.rollCycle(),
+                            "Read-only tailer should preserve WEEKLY roll cycle in q1");
 
                 assertEquals("World", tailer.readText(), "Second message should match");
 

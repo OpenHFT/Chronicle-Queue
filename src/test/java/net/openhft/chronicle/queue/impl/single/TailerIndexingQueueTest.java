@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -48,8 +49,9 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer moves backward from end of cycle")
     public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Windows does not support this test");
         try (final ChronicleQueue queue = createQueue(path, clock::get);
              final ExcerptAppender appender = queue.createAppender()) {
             // generate some cycle files

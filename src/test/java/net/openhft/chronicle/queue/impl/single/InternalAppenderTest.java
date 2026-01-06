@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class InternalAppenderTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Internal appender preserves replicated index numbers")
     public void replicationTest() throws Exception {
         final File file = Files.createTempDirectory("queue").toFile();
         try (final SingleChronicleQueue queue =

@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -51,6 +52,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Cache never returns released references under concurrency")
     void shouldNeverGiveOutReleasedReferences() {
         final ExecutorService executorService = Executors.newCachedThreadPool();
         int numThreads = Math.min(MAX_THREADS_TO_RUN, Math.max(MIN_THREADS_TO_RUN, Runtime.getRuntime().availableProcessors()));
@@ -67,16 +69,17 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
+            throw new RuntimeException("Reference getter interrupted during stress run", e);
         } catch (ExecutionException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Reference getter failed during stress run", e);
         } finally {
             executorService.shutdownNow();
             try {
-                assertTrue(executorService.awaitTermination(10, TimeUnit.SECONDS), "executor: terminated");
+                assertTrue(executorService.awaitTermination(10, TimeUnit.SECONDS),
+                        "executor should terminate within timeout");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
+                throw new RuntimeException("Executor termination interrupted", e);
             }
         }
         Closeable.closeQuietly(cache);
@@ -85,6 +88,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Cache returns same object while references are held")
     void shouldReturnSameObjectWhileNotReleased() {
         final Reservation reservation = cache.get(1);
         final Reservation otherReservation = cache.get(1);
@@ -94,6 +98,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Cache expires objects once reference count reaches zero")
     void shouldExpireObjectsWhenReferenceCountGoesToZero() {
         final Reservation reservation = cache.get(1);
         reservation.release();
@@ -138,7 +143,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
                     reservation.release();
                 }
             }
-            Jvm.startup().on(ReferenceGetter.class, "Made " + reservationCount + " reservations");
+            Jvm.startup().on(ReferenceGetter.class, "Made " + reservationCount + " reservations during stress run");
         }
     }
 
@@ -159,7 +164,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
 
         void assertNotReleased() {
             final int referenceCount = this.referenceCounted.refCount();
-            assertTrue(referenceCount > 1, "Expected reference count of at least 2, got " + referenceCount);
+            assertTrue(referenceCount > 1, "Reference count should be at least 2, got " + referenceCount);
         }
     }
 

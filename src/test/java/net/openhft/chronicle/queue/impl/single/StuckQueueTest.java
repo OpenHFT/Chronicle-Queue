@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -29,10 +30,11 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 public class StuckQueueTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Read-only queue can recover from stuck file")
     public void test() throws IOException {
 
         // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Test uses a path that is not valid on Windows");
 
         Path tmpDir = getTmpDir().toPath();
         assumeFalse(PageUtil.isHugePage(tmpDir.toString()), "This test uses a checked in queue file that has a size incompatible with hugetlbfs");
@@ -49,13 +51,14 @@ public class StuckQueueTest extends QueueTestCommon {
 
         try (RollingChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).rollCycle(MINUTELY).readOnly(true).build();
              ExcerptTailer tailer = q.createTailer()) {
-//            System.out.println(q.dump());
+            //            System.out.println(q.dump());
 
             int cycle = q.rollCycle().toCycle(0x18406e100000000L);
 
             try (SingleChronicleQueueStore wireStore = q.storeForCycle(cycle, q.epoch(), false, null)) {
                 String absolutePath = wireStore.file().getAbsolutePath();
-                assertTrue(absolutePath.endsWith("20180508-1249.cq4"), "queue file ends with template name");
+                assertTrue(absolutePath.endsWith("20180508-1249.cq4"),
+                        "queue file should end with template name 20180508-1249.cq4");
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
@@ -70,9 +73,9 @@ public class StuckQueueTest extends QueueTestCommon {
             }
             ExcerptTailer tailer2 = q.createTailer();
             try (DocumentContext dc = tailer2.readingDocument()) {
-                assertTrue(dc.isPresent(), "tailer2 document present");
+                assertTrue(dc.isPresent(), "tailer2 should read the appended document");
                 String actual = dc.wire().read("hello").text();
-                assertEquals("world", actual, "tailer2 reads appended world");
+                assertEquals("world", actual, "tailer2 should read the appended value 'world'");
             }
         }
     }

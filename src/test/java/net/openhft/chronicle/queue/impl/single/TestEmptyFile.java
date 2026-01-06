@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -41,10 +42,10 @@ public class TestEmptyFile {
     }
 
     @Test
-
+    @DisplayName("Empty store file does not yield a document")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void shouldHandleEmptyFile() {
-        Assumptions.assumeFalse(OS.isWindows());
+        Assumptions.assumeFalse(OS.isWindows(), "Windows does not support this test");
         try (final ChronicleQueue queue =
                      ChronicleQueue.singleBuilder(tmpDir)
                              .testBlockSize()

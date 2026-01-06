@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
@@ -26,7 +27,6 @@ import java.util.stream.Stream;
 import static net.openhft.chronicle.queue.impl.single.StoreTailer.INDEXING_LINEAR_SCAN_THRESHOLD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@SuppressWarnings({"deprecation", "removal"})
 @ExtendWith(IndexTest.IndexTestTemplateProvider.class)
 @SuppressWarnings({"deprecation", "removal"})
 public class IndexTest extends QueueTestCommon {
@@ -95,6 +95,7 @@ public class IndexTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Appender index matches roll cycle index per write")
     public void test() {
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
@@ -110,12 +111,14 @@ public class IndexTest extends QueueTestCommon {
                 final int cycle = queue.lastCycle();
                 long index0 = queue.rollCycle().toIndex(cycle, n);
                 long indexA = appender.lastIndexAppended();
-                assertEquals(index0, indexA, "index: cycle=" + cycle + " seq=" + n);
+                assertEquals(index0, indexA, "index should match cycle " + cycle + " seq " + n
+                        + " at iteration " + i);
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Tailer uses linear scan when index moves are nearby")
     public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())

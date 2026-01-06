@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ChronicleReaderMainCliTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("CLI prints queue records to stdout")
     public void mainReadsAndPrintsQueueRecords() {
         final java.io.File dir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build();
@@ -35,10 +37,11 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         }
 
         final String out = capture.toString();
-        assertTrue(out.contains("hello"), "Expected output to contain written text");
+        assertTrue(out.contains("hello"), "CLI output should contain 'hello': " + out);
     }
 
     @Test
+    @DisplayName("Invalid content-based limiter class throws")
     public void invalidContentBasedLimiterClassThrows() {
         final java.io.File dir = getTmpDir();
         ChronicleReaderMain main = new ChronicleReaderMain();
@@ -48,6 +51,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Invalid binary search comparator class throws")
     public void invalidBinarySearchComparatorClassThrows() {
         final java.io.File dir = getTmpDir();
         ChronicleReaderMain main = new ChronicleReaderMain();
@@ -57,6 +61,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("CLI honours start index when reading")
     public void mainHonoursStartIndex() {
         final java.io.File dir = getTmpDir();
         long secondIndex;
@@ -81,12 +86,13 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         }
 
         final String out = capture.toString();
-        assertTrue(out.contains("second"), "CLI output should contain second message when starting from second index");
+        assertTrue(out.contains("second"), "CLI output should contain 'second' when starting from second index: " + out);
         assertTrue(out.contains("third"), "CLI output should contain third message when starting from second index");
-        assertFalse(out.contains("first"), "Start index should skip earlier entries");
+        assertFalse(out.contains("first"), "CLI output should skip 'first' when starting from second index: " + out);
     }
 
     @Test
+    @DisplayName("Method reader options enable message history")
     public void methodReaderOptionsEnableMessageHistory() {
         final java.io.File dir = getTmpDir();
         ChronicleReaderMainStub main = new ChronicleReaderMainStub();

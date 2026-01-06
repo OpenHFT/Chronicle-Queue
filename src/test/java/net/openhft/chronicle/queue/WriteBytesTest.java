@@ -14,6 +14,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -31,6 +32,7 @@ public class WriteBytesTest extends QueueTestCommon {
     private final byte[] outgoingMsgBytes = new byte[100];
 
     @Test
+    @DisplayName("Write and read byte arrays through the queue")
     public void testWriteBytes() {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
@@ -71,6 +73,7 @@ public class WriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue dump output matches writeBytes content")
     public void testWriteBytesAndDump() {
         File dir = getTmpDir();
         Assumptions.assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
@@ -1045,7 +1048,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     "--- !!data\n" +
                     "\u007F\u007F\u007F\u007F\u007F\u007F\u007F\u007F\n" +
                     "...\n" +
-                    "# 126928 bytes remaining\n", queue.dump(), "dump: writeBytes output");
+                    "# 126928 bytes remaining\n", queue.dump(), "queue dump should match writeBytes output");
 
         } finally {
             try {
@@ -1057,6 +1060,7 @@ public class WriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("WriteBytes works with direct buffer reuse")
     public void testWriteBytesWithDirectBufferReuse() {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
@@ -1075,7 +1079,8 @@ public class WriteBytesTest extends QueueTestCommon {
                     appender.writeBytes(directPayload);
 
                     assertTrue(tailer.readBytes(readBuffer), "entry " + i + " should be readable");
-                    assertEquals("direct-entry-" + i, readBuffer.readUtf8(), "entry " + i + " payload");
+                    assertEquals("direct-entry-" + i, readBuffer.readUtf8(),
+                            "entry " + i + " payload should match expected content");
                     readBuffer.clear();
                 }
             } finally {
@@ -1092,6 +1097,7 @@ public class WriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Roll cycle capacity remains consistent across writes")
     public void testRollCycleCapacityConsistency() {
         File dir = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider("2024/01/01T00:00:00")
@@ -1110,7 +1116,7 @@ public class WriteBytesTest extends QueueTestCommon {
                 initialCapacity = bytes.bytesStore().capacity();
                 bytes.writeUtf8("cycle-1");
             }
-            assertNextUtf8(tailer, "cycle-1");
+            assertNextUtf8(tailer, "cycle-1", "cycle 1 payload should be readable before roll");
 
             timeProvider.advanceMillis(TEST4_DAILY.lengthInMillis());
             long postRollCapacity;
@@ -1120,7 +1126,7 @@ public class WriteBytesTest extends QueueTestCommon {
                 bytes.writeUtf8("cycle-2");
             }
             assertEquals(initialCapacity, postRollCapacity, "Wire buffer capacity should remain stable across rolls");
-            assertNextUtf8(tailer, "cycle-2");
+            assertNextUtf8(tailer, "cycle-2", "cycle 2 payload should be readable after roll");
         } finally {
             try {
                 IOTools.deleteDirWithFiles(dir, 2);
@@ -1130,10 +1136,10 @@ public class WriteBytesTest extends QueueTestCommon {
         }
     }
 
-    private static void assertNextUtf8(ExcerptTailer tailer, String expected) {
+    private static void assertNextUtf8(ExcerptTailer tailer, String expected, String message) {
         try (DocumentContext dc = tailer.readingDocument()) {
             assertTrue(dc.isPresent(), "Document should be present for " + expected);
-            assertEquals(expected, dc.wire().bytes().readUtf8(), "readUtf8 for " + expected);
+            assertEquals(expected, dc.wire().bytes().readUtf8(), message);
         }
     }
 

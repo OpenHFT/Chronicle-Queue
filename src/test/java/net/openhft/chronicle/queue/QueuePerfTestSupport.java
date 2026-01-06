@@ -29,7 +29,7 @@ final class QueuePerfTestSupport {
             long s64 = bytes.readLong(); // 8 bytes
             double f64 = bytes.readDouble(); // 8 bytes
             String s = bytes.readUtf8(); // 8 bytes
-            assertEquals("Hello!!", s, "bytes: readUtf8");
+            assertEquals("Hello!!", s, "readUtf8 should return Hello!! at offset " + i);
         }
     }
 

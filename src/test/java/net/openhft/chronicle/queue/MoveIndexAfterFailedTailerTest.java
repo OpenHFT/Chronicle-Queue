@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -23,6 +24,7 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Reads all documents after failed tailer move")
     public void test() {
         String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         final SingleChronicleQueueBuilder myBuilder = SingleChronicleQueueBuilder.single(basePath)

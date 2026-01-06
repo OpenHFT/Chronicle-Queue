@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -37,6 +38,7 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
     }
 
     @ParameterizedTest(name = "{0}")
+    @DisplayName("Backwards tailer remains consistent across cycles")
     @MethodSource("rollCycles")
     public void verifyConsistency(RollCycle rollCycle) {
         @NotNull File path = getTmpDir();

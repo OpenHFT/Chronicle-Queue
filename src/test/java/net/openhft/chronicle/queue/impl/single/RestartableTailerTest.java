@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class RestartableTailerTest extends QueueTestCommon {
     @Test
+    @DisplayName("Named tailers resume from stored positions")
     public void restartable() {
         String tmp = OS.getTarget() + "/restartable-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();

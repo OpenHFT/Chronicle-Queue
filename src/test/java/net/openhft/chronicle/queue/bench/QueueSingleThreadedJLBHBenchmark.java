@@ -13,17 +13,17 @@ import net.openhft.chronicle.jlbh.JLBHTask;
 import net.openhft.chronicle.jlbh.TeamCityHelper;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.SingleChroniclePerfMainTest;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.values.Values;
 import net.openhft.chronicle.wire.DocumentContext;
 
-import static net.openhft.chronicle.queue.FacadeInterfaces.IFacade;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 
 public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     private static final String PATH = System.getProperty("path", "replica");
     private static final int ITERATIONS = 1_000_000;
-    private final IFacade datum = Values.newNativeReference(IFacade.class);
+    private final SingleChroniclePerfMainTest.IFacade datum = Values.newNativeReference(SingleChroniclePerfMainTest.IFacade.class);
     private SingleChronicleQueue sourceQueue;
     private SingleChronicleQueue sinkQueue;
     private ExcerptTailer tailer;

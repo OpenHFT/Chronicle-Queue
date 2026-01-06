@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -65,6 +66,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     }
 
     @Test
+    @DisplayName("Resource lookup caches identical cycle resources")
     public void resourceLookupIsCached() {
         final File dir = getTmpDir();
         final RollingResourcesCache cache = newCache(dir);
@@ -73,7 +75,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
         final RollingResourcesCache.Resource repeat = cache.resourceFor(0);
         final RollingResourcesCache.Resource next = cache.resourceFor(1);
 
-        assertSame(first, repeat, "Expected identical instance for cached cycle");
+        assertSame(first, repeat, "cache should return identical instance for cached cycle");
         assertNotSame(first, next, "Different cycle should produce a new resource");
 
         final int firstCount = cache.parseCount(first.text);
@@ -82,6 +84,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     }
 
     @Test
+    @DisplayName("toLong caches entries and evicts when full")
     public void toLongCachesAndClearsWhenFull() {
         final File dir = getTmpDir();
         final RollingResourcesCache cache = newCache(dir);
@@ -103,6 +106,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     }
 
     @Test
+    @DisplayName("Weekly format round-trip parses back to cycle")
     public void parseWeeklyFormatValid() {
         // round-trip property: resourceFor(cycle).text parses back to the same cycle
         final RollingResourcesCache weeklyCache = new RollingResourcesCache(
@@ -112,11 +116,12 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
             int cycle = base + i;
             String name = weeklyCache.resourceFor(cycle).text;
             int parsed = weeklyCache.parseCount(name);
-            assertEquals(cycle, parsed, "weekly cache should parse resource name back to original cycle number for cycle " + cycle);
+            assertEquals(cycle, parsed, "weekly cache should parse resource name back for i=" + i + ", cycle=" + cycle);
         }
     }
 
     @Test
+    @DisplayName("Cycles convert to resource names without epoch offset")
     public void shouldConvertCyclesToResourceNamesWithNoEpoch() {
         final int epoch = 0;
         final RollingResourcesCache cache =
@@ -135,6 +140,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     }
 
     @Test
+    @DisplayName("Cycles convert to resource names with epoch offsets")
     public void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() {
         RollingResourcesCache dailyCache = new RollingResourcesCache(DAILY, AM_EPOCH, File::new, File::getName);
         assertEquals(AM_DAILY_FILE_NAME, dailyCache.resourceFor(AM_DAILY_CYCLE_NUMBER).text, "daily cache should convert AM cycle number to correct resource name");
@@ -219,6 +225,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     }
 
     @Test
+    @DisplayName("Incorrectly formatted names fail to parse")
     public void parseIncorrectlyFormattedName() {
         final RollingResourcesCache cache =
                 new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
@@ -226,6 +233,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     }
 
     @Test
+    @DisplayName("Fuzzy conversion matches epoch and cycle arithmetic")
     public void fuzzyConversionTest() {
         final int maxAddition = (int) ChronoUnit.DECADES.getDuration().toMillis();
         final Random random = new Random(SEED);
@@ -248,9 +256,11 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
 
                 final long daysBetweenEpochAndInstant = (instantAfterEpoch - epoch) / ONE_DAY_IN_MILLIS;
 
-                assertEquals(daysBetweenEpochAndInstant, cycle, "cycle number should equal days between epoch and instant");
+                assertEquals(daysBetweenEpochAndInstant, cycle,
+                        "cycle number should equal days between epoch and instant, i=" + i + ", j=" + j);
 
-                assertEquals((long) cycle * DAILY.lengthInMillis(), ((long) cycle) * ONE_DAY_IN_MILLIS, "cycle length in millis should equal cycle number multiplied by one day in millis");
+                assertEquals((long) cycle * DAILY.lengthInMillis(), ((long) cycle) * ONE_DAY_IN_MILLIS,
+                        "cycle length in millis should equal cycle number times one day, i=" + i + ", j=" + j);
 
                 if (LOG_TEST_DEBUG) {
                     System.out.printf("Epoch: %d%n", epoch);
@@ -278,6 +288,7 @@ public class RollingResourcesCacheTest extends RollingResourcesCacheTestBase {
     }
 
     @Test
+    @DisplayName("toLong converts resource paths to expected values")
     public void testToLong() {
         RollingResourcesCache cache = new RollingResourcesCache(DAILY, getAmEpoch(), File::new, File::getName);
         RollingResourcesCache.Resource resource = cache.resourceFor(0);

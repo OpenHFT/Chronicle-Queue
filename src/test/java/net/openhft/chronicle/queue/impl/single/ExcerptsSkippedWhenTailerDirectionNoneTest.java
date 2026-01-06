@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -14,8 +15,9 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
-    @SuppressWarnings("try")
     @Test
+    @SuppressWarnings("try")
+    @DisplayName("Tailer direction NONE does not skip start messages")
     public void shouldNotSkipMessageAtStartOfQueue() {
         final File tmpDir = getTmpDir();
         try (final ChronicleQueue writeQueue =

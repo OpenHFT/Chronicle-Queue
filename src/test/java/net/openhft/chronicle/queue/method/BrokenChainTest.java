@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.ThreadLocalAppender;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ public class BrokenChainTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Broken chain rollback preserves reader state")
     public void brokenChainQueue() {
         String tmpName = OS.getTarget() + "/brokenChain-" + System.nanoTime();
         try (ChronicleQueue queue = ChronicleQueue.single(tmpName);
@@ -36,45 +38,45 @@ public class BrokenChainTest extends QueueTestCommon {
              ExcerptTailer tailer = queue.createTailer()) {
 
             final First writer = appender.methodWriter(First.class);
-            assertTrue(appender.writingIsComplete(), "initial: writing complete");
+            assertTrue(appender.writingIsComplete(), "initial appender should start in writing complete state");
 
             List<String> list = new ArrayList<>();
             First first = pre -> msg -> list.add("pre: " + pre + ", msg: " + msg);
             MethodReader reader = tailer.methodReader(first);
 
-            assertFalse(reader.readOne(), "initial: no messages");
+            assertFalse(reader.readOne(), "initial read should not return any messages");
 
             appender.rollbackIfNotComplete();
 
-            assertFalse(reader.readOne(), "after rollback: no messages");
+            assertFalse(reader.readOne(), "reader should remain empty after rollback of incomplete write");
 
             Second second = writer.pre("pre");
-            assertFalse(appender.writingIsComplete(), "after pre: writing not complete");
+            assertFalse(appender.writingIsComplete(), "after pre 'pre', writing should be incomplete");
             second.msg("msg");
-            assertTrue(appender.writingIsComplete(), "after msg: writing complete");
+            assertTrue(appender.writingIsComplete(), "after msg 'msg', writing should be complete");
             appender.rollbackIfNotComplete();
 
-            assertTrue(reader.readOne(), "read: first message present");
-            assertFalse(reader.readOne(), "read: end of queue");
-            assertEquals("[pre: pre, msg: msg]", list.toString(), "read: message list");
+            assertTrue(reader.readOne(), "reader should read first message after commit");
+            assertFalse(reader.readOne(), "reader should reach end after first message");
+            assertEquals("[pre: pre, msg: msg]", list.toString(), "list should contain first chain message");
 
             list.clear();
             Second secondB = writer.pre("bad-pre");
-            assertFalse(appender.writingIsComplete(), "after pre: writing not complete");
+            assertFalse(appender.writingIsComplete(), "after pre 'bad-pre', writing should be incomplete");
             appender.rollbackIfNotComplete();
-            assertTrue(appender.writingIsComplete(), "after rollback: writing complete");
-            assertFalse(reader.readOne(), "after rollback: no messages");
-            assertEquals("[]", list.toString(), "after rollback: no side effects");
+            assertTrue(appender.writingIsComplete(), "after rollback of bad-pre, writing should be complete");
+            assertFalse(reader.readOne(), "reader should not see messages after bad-pre rollback");
+            assertEquals("[]", list.toString(), "rollback should not add side effects to list");
 
             Second secondC = writer.pre("pre-C");
-            assertFalse(appender.writingIsComplete(), "after pre: writing not complete");
+            assertFalse(appender.writingIsComplete(), "after pre 'pre-C', writing should be incomplete");
             secondC.msg("msg-C");
-            assertTrue(appender.writingIsComplete(), "after msg: writing complete");
+            assertTrue(appender.writingIsComplete(), "after msg 'msg-C', writing should be complete");
             appender.rollbackIfNotComplete();
 
-            assertTrue(reader.readOne(), "read: message present");
-            assertFalse(reader.readOne(), "read: end of queue");
-            assertEquals("[pre: pre-C, msg: msg-C]", list.toString(), "read: message list");
+            assertTrue(reader.readOne(), "reader should read message after pre-C commit");
+            assertFalse(reader.readOne(), "reader should reach end after pre-C message");
+            assertEquals("[pre: pre-C, msg: msg-C]", list.toString(), "list should contain pre-C chain message");
         }
         IOTools.deleteDirWithFiles(tmpName);
     }

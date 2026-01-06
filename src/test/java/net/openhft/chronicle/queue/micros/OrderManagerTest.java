@@ -15,6 +15,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -33,6 +34,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Order idea triggers listener when price is crossed")
     public void testOnOrderIdea() {
         ignoreException("Cannot get access to vectorizedMismatch");
         // what we expect to happen
@@ -59,6 +61,7 @@ public class OrderManagerTest extends QueueTestCommon {
 
     // CPD-OFF - queue-backed scenarios mirror each other
     @Test
+    @DisplayName("Order ideas round-trip through queue")
     public void testWithQueue() {
         File queuePath = new File(OS.getTarget(), "testWithQueue-" + Time.uniqueId());
         try {
@@ -86,10 +89,11 @@ public class OrderManagerTest extends QueueTestCommon {
                 // build our scenario
                 OrderManager orderManager = new OrderManager(listener);
                 MethodReader reader = queue.createTailer().methodReader(orderManager);
-                for (int i = 0; i < 5; i++)
-                    assertTrue(reader.readOne(), "reader.readOne()");
+                for (int i = 0; i < 5; i++) {
+                    assertTrue(reader.readOne(), "method reader should consume order event at i=" + i);
+                }
 
-                assertFalse(reader.readOne(), "reader.readOne()");
+                assertFalse(reader.readOne(), "method reader should be at end after replaying queue");
             }
 
             verify(listener);
@@ -103,6 +107,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue history propagates across writer hops")
     public void testWithQueueHistory() throws Throwable {
         AtomicBoolean executed = new AtomicBoolean();
         FlakyTestRunner.builder(() -> {
@@ -152,22 +157,23 @@ public class OrderManagerTest extends QueueTestCommon {
                 // build our scenario
                 OrderManager orderManager = new OrderManager(listener);
                 MethodReader reader = in.createTailer().methodReader(orderManager);
-                for (int i = 0; i < 5; i++)
-                    assertTrue(reader.readOne(), "reader.readOne()");
+                for (int i = 0; i < 5; i++) {
+                    assertTrue(reader.readOne(), "history reader should consume order event at i=" + i);
+                }
 
-                assertFalse(reader.readOne(), "reader.readOne()");
+                assertFalse(reader.readOne(), "history reader should be at end after queue 1 replay");
             }
 
             try (ChronicleQueue in = ChronicleQueue.singleBuilder(queuePath2).testBlockSize().sourceId(2).build()) {
                 MethodReader reader = in.createTailer().methodReader((OrderListener) order -> {
                     MessageHistory x = MessageHistory.get();
                     // Note: this will have one extra timing, the time it was written to the console.
-                    assertEquals(1, x.sourceId(0), "x.sourceId(0)");
-                    assertEquals(2, x.sourceId(1), "x.sourceId(1)");
-                    assertEquals(4, x.timings(), "x.timings()");
+                    assertEquals(1, x.sourceId(0), "history sourceId(0) should be 1");
+                    assertEquals(2, x.sourceId(1), "history sourceId(1) should be 2");
+                    assertEquals(4, x.timings(), "history timings should include write to console");
                 });
-                assertTrue(reader.readOne(), "reader.readOne()");
-                assertFalse(reader.readOne(), "reader.readOne()");
+                assertTrue(reader.readOne(), "history reader should consume initial order");
+                assertFalse(reader.readOne(), "history reader should be at end after initial order");
             }
         } finally {
             try {
@@ -180,6 +186,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Service restart replays one message per cycle")
     public void testRestartingAService() {
         File queuePath = DirectoryUtils.tempDir("testRestartingAService");
         File queuePath2 = DirectoryUtils.tempDir("testRestartingAService-down");
@@ -221,24 +228,25 @@ public class OrderManagerTest extends QueueTestCommon {
 
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer("test");
-                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()), "tailer.index()=" + Long.toHexString(tailer.index()));
+                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()),
+                            "tailer index should match sequence at i=" + i + " index=" + Long.toHexString(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 
-                    assertTrue("i: " + i, reader.readOne());
+                    assertTrue(reader.readOne(), "reader should consume one message at i=" + i);
                 }
             }
         } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
             } catch (Exception e) {
-                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath, e);
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete main queue path " + queuePath, e);
             }
 
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception e) {
-                Jvm.warn().on(OrderManagerTest.class, "Failed to delete " + queuePath2, e);
+                Jvm.warn().on(OrderManagerTest.class, "Failed to delete downstream queue path " + queuePath2, e);
             }
         }
     }

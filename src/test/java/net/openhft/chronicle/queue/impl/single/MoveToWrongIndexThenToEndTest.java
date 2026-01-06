@@ -13,6 +13,7 @@ import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
@@ -81,6 +82,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer toEnd survives wrong index without BufferUnderflowException")
     public void testBufferUnderflowException() throws InterruptedException {
         finishedNormally = false;
         append();
@@ -123,7 +125,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
             waitFor(l1, "tailer finish");
 
-            assertNull(refThrowable.get(), "refThrowable");
+            assertNull(refThrowable.get(), "Tailer thread should not throw during toEnd loop");
 
         } finally {
             try {
@@ -189,7 +191,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
             return index;
         } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Failed to estimate last index for cycle " + cycle, e);
         }
     }
 

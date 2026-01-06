@@ -11,6 +11,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("EOF marker written after metadata writing document")
     public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
 
         final Consumer<InternalAppender> writer = appender -> {
@@ -42,6 +44,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("EOF marker written after writing document")
     public void checkTheEOFisWrittenToPreQueueFileWritingDocument() {
         final Consumer<InternalAppender> writer = appender -> {
             try (DocumentContext wd = appender.writingDocument()) {
@@ -100,6 +103,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index queue across roll cycle boundary")
     public void testIndexQueue() {
 
         File file1 = getTmpDir();
@@ -140,13 +144,16 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     results.add(forRead.to8bitString());
                     forRead.clear();
                 }
-                assertTrue(results.contains("Hello World 1"), results.toString());
-                assertTrue(results.contains("Hello World 2"), "tailer should read second message from same cycle");
+                assertTrue(results.contains("Hello World 1"),
+                        results + " should contain Hello World 1");
+                assertTrue(results.contains("Hello World 2"),
+                        results + " should contain Hello World 2");
                 // The reader fails to read the third message. The reason for this is
                 // that there was no EOF marker placed at end of the 18264 indexed file
                 // so when the reader started reading through the queues it got stuck on
                 // that file and never progressed to the latest queue file.
-                assertTrue(results.contains("Hello World 3"), "tailer should read message from next cycle when EOF marker present");
+                assertTrue(results.contains("Hello World 3"),
+                        results + " should contain Hello World 3");
             } finally {
                 forRead.releaseLast();
             }
@@ -154,6 +161,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer skips to fifth message in cycle")
     public void read5thMessageTest() {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(CLOCK.currentTimeMillis());
@@ -209,6 +217,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/822
     @Test
+    @DisplayName("Metadata entries are written and read through the index")
     public void writeReadMetadata() {
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
@@ -301,6 +310,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports a single data entry in one cycle")
     public void singleDataEntry() {
         String[] strings = new String[]{"data-1"};
         boolean[] meta = new boolean[]{false};
@@ -309,6 +319,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports a single meta entry in one cycle")
     public void singleMetaEntry() {
         String[] strings = new String[]{"data-1"};
         boolean[] meta = new boolean[]{true};
@@ -317,6 +328,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports three data entries in one cycle")
     public void dataDataData() {
         String[] strings = new String[]{"data-1", "data-2", "data-3"};
         boolean[] meta = new boolean[]{false, false, false};
@@ -325,6 +337,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports data-data-meta pattern")
     public void dataDataMeta() {
         String[] strings = new String[]{"data-1", "data-2", "meta-1"};
         boolean[] meta = new boolean[]{false, false, true};
@@ -333,6 +346,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports data-meta-data pattern")
     public void dataMetaData() {
         String[] strings = new String[]{"data-1", "meta-1", "data-2"};
         boolean[] meta = new boolean[]{false, true, false};
@@ -341,6 +355,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports data-meta-meta pattern")
     public void dataMetaMeta() {
         String[] strings = new String[]{"data-1", "meta-1", "meta-2"};
         boolean[] meta = new boolean[]{false, true, true};
@@ -349,6 +364,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports three meta entries in one cycle")
     public void metaMetaMeta() {
         String[] strings = new String[]{"meta-1", "meta-2", "meta-3"};
         boolean[] meta = new boolean[]{true, true, true};
@@ -357,6 +373,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports meta-meta-data pattern")
     public void metaMetaData() {
         String[] strings = new String[]{"meta-1", "meta-2", "data-1"};
         boolean[] meta = new boolean[]{true, true, false};
@@ -365,6 +382,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports meta-data-meta pattern")
     public void metaDataMeta() {
         String[] strings = new String[]{"meta-1", "data-1", "meta-2"};
         boolean[] meta = new boolean[]{true, false, true};
@@ -373,6 +391,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Index supports meta-data-data pattern")
     public void metaDataData() {
         String[] strings = new String[]{"meta-1", "data-1", "data-2"};
         boolean[] meta = new boolean[]{true, false, false};

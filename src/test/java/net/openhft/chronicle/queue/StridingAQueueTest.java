@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.util.Mocker;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class StridingAQueueTest extends QueueTestCommon {
     @Test
+    @DisplayName("Striding tailer reads expected subset of entries")
     public void testStriding() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(1_567_498_753_000L);

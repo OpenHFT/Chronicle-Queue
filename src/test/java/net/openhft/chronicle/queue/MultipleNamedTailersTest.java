@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MultipleNamedTailersTest extends QueueTestCommon {
     @Test
+    @DisplayName("Named tailers read the same documents as unnamed tailers")
     public void multipleTailers() {
         File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
 
@@ -43,7 +45,7 @@ public class MultipleNamedTailersTest extends QueueTestCommon {
 
     private void check(ExcerptTailer tailer1, String id0, long index0) {
         try (DocumentContext dc = tailer1.readingDocument()) {
-            assertTrue(dc.isPresent(), "tailer: document present");
+            assertTrue(dc.isPresent(), "tailer: document should be present when reading");
             assertEquals(index0, tailer1.index(), "tailer: index should match lastIndexAppended");
             assertEquals(id0, dc.wire().getValueIn().text(), "tailer: readText should match written id");
         }

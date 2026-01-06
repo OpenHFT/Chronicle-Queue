@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -61,29 +62,40 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
     public void shouldBlowUpIfClosed() {
         listing.close();
-        assertThrows(IllegalStateException.class, listing::getMaxCreatedCycle, "directory listing: closed");
+        assertThrows(IllegalStateException.class, listing::getMaxCreatedCycle,
+                "listing should throw when querying after close");
     }
 
     @Test
+    @DisplayName("Track max and min cycle after file creation")
     public void shouldTrackMaxValue() {
         listing.refresh(true);
 
         listing.onFileCreated(tempFile, 7);
 
-        assertEquals(7, listing.getMaxCreatedCycle(), "Expected max created cycle to be 7 after creating first file with cycle 7");
-        assertEquals(7, listing.getMinCreatedCycle(), "Expected min created cycle to be 7 after creating first file with cycle 7");
-        assertEquals(7, listingReadOnly.getMaxCreatedCycle(), "Expected read-only max created cycle to be 7 after first file creation");
-        assertEquals(7, listingReadOnly.getMinCreatedCycle(), "Expected read-only min created cycle to be 7 after first file creation");
+        assertEquals(7, listing.getMaxCreatedCycle(),
+                "max created cycle should be 7 after creating first file with cycle 7");
+        assertEquals(7, listing.getMinCreatedCycle(),
+                "min created cycle should be 7 after creating first file with cycle 7");
+        assertEquals(7, listingReadOnly.getMaxCreatedCycle(),
+                "read-only max created cycle should be 7 after first file creation");
+        assertEquals(7, listingReadOnly.getMinCreatedCycle(),
+                "read-only min created cycle should be 7 after first file creation");
 
         listing.onFileCreated(tempFile, 8);
 
-        assertEquals(8, listing.getMaxCreatedCycle(), "Expected max created cycle to be 8 after creating second file with cycle 8");
-        assertEquals(7, listing.getMinCreatedCycle(), "Expected min created cycle to remain 7 after creating second file with cycle 8");
-        assertEquals(8, listingReadOnly.getMaxCreatedCycle(), "Expected read-only max created cycle to be 8 after second file creation");
-        assertEquals(7, listingReadOnly.getMinCreatedCycle(), "Expected read-only min created cycle to remain 7 after second file creation");
+        assertEquals(8, listing.getMaxCreatedCycle(),
+                "max created cycle should be 8 after creating second file with cycle 8");
+        assertEquals(7, listing.getMinCreatedCycle(),
+                "min created cycle should remain 7 after creating second file with cycle 8");
+        assertEquals(8, listingReadOnly.getMaxCreatedCycle(),
+                "read-only max created cycle should be 8 after second file creation");
+        assertEquals(7, listingReadOnly.getMinCreatedCycle(),
+                "read-only min created cycle should remain 7 after second file creation");
     }
 
     @Test
+    @DisplayName("Initialise directory listing from existing files")
     public void shouldInitialiseFromFilesystem() throws IOException {
         new File(testDirectory, 1 + SingleChronicleQueue.SUFFIX).createNewFile();
         new File(testDirectory, 2 + SingleChronicleQueue.SUFFIX).createNewFile();
@@ -91,18 +103,25 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
         listing.refresh(true);
 
-        assertEquals(3, listing.getMaxCreatedCycle(), "Expected max created cycle to be 3 after initializing from filesystem with cycles 1, 2, 3");
-        assertEquals(1, listing.getMinCreatedCycle(), "Expected min created cycle to be 1 after initializing from filesystem with cycles 1, 2, 3");
-        assertEquals(3, listingReadOnly.getMaxCreatedCycle(), "Expected read-only max created cycle to be 3 after filesystem initialization");
-        assertEquals(1, listingReadOnly.getMinCreatedCycle(), "Expected read-only min created cycle to be 1 after filesystem initialization");
+        assertEquals(3, listing.getMaxCreatedCycle(),
+                "max created cycle should be 3 after initialising from cycles 1, 2, 3");
+        assertEquals(1, listing.getMinCreatedCycle(),
+                "min created cycle should be 1 after initialising from cycles 1, 2, 3");
+        assertEquals(3, listingReadOnly.getMaxCreatedCycle(),
+                "read-only max created cycle should be 3 after filesystem initialisation");
+        assertEquals(1, listingReadOnly.getMinCreatedCycle(),
+                "read-only min created cycle should be 1 after filesystem initialisation");
     }
 
     @Test
+    @DisplayName("Lock timeout does not prevent max cycle update")
     public void lockShouldTimeOut() {
         listing.onFileCreated(tempFile, 8);
 
         listing.onFileCreated(tempFile, 9);
-        assertEquals(9, listing.getMaxCreatedCycle(), "Expected max created cycle to be 9 after creating file with cycle 9, demonstrating lock acquisition succeeds");
-        assertEquals(9, listingReadOnly.getMaxCreatedCycle(), "Expected read-only max created cycle to be 9 after lock operation completes");
+        assertEquals(9, listing.getMaxCreatedCycle(),
+                "max created cycle should be 9 after creating file with cycle 9");
+        assertEquals(9, listingReadOnly.getMaxCreatedCycle(),
+                "read-only max created cycle should be 9 after lock operation completes");
     }
 }

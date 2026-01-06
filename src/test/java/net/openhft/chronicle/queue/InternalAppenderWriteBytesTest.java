@@ -12,6 +12,7 @@ import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -35,6 +36,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Write at end of last existing roll cycle")
     public void canWriteAtEndOfLastExistingRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
@@ -43,6 +45,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Write at beginning of next roll cycle")
     public void canWriteAtBeginningOfNextRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
@@ -74,6 +77,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Cannot overwrite existing queue entries once written")
     public void cannotOverwriteExistingEntries() {
         @NotNull Bytes<byte[]> originalBytes = Bytes.from("hello world");
         final Bytes<byte[]> overwriteBytes = Bytes.from("HELLO WORLD");
@@ -93,6 +97,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Cannot overwrite entries from different queue instance")
     public void cannotOverwriteExistingEntries_DifferentQueueInstance() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
@@ -183,7 +188,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
             assertEquals(test, result, "Tailer should read original bytes unchanged when overwrite attempts from different queue instance are rejected");
-            assertEquals(1, tailer.index(), "Tailer should be at index 1 after reading the first entry");
+            assertEquals(1, tailer.index(), "Tailer should be at index 1 after reading first entry from new queue");
         }
     }
 
@@ -222,6 +227,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Cannot append to previous cycle after EOF")
     public void cannotAppendToPreviousCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");

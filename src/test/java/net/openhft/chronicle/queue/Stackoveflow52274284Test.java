@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Stackoveflow52274284Test extends QueueTestCommon {
     @Test
+    @DisplayName("Stackoverflow 52274284 reproducer reads all records")
     public void fails() throws IOException {
         String basePath = OS.getTarget();
         String path = Files.createTempDirectory(Paths.get(basePath), "chronicle-")

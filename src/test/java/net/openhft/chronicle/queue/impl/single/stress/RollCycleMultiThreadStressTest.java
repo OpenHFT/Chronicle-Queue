@@ -22,6 +22,7 @@ import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -102,10 +103,6 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
         return allReadersComplete;
     }
 
-    public static void main(String[] args) throws Exception {
-        new RollCycleMultiThreadStressVanillaTest().run();
-    }
-
     private static void shutdownAll(int waitSecs, ExecutorService... ess) throws InterruptedException {
         for (ExecutorService es : ess)
             es.shutdownNow();
@@ -123,6 +120,7 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Multi-thread stress across roll cycles completes")
     public void stress() throws Exception {
         ignoreException(" us to grow file");
         ignoreException("ms to check the disk space of");
@@ -169,7 +167,7 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
         if (readersReadOnly)
             try (ChronicleQueue queue = createQueue(file)) {
-                assertNotNull(queue, "createQueue should succeed");
+                assertNotNull(queue, "createQueue should succeed for read-only queue setup");
             }
 
         if (sharedWriteQueue)
@@ -231,8 +229,7 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
         assertTrue(wrote.get() >= expectedNumberOfMessages, "Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions);
 
         readers.stream().filter(r -> r.exception != null).findAny().ifPresent(reader -> {
-            throw new AssertionError("Reader encountered exception, so stopped reading messages",
-                    reader.exception);
+            throw new AssertionError("Reader encountered exception after writing completed", reader.exception);
         });
 
         Jvm.perf().on(getClass(), String.format("Took %dms to write %d messages (max time allowed %dms)",
@@ -329,7 +326,8 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     @BeforeEach
     public void multiCPU() {
-        Assumptions.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+        Assumptions.assumeTrue(Runtime.getRuntime().availableProcessors() > 1,
+                "Test requires more than one CPU core for multi-threading");
     }
 
     enum StressTestType {
@@ -346,7 +344,7 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
                            int lastTailerCycle, int lastQueueCycle, int expected, ValueIn valueIn);
 
         /**
-         * Executed after all documents have been read
+         * Executed after all documents have been read to validate final reader state.
          */
         void postReadCheck(RollingChronicleQueue queue);
     }
@@ -461,11 +459,11 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 readerCheckingStrategy.postReadCheck(queue);
             } catch (Throwable e) {
                 exception = e;
-                Jvm.debug().on(getClass(), "Finished reader", e);
+                Jvm.debug().on(getClass(), "Finished reader after exception", e);
                 return e;
             }
 
-            Jvm.debug().on(getClass(), "Finished reader OK");
+            Jvm.debug().on(getClass(), "Finished reader without errors");
             return null;
         }
     }
@@ -503,12 +501,12 @@ public abstract class RollCycleMultiThreadStressTest extends QueueTestCommon {
                     loopIteration++;
 
                     if (value >= expectedNumberOfMessages) {
-                        Jvm.debug().on(getClass(), "Finished writer");
+                        Jvm.debug().on(getClass(), "Finished writer after reaching expected message count");
                         return null;
                     }
                 }
             } catch (Throwable e) {
-                Jvm.debug().on(getClass(), "Finished writer", e);
+                Jvm.debug().on(getClass(), "Finished writer after exception", e);
                 exception = e;
                 return e;
             } finally {

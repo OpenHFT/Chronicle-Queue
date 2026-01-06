@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST8_DAILY;
@@ -14,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ToEndPaddingTest extends QueueTestCommon {
     @Test
+    @DisplayName("toEnd handles padding across variable length messages")
     public void toEndWorksWithDifferentlyPaddedMessages() {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().rollCycle(TEST8_DAILY).build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -26,7 +28,7 @@ public class ToEndPaddingTest extends QueueTestCommon {
 
             DocumentContext dc;
             try (final DocumentContext documentContext = tailer.readingDocument(false)) {
-                assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
+                assertTrue(documentContext.isPresent(), "document context should be present for initial read");
 
                 final String text = documentContext.wire().read().text();
 
@@ -43,16 +45,18 @@ public class ToEndPaddingTest extends QueueTestCommon {
             }
 
             // toEnd just before adding one more entry
-            assertEquals(2336, dc.wire().bytes().readPosition(), "dc.wire().bytes().readPosition()");
+            assertEquals(2336, dc.wire().bytes().readPosition(),
+                    "read position before toEnd padding should be 2336");
             tailer.toEnd();
-            assertEquals(2368, dc.wire().bytes().readPosition(), "dc.wire().bytes().readPosition()");
+            assertEquals(2368, dc.wire().bytes().readPosition(),
+                    "read position after toEnd padding should be 2368");
 
             try (final DocumentContext documentContext = appender.acquireWritingDocument(false)) {
                 documentContext.wire().write("key").text("value");
             }
 
             try (final DocumentContext documentContext = tailer.readingDocument(false)) {
-                assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
+                assertTrue(documentContext.isPresent(), "document context should be present after toEnd read");
 
                 final String text = documentContext.wire().read().text();
 

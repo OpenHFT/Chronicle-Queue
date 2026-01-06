@@ -16,6 +16,7 @@ import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -43,6 +44,7 @@ public class NotCompleteTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Interrupted or failed writes leave queue unchanged")
     public void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
 
         final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
@@ -71,7 +73,7 @@ public class NotCompleteTest extends QueueTestCommon {
                     // thread is interrupted during this
                     try {
                         proxy.accept(interrupter);
-                        Jvm.error().on(getClass(), "Should have interrupted");
+                        Jvm.error().on(getClass(), "Writer thread should have been interrupted");
                     } catch (InterruptedRuntimeException expected) {
                         // expected.
                     }
@@ -105,7 +107,7 @@ public class NotCompleteTest extends QueueTestCommon {
                     assertEquals(cleanedQueueDump, dump, "queue should be unchanged by the failed (exception) write");
                 }
 
-                // check nothing else written
+                    // check nothing else written
                     assertFalse(reader.readOne(), "MethodReader should have no new messages after failed exception write");
 
                 // do an empty write
@@ -117,7 +119,7 @@ public class NotCompleteTest extends QueueTestCommon {
                 // check queue unchanged
                 String dump = cleanQueueDump(queueWriter.dump());
                     assertEquals(cleanedQueueDump, dump, "queue should be unchanged by the failed (rollback) write");
-                // check nothing else written
+                    // check nothing else written
                     assertFalse(reader.readOne(), "MethodReader should have no new messages after rollback write");
 
                 // write another person to same queue in this thread
@@ -185,7 +187,7 @@ public class NotCompleteTest extends QueueTestCommon {
             if (INTERRUPT.equals(name)) {
                 Thread.currentThread().interrupt();
             } else if (THROW.equals(name)) {
-                throw new NullPointerException();
+                throw new NullPointerException("Forced failure for write interruption test");
             } else {
                 wire.write("name").text(name);
             }

@@ -16,6 +16,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -42,6 +43,7 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue recovers after EOF marker on empty cycle")
     public void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         assumeFalse(OS.isWindows(), "Windows does not support this test");
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
@@ -67,7 +69,7 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
             final int nextCycle = queue.cycle();
 
             // ensure that the cycle file will roll
-            assertNotEquals(nextCycle, startCycle);
+            assertNotEquals(nextCycle, startCycle, "Cycle should roll after advancing clock");
 
             ExecutorService appenderExecutor = Executors.newSingleThreadExecutor(
                     new NamedThreadFactory("Appender"));

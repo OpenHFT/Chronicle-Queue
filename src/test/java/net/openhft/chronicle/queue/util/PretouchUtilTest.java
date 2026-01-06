@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -16,12 +17,13 @@ import static org.junit.jupiter.api.Assertions.*;
 public class PretouchUtilTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Pretouch handler creation falls back safely")
     public void createEventHandlerAndPretoucherFallback() {
         ignoreException("Pretoucher is only supported");
         final File dir = getTmpDir();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
             final EventHandler handler = PretouchUtil.createEventHandler(q);
-            assertNotNull(handler, "pretouch: handler");
+            assertNotNull(handler, "Pretouch handler should be created for queue");
             // Exercise handler once. In enterprise builds this may perform work and return true;
             // in OSS fallback it returns false. Only assert that it does not throw.
             try {
@@ -35,6 +37,7 @@ public class PretouchUtilTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Pretouch handler on closed queue does not throw")
     public void eventHandlerActionOnClosedQueueDoesNotThrow() {
         ignoreException("Pretoucher is only supported");
         final File dir = getTmpDir();
@@ -42,7 +45,7 @@ public class PretouchUtilTest extends QueueTestCommon {
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
             handler = PretouchUtil.createEventHandler(q);
         }
-        assertNotNull(handler, "pretouch: handler");
+        assertNotNull(handler, "Pretouch handler should be created for closed queue");
         try {
             handler.action();
         } catch (net.openhft.chronicle.core.threads.InvalidEventHandlerException ignored) {

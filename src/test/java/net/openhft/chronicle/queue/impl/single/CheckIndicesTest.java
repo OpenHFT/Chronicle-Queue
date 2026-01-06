@@ -11,6 +11,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Callable;
@@ -31,11 +32,12 @@ public class CheckIndicesTest extends QueueTestCommon {
         super.threadDump();
     }
 
-    @Disabled("stress test to run manually")
     @Test
+    @DisplayName("Manual stress test checks index consistency under concurrent writes")
+    @Disabled("Stress test to run manually for index checking")
     public void test() throws ExecutionException, InterruptedException {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).epoch(System.currentTimeMillis()).build()) {
-            Assertions.assertNotNull(queue, "check-indices: queue");
+            Assertions.assertNotNull(queue, "check-indices: queue should be created");
             queue0 = queue;
             newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::appendToQueue, 0, 1, TimeUnit.MICROSECONDS);
             Future<Callable<Void>> f = newSingleThreadScheduledExecutor().submit(this::checkIndices);
@@ -69,9 +71,11 @@ public class CheckIndicesTest extends QueueTestCommon {
                     continue;
                 }
                 if (index != dc.index())
-                    throw new AssertionError();
-                if (queue0.rollCycle().toSequenceNumber(index) != dc.wire().read("value").readLong())
-                    throw new AssertionError();
+                    throw new AssertionError("Index mismatch, expected " + index + " but read " + dc.index());
+                long expectedSeq = queue0.rollCycle().toSequenceNumber(index);
+                long actualSeq = dc.wire().read("value").readLong();
+                if (expectedSeq != actualSeq)
+                    throw new AssertionError("Sequence mismatch at index " + index + ": expected " + expectedSeq + ", actual " + actualSeq);
             }
             movetoIndex = false;
             index += 1;
@@ -91,7 +95,7 @@ public class CheckIndicesTest extends QueueTestCommon {
                 }
             }
         } catch (Exception e) {
-            throw new AssertionError(e);
+            throw new AssertionError("Appender failed while writing batch entries", e);
         }
     }
 }

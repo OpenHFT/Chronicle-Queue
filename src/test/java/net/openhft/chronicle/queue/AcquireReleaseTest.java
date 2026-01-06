@@ -12,6 +12,7 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -68,6 +69,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reserve and release returns all documents for tailer")
     public void testReserveAndRelease() {
         File dir = getTmpDir();
 

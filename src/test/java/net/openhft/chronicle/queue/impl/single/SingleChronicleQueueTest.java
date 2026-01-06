@@ -24,6 +24,7 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -192,6 +193,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Append writes update the sequence number")
     public void testAppend() {
         try (final ChronicleQueue queue =
                      builderWithAppendListener(getTmpDir(), wireType)
@@ -201,21 +203,25 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             for (int i = 0; i < 10; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()), "queue.rollCycle().toSequenceNumber(appender.lastIndexAppended())");
+                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()),
+                        "Sequence number should match append count during append/read at index " + i);
             }
 
-            assertEquals(10L, countEntries(queue, named), "countEntries(queue, named)");
+            assertEquals(10L, countEntries(queue, named),
+                    "Entry count should be 10 after append loop");
         }
         assertEquals(expectedForTestAppend(),
-                appenderListenerDump.toString(), "appenderListenerDump.toString()");
+                appenderListenerDump.toString(), "Appender listener dump should match append output");
     }
 
     @TestTemplate
+    @DisplayName("Create appender returns new instance each time")
     public void createAppenderWillReturnANewAppenderEachTime() {
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType).build();
              final ExcerptAppender appender1 = queue.createAppender();
              final ExcerptAppender appender2 = queue.createAppender()) {
-            assertNotSame(appender1, appender2, "appender2");
+            assertNotSame(appender1, appender2,
+                    "Second appender instance should be distinct from first appender");
         }
     }
 
@@ -224,14 +230,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
      * {@link SingleChronicleQueueBuilder#readOnly(boolean)}.
      */
     @TestTemplate
+    @DisplayName("Read-only queue rejects createAppender calls")
     public void createAppenderWillThrowWhenQueueIsReadOnly() {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Read-only createAppender test does not run on Windows");
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = builder(queueDir, wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("hello world");
             try (final ChronicleQueue readOnlyQueue = builder(queueDir, wireType).readOnly(true).build()) {
-                assertThrows(IllegalStateException.class, readOnlyQueue::createAppender);
+                assertThrows(IllegalStateException.class, readOnlyQueue::createAppender,
+                        "createAppender should fail for read-only queue");
             }
         }
     }
@@ -291,6 +299,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Text write and read round trip")
     public void testTextReadWrite() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue =
@@ -298,9 +307,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                              .build();
              final ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("hello world");
-            assertEquals("hello world", queue.createTailer(named ? "named" : null).readText(), "queue.createTailer(named ? \"named\" : null).readText()");
+            assertEquals("hello world", queue.createTailer(named ? "named" : null).readText(),
+                    "Tailer should read written text");
         }
-        assertEquals(expectedForTestTextReadWrite(), appenderListenerDump.toString(), "appenderListenerDump.toString()");
+        assertEquals(expectedForTestTextReadWrite(), appenderListenerDump.toString(),
+                "Appender listener dump should match text write output");
     }
 
     @NotNull
@@ -313,6 +324,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Cleanup removes queue directory after use")
     public void testCleanupDir() throws Throwable {
         AtomicBoolean executed = new AtomicBoolean();
         if (OS.isWindows())
@@ -324,7 +336,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             testCleanupDir0();
             executed.set(true);
         }
-        assertTrue(executed.get(), "cleanup dir: executed");
+        assertTrue(executed.get(), "Cleanup directory test should execute");
     }
 
     private void testCleanupDir0() {
@@ -345,6 +357,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Rollback on append keeps earlier writes")
     public void testRollbackOnAppend() {
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), wireType)
@@ -367,16 +380,19 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertEquals("world", dc.wire().read("hello").text(), "dc.wire().read(\"hello\").text()");
+                assertEquals("world", dc.wire().read("hello").text(),
+                        "Tailer should read first message after rollback");
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertEquals("world2", dc.wire().read("hello").text(), "dc.wire().read(\"hello\").text()");
+                assertEquals("world2", dc.wire().read("hello").text(),
+                        "Tailer should read second message after rollback");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Write with document read bytes different threads")
     public void testWriteWithDocumentReadBytesDifferentThreads() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
                 .build()) {
@@ -409,7 +425,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     b.readPosition(0);
                     b.singleThreadedCheckReset();
                     result.add(b);
-                    throw new RejectedExecutionException();
+                    throw new RejectedExecutionException("Stop scheduled task after first read");
                 }, 1, 1, TimeUnit.MICROSECONDS);
 
                 final Bytes<?> bytes = result.poll(5, TimeUnit.SECONDS);
@@ -433,6 +449,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Should blow up if trying to create queue with unparseable roll cycle")
     public void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
@@ -450,13 +467,14 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Can append metadata if append lock is set")
     public void testCanAppendMetadataIfAppendLockIsSet() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             final SingleChronicleQueue scq = (SingleChronicleQueue) queue;
             scq.appendLock().lock();
             try (final ExcerptAppender appender = queue.createAppender()) {
-                assumeTrue(appender instanceof StoreAppender, "Failing in CQE");
+                assumeTrue(appender instanceof StoreAppender, "StoreAppender is required for CQE append lock test");
                 try (DocumentContext dc = appender.writingDocument(true)) {
                     dc.wire().write("Hello World");
                 }
@@ -471,6 +489,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Append lock prevents additional appends queue behaviour scenario")
     public void testCantAppendIfAppendLockIsSet() {
         File tmpDir = getTmpDir();
         assertThrows(IllegalStateException.class, () -> {
@@ -484,6 +503,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Cant append if append lock is set in different queue")
     public void testCantAppendIfAppendLockIsSetInDifferentQueue() {
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
@@ -502,20 +522,21 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Can append write bytes internal if append lock is set")
     public void testCanAppendWriteBytesInternalIfAppendLockIsSet() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builderWithAppendListener(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
             try (final ExcerptAppender appender = queue.createAppender()) {
-                assumeTrue(appender instanceof StoreAppender, "requires StoreAppender");
-                assumeTrue(appender instanceof StoreAppender);
+                assumeTrue(appender instanceof StoreAppender, "StoreAppender is required for writeBytesInternal");
                 StoreAppender storeAppender = (StoreAppender) appender;
                 ((SingleChronicleQueue) queue).writeLock().lock();
                 storeAppender.writeBytesInternal(0, test);
             }
         }
-        assertEquals(expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet(), appenderListenerDump.toString(), "appenderListenerDump.toString()");
+        assertEquals(expectedForTestCanAppendWriteBytesInternalIfAppendLockIsSet(), appenderListenerDump.toString(),
+                "Appender listener dump should match writeBytesInternal output");
     }
 
     @NotNull
@@ -528,6 +549,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Should not blow up if trying to create queue with incorrect roll cycle")
     public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
@@ -543,11 +565,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         // match the first RollCycles with the same format string, which may not
         // be the RollCycles it was written with
         try (final ChronicleQueue reopen = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-            assertEquals(DEFAULT, reopen.rollCycle(), "reopen.rollCycle()");
+            assertEquals(DEFAULT, reopen.rollCycle(), "Reopened queue should default to RollCycles.DEFAULT");
         }
     }
 
     @TestTemplate
+    @DisplayName("Epoch override takes effect queue behaviour scenario")
     public void shouldOverrideDifferentEpoch() {
         expectException("Overriding roll epoch from existing metadata, was 10, overriding to 100");
         File tmpDir = getTmpDir();
@@ -560,11 +583,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
 
         try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(TEST_SECONDLY).epoch(10).build()) {
-            assertEquals(shouldBeEpoch, ((SingleChronicleQueue) ignored).epoch(), "((SingleChronicleQueue) ignored).epoch()");
+            assertEquals(shouldBeEpoch, ((SingleChronicleQueue) ignored).epoch(),
+                    "Queue epoch should match configured value");
         }
     }
 
     @TestTemplate
+    @DisplayName("Read and write with hourly roll cycle")
     public void testReadWriteHourly() {
 
         File tmpDir = getTmpDir();
@@ -588,7 +613,25 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return q.rollCycle().toSequenceNumber(index);
     }
 
+    private void assertMetaEntry(ChronicleQueue queue,
+                                 ExcerptTailer tailer,
+                                 boolean includeMetaData,
+                                 int expectedSeq,
+                                 boolean expectedMeta,
+                                 String expectedText,
+                                 String context) {
+        try (DocumentContext documentContext = tailer.readingDocument(includeMetaData)) {
+            assertEquals(expectedSeq, toSeq(queue, documentContext.index()),
+                    "Sequence number should be " + expectedSeq + " for " + context);
+            assertEquals(expectedMeta, documentContext.isMetaData(),
+                    "Metadata flag should be " + expectedMeta + " for " + context);
+            assertEquals(expectedText, documentContext.wire().getValueIn().text(),
+                    "Text should be " + expectedText + " for " + context);
+        }
+    }
+
     @TestTemplate
+    @DisplayName("Should allow directory to be deleted when queue is closed")
     public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test deleting after close on windows");
@@ -604,7 +647,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 dc.wire().write().text("foo");
             }
             try (final DocumentContext dc = queue.createTailer(named ? "named" : null).readingDocument()) {
-                assertEquals("foo", dc.wire().read().text(), "dc.wire().read().text()");
+                assertEquals("foo", dc.wire().read().text(), "Tailer should read written foo text");
             }
         }
 
@@ -615,10 +658,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     .collect(Collectors.toList());
             assertTrue(unDeletable.isEmpty(), "Unable to delete " + unDeletable);
         }
-        assertTrue(dir.delete(), "dir.delete()");
+        assertTrue(dir.delete(), "Directory should delete after queue close");
     }
 
     @TestTemplate
+    @DisplayName("Reading fewer bytes than written queue behaviour scenario")
     public void testReadingLessBytesThanWritten() {
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
                 .build();
@@ -639,7 +683,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 tailer.readBytes(b);
 
-                assertEquals(expected.readInt(0), b.readInt(0), "b.readInt(0)");
+                assertEquals(expected.readInt(0), b.readInt(0),
+                        "Read prefix should match expected bytes at iteration " + i);
 
                 b.releaseLast();
             }
@@ -647,6 +692,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Append entries and read them back")
     public void testAppendAndRead() {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .build();
@@ -656,7 +702,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             for (int i = 0; i < 10; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()), "queue.rollCycle().toSequenceNumber(appender.lastIndexAppended())");
+                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()),
+                        "Sequence number should match append count at index " + i);
             }
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
@@ -664,21 +711,33 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             // Sequential read
             for (int i = 0; i < 10; i++) {
                 final int n = i;
-                assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32(), "r.read(TestKey.test).int32()")), "sequential readDocument: n=" + n);
-                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()), "queue.rollCycle().toSequenceNumber(tailer.index())");
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent(), "sequential readDocument should succeed at index " + i);
+                    assertEquals(n, dc.wire().read(TestKey.test).int32(),
+                            "Sequential TestKey.test should equal " + n + " at index " + i);
+                }
+                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()),
+                        "Tailer sequence number should advance after sequential read at index " + i);
             }
 
             // Random read
             for (int i = 0; i < 10; i++) {
                 final int n = i;
-                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, n)), "n: " + n);
-                assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32(), "r.read(TestKey.test).int32()")), "n: " + n);
-                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()), "queue.rollCycle().toSequenceNumber(tailer.index())");
+                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, n)),
+                        "Tailer should move to index " + i + " for random read");
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent(), "Tailer should read document for random index " + i);
+                    assertEquals(n, dc.wire().read(TestKey.test).int32(),
+                            "Random TestKey.test should equal " + n + " at index " + i);
+                }
+                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()),
+                        "Tailer sequence number should advance after random read at index " + i);
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Read and append concurrently queue behaviour scenario")
     public void testReadAndAppend() throws InterruptedException {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -705,13 +764,14 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    fail("exception");
+                    fail("Exception while reading document in background thread");
                 }
             });
             t.setDaemon(true);
             t.start();
 
-            assertTrue(started.await(1, TimeUnit.SECONDS), "started.await(1, TimeUnit.SECONDS)");
+            assertTrue(started.await(1, TimeUnit.SECONDS),
+                    "Reader thread should start within 1 second");
 
             for (int i = 0; i < 2; i++) {
                 final int n = i;
@@ -725,6 +785,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Check index with writingDocument writes queue behaviour scenario")
     public void testCheckIndexWithWritingDocument() {
         int documents = doTestCheckIndex(
                 (appender, n) -> {
@@ -732,10 +793,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                         dc.wire().writeEventName("").object("" + n);
                     }
                 });
-        assertEquals(6, documents, "check index: writingDocument");
+        assertEquals(6, documents, "Document count should be 6 for writingDocument");
     }
 
     @TestTemplate
+    @DisplayName("Check index with writingDocument bytes queue behaviour scenario")
     public void testCheckIndexWithWritingDocument2() {
         int documents = doTestCheckIndex(
                 (appender, n) -> {
@@ -746,24 +808,27 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                                 .writeInt(1);
                     }
                 });
-        assertEquals(6, documents, "check index: writingDocument2");
+        assertEquals(6, documents, "Document count should be 6 for writingDocument2");
     }
 
     @TestTemplate
+    @DisplayName("Check index while writing bytes queue behaviour scenario")
     public void testCheckIndexWithWriteBytes() {
         int documents = doTestCheckIndex(
                 (appender, n) -> appender.writeBytes(Bytes.from("Message-" + n)));
-        assertEquals(6, documents, "check index: writeBytes");
+        assertEquals(6, documents, "Document count should be 6 for writeBytes");
     }
 
     @TestTemplate
+    @DisplayName("Check index with bytes lambda writes")
     public void testCheckIndexWithWriteBytes2() {
         int documents = doTestCheckIndex(
                 (appender, n) -> appender.writeBytes(b -> b.append8bit("Message-").append(n)));
-        assertEquals(6, documents, "check index: writeBytes2");
+        assertEquals(6, documents, "Document count should be 6 for writeBytes2");
     }
 
     @TestTemplate
+    @DisplayName("Check index with bytes marshalling writes")
     public void testCheckIndexWithWriteBytes3() {
         int documents = doTestCheckIndex(
                 (appender, n) -> appender.writeBytes(b ->
@@ -771,24 +836,26 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                                 .writeStopBit(12345)
                                 .writeStopBit(1.2) // float also supported.
                                 .writeInt(1)));
-        assertEquals(6, documents, "check index: writeBytes3");
+        assertEquals(6, documents, "Document count should be 6 for writeBytes3");
     }
 
     @TestTemplate
+    @DisplayName("Check index with map writes queue behaviour scenario")
     public void testCheckIndexWithWriteMap() {
         int documents = doTestCheckIndex(
                 (appender, n) -> appender.writeMap(new HashMap<String, String>() {{
                     put("key", "Message-" + n);
                 }}));
-        assertEquals(6, documents, "check index: writeMap");
+        assertEquals(6, documents, "Document count should be 6 for writeMap");
     }
 
     @TestTemplate
+    @DisplayName("Check index with text writes queue behaviour scenario")
     public void testCheckIndexWithWriteText() {
         int documents = doTestCheckIndex(
                 (appender, n) -> appender.writeText("Message-" + n)
         );
-        assertEquals(6, documents, "check index: writeText");
+        assertEquals(6, documents, "Document count should be 6 for writeText");
     }
 
     private int doTestCheckIndex(@NotNull BiConsumer<ExcerptAppender, Integer> writeTo) {
@@ -805,12 +872,15 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             for (int i = 0; i <= 5; i++) {
 
                 writeTo.accept(appender, i);
-                assertEquals(cycle + i, appender.cycle(), "appender should advance to next cycle each day");
+                assertEquals(cycle + i, appender.cycle(),
+                        "Appender should advance to next cycle at iteration " + i);
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     long index = tailer.index();
-                    assertEquals(appender.cycle(), tailer.cycle(), "tailer should be on same cycle as appender");
-                    assertEquals(cycle + i, DEFAULT.toCycle(index), "document index should reflect current cycle");
+                    assertEquals(appender.cycle(), tailer.cycle(),
+                            "Tailer should be on same cycle as appender at iteration " + i);
+                    assertEquals(cycle + i, DEFAULT.toCycle(index),
+                            "Document index should reflect current cycle at iteration " + i);
                 }
                 stp.currentTimeMillis(stp.currentTimeMillis() + 86400_000L);
                 documents++;
@@ -821,6 +891,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Append and read across rolling cycles")
     public void testAppendAndReadWithRollingB() {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
@@ -839,9 +910,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 stp.currentTimeMillis(stp.currentTimeMillis() + 86400_000L);
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(cycle + i, appender.cycle(), "appender should be on current cycle after first write");
+                assertEquals(cycle + i, appender.cycle(),
+                        "Appender should be on current cycle after first write at iteration " + i);
                 appender.writeDocument(w -> w.write(TestKey.test2).int32(n + 1000));
-                assertEquals(cycle + i, appender.cycle(), "appender should remain on same cycle after second write");
+                assertEquals(cycle + i, appender.cycle(),
+                        "Appender should remain on same cycle after second write at iteration " + i);
             }
 
             /* Note this means the file has rolled
@@ -851,20 +924,27 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null).toStart();
             for (int i = 0; i < 6; i++) {
                 final int n = i;
-                boolean condition = tailer.readDocument(r -> assertEquals(n,
-                        r.read(TestKey.test).int32(), "first document value should match iteration"));
-                assertTrue(condition, "i : " + i);
-                assertEquals(cycle + i, tailer.cycle(), "tailer should be on current cycle after first read");
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent(), "Tailer should read first document at iteration " + i);
+                    assertEquals(n, dc.wire().read(TestKey.test).int32(),
+                            "first document value should match loop index " + i);
+                }
+                assertEquals(cycle + i, tailer.cycle(),
+                        "Tailer should be on current cycle after first read at iteration " + i);
 
-                boolean condition2 = tailer.readDocument(r -> assertEquals(n + 1000,
-                        r.read(TestKey.test2).int32(), "second document value should be offset by 1000"));
-                assertTrue(condition2, "i2 : " + i);
-                assertEquals(cycle + i, tailer.cycle(), "tailer should remain on same cycle after second read");
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent(), "Tailer should read second document at iteration " + i);
+                    assertEquals(n + 1000, dc.wire().read(TestKey.test2).int32(),
+                            "second document value should be offset by 1000 at loop index " + i);
+                }
+                assertEquals(cycle + i, tailer.cycle(),
+                        "Tailer should remain on same cycle after second read at iteration " + i);
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Append entries and read back by index")
     public void testAppendAndReadAtIndex() {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
@@ -875,25 +955,31 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             for (int i = 0; i < 5; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(i, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()), "queue.rollCycle().toSequenceNumber(appender.lastIndexAppended())");
+                assertEquals(i, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()),
+                        "Sequence number should match append count before index read at index " + i);
             }
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
             for (int i = 0; i < 5; i++) {
                 final long index = queue.rollCycle().toIndex(appender.cycle(), i);
-                assertTrue(tailer.moveToIndex(index), "tailer.moveToIndex(index)");
+                assertTrue(tailer.moveToIndex(index), "Tailer should move to index " + index + " at iteration " + i);
 
                 final int n = i;
-                assertTrue(tailer.readDocument(r -> assertEquals(n, queue.rollCycle().toSequenceNumber(r.read(TestKey.test)
-                        .int32()), "queue.rollCycle().toSequenceNumber(r.read(TestKey.test) .int32())")), "readDocument after moveToIndex: i=" + i);
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent(), "readDocument after moveToIndex: i=" + i);
+                    assertEquals(n, queue.rollCycle().toSequenceNumber(dc.wire().read(TestKey.test).int32()),
+                            "Sequence number should match read value at index " + n + " for loop index " + i);
+                }
                 long index2 = tailer.index();
                 long sequenceNumber = queue.rollCycle().toSequenceNumber(index2);
-                assertEquals(n + 1, sequenceNumber, "sequenceNumber");
+                assertEquals(n + 1, sequenceNumber,
+                        "Sequence number should increment after moveToIndex at iteration " + i);
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Simple wire write and read queue behaviour scenario")
     public void testSimpleWire() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -909,11 +995,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             tailer.readDocument(wire -> wire.read("FirstName").text(first));
             tailer.readDocument(wire -> wire.read("Surname").text(surname));
-            assertEquals("Steve Jobs", first + " " + surname, "first + \" \" + surname");
+            assertEquals("Steve Jobs", first + " " + surname,
+                    "First name and surname should concatenate to Steve Jobs");
         }
     }
 
     @TestTemplate
+    @DisplayName("Index writing updates last index queue behaviour scenario")
     public void testIndexWritingDocument() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -929,11 +1017,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 dc.wire().write("FirstName").text("Quartilla");
             }
 
-            assertEquals(index, appender.lastIndexAppended(), "appender.lastIndexAppended()");
+            assertEquals(index, appender.lastIndexAppended(),
+                    "Last index appended should match first document index");
         }
     }
 
     @TestTemplate
+    @DisplayName("Marshallable document round trip queue behaviour scenario")
     public void testReadingWritingMarshallableDocument() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -949,15 +1039,17 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (DocumentContext dc = tailer.readingDocument()) {
 
-                assertEquals(myMarshable, dc.wire().read("myMarshable").typedMarshallable(), "dc.wire().read(\"myMarshable\").typedMarshallable()");
+                assertEquals(myMarshable, dc.wire().read("myMarshable").typedMarshallable(),
+                        "Typed marshallable should round trip from queue");
             }
         }
     }
 
     // CPD-OFF - metadata scenarios mirror each other
     @TestTemplate
+    @DisplayName("Metadata entries are reported correctly queue behaviour scenario")
     public void testMetaData() {
-        assumeFalse(named);
+        assumeFalse(named, "Metadata test requires unnamed tailer mode");
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
@@ -979,7 +1071,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             StringBuilder event = new StringBuilder();
             while (true) {
                 try (DocumentContext dc = tailer.readingDocument(true)) {
-                    assertTrue(dc.isMetaData(), "dc.isMetaData()");
+                    assertTrue(dc.isMetaData(), "Document context should be metadata for Quartilla entry in dump");
                     ValueIn in = dc.wire().read(event);
                     // first we will pick up header, index etc.
                     if (!StringUtils.isEqual(event, "FirstName"))
@@ -992,14 +1084,14 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             long robIndex;
             try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isData(), "dc.isData()");
+                assertTrue(dc.isData(), "Document context should be data for Rob entry");
                 robIndex = dc.index();
                 dc.wire().read("FirstName").text("Rob", org.junit.jupiter.api.Assertions::assertEquals);
             }
 
             while (true) {
                 try (DocumentContext dc = tailer.readingDocument(true)) {
-                    assertTrue(dc.isMetaData(), "dc.isMetaData()");
+                    assertTrue(dc.isMetaData(), "Document context should be metadata for Steve entry in dump");
                     ValueIn in = dc.wire().read(event);
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
@@ -1009,15 +1101,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
             }
 
-            assertTrue(tailer.moveToIndex(robIndex), "tailer.moveToIndex(robIndex)");
+            assertTrue(tailer.moveToIndex(robIndex), "Tailer should move to Rob entry index");
             try (DocumentContext dc = tailer.readingDocument(false)) {
-                assertTrue(dc.isData(), "dc.isData()");
+                assertTrue(dc.isData(), "Document context should be data when revisiting Rob entry");
                 dc.wire().read("FirstName").text("Rob", org.junit.jupiter.api.Assertions::assertEquals);
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Second document should be absent after single write")
     public void testReadingSecondDocumentNotExist() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -1036,12 +1129,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(dc.isPresent(), "dc.isPresent()");
+                assertFalse(dc.isPresent(), "Second document should not be present after reading first entry");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Document index increments as expected queue behaviour scenario")
     public void testDocumentIndexTest() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -1049,17 +1143,20 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (DocumentContext dc = appender.writingDocument()) {
                 long index = dc.index();
-                assertEquals(0, chronicle.rollCycle().toSequenceNumber(index), "chronicle.rollCycle().toSequenceNumber(index)");
+                assertEquals(0, chronicle.rollCycle().toSequenceNumber(index),
+                        "Sequence number should be 0 for first write");
                 dc.wire().write("FirstName").text("Quartilla");
             }
 
             try (DocumentContext dc = appender.writingDocument()) {
-                assertEquals(1, chronicle.rollCycle().toSequenceNumber(dc.index()), "chronicle.rollCycle().toSequenceNumber(dc.index())");
+                assertEquals(1, chronicle.rollCycle().toSequenceNumber(dc.index()),
+                        "Sequence number should be 1 for second write");
                 dc.wire().write("FirstName").text("Rob");
             }
 
             try (DocumentContext dc = appender.writingDocument()) {
-                assertEquals(2, chronicle.rollCycle().toSequenceNumber(dc.index()), "chronicle.rollCycle().toSequenceNumber(dc.index())");
+                assertEquals(2, chronicle.rollCycle().toSequenceNumber(dc.index()),
+                        "Sequence number should be 2 for third write");
                 dc.wire().write("FirstName").text("Rob");
             }
 
@@ -1067,23 +1164,27 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 long index = dc.index();
-                assertEquals(0, chronicle.rollCycle().toSequenceNumber(index), "chronicle.rollCycle().toSequenceNumber(index)");
+                assertEquals(0, chronicle.rollCycle().toSequenceNumber(index),
+                        "Sequence number should be 0 for first read");
 
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertEquals(1, chronicle.rollCycle().toSequenceNumber(dc.index()), "chronicle.rollCycle().toSequenceNumber(dc.index())");
+                assertEquals(1, chronicle.rollCycle().toSequenceNumber(dc.index()),
+                        "Sequence number should be 1 for second read");
 
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertEquals(2, chronicle.rollCycle().toSequenceNumber(dc.index()), "chronicle.rollCycle().toSequenceNumber(dc.index())");
+                assertEquals(2, chronicle.rollCycle().toSequenceNumber(dc.index()),
+                        "Sequence number should be 2 for third read");
 
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Reading second document not exist including meta")
     public void testReadingSecondDocumentNotExistIncludingMeta() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -1109,12 +1210,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             }
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(dc.isPresent(), "dc.isPresent()");
+                assertFalse(dc.isPresent(), "Second document should not be present after metadata read");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Simple byte write and read queue behaviour scenario")
     public void testSimpleByteTest() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
@@ -1130,10 +1232,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             Bytes<?> bytes = Bytes.elasticByteBuffer();
             try {
                 tailer.readBytes(bytes);
-                assertEquals("Steve", bytes.toString(), "bytes.toString()");
+                assertEquals("Steve", bytes.toString(), "First payload should be Steve");
                 bytes.clear();
                 tailer.readBytes(bytes);
-                assertEquals("Jobs", bytes.toString(), "bytes.toString()");
+                assertEquals("Jobs", bytes.toString(), "Second payload should be Jobs");
             } finally {
                 steve.releaseLast();
                 jobs.releaseLast();
@@ -1143,6 +1245,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Read values by index in sparse positions")
     public void testReadAtIndex() {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), wireType)
                 .indexCount(8)
@@ -1168,18 +1271,20 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             for (int i : new int[]{0, 8, 7, 9, 64, 65, 66}) {
                 final long index = queue.rollCycle().toIndex(cycle, i);
                 assertTrue(tailer.moveToIndex(
-                        index), "i: " + i);
+                        index), "Tailer should move to index " + i + " when reading sparse positions");
                 try (final DocumentContext context = tailer.readingDocument()) {
-                    assertEquals(index, context.index(), "document index should match target index");
+                    assertEquals(index, context.index(), "document index should match target index at position " + i);
                     context.wire().read("key").text(sb);
-                    assertEquals("value=" + i, sb.toString(), "document value should match expected sequence");
+                    assertEquals("value=" + i, sb.toString(),
+                            "Document value should match expected sequence at index " + i);
                 }
             }
         }
     }
 
-    @Disabled("long running test")
+    @Disabled("Long running test disabled for regular runs")
     @TestTemplate
+    @DisplayName("Read value at index for 4MB payloads queue behaviour scenario")
     public void testReadAtIndex4MB() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), this.wireType).rollCycle(SMALL_DAILY)
                 .build();
@@ -1198,14 +1303,17 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             StringBuilder sb = new StringBuilder();
 
             for (long i = 0; i < (4L << 20L); i++) {
-                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)), "tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i))");
+                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)),
+                        "Tailer should move to index " + i + " in cycle " + cycle);
                 tailer.readDocument(wire -> wire.read("key").text(sb));
-                assertEquals("value=" + i, sb.toString(), "sb.toString()");
+                assertEquals("value=" + i, sb.toString(),
+                        "Read value should match for index " + i);
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Metadata index entries are correct queue behaviour scenario")
     public void testMetaIndexTest() {
 
         File tmpDir = getTmpDir();
@@ -1240,69 +1348,21 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 ExcerptTailer tailer = q.createTailer(named ? "named" : null);
 
-                try (DocumentContext documentContext2 = tailer.readingDocument()) {
-                    assertEquals(0, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertFalse(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("one", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(1, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertFalse(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("two", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(2, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertTrue(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("meta1", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(2, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertFalse(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("three", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(3, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertTrue(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("meta2", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(3, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertTrue(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("meta3", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(true)) {
-                    assertEquals(3, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertFalse(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("four", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
+                assertMetaEntry(q, tailer, false, 0, false, "one", "first data entry in sequence 0");
+                assertMetaEntry(q, tailer, true, 1, false, "two", "second data entry in sequence 1");
+                assertMetaEntry(q, tailer, true, 2, true, "meta1", "first metadata entry in sequence 2");
+                assertMetaEntry(q, tailer, true, 2, false, "three", "third data entry in sequence 2");
+                assertMetaEntry(q, tailer, true, 3, true, "meta2", "second metadata entry in sequence 3");
+                assertMetaEntry(q, tailer, true, 3, true, "meta3", "third metadata entry in sequence 3");
+                assertMetaEntry(q, tailer, true, 3, false, "four", "fourth data entry in sequence 3");
             }
 
             {
                 ExcerptTailer tailer = q.createTailer(named ? "named2" : null);
 
-                try (DocumentContext documentContext2 = tailer.readingDocument()) {
-                    assertEquals(0, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertFalse(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("one", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
-                    assertEquals(1, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertFalse(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("two", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
-
-                try (DocumentContext documentContext2 = tailer.readingDocument(false)) {
-                    assertEquals(2, toSeq(q, documentContext2.index()), "toSeq(q, documentContext2.index())");
-                    assertFalse(documentContext2.isMetaData(), "documentContext2.isMetaData()");
-                    assertEquals("three", documentContext2.wire().getValueIn().text(), "documentContext2.wire().getValueIn().text()");
-                }
+                assertMetaEntry(q, tailer, false, 0, false, "one", "named tailer first data entry");
+                assertMetaEntry(q, tailer, false, 1, false, "two", "named tailer second data entry");
+                assertMetaEntry(q, tailer, false, 2, false, "three", "named tailer third data entry");
             }
         }
         assertEquals("idx: 6f06c00000000\n" +
@@ -1325,40 +1385,47 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                         "--- !!data #binary\n" +
                         "four\n" +
                         "\n",
-                appenderListenerDump.toString(), "appenderListenerDump.toString()");
+                appenderListenerDump.toString(), "Appender listener dump should match meta index output");
     }
 
     @TestTemplate
+    @DisplayName("Last written index is per appender")
     public void testLastWrittenIndexPerAppender() {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
 
             appender.writeDocument(wire -> wire.write("key").text("test"));
-            assertEquals(0, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()), "queue.rollCycle().toSequenceNumber(appender.lastIndexAppended())");
+            assertEquals(0, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()),
+                    "Sequence number should be 0 after first write");
         }
     }
 
     @TestTemplate
+    @DisplayName("Last written index per appender no data")
     public void testLastWrittenIndexPerAppenderNoData() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
-            assertThrows(IllegalStateException.class, appender::lastIndexAppended, "lastIndexAppended: no data");
+            assertThrows(IllegalStateException.class, appender::lastIndexAppended,
+                    "lastIndexAppended should throw when no data is written");
         }
     }
 
     @TestTemplate
+    @DisplayName("Last index throws when no messages written")
     public void testNoMessagesWritten() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
 
-            assertThrows(IllegalStateException.class, appender::lastIndexAppended, "lastIndexAppended: no messages");
+            assertThrows(IllegalStateException.class, appender::lastIndexAppended,
+                    "lastIndexAppended should throw when no messages are written");
         }
     }
 
     @TestTemplate
+    @DisplayName("Header index is read at index queue behaviour scenario")
     public void testHeaderIndexReadAtIndex() {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .build();
@@ -1372,12 +1439,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             }
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
-            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 0)), "tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 0))");
+            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 0)),
+                    "Tailer should move to index 0 for header read");
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read("key").text(sb));
 
-            assertEquals("value=0", sb.toString(), "sb.toString()");
+            assertEquals("value=0", sb.toString(), "First value should be value=0 at index 0");
         }
     }
 
@@ -1385,6 +1453,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
      * test that if we make EPOC the current time, then the cycle is == 0
      */
     @TestTemplate
+    @DisplayName("Epoch value is applied correctly queue behaviour scenario")
     public void testEPOC() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
@@ -1398,6 +1467,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Should be able to read from queue with non zero epoch")
     public void shouldBeAbleToReadFromQueueWithNonZeroEpoch() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
@@ -1409,11 +1479,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             assertEquals(0, appender.cycle(), "cycle should be 0 when epoch matches write time");
 
             final ExcerptTailer excerptTailer = chronicle.createTailer(named ? "named" : null).toStart();
-            assertTrue(excerptTailer.readingDocument().isPresent(), "excerptTailer.readingDocument().isPresent()");
+            assertTrue(excerptTailer.readingDocument().isPresent(),
+                    "Tailer should read first document when epoch matches write time");
         }
     }
 
     @TestTemplate
+    @DisplayName("Large epoch values are supported queue behaviour scenario")
     public void shouldHandleLargeEpoch() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
@@ -1425,11 +1497,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             appender.writeDocument(wire -> wire.write("key").text("value=v"));
 
             final ExcerptTailer excerptTailer = chronicle.createTailer(named ? "named" : null).toStart();
-            assertTrue(excerptTailer.readingDocument().isPresent(), "excerptTailer.readingDocument().isPresent()");
+            assertTrue(excerptTailer.readingDocument().isPresent(),
+                    "Tailer should read first document with large epoch");
         }
     }
 
     @TestTemplate
+    @DisplayName("Negative epoch values are supported queue behaviour scenario")
     public void testNegativeEPOC() {
         for (int h = -14; h <= 14; h++) {
             try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
@@ -1448,6 +1522,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Index lookup reads expected values queue behaviour scenario")
     public void testIndex() {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(HOURLY)
@@ -1457,21 +1532,23 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             int cycle = writeSequentialValueDocuments(queue, appender);
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
-            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)), "tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2))");
+            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)),
+                    "Tailer should move to index 2 for first move read");
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read("key").text(sb));
-            assertEquals("value=2", sb.toString(), "sb.toString()");
+            assertEquals(valueString(2), sb.toString(), "Tailer should read value=2 after moveToIndex");
 
             tailer.readDocument(wire -> wire.read("key").text(sb));
-            assertEquals("value=3", sb.toString(), "sb.toString()");
+            assertEquals(valueString(3), sb.toString(), "Tailer should read value=3 on next document");
 
             tailer.readDocument(wire -> wire.read("key").text(sb));
-            assertEquals("value=4", sb.toString(), "sb.toString()");
+            assertEquals(valueString(4), sb.toString(), "Tailer should read final value after moveToIndex");
         }
     }
 
     @TestTemplate
+    @DisplayName("Reading document returns expected values queue behaviour scenario")
     public void testReadingDocument() {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(HOURLY)
@@ -1481,11 +1558,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             long cycle = writeSequentialValueDocuments(queue, appender);
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
-            assertTailerReadsValues(tailer, "value=0", "value=1", "value=2", "value=3", "value=4");
+            verifyTailerReadsValues(tailer, valueString(0), valueString(1), valueString(2), valueString(3), valueString(4));
         }
     }
 
     @TestTemplate
+    @DisplayName("Reading document after moveToIndex queue behaviour scenario")
     public void testReadingDocumentWithFirstAMove() {
 
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
@@ -1496,20 +1574,19 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             int cycle = writeSequentialValueDocuments(queue, appender);
 
             final ExcerptTailer tailer = queue.createTailer(named ? "named" : null);
-            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)), "tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2))");
-            assertTailerReadsValues(tailer, "value=2", "value=3", "value=4");
+            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)),
+                    "Tailer should move to index 2 before reading");
+            verifyTailerReadsValues(tailer, valueString(2), valueString(3), valueString(4));
         }
     }
 
     @TestTemplate
+    @DisplayName("Reading document with first amove with epoch")
     public void testReadingDocumentWithFirstAMoveWithEpoch() {
         Instant hourly = Instant.parse("2018-02-12T00:59:59.999Z");
-        Instant minutely = Instant.parse("2018-02-12T00:00:59.999Z");
 
         Date epochHourlyFirstCycle = Date.from(hourly);
-        Date epochMinutelyFirstCycle = Date.from(minutely);
         Date epochHourlySecondCycle = Date.from(hourly.plusMillis(1));
-        Date epochMinutelySecondCycle = Date.from(minutely.plusMillis(1));
 
         assertTrue(doTestEpochMove(epochHourlyFirstCycle.getTime(), MINUTELY), "epoch move: hourly first minutely");
         assertTrue(doTestEpochMove(epochHourlySecondCycle.getTime(), MINUTELY), "epoch move: hourly second minutely");
@@ -1517,6 +1594,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         assertTrue(doTestEpochMove(epochHourlySecondCycle.getTime(), HOURLY), "epoch move: hourly second hourly");
         assertTrue(doTestEpochMove(epochHourlyFirstCycle.getTime(), DAILY), "epoch move: hourly first daily");
         assertTrue(doTestEpochMove(epochHourlySecondCycle.getTime(), DAILY), "epoch move: hourly second daily");
+
+        Instant minutely = Instant.parse("2018-02-12T00:00:59.999Z");
+        Date epochMinutelyFirstCycle = Date.from(minutely);
+        Date epochMinutelySecondCycle = Date.from(minutely.plusMillis(1));
 
         assertTrue(doTestEpochMove(epochMinutelyFirstCycle.getTime(), MINUTELY), "epoch move: minutely first minutely");
         assertTrue(doTestEpochMove(epochMinutelySecondCycle.getTime(), MINUTELY), "epoch move: minutely second minutely");
@@ -1536,7 +1617,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             int cycle = writeSequentialValueDocuments(queue, appender);
             long cycle1 = queue.rollCycle().toCycle(appender.lastIndexAppended());
             if (cycle + 1 != cycle1) {
-                assertEquals(cycle, cycle1, "epoch move: cycle");
+                assertEquals(cycle, cycle1, "Epoch move should keep cycle aligned with appender");
             }
 
             try (final ExcerptTailer tailer = queue.createTailer(named ? "named" : null)) {
@@ -1544,20 +1625,24 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 if (!moved) {
                     return false;
                 }
-                assertTailerReadsValues(tailer, "value=2", "value=3", "value=4");
+                verifyTailerReadsValues(tailer, valueString(2), valueString(3), valueString(4));
             }
         }
         return true;
     }
 
-    private void assertTailerReadsValues(ExcerptTailer tailer, String... expected) {
+    private String valueString(int value) {
+        return "value=" + value;
+    }
+
+    private void verifyTailerReadsValues(ExcerptTailer tailer, String... expected) {
         StringBuilder sb = new StringBuilder();
         for (String value : expected) {
             try (final DocumentContext dc = tailer.readingDocument()) {
                 assert dc.isPresent();
                 assert dc.isData();
                 dc.wire().read("key").text(sb);
-                assertEquals(value, sb.toString(), "sb.toString()");
+                assertEquals(value, sb.toString(), "Tailer should read expected value " + value);
             }
         }
         try (final DocumentContext dc = tailer.readingDocument()) {
@@ -1574,7 +1659,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             appender.writeDocument(wire -> wire.write("key").text("value=" + j));
             if (i == 2) {
                 final long cycle1 = queue.rollCycle().toCycle(appender.lastIndexAppended());
-                assertEquals(cycle1, cycle, "document cycle should remain consistent during writes");
+                assertEquals(cycle1, cycle, "document cycle should remain consistent during writes at iteration " + i);
             }
         }
         return cycle;
@@ -1596,22 +1681,27 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    private void assertTwoMessagesRead(File dir, RollCycle rollCycle, SetTimeProvider timeProvider, boolean backwards) {
+    private void verifyTwoMessagesRead(File dir, RollCycle rollCycle, SetTimeProvider timeProvider, boolean backwards) {
         try (ChronicleQueue queue = binary(dir)
                 .rollCycle(rollCycle).timeProvider(timeProvider).build();
              ExcerptTailer tailer = queue.createTailer(named ? "named" : null)) {
             if (backwards) {
                 ExcerptTailer excerptTailer = tailer.direction(TailerDirection.BACKWARD).toEnd();
-                assertEquals("second message", excerptTailer.readText(), "excerptTailer.readText()");
-                assertEquals("first message", excerptTailer.readText(), "excerptTailer.readText()");
+                assertEquals("second message", excerptTailer.readText(),
+                        "Backward tailer should read second message first");
+                assertEquals("first message", excerptTailer.readText(),
+                        "Backward tailer should read first message next");
             } else {
-                assertEquals("first message", tailer.readText(), "tailer.readText()");
-                assertEquals("second message", tailer.readText(), "tailer.readText()");
+                assertEquals("first message", tailer.readText(),
+                        "Forward tailer should read first message");
+                assertEquals("second message", tailer.readText(),
+                        "Forward tailer should read second message");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Append before toEnd keeps reads consistent")
     public void testAppendedBeforeToEnd() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, this.wireType)
@@ -1634,14 +1724,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text2"));
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertTrue(dc.isPresent(), "dc.isPresent()");
+                assertTrue(dc.isPresent(), "Document context should be present after second append");
 
-                assertEquals("text2", dc.wire().read("test").text(), "dc.wire().read(\"test\").text()");
+                assertEquals("text2", dc.wire().read("test").text(),
+                        "Tailer should read second appended text");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Reentrant appender and tailer usage queue behaviour scenario")
     public void testReentrant() {
 
         File tmpDir = getTmpDir();
@@ -1658,7 +1750,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 try (DocumentContext dc2 = appender.writingDocument()) {
                     dc2.wire().write("some2").text("other");
                 }
-                assertTrue(dc.isOpen(), "dc.isOpen()");
+                assertTrue(dc.isOpen(), "Outer document context should remain open");
             }
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
@@ -1715,7 +1807,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "some: data\n" +
                     "some2: other\n" +
-                    "...\n", tidyDump(queue), "tidyDump(queue)");
+                    "...\n", tidyDump(queue), "Queue dump should match expected simple data output");
         }
     }
 
@@ -1724,6 +1816,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Tailer toEnd moves to last index")
     public void testToEnd() throws InterruptedException {
         File dir = getTmpDir();
         try (ChronicleQueue queue = builder(dir, wireType)
@@ -1756,6 +1849,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("toEnd handles roll cycle end queue behaviour scenario")
     public void testToEnd2() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
@@ -1773,11 +1867,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text"));
 
-            assertTrue(tailer.readDocument(w -> w.read("test").text("text", org.junit.jupiter.api.Assertions::assertEquals)), "tailer.readDocument(w -> w.read(\"test\").text(\"text\", org.junit.jupiter.api.Assertions::assertEquals))");
+            assertTrue(tailer.readDocument(w -> w.read("test").text("text", org.junit.jupiter.api.Assertions::assertEquals)),
+                    "Tailer should read 'text' after toEnd and append");
         }
     }
 
     @TestTemplate
+    @DisplayName("To end on deleted queue files")
     public void testToEndOnDeletedQueueFiles() throws IOException {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
@@ -1796,7 +1892,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text"));
 
-            assertTrue(tailer.readDocument(w -> w.read("test").text("text", org.junit.jupiter.api.Assertions::assertEquals)), "tailer.readDocument(w -> w.read(\"test\").text(\"text\", org.junit.jupiter.api.Assertions::assertEquals))");
+            assertTrue(tailer.readDocument(w -> w.read("test").text("text", org.junit.jupiter.api.Assertions::assertEquals)),
+                    "Tailer should read 'text' after delete and append");
 
             try (Stream<Path> cq4Files = Files.find(dir.toPath(), 1, (p, basicFileAttributes) -> p.toString().endsWith("cq4"), FileVisitOption.FOLLOW_LINKS)) {
                 final List<Path> unDeletable = cq4Files.filter(path -> !path.toFile().delete())
@@ -1817,6 +1914,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Read and write round trip queue behaviour scenario")
     public void testReadWrite() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
@@ -1843,18 +1941,23 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     if (i % 10000 == 0)
                         System.gc();
                     if (i % 2 == 0)
-                        assertTrue(tailer2.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)), "tailer2.readDocument(w -> w.read(\"test - message\").text(\"text\", org.junit.jupiter.api.Assertions::assertEquals))");
+                        assertTrue(tailer2.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)),
+                                "tailer2 should read expected message at iteration " + i);
                     if (i % 3 == 0)
-                        assertTrue(tailer3.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)), "tailer3.readDocument(w -> w.read(\"test - message\").text(\"text\", org.junit.jupiter.api.Assertions::assertEquals))");
+                        assertTrue(tailer3.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)),
+                                "tailer3 should read expected message at iteration " + i);
                     if (i % 4 == 0)
-                        assertTrue(tailer4.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)), "tailer4.readDocument(w -> w.read(\"test - message\").text(\"text\", org.junit.jupiter.api.Assertions::assertEquals))");
-                    assertTrue(tailer.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)), "tailer.readDocument(w -> w.read(\"test - message\").text(\"text\", org.junit.jupiter.api.Assertions::assertEquals))");
+                        assertTrue(tailer4.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)),
+                                "tailer4 should read expected message at iteration " + i);
+                    assertTrue(tailer.readDocument(w -> w.read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals)),
+                            "tailer should read expected message at iteration " + i);
                 }
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Reading document on empty queue returns false queue behaviour scenario")
     public void testReadingDocumentForEmptyQueue() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, this.wireType)
@@ -1863,7 +1966,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             ExcerptTailer tailer = chronicle.createTailer(named ? "named" : null);
             // DocumentContext is empty as we have no queue and don't know what the wire type will be.
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(dc.isPresent(), "dc.isPresent()");
+                assertFalse(dc.isPresent(), "Document context should be empty for empty queue");
             }
 
             try (ChronicleQueue chronicle2 = builder(dir, this.wireType)
@@ -1877,7 +1980,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 // DocumentContext should not be empty as we know what the wire type will be.
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue(dc.isPresent(), "dc.isPresent()");
+                    assertTrue(dc.isPresent(), "Document context should be present after writing a document");
                     dc.wire().read("test - message").text("text", org.junit.jupiter.api.Assertions::assertEquals);
                 }
             }
@@ -1885,8 +1988,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Metadata dump matches expected layout queue behaviour scenario")
     public void testMetaData6() {
-        assumeFalse(named);
+        assumeFalse(named, "Metadata dump test requires unnamed tailer mode");
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
@@ -1898,7 +2002,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             }
 
             try (DocumentContext dc = appender.writingDocument()) {
-                assertFalse(dc.isMetaData(), "dc.isMetaData()");
+                assertFalse(dc.isMetaData(), "Document context should be data for Helen entry");
                 dc.wire().write("FirstName").text("Helen");
             }
             try (DocumentContext dc = appender.writingDocument(true)) {
@@ -1910,7 +2014,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             StringBuilder event = new StringBuilder();
             while (true) {
                 try (DocumentContext dc = tailer.readingDocument(true)) {
-                    assertTrue(dc.isMetaData(), "dc.isMetaData()");
+                    assertTrue(dc.isMetaData(), "Document context should be metadata for Quartilla entry");
                     ValueIn in = dc.wire().read(event);
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
@@ -1921,14 +2025,14 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             }
 
             try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isData(), "dc.isData()");
-                assertTrue(dc.isPresent(), "dc.isPresent()");
+                assertTrue(dc.isData(), "Document context should be data for Helen read");
+                assertTrue(dc.isPresent(), "Document context should be present for Helen read");
                 dc.wire().read("FirstName").text("Helen", org.junit.jupiter.api.Assertions::assertEquals);
             }
 
             while (true) {
                 try (DocumentContext dc = tailer.readingDocument(true)) {
-                    assertTrue(dc.isMetaData(), "dc.isMetaData()");
+                    assertTrue(dc.isMetaData(), "Document context should be metadata for Steve entry");
                     ValueIn in = dc.wire().read(event);
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
@@ -1937,7 +2041,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     break;
                 }
             }
-            assertEquals(expectedMetaDataTest2(), tidyDump(chronicle), "tidyDump(chronicle)");
+            assertEquals(expectedMetaDataTest2(), tidyDump(chronicle),
+                    "Queue dump should match expected metadata");
         }
     }
     // CPD-ON
@@ -2008,6 +2113,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("toEnd before write reads new data")
     public void testToEndBeforeWrite() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
@@ -2031,6 +2137,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Forward then backward tailer reads entries")
     public void testForwardFollowedBackBackwardTailer() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
@@ -2051,6 +2158,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Should read backward from end of queue when direction is set after move to end")
     public void shouldReadBackwardFromEndOfQueueWhenDirectionIsSetAfterMoveToEnd() {
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
@@ -2063,7 +2171,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             tailer.toEnd();
             tailer.direction(TailerDirection.BACKWARD);
 
-            assertTrue(tailer.readingDocument().isPresent(), "tailer.readingDocument().isPresent()");
+            assertTrue(tailer.readingDocument().isPresent(),
+                    "Tailer should read last document when moving backward from end");
         }
     }
 
@@ -2075,17 +2184,18 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < entries; i++) {
                 try (DocumentContext documentContext = forwardTailer.readingDocument()) {
-                    assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
-                    assertEquals(i, DEFAULT.toSequenceNumber(documentContext.index()), "DEFAULT.toSequenceNumber(documentContext.index())");
+                    assertTrue(documentContext.isPresent(), "Forward tailer should read document " + i);
+                    assertEquals(i, DEFAULT.toSequenceNumber(documentContext.index()),
+                            "Sequence number should match forward index " + i);
                     sb.setLength(0);
                     ValueIn valueIn = documentContext.wire().readEventName(sb);
-                    assertTrue("hello".contentEquals(sb), "\"hello\".contentEquals(sb)");
+                    assertTrue("hello".contentEquals(sb), "Forward event name should be hello at index " + i);
                     String actual = valueIn.text();
-                    assertEquals("world" + i, actual, "document value should match expected world sequence");
+                    assertEquals("world" + i, actual, "document value should match expected world sequence at index " + i);
                 }
             }
             try (DocumentContext documentContext = forwardTailer.readingDocument()) {
-                assertFalse(documentContext.isPresent(), "documentContext.isPresent()");
+                assertFalse(documentContext.isPresent(), "Forward tailer should have no more documents");
             }
             return entries;
         }
@@ -2099,25 +2209,26 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         StringBuilder sb = new StringBuilder();
         for (int i = entries - 1; i >= 0; i--) {
             try (DocumentContext documentContext = backwardTailer.readingDocument()) {
-                assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
+                assertTrue(documentContext.isPresent(), "Backward tailer should read document " + i);
                 final long index = documentContext.index();
-                assertEquals(i, (int) index, "document index should match reverse iteration position");
-                assertEquals(i, DEFAULT.toSequenceNumber(index), "DEFAULT.toSequenceNumber(index)");
-                assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
+                assertEquals(i, (int) index, "document index should match reverse iteration at index " + i);
+                assertEquals(i, DEFAULT.toSequenceNumber(index), "Sequence number should match reverse index " + i);
+                assertTrue(documentContext.isPresent(), "Document context should remain present during read at index " + i);
                 sb.setLength(0);
                 ValueIn valueIn = documentContext.wire().readEventName(sb);
-                assertTrue("hello".contentEquals(sb), "\"hello\".contentEquals(sb)");
+                assertTrue("hello".contentEquals(sb), "Backward event name should be hello at index " + i);
                 String actual = valueIn.text();
-                assertEquals("world" + i, actual, "document value should match expected world sequence in reverse");
+                assertEquals("world" + i, actual, "document value should match expected world sequence in reverse at index " + i);
             }
         }
         try (DocumentContext documentContext = backwardTailer.readingDocument()) {
-            assertFalse(documentContext.isPresent(), "documentContext.isPresent()");
+            assertFalse(documentContext.isPresent(), "Backward tailer should have no more documents");
         }
         return entries;
     }
 
     @TestTemplate
+    @DisplayName("Overread forward from future cycle then read backward tailer")
     public void testOverreadForwardFromFutureCycleThenReadBackwardTailer() {
         // when "forwardToFuture" flag is set, go one cycle to the future
         AtomicBoolean forwardToFuture = new AtomicBoolean(false);
@@ -2141,10 +2252,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     .toStart();
 
             try (DocumentContext context = forwardTailer.readingDocument()) {
-                assertTrue(context.isPresent(), "context.isPresent()");
+                assertTrue(context.isPresent(), "Forward tailer should read document in future cycle");
             }
             try (DocumentContext context = forwardTailer.readingDocument()) {
-                assertFalse(context.isPresent(), "context.isPresent()");
+                assertFalse(context.isPresent(), "Forward tailer should not read second document in future cycle");
             }
 
             ExcerptTailer backwardTailer = chronicle.createTailer(named ? "named" : null)
@@ -2152,12 +2263,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     .toEnd();
 
             try (DocumentContext context = backwardTailer.readingDocument()) {
-                assertTrue(context.isPresent(), "context.isPresent()");
+                assertTrue(context.isPresent(), "Backward tailer should read document after forward overread");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Reads simple messages sequence queue behaviour scenario")
     public void testSomeMessages() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
@@ -2169,15 +2281,18 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             for (long i = 0; i < entries; i++) {
                 long finalI = i;
+                String readMessage = "read int64 value should match expected value at index " + i;
                 appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
                 long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
-                assertEquals(i, seq, "sequence number should match iteration index after appending message");
-                tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> assertEquals((long) a, b, "read int64 value should match expected value from document")));
+                assertEquals(i, seq, "sequence number should match iteration index after appending message at index " + i);
+                tailer.readDocument(w -> w.read().int64(finalI,
+                        (a, b) -> assertEquals((long) a, b, readMessage)));
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Zero length message reads cleanly queue behaviour scenario")
     public void testZeroLengthMessage() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST_DAILY)
@@ -2188,12 +2303,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             });
             ExcerptTailer tailer = chronicle.createTailer(named ? "named" : null);
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(dc.wire().hasMore(), "dc.wire().hasMore()");
+                assertFalse(dc.wire().hasMore(), "Zero-length document should have no data");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("MoveToIndex works after appends queue behaviour scenario")
     public void testMoveToWithAppender() {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .build();
@@ -2222,6 +2338,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Map wrapper object round trip queue behaviour scenario")
     public void testMapWrapper() {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .build()) {
@@ -2240,13 +2357,14 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     MapWrapper object = documentContext.wire().read().object(MapWrapper.class);
-                    assertEquals(1.2, object.map.get("hello"), 0.0, "object.map.get(\"hello\")");
+                    assertEquals(1.2, object.map.get("hello"), 0.0, "Map should contain hello=1.2");
                 }
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Last index appended increments after write")
     public void testLastIndexAppended() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -2256,11 +2374,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             final long nextIndexToWrite = appender.lastIndexAppended() + 1;
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
             assertEquals(nextIndexToWrite,
-                    appender.lastIndexAppended(), "appender.lastIndexAppended()");
+                    appender.lastIndexAppended(), "Last index appended should advance after empty bytes write");
         }
     }
 
     @TestTemplate
+    @DisplayName("Appended skip to end multi threaded")
     public void testAppendedSkipToEndMultiThreaded() throws InterruptedException {
         // some text to simulate load.
         StringBuilder sb = new StringBuilder();
@@ -2301,7 +2420,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                         long index = dc.index();
                         long actual = dc.wire().read("key").int64();
 
-                        assertEquals(toTextIndex(q, index), toTextIndex(q, actual), "toTextIndex(q, actual)");
+                        assertEquals(toTextIndex(q, index), toTextIndex(q, actual),
+                                "Index should round-trip through toTextIndex at iteration " + i);
                     }
                 }
             }
@@ -2318,6 +2438,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
      * positions that are already occupied
      */
     @TestTemplate
+    @DisplayName("Appender skips to end when behind")
     public void testAppendedSkipToEnd() {
 
         try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
@@ -2331,17 +2452,20 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("key").text("some more " + 1);
                 }
-                assertEquals(i, q.rollCycle().toSequenceNumber(appender.lastIndexAppended()), "q.rollCycle().toSequenceNumber(appender.lastIndexAppended())");
+                assertEquals(i, q.rollCycle().toSequenceNumber(appender.lastIndexAppended()),
+                        "Sequence number should match write count " + i);
             }
 
             try (DocumentContext dc = appender2.writingDocument()) {
                 dc.wire().write("key").text("some data " + indexCount);
             }
-            assertEquals(indexCount, q.rollCycle().toSequenceNumber(appender2.lastIndexAppended()), "q.rollCycle().toSequenceNumber(appender2.lastIndexAppended())");
+            assertEquals(indexCount, q.rollCycle().toSequenceNumber(appender2.lastIndexAppended()),
+                    "Second appender should continue after " + indexCount + " writes");
         }
     }
 
     @TestTemplate
+    @DisplayName("toEnd handles previous cycle EOF queue behaviour scenario")
     public void testToEndPrevCycleEOF() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         File dir = getTmpDir();
@@ -2363,8 +2487,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             ExcerptTailer tailer = q.createTailer(named ? "named" : null);
 
-            assertEquals("first", tailer.readText(), "tailer.readText()");
-            assertNull(tailer.readText(), "tailer.readText()");
+            assertEquals("first", tailer.readText(), "Tailer should read first text before EOF");
+            assertNull(tailer.readText(), "Tailer should return null after EOF");
 
         }
         AbstractCloseable.assertCloseablesClosed();
@@ -2377,11 +2501,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             ExcerptTailer tailer = q.createTailer(named ? "named" : null).toEnd();
 
             try (DocumentContext documentContext = tailer.readingDocument()) {
-                assertFalse(documentContext.isPresent(), "documentContext.isPresent()");
+                assertFalse(documentContext.isPresent(), "Tailer should be at end before append");
             }
 
             try (DocumentContext documentContext = tailer.readingDocument()) {
-                assertFalse(documentContext.isPresent(), "documentContext.isPresent()");
+                assertFalse(documentContext.isPresent(), "Tailer should still be at end before append");
             }
         }
         AbstractCloseable.assertCloseablesClosed();
@@ -2399,16 +2523,20 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             ExcerptTailer excerptTailerAfterAppend = q.createTailer(named ? "named" : null).toEnd();
             appender.writeText("even more text");
 
-            assertEquals("more text", excerptTailerBeforeAppend.readText(), "excerptTailerBeforeAppend.readText()");
-            assertEquals("even more text", excerptTailerAfterAppend.readText(), "excerptTailerAfterAppend.readText()");
-            assertEquals("even more text", excerptTailerBeforeAppend.readText(), "excerptTailerBeforeAppend.readText()");
+            assertEquals("more text", excerptTailerBeforeAppend.readText(),
+                    "Tailer created before append should read first new text");
+            assertEquals("even more text", excerptTailerAfterAppend.readText(),
+                    "Tailer created after append should read latest text");
+            assertEquals("even more text", excerptTailerBeforeAppend.readText(),
+                    "Existing tailer should read latest text after new append");
         }
         AbstractCloseable.assertCloseablesClosed();
 
     }
 
-    @Disabled("Long Running Test")
+    @Disabled("Long running test disabled for standard runs")
     @TestTemplate
+    @DisplayName("Random concurrent read and write queue behaviour scenario")
     public void testRandomConcurrentReadWrite() throws
             InterruptedException {
 
@@ -2439,7 +2567,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     executor.shutdownNow();
                     terminated = executor.awaitTermination(30, TimeUnit.SECONDS);
                 }
-                assertTrue(terminated, "random concurrent read/write: executor terminated");
+                assertTrue(terminated, "random concurrent read/write: executor terminated at iteration " + i);
 
                 Jvm.pause(1000);
             }
@@ -2447,6 +2575,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Tailer when cycles where skipped on write")
     public void testTailerWhenCyclesWhereSkippedOnWrite() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -2483,7 +2612,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 for (String expected : stringsToPut) {
                     try (DocumentContext readingContext = tailer.readingDocument()) {
                         if (!readingContext.isPresent())
-                            fail("unexpected failure");
+                            fail("Reading context should be present for expected value " + expected);
                         String text = readingContext.wire().read().text();
                         assertEquals(expected, text, "read text should match expected string value after queue roll");
 
@@ -2505,8 +2634,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         try (DocumentContext dc = tailer.readingDocument()) {
             if (!dc.isPresent())
                 return;
-            assertEquals(dc.index(), dc.wire().read("key").int64(), "dc.wire().read(\"key\").int64()");
-            assertEquals(text, dc.wire().read("text").text(), "dc.wire().read(\"text\").text()");
+            assertEquals(dc.index(), dc.wire().read("key").int64(), "Document key should match index");
+            assertEquals(text, dc.wire().read("text").text(), "Document text should match expected value");
         }
     }
 
@@ -2519,6 +2648,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Multiple appenders interleave writes correctly queue behaviour scenario")
     public void testMultipleAppenders() {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST_DAILY)
@@ -2530,15 +2660,15 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             int count = 0;
             for (int i = 0; i < 3; i++) {
                 syncA.writeText("hello A" + i);
-                assertEquals(count++, (int) syncA.lastIndexAppended(), "(int) syncA.lastIndexAppended()");
+                assertEquals(count++, (int) syncA.lastIndexAppended(), "syncA should append at expected sequence at iteration " + i);
                 syncB.writeText("hello B" + i);
-                assertEquals(count++, (int) syncB.lastIndexAppended(), "(int) syncB.lastIndexAppended()");
+                assertEquals(count++, (int) syncB.lastIndexAppended(), "syncB should append at expected sequence at iteration " + i);
                 try (DocumentContext dc = syncC.writingDocument(true)) {
                     dc.wire().getValueOut().text("some meta " + i);
                 }
             }
             String expected = expectedMultipleAppenders();
-            assertEquals(expected, tidyDump(syncQ), "tidyDump(syncQ)");
+            assertEquals(expected, tidyDump(syncQ), "Queue dump should match expected output for multiple appenders");
         }
     }
 
@@ -2634,6 +2764,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Should not generate garbage reading document after end of file")
     public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         File dir = getTmpDir();
@@ -2655,7 +2786,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
              ExcerptTailer tailer = q.createTailer(named ? "named" : null)) {
 
-            assertEquals("first", tailer.readText(), "tailer.readText()");
+            assertEquals("first", tailer.readText(), "Tailer should read first message before EOF");
             GcControls.waitForGcCycle();
             final long startCollectionCount = GcControls.getGcCount();
 
@@ -2670,6 +2801,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Reading writing when next cycle is in sequence")
     public void testReadingWritingWhenNextCycleIsInSequence() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -2677,10 +2809,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         final RollCycle rollCycle = TEST_SECONDLY;
 
         writeTwoMessages(dir, rollCycle, timeProvider, 1100);
-        assertTwoMessagesRead(dir, rollCycle, timeProvider, false);
+        verifyTwoMessagesRead(dir, rollCycle, timeProvider, false);
     }
 
     @TestTemplate
+    @DisplayName("Reading writing when cycle is skipped")
     public void testReadingWritingWhenCycleIsSkipped() {
 
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -2689,10 +2822,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         final RollCycle rollCycle = TEST_SECONDLY;
 
         writeTwoMessages(dir, rollCycle, timeProvider, 2100);
-        assertTwoMessagesRead(dir, rollCycle, timeProvider, false);
+        verifyTwoMessagesRead(dir, rollCycle, timeProvider, false);
     }
 
     @TestTemplate
+    @DisplayName("Reading writing when cycle is skipped backwards")
     public void testReadingWritingWhenCycleIsSkippedBackwards() {
         final SetTimeProvider timeProvider = new SetTimeProvider();
         long time = System.currentTimeMillis();
@@ -2702,10 +2836,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         final RollCycle rollCycle = TEST_SECONDLY;
 
         writeTwoMessages(dir, rollCycle, timeProvider, 2100);
-        assertTwoMessagesRead(dir, rollCycle, timeProvider, true);
+        verifyTwoMessagesRead(dir, rollCycle, timeProvider, true);
     }
 
     @TestTemplate
+    @DisplayName("Read and write with time provider queue behaviour scenario")
     public void testReadWritingWithTimeProvider() {
         final File dir = getTmpDir();
 
@@ -2730,10 +2865,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
 
                 try (DocumentContext dc = tailer2.readingDocument()) {
-                    assertTrue(dc.isPresent(), "dc.isPresent()");
+                    assertTrue(dc.isPresent(), "Tailer should see document written by second queue");
                 }
 
-                assertEquals(q1.file(), q2.file(), "q2.file()");
+                assertEquals(q1.file(), q2.file(), "Queues should point at same directory");
                 // this is required for queue to re-request last/first cycle
                 timeProvider.advanceMillis(1);
 
@@ -2744,12 +2879,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     }
                     Jvm.pause(1);
                 }
-                fail("unexpected failure");
+                fail("Tailer should observe document within retry loop");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Count excerpts across cycle boundaries queue behaviour scenario")
     public void testCountExceptsBetweenCycles() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -2776,26 +2912,29 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             for (int lower = 0; lower < indexs.length; lower++) {
                 for (int upper = lower; upper < indexs.length; upper++) {
-                    assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
-                            indexs[upper]), "queue.countExcerpts(indexs[lower], indexs[upper])");
+                    assertEquals(upper - lower, queue.countExcerpts(indexs[lower], indexs[upper]),
+                            "Count between indexes should match range " + lower + " to " + upper);
                 }
             }
 
             // check the base line of the test below
-            assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]), "queue.countExcerpts(indexs[0], indexs[6])");
+            assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]),
+                    "Baseline count should be 6 between index 0 and 6");
 
             /// check for the case when the last index has a sequence number of -1
-            assertEquals(0, queue.rollCycle().toSequenceNumber(indexs[6]), "queue.rollCycle().toSequenceNumber(indexs[6])");
+            assertEquals(0, queue.rollCycle().toSequenceNumber(indexs[6]),
+                    "Sequence number should be 0 for index 6 rollover case");
             assertEquals(5, queue.countExcerpts(indexs[0],
-                    indexs[6] - 1), "queue.countExcerpts(indexs[0], indexs[6] - 1)");
+                    indexs[6] - 1), "Count should ignore last index when seq is -1");
 
             /// check for the case when the first index has a sequence number of -1
             assertEquals(7, queue.countExcerpts(indexs[0] - 1,
-                    indexs[6]), "queue.countExcerpts(indexs[0] - 1, indexs[6])");
+                    indexs[6]), "Count should include index 6 when lower bound shifts");
         }
     }
 
     @TestTemplate
+    @DisplayName("Long living tailer appender re acquired each second")
     public void testLongLivingTailerAppenderReAcquiredEachSecond() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         final File dir = getTmpDir();
@@ -2832,8 +2971,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                         if (!dc.isPresent())
                             System.out.println(queue.dump());
 
-                        assertTrue(dc.isPresent(), "dc.isPresent()");
-                        assertEquals(i, dc.wire().read("some").int32(), "dc.wire().read(\"some\").int32()");
+                        assertTrue(dc.isPresent(), "Tailer should read document at iteration " + i);
+                        assertEquals(i, dc.wire().read("some").int32(),
+                                "Tailer should read expected value at iteration " + i);
                     }
                 }
             }
@@ -2841,6 +2981,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Count excerpts rejects invalid indexes queue behaviour scenario")
     public void testCountExceptsWithRubbishData() {
 
         try (final RollingChronicleQueue queue = binary(getTmpDir())
@@ -2850,11 +2991,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             // rubbish data
             assertThrows(IllegalStateException.class,
                     () -> queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L),
-                    "countExcerpts: rubbish data");
+                    "countExcerpts should reject invalid index range");
         }
     }
 
     @TestTemplate
+    @DisplayName("Read from size prefixed blobs queue behaviour scenario")
     public void testFromSizePrefixedBlobs() {
 
         try (final ChronicleQueue queue = binary(getTmpDir())
@@ -2869,7 +3011,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             DocumentContext dc0;
             try (DocumentContext dc = queue.createTailer(named ? "named" : null).readingDocument()) {
                 s = Wires.fromSizePrefixedBlobs(dc);
-                assertTrue(s.contains("some: data"), "s.contains(\"some: data\")");
+                assertTrue(s.contains("some: data"), "Dump should include 'some: data'");
                 dc0 = dc;
             }
 
@@ -2880,6 +3022,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Tailer rollback reads expected entries queue behaviour scenario")
     public void tailerRollBackTest() {
         final File source = getTmpDir();
         try (final ChronicleQueue q = binary(source).build();
@@ -2925,6 +3068,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Copy queue data between directories queue behaviour scenario")
     public void testCopyQueue() {
         final File source = getTmpDir();
         final File target = getTmpDir();
@@ -2978,13 +3122,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                         value[0] = valueIn.int64();
                     });
 
-                    assertTrue(read, "copy queue: read event=" + expectedEventName);
-                    assertEquals(expectedEventName, eventName.toString(), "copy queue: event");
-                    assertEquals(expectedValue, value[0], "copy queue: value event=" + expectedEventName);
+                    assertTrue(read, "Tailer should read event " + expectedEventName + " at index " + i);
+                    assertEquals(expectedEventName, eventName.toString(), "Event name should match expected value at index " + i);
+                    assertEquals(expectedValue, value[0], "copy queue should read value for event " + expectedEventName + " at index " + i);
                 }
 
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertFalse(dc.isPresent(), "copy queue: end");
+                    assertFalse(dc.isPresent(), "Copied queue should have no more documents");
                 }
             }
         }
@@ -2994,6 +3138,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
      * see https://github.com/OpenHFT/Chronicle-Queue/issues/299
      */
     @TestTemplate
+    @DisplayName("Incorrect excerpt tailer reads after switching tailer direction")
     public void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection() {
 
         try (final ChronicleQueue queue = binary(getTmpDir())
@@ -3026,24 +3171,31 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (ExcerptTailer tailer = queue.createTailer(named ? "named" : null)) {
 
-                assertTrue(tailer.moveToIndex(startIndex), "tailer.moveToIndex(startIndex)");
+                assertTrue(tailer.moveToIndex(startIndex), "Tailer should move to starting index for seq 52");
 
                 tailer.direction(TailerDirection.FORWARD);
-                assertEquals(0, action(tailer, queue.rollCycle()), "action(tailer, queue.rollCycle())");
-                assertEquals(1, action(tailer, queue.rollCycle()), "action(tailer, queue.rollCycle())");
+                assertEquals(0, action(tailer, queue.rollCycle()),
+                        "Tailer should read expected value after forward move");
+                assertEquals(1, action(tailer, queue.rollCycle()),
+                        "Tailer should read next value after forward move");
 
                 tailer.direction(TailerDirection.BACKWARD);
-                assertEquals(2, action(tailer, queue.rollCycle()), "action(tailer, queue.rollCycle())");
-                assertEquals(1, action(tailer, queue.rollCycle()), "action(tailer, queue.rollCycle())");
+                assertEquals(2, action(tailer, queue.rollCycle()),
+                        "Tailer should read expected value after backward move");
+                assertEquals(1, action(tailer, queue.rollCycle()),
+                        "Tailer should read previous value after backward move");
 
                 tailer.direction(TailerDirection.FORWARD);
-                assertEquals(0, action(tailer, queue.rollCycle()), "action(tailer, queue.rollCycle())");
-                assertEquals(1, action(tailer, queue.rollCycle()), "action(tailer, queue.rollCycle())");
+                assertEquals(0, action(tailer, queue.rollCycle()),
+                        "Tailer should read expected value after forward reset");
+                assertEquals(1, action(tailer, queue.rollCycle()),
+                        "Tailer should read next value after forward reset");
             }
         }
     }
 
     @TestTemplate
+    @DisplayName("Existing roll cycle remains unchanged queue behaviour scenario")
     public void testExistingRollCycleIsMaintained() {
         expectException("Overriding roll cycle from ");
         expectException("Overriding roll length from ");
@@ -3061,7 +3213,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (final ChronicleQueue queue = binary(tmpDir)
                     .rollCycle(values.get(i + 1)).build()) {
-                assertEquals(values.get(i), queue.rollCycle(), "queue.rollCycle()");
+                assertEquals(values.get(i), queue.rollCycle(), "Queue roll cycle should remain on existing value at index " + i);
             }
         }
     }
@@ -3075,6 +3227,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Check reference counting and check file deletion")
     public void checkReferenceCountingAndCheckFileDeletion() {
 
         MappedFile mappedFile;
@@ -3091,7 +3244,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (DocumentContext documentContext = queue.createTailer(named ? "named" : null).readingDocument()) {
                 mappedFile = toMappedFile(documentContext);
-                assertEquals("some text", documentContext.wire().read().text(), "documentContext.wire().read().text()");
+                assertEquals("some text", documentContext.wire().read().text(),
+                        "Tailer should read first written text");
             }
         }
 
@@ -3102,11 +3256,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             return;
         }
         // this used to fail on windows
-        assertTrue(mappedFile.file().delete(), "mappedFile.file().delete()");
+        assertTrue(mappedFile.file().delete(), "Mapped file should delete after close");
 
     }
 
     @TestTemplate
+    @DisplayName("Check reference counting when rolling and check file deletion")
     public void checkReferenceCountingWhenRollingAndCheckFileDeletion() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -3132,12 +3287,14 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (ExcerptTailer tailer = queue.createTailer(named ? "named" : null)) {
                 try (DocumentContext documentContext = tailer.readingDocument()) {
-                    assertEquals("some text", documentContext.wire().read().text(), "documentContext.wire().read().text()");
+                    assertEquals("some text", documentContext.wire().read().text(),
+                            "Tailer should read text from first cycle");
 
                 }
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
-                    assertEquals("some more text", documentContext.wire().read().text(), "documentContext.wire().read().text()");
+                    assertEquals("some more text", documentContext.wire().read().text(),
+                            "Tailer should read text from second cycle");
 
                 }
             }
@@ -3150,11 +3307,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
         }
-        assertTrue(mappedFile1.file().delete(), "mappedFile1.file().delete()");
-        assertTrue(mappedFile2.file().delete(), "mappedFile2.file().delete()");
+        assertTrue(mappedFile1.file().delete(), "First mapped file should delete after close");
+        assertTrue(mappedFile2.file().delete(), "Second mapped file should delete after close");
     }
 
     @TestTemplate
+    @DisplayName("Writing document remains atomic queue behaviour scenario")
     @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
     public void testWritingDocumentIsAtomic() {
 
@@ -3198,7 +3356,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                         }
 
                         long justRead = dc.wire().read("some key").int64();
-                        assertEquals(expected, justRead, "justRead");
+                        assertEquals(expected, justRead, "Tailer should read sequential value " + expected);
                         break;
                     }
                 }
@@ -3215,12 +3373,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Should be able to load queue from read only files")
     public void shouldBeAbleToLoadQueueFromReadOnlyFiles() throws IOException {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test read only mode on windows");
             return;
         }
-        assumeFalse(named);
+        assumeFalse(named, "Read-only file test requires unnamed tailer mode");
 
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = builder(queueDir, wireType).
@@ -3230,17 +3389,19 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
 
         try (Stream<Path> list = Files.list(queueDir.toPath())) {
-            list.forEach(p -> assertTrue(p.toFile().setReadOnly(), "p.toFile().setReadOnly()"));
+            list.forEach(p -> assertTrue(p.toFile().setReadOnly(), "File should be read-only: " + p));
         }
 
         try (final ChronicleQueue queue = builder(queueDir, wireType).
                 readOnly(true).
                 testBlockSize().build()) {
-            assertTrue(queue.createTailer(named ? "named" : null).readingDocument().isPresent(), "queue.createTailer(named ? \"named\" : null).readingDocument().isPresent()");
+            assertTrue(queue.createTailer(named ? "named" : null).readingDocument().isPresent(),
+                    "Read-only queue should still allow reads");
         }
     }
 
     @TestTemplate
+    @DisplayName("Should create queue in current directory")
     public void shouldCreateQueueInCurrentDirectory() {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
@@ -3255,7 +3416,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             assertNotNull(ignored, "queue instance should be non-null even when using current directory");
         }
 
-        assertTrue(new File(QUEUE_METADATA_FILE).delete(), "new File(QUEUE_METADATA_FILE).delete()");
+        assertTrue(new File(QUEUE_METADATA_FILE).delete(), "Metadata file should delete after close");
     }
 
     @NotNull
@@ -3264,6 +3425,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Tailer snapping roll with new appender")
     public void testTailerSnappingRollWithNewAppender() throws InterruptedException, ExecutionException, TimeoutException {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
@@ -3365,6 +3527,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Write bytes and index five times with overwrite test")
     public void writeBytesAndIndexFiveTimesWithOverwriteTest() {
         try (final ChronicleQueue sourceQueue =
                      builder(getTmpDir(), wireType).
@@ -3382,9 +3545,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                          builder(getTmpDir(), wireType).testBlockSize().build();
                  ExcerptAppender appender0 = queue.createAppender()) {
 
-                assumeTrue(appender0 instanceof InternalAppender);
+                assumeTrue(appender0 instanceof InternalAppender,
+                        "InternalAppender is required for overwrite test");
                 InternalAppender appender = (InternalAppender) appender0;
-                assumeTrue(appender instanceof StoreAppender);
+                assumeTrue(appender instanceof StoreAppender,
+                        "StoreAppender is required for overwrite test");
 
                 List<BytesWithIndex> bytesWithIndies = new ArrayList<>();
                 try {
@@ -3436,6 +3601,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Write bytes and index five times test")
     public void writeBytesAndIndexFiveTimesTest() {
         try (final ChronicleQueue sourceQueue =
                      builder(getTmpDir(), wireType).
@@ -3482,6 +3648,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Rollback preserves expected messages queue behaviour scenario")
     public void rollbackTest() {
 
         File file = getTmpDir();
@@ -3531,7 +3698,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 try {
                     documentContext.wire().readEventName(sb);
-                    assertEquals("hello2", sb.toString(), "sb.toString()");
+                    assertEquals("hello2", sb.toString(), "Event name should remain hello2 before rollback");
                     documentContext.rollbackOnClose();
                 } finally {
                     bytes.readPosition(rp).writePosition(wp).writeLimit(wl);
@@ -3540,24 +3707,24 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             try (DocumentContext documentContext = tailer1.readingDocument()) {
                 documentContext.wire().readEventName(sb);
-                assertEquals("hello2", sb.toString(), "sb.toString()");
+                assertEquals("hello2", sb.toString(), "Event name should be hello2 after rollback");
             }
             try (DocumentContext documentContext = tailer1.readingDocument()) {
                 documentContext.wire().readEventName(sb);
-                assertEquals("hello3", sb.toString(), "sb.toString()");
+                assertEquals("hello3", sb.toString(), "Event name should be hello3 before rollback");
                 documentContext.rollbackOnClose();
             }
             try (DocumentContext documentContext = tailer1.readingDocument()) {
-                assertTrue(documentContext.isPresent(), "documentContext.isPresent()");
+                assertTrue(documentContext.isPresent(), "Document should be present for final hello3 read");
                 documentContext.wire().readEventName(sb);
-                assertEquals("hello3", sb.toString(), "sb.toString()");
+                assertEquals("hello3", sb.toString(), "Event name should be hello3 after rollback");
             }
             try (DocumentContext documentContext = tailer1.readingDocument()) {
-                assertFalse(documentContext.isPresent(), "documentContext.isPresent()");
+                assertFalse(documentContext.isPresent(), "Document should not be present after final read");
                 documentContext.rollbackOnClose();
             }
             try (DocumentContext documentContext = tailer1.readingDocument()) {
-                assertFalse(documentContext.isPresent(), "documentContext.isPresent()");
+                assertFalse(documentContext.isPresent(), "No additional documents should be present");
             }
         }
     }
@@ -3575,6 +3742,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Mapped segments should be unmapped as cycle rolls")
     public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws IOException, InterruptedException {
 
         assumeTrue(wireType == WireType.BINARY, "this test is slow and does not depend on wire type");
@@ -3592,7 +3760,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             passed = passed && doMappedSegmentUnmappedRollTest(setTime(clock, midnight + (i * oneHourInMillis)), builder);
 
         if (!passed) {
-            fail(builder.toString());
+            fail("Mapped segment roll test failed: " + builder);
         }
     }
 
@@ -3657,9 +3825,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
      * relates to https://github.com/OpenHFT/Chronicle-Queue/issues/699
      */
     @TestTemplate
+    @DisplayName("Read values using read-only queue queue behaviour scenario")
     public void testReadUsingReadOnly() {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
-        assumeFalse(named);
+        assumeFalse(named, "Read-only queue test requires unnamed tailer mode");
 
         File tmpDir = getTmpDir();
         String expected = "hello world";
@@ -3681,34 +3850,37 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 dc.wire().getValueIn().text(sb);
             }
 
-            assertEquals(expected, sb.toString(), "read-only queue: value");
+            assertEquals(expected, sb.toString(), "Read-only queue should return written value");
         }
     }
 
     @TestTemplate
+    @DisplayName("Last index should return last index for populated queue")
     public void lastIndexShouldReturnLastIndexForPopulatedQueue() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
-            assertEquals(-1, queue.lastIndex(), "queue.lastIndex()");
+            assertEquals(-1, queue.lastIndex(), "Empty queue should report -1 last index");
 
             long actualLastIndex;
             try (ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText("Hello!");
                 actualLastIndex = appender.lastIndexAppended();
             }
-            assertEquals(actualLastIndex, queue.lastIndex(), "queue.lastIndex()");
+            assertEquals(actualLastIndex, queue.lastIndex(), "Queue last index should match last append");
         }
     }
 
     @TestTemplate
+    @DisplayName("Last index should return negative one for empty queue")
     public void lastIndexShouldReturnNegativeOneForEmptyQueue() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
-            assertEquals(-1, queue.lastIndex(), "queue.lastIndex()");
+            assertEquals(-1, queue.lastIndex(), "New queue should report -1 last index");
         }
     }
 
     @TestTemplate
+    @DisplayName("Last index should return negative one for metadata only queue")
     public void lastIndexShouldReturnNegativeOneForMetadataOnlyQueue() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
@@ -3717,11 +3889,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     documentContext.wire().write().text("Hello!");
                 }
             }
-            assertEquals(-1, queue.lastIndex(), "queue.lastIndex()");
+            assertEquals(-1, queue.lastIndex(), "Metadata-only queue should report -1 last index");
         }
     }
 
     @TestTemplate
+    @DisplayName("Should wait for condition when creating appender")
     public void shouldWaitForConditionWhenCreatingAppender() throws TimeoutException {
         File tmpDir = getTmpDir();
         AtomicBoolean gotAppender = new AtomicBoolean(false);
@@ -3740,7 +3913,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             // Assert createAppender is blocked
             Jvm.pause(100L);
-            assertFalse(gotAppender.get(), "gotAppender.get()");
+            assertFalse(gotAppender.get(), "Appender should not be acquired before condition is signalled");
 
             // Release
             createAppenderLock.lock();

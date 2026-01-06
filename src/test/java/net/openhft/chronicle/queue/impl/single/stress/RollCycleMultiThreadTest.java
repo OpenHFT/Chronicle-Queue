@@ -13,6 +13,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -26,6 +27,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
     private static final RollCycle ROLL_CYCLE = TEST_DAILY;
 
     @Test
+    @DisplayName("Observer reads after roll cycle when queue is empty")
     public void testRead1() throws ExecutionException, InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
@@ -50,14 +52,16 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     .build();
                  ExcerptAppender appender = queue.createAppender()) {
 
-                Assertions.assertEquals(-2, (int) scheduledExecutorService.submit(observer).get(), "(int) scheduledExecutorService.submit(observer).get()");
+                Assertions.assertEquals(-2, (int) scheduledExecutorService.submit(observer).get(),
+                        "observer should report -2 before any day 3 data");
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("say").text("Day 3 data");
                 }
-                Assertions.assertEquals(1, (int) scheduledExecutorService.submit(observer).get(), "(int) scheduledExecutorService.submit(observer).get()");
+                Assertions.assertEquals(1, (int) scheduledExecutorService.submit(observer).get(),
+                        "observer should report 1 after day 3 data is written");
                 assertEquals(1, observer.documentsRead, "observer.documentsRead");
 
             }
@@ -69,6 +73,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Observer reads across roll cycles with existing data")
     public void testRead2() throws ExecutionException, InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
@@ -98,7 +103,8 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 1 data");
                 }
 
-                Assertions.assertEquals(1, (int) es.submit(observer).get(), "(int) es.submit(observer).get()");
+                Assertions.assertEquals(1, (int) es.submit(observer).get(),
+                        "observer should report 1 after day 1 data is written");
 
                 assertEquals("--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
@@ -167,7 +173,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "say: Day 1 data\n" +
                                 "...\n" +
                                 "# 130648 bytes remaining\n",
-                        queue.dump(), "queue.dump()");
+                        queue.dump(), "queue dump should match expected data after day 1 write");
 
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
@@ -278,7 +284,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "say: Day 3 data\n" +
                                 "...\n" +
                                 "# 130648 bytes remaining\n",
-                        queue.dump(), "queue.dump()");
+                        queue.dump(), "queue dump should match expected data after day 3 write");
                 Assertions.assertEquals(2, (int) es.submit(observer).get(), "(int) es.submit(observer).get()");
 
                 assertEquals(2, observer.documentsRead, "observer.documentsRead");

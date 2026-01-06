@@ -14,6 +14,7 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Disabled("long running")
+@Disabled("long running contention benchmark for manual performance checks")
 @TestMethodOrder(MethodOrderer.MethodName.class)
 @RequiredForClient
 public class ContendedWriterTest extends QueueTestCommon {
@@ -38,80 +39,90 @@ public class ContendedWriterTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Single writer thread runs without contention errors")
     public void oneThread() {
         long totalCount = test("oneThread", new Config(false, 1, 0));
-        assertTrue(totalCount > 0, "contended-writer: oneThread samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for one-thread run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Single writer thread with deferred contention")
     public void oneThreadDeferred() {
         long totalCount = test("oneThreadDeferred", new Config(true, 1, 0));
-        assertTrue(totalCount > 0, "contended-writer: oneThreadDeferred samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for deferred one-thread run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Six writer threads run with expected contention")
     public void sixThreads() {
         Config config15 = new Config(false, 1, 5);
         long totalCount = test("sixThreads", config15, config15, config15, config15, config15, config15);
-        assertTrue(totalCount > 0, "contended-writer: sixThreads samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for six-thread run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Six writer threads with deferred contention")
     public void sixThreadsDeferred() {
         Config config15 = new Config(true, 1, 5);
         long totalCount = test("sixThreadsDeferred", config15, config15, config15, config15, config15, config15);
-        assertTrue(totalCount > 0, "contended-writer: sixThreadsDeferred samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for deferred six-thread run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Two threads writing large messages at same slow rate")
     public void twoThreadsWritingLargeMessagesAtSameSlowRate() {
         long totalCount = test("twoThreadsWritingLargeMessagesAtSameSlowRate",
                 new Config(false, 1, 5),
                 new Config(false, 1, 5));
-        assertTrue(totalCount > 0, "contended-writer: large msgs same slow samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for slow large-message run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Two threads writing large messages at same slow rate with deferred contention")
     public void twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred() {
         long totalCount = test("twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred",
                 new Config(true, 1, 5),
                 new Config(true, 1, 5));
-        assertTrue(totalCount > 0, "contended-writer: large msgs same slow deferred samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for deferred slow large-message run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Two threads writing large messages with fast and slow rates")
     public void twoThreadsWritingLargeMessagesOneFastOneSlow() {
         long totalCount = test("twoThreadsWritingLargeMessagesOneFastOneSlow",
                 new Config(false, 1, 0),
                 new Config(false, 1, 5));
-        assertTrue(totalCount > 0, "contended-writer: large msgs fast/slow samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for fast/slow large-message run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Two threads writing large messages with fast/slow rates and deferred contention")
     public void twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred() {
         long totalCount = test("twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred",
                 new Config(false, 1, 0),
                 new Config(true, 1, 5));
-        assertTrue(totalCount > 0, "contended-writer: large msgs fast/slow deferred samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for deferred fast/slow large-message run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Two threads writing large messages fast and small messages slow")
     public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow() {
         long totalCount = test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow",
                 new Config(false, 1, 0),
                 new Config(false, 0, 5));
-        assertTrue(totalCount > 0, "contended-writer: large/fast and small/slow samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for large/fast small/slow run, count=" + totalCount);
     }
 
     @Test
+    @DisplayName("Two threads writing large messages fast and small messages slow with deferred contention")
     public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred() {
         long totalCount = test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred",
                 new Config(false, 1, 0),
                 new Config(true, 0, 5));
-        assertTrue(totalCount > 0, "contended-writer: large/fast and small/slow deferred samples");
+        assertTrue(totalCount > 0, "totalCount should be > 0 for deferred large/fast small/slow run, count=" + totalCount);
     }
 
-    private void test(String name, Config... configs) {
+    private long test(String name, Config... configs) {
         File path = getTmpDir();
         SingleChronicleQueue[] queues = new SingleChronicleQueue[configs.length];
         StartAndMonitor[] startAndMonitors = new StartAndMonitor[configs.length];
@@ -180,7 +191,7 @@ public class ContendedWriterTest extends QueueTestCommon {
         public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
             ValueIn valueIn = wire.getValueIn();
             for (int i = 0; i < NUMBER_OF_LONGS; i++)
-                assertEquals(i, valueIn.int64());
+                assertEquals(i, valueIn.int64(), "marshallable value should equal index " + i);
         }
 
         @Override

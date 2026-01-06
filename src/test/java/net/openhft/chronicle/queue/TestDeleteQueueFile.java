@@ -14,6 +14,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -42,11 +43,14 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     private static final int NUM_REPEATS = 10;
     private static final int CYCLES_TO_DELETE_PER_ITERATION = 20;
+    private static final String ISSUE_1151_URL = "https://github.com/OpenHFT/Chronicle-Queue/issues/1151";
+    private static final String NON_WINDOWS_ASSUMPTION = "Requires non-Windows delete semantics";
     private final Path tempQueueDir = getTmpDir().toPath();
 
     @Test
+    @DisplayName("Refresh updates first and last indices")
     public void testRefreshDirectoryListingWillUpdateFirstAndLastIndicesCorrectly() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Refresh listing test - " + NON_WINDOWS_ASSUMPTION);
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
@@ -58,19 +62,23 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             queue.refreshDirectoryListing();
 
             final RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
-            assertEquals(toHexString(secondCycle.firstIndex), toHexString(queue.firstIndex()), "toHexString(queue.firstIndex())");
-            assertEquals(toHexString(secondCycle.lastIndex), toHexString(queue.lastIndex()), "toHexString(queue.lastIndex())");
+            assertEquals(toHexString(secondCycle.firstIndex), toHexString(queue.firstIndex()),
+                    "First index should match remaining cycle after refresh");
+            assertEquals(toHexString(secondCycle.lastIndex), toHexString(queue.lastIndex()),
+                    "Last index should match remaining cycle after refresh");
 
             // and create a tailer it should only read data in second file
             ExcerptTailer excerptTailer2 = queue.createTailer();
-            assertEquals(toHexString(secondCycle.firstIndex), toHexString(excerptTailer2.index()), "toHexString(excerptTailer2.index())");
+            assertEquals(toHexString(secondCycle.firstIndex), toHexString(excerptTailer2.index()),
+                    "Tailer should start at first index of remaining cycle");
             readText(excerptTailer2, "test2");
         }
     }
 
     @Test
+    @DisplayName("Tailer toStart handles deleted store file")
     public void tailerToStartWorksInFaceOfDeletedStoreFile() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Tailer toStart delete test - " + NON_WINDOWS_ASSUMPTION);
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
@@ -88,14 +96,16 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             Files.delete(Paths.get(firstCycle.filename));
 
             // should be at correct index
-            assertEquals(toHexString(secondCycle.firstIndex), toHexString(tailer.toStart().index()), "toHexString(tailer.toStart().index())");
+            assertEquals(toHexString(secondCycle.firstIndex), toHexString(tailer.toStart().index()),
+                    "Tailer should move to first index of remaining cycle");
         }
     }
 
-    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
+    @Disabled("Issue 1151: toStart from start with deleted store - " + ISSUE_1151_URL)
+    @DisplayName("Tailer toStart from start handles deleted store")
     public void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Tailer toStart from start delete test - " + NON_WINDOWS_ASSUMPTION);
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
@@ -113,13 +123,15 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             Files.delete(Paths.get(firstCycle.filename));
 
             // should be at correct index
-            assertEquals(toHexString(secondCycle.firstIndex), toHexString(tailer.toStart().index()), "toHexString(tailer.toStart().index())");
+            assertEquals(toHexString(secondCycle.firstIndex), toHexString(tailer.toStart().index()),
+                    "Tailer should move to first index after deletion");
         }
     }
 
     @Test
+    @DisplayName("Tailer toEnd handles deleted store file")
     public void tailerToEndWorksInFaceOfDeletedStoreFile() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Tailer toEnd delete test - " + NON_WINDOWS_ASSUMPTION);
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
@@ -137,14 +149,16 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             Files.delete(Paths.get(thirdCycle.filename));
 
             // should be at correct index
-            assertEquals(toHexString(secondCycle.lastIndex + 1), toHexString(tailer.toEnd().index()), "toHexString(tailer.toEnd().index())");
+            assertEquals(toHexString(secondCycle.lastIndex + 1), toHexString(tailer.toEnd().index()),
+                    "Tailer should move to end of remaining cycle");
         }
     }
 
-    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
+    @Disabled("Issue 1151: toEnd from end with deleted store - " + ISSUE_1151_URL)
+    @DisplayName("Tailer toEnd from end handles deleted store")
     public void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Tailer toEnd from end delete test - " + NON_WINDOWS_ASSUMPTION);
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
@@ -162,13 +176,15 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             Files.delete(Paths.get(thirdCycle.filename));
 
             // should be at correct index
-            assertEquals(toHexString(secondCycle.lastIndex + 1), toHexString(tailer.toEnd().index()), "toHexString(tailer.toEnd().index())");
+            assertEquals(toHexString(secondCycle.lastIndex + 1), toHexString(tailer.toEnd().index()),
+                    "Tailer should move to end after deletion");
         }
     }
 
     @Test
+    @DisplayName("Force refresh updates cached first index")
     public void firstAndLastIndexAreRefreshedAfterForceRefreshInterval() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Force refresh interval test - " + NON_WINDOWS_ASSUMPTION);
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, builder -> builder.forceDirectoryListingRefreshIntervalMs(250))) {
 
@@ -186,24 +202,29 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             Files.delete(Paths.get(firstCycle.filename));
 
             // using old cached value
-            assertEquals(toHexString(firstCycle.firstIndex), toHexString(queue.firstIndex()), "toHexString(queue.firstIndex())");
-            assertEquals(toHexString(firstCycle.firstIndex), toHexString(queue.firstIndex()), "toHexString(queue.firstIndex())");
+            assertEquals(toHexString(firstCycle.firstIndex), toHexString(queue.firstIndex()),
+                    "Cached first index should still reflect deleted cycle");
+            assertEquals(toHexString(firstCycle.firstIndex), toHexString(queue.firstIndex()),
+                    "Cached first index should remain unchanged before refresh");
 
             // wait for cache to expire
             ((SetTimeProvider) queue.time()).advanceMillis(260);
 
             // using correct value
-            assertEquals(toHexString(secondCycle.firstIndex), toHexString(queue.firstIndex()), "toHexString(queue.firstIndex())");
+            assertEquals(toHexString(secondCycle.firstIndex), toHexString(queue.firstIndex()),
+                    "First index should refresh to remaining cycle after interval");
         }
     }
 
     @Test
+    @DisplayName("Tailing deleted cycles retries in writable queue")
     public void tailingThroughDeletedCyclesWillRefreshThenRetry_Writable() throws IOException {
         int counter = tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> qwcd.queue);
         assertEquals(10, counter, "tailing deleted cycles: documents read (writable)");
     }
 
     @Test
+    @DisplayName("Tailing deleted cycles retries in read-only queue")
     public void tailingThroughDeletedCyclesWillRefreshThenRetry_ReadOnly() throws IOException {
         int counter = tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())
                 .rollCycle(RollCycles.FAST_DAILY)
@@ -213,6 +234,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Chaos test deletes old roll cycles")
     public void deletingOldFilesChaosTest() throws InterruptedException {
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         final int numberOfCycles = 300;
@@ -229,28 +251,34 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             running.set(false);
             forwardTailerThread.join();
             backwardTailerThread.join();
-            assertFalse(deleterThread.isAlive(), "chaos: deleter thread alive");
-            assertFalse(forwardTailerThread.isAlive(), "chaos: forward tailer thread alive");
-            assertFalse(backwardTailerThread.isAlive(), "chaos: backward tailer thread alive");
+            assertFalse(deleterThread.isAlive(), "Old-cycle deleter thread should have terminated");
+            assertFalse(forwardTailerThread.isAlive(), "Forward tailer thread should have terminated after old-cycle delete");
+            assertFalse(backwardTailerThread.isAlive(), "Backward tailer thread should have terminated after old-cycle delete");
         }
     }
 
     @Test
+    @DisplayName("Delete store from start of range")
     public void deleteFileFromUnderTailerTest_StartOfRange() throws IOException {
         LastReadIndexResult result = deleteFileFromUnderTailerTest(10, 0);
-        assertEquals(toHexString(result.expectedLastIndexRead), toHexString(result.lastIndexRead), "delete-under-tailer: last index (start)");
+        assertEquals(toHexString(result.expectedLastIndexRead), toHexString(result.lastIndexRead),
+                "Tailer should read expected last index after deleting start cycle");
     }
 
     @Test
+    @DisplayName("Delete store from middle of range")
     public void deleteFileFromUnderTailerTest_MiddleOfRange() throws IOException {
         LastReadIndexResult result = deleteFileFromUnderTailerTest(10, 5);
-        assertEquals(toHexString(result.expectedLastIndexRead), toHexString(result.lastIndexRead), "delete-under-tailer: last index (middle)");
+        assertEquals(toHexString(result.expectedLastIndexRead), toHexString(result.lastIndexRead),
+                "Tailer should read expected last index after deleting middle cycle");
     }
 
     @Test
+    @DisplayName("Delete store from end of range")
     public void deleteFileFromUnderTailerTest_EndOfRange() throws IOException {
         LastReadIndexResult result = deleteFileFromUnderTailerTest(10, 8);
-        assertEquals(toHexString(result.expectedLastIndexRead), toHexString(result.lastIndexRead), "delete-under-tailer: last index (end)");
+        assertEquals(toHexString(result.expectedLastIndexRead), toHexString(result.lastIndexRead),
+                "Tailer should read expected last index after deleting end cycle");
     }
 
     private static final class LastReadIndexResult {
@@ -264,7 +292,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     private LastReadIndexResult deleteFileFromUnderTailerTest(int numberOfCycles, int currentCycleIndex) throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Delete file from under tailer test - " + NON_WINDOWS_ASSUMPTION);
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(numberOfCycles, null)) {
             try (final ExcerptTailer tailer = queueWithCycleDetails.queue.createTailer()) {
@@ -317,7 +345,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 Jvm.pause(1_000);
             }
         } catch (IOException e) {
-            Jvm.error().on(TestDeleteQueueFile.class, "Error occurred", e);
+            Jvm.error().on(TestDeleteQueueFile.class, "Failed while truncating old roll cycles", e);
         }
     }
 
@@ -336,13 +364,14 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 Jvm.pause(20);
             }
         } catch (IOException e) {
-            Jvm.error().on(TestDeleteQueueFile.class, "Error occurred", e);
+            Jvm.error().on(TestDeleteQueueFile.class, "Failed while deleting random roll cycles", e);
         }
     }
 
     @Test
+    @DisplayName("Chaos test deletes random roll cycles")
     public void deletingRandomRollCyclesChaosTest() throws InterruptedException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Random delete chaos test - " + NON_WINDOWS_ASSUMPTION);
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         final int numberOfCycles = 300;
         final AtomicBoolean running = new AtomicBoolean(true);
@@ -360,9 +389,9 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             running.set(false);
             backwardTailerThread.join();
             forwardTailerThread.join();
-            assertFalse(deleteRandomCyclesThread.isAlive(), "chaos-random: deleter thread alive");
-            assertFalse(backwardTailerThread.isAlive(), "chaos-random: backward tailer thread alive");
-            assertFalse(forwardTailerThread.isAlive(), "chaos-random: forward tailer thread alive");
+            assertFalse(deleteRandomCyclesThread.isAlive(), "Random deleter thread should have terminated");
+            assertFalse(backwardTailerThread.isAlive(), "Backward tailer thread should have terminated after random delete");
+            assertFalse(forwardTailerThread.isAlive(), "Forward tailer thread should have terminated after random delete");
         }
     }
 
@@ -413,7 +442,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                     }
                 }
             } catch (Exception e) {
-                Jvm.error().on(TestDeleteQueueFile.class, "Error occurred", e);
+                Jvm.error().on(TestDeleteQueueFile.class, "Tailer worker failed for direction=" + direction, e);
             }
             Jvm.startup().on(TestDeleteQueueFile.class, "Tailer thread terminated: " + direction);
         }
@@ -485,7 +514,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     private int tailingThroughDeletedCyclesWillRefreshThenRetry(Function<QueueWithCycleDetails, SingleChronicleQueue> queueCreator) throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Retry after deleted cycles test - " + NON_WINDOWS_ASSUMPTION);
         expectException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null);
@@ -538,7 +567,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         List<RollCycleDetails> rollCycleDetails;
         try (ExcerptAppender appender = queue.createAppender()) {
 
-            assertEquals(Long.MAX_VALUE, queue.firstIndex(), "queue.firstIndex()");
+            assertEquals(Long.MAX_VALUE, queue.firstIndex(),
+                    "New queue should start with MAX_VALUE first index");
 
             rollCycleDetails = IntStream.range(0, numberOfCycles)
                     .mapToObj(i -> {
@@ -555,7 +585,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
 
         // There should be 3 acquired files, for roll cycles 1, 2, 3
-        assertEquals(numberOfCycles, rollCycleDetails.size(), "rollCycleDetails.size()");
+        assertEquals(numberOfCycles, rollCycleDetails.size(),
+                "Roll cycle details should match expected cycle count");
 
         // now let's create one tailer which will read all content
         try (ExcerptTailer excerptTailer = queue.createTailer()) {
@@ -571,16 +602,20 @@ public class TestDeleteQueueFile extends QueueTestCommon {
      * Helper method to assert that a tailer can correctly navigate to start and end of queue
      */
     private void assertTailerCanNavigateQueue(ExcerptTailer tailer, RollCycleDetails firstCycle, RollCycleDetails lastCycle) {
-        assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()), "tailer toStart should land at first cycle index");
-        assertEquals(toHexString(lastCycle.lastIndex + 1), toHexString(tailer.toEnd().index()), "tailer toEnd should land after last cycle index");
+        assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()),
+                "tailer toStart should land at first cycle index in intact queue");
+        assertEquals(toHexString(lastCycle.lastIndex + 1), toHexString(tailer.toEnd().index()),
+                "tailer toEnd should land after last cycle index in intact queue");
     }
 
     /**
      * Helper method to assert that a tailer can correctly navigate from end to start of queue
      */
     private void assertTailerCanNavigateQueueEndToStart(ExcerptTailer tailer, RollCycleDetails firstCycle, RollCycleDetails lastCycle) {
-        assertEquals(toHexString(lastCycle.lastIndex + 1), toHexString(tailer.toEnd().index()), "tailer toEnd should land after last cycle index");
-        assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()), "tailer toStart should return to first cycle index");
+        assertEquals(toHexString(lastCycle.lastIndex + 1), toHexString(tailer.toEnd().index()),
+                "tailer toEnd should land after last cycle index before reverse navigation");
+        assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()),
+                "tailer toStart should return to first cycle index after reverse navigation");
     }
 
     static class QueueWithCycleDetails extends AbstractCloseable {
@@ -631,7 +666,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
      */
     private void readText(ExcerptTailer tailer, String text) {
         for (int i = 0; i < NUM_REPEATS; i++) {
-            assertEquals(text, tailer.readText(), "tailer.readText()");
+            assertEquals(text, tailer.readText(), "Tailer should read expected text at iteration " + i);
         }
     }
 

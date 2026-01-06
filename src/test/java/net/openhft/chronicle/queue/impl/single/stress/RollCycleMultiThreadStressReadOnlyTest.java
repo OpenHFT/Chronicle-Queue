@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.core.OS;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +17,7 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
     }
 
     @Test
+    @DisplayName("Read-only stress test runs on supported platforms")
     @Override
     public void stress() throws Exception {
         Assumptions.assumeFalse(OS.isWindows(), "Windows does not support read only");

@@ -12,6 +12,7 @@ import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -44,6 +45,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer tolerates empty roll cycle at end")
     public void tailerShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
         createQueueWithEmptyRollCycleAtEnd();
@@ -68,6 +70,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Appender tolerates empty roll cycle at end")
     public void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
         ignoreException("Renamed un-acquirable segment file");
@@ -98,7 +101,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Recovery fails when lock cannot be acquired")
     @Timeout(value = 6_000, unit = TimeUnit.MILLISECONDS)
     public void appropriateExceptionIsThrownWhenLockCannotBeAcquiredForRecovery() throws IOException, InterruptedException {
         createQueueWithEmptyRollCycleAtEnd();

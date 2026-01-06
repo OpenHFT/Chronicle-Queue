@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
@@ -37,6 +38,7 @@ public class ToEndInvalidIndexTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("toEnd reports correct index when sub-index is zero")
     public void testBackwardsToEndReportsCorrectIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {

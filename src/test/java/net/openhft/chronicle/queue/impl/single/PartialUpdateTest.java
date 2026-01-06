@@ -9,10 +9,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -128,7 +125,7 @@ public class PartialUpdateTest extends QueueTestCommon {
         queueCreator.createQueue(setTimeProvider, queuePath);
     }
 
-    @After
+    @AfterEach
     @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(queuePath.toFile());
@@ -147,60 +144,72 @@ public class PartialUpdateTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Backward toEnd positions tailer on last entry")
     public void testBackwardsToEndArrivesAtCorrectPosition() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.direction(TailerDirection.BACKWARD).toEnd();
             // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
-            assertEquals("Six", tailer.readText(), "tailer.readText()");
+            assertEquals("Six", tailer.readText(),
+                    "backward toEnd should read last entry text");
         }
     }
 
     @TestTemplate
+    @DisplayName("Backward toEnd reports last index value")
     public void testBackwardsToEndReportsCorrectIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.direction(TailerDirection.BACKWARD).toEnd();
             // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
-            assertEquals(LAST_INDEX, tailer.index(), "tailer.index()");
+            assertEquals(LAST_INDEX, tailer.index(),
+                    "backward toEnd should report last index");
         }
     }
 
     @TestTemplate
+    @DisplayName("Forward toEnd positions tailer after last entry")
     public void testForwardsToEndArrivesAtCorrectPosition() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.toEnd();
             // toEnd in the forward direction positions the cursor AFTER the last excerpt
-            assertNull(tailer.readText(), "tailer.readText()");
+            assertNull(tailer.readText(),
+                    "forward toEnd should report no entry at end");
         }
     }
 
     @TestTemplate
+    @DisplayName("Forward toEnd reports index after last entry")
     public void testForwardsToEndReportsCorrectIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
             tailer.toEnd();
             // toEnd in the forward direction positions the cursor AFTER the last excerpt
-            assertEquals(LAST_INDEX + 1, tailer.index(), "tailer.index()");
+            assertEquals(LAST_INDEX + 1, tailer.index(),
+                    "forward toEnd should report index after last entry");
         }
     }
 
     @TestTemplate
+    @DisplayName("Queue last index matches expected value")
     public void testLastIndexIsCorrect() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath)) {
             // Should report last index correctly
-            assertEquals(LAST_INDEX, queue.lastIndex(), "queue.lastIndex()");
+            assertEquals(LAST_INDEX, queue.lastIndex(),
+                    "queue lastIndex should match expected value");
         }
     }
 
     @TestTemplate
+    @DisplayName("Appender reports last appended index value")
     public void testAppendReturnsCorrectLastAppendedIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptAppender appender = queue.createAppender()) {
             // Should report last index correctly
             appender.writeText("Seven");
-            assertEquals(LAST_INDEX + 1, appender.lastIndexAppended(), "appender.lastIndexAppended()");
+            assertEquals(LAST_INDEX + 1, appender.lastIndexAppended(),
+                    "appender lastIndexAppended should advance after write");
         }
     }
 
@@ -229,11 +238,11 @@ public class PartialUpdateTest extends QueueTestCommon {
             appender.writeText("Five");
             int currentCycle = RollCycles.FAST_DAILY.toCycle(appender.lastIndexAppended());
             try (SingleChronicleQueueStore secondRollCycle = queue.storeForCycle(currentCycle, 0, false, null)) {
-                assertNotNull(secondRollCycle, "secondRollCycle");
+                assertNotNull(secondRollCycle, "second roll cycle store should be available");
                 final long previousWritePosition = secondRollCycle.writePosition();
                 long previousSequence = secondRollCycle.lastSequenceNumber(tailer);
                 printLastWritePositionAndSequence("before append last excerpt", tailer, secondRollCycle);
-                assertEquals(1, previousSequence, "previousSequence");
+                assertEquals(1, previousSequence, "previous sequence should be 1 before final write");
                 appender.writeText("Six");
                 printLastWritePositionAndSequence("after append last excerpt", tailer, secondRollCycle);
 
@@ -241,7 +250,7 @@ public class PartialUpdateTest extends QueueTestCommon {
                 updateSimulator.simulatePartialUpdate(tailer, secondRollCycle, previousWritePosition, previousSequence);
                 printLastWritePositionAndSequence(updateDescription, tailer, secondRollCycle);
             } catch (StreamCorruptedException e) {
-                throw new RuntimeException("Error reading last sequence number", e);
+                throw new RuntimeException("Error reading last sequence number for " + updateDescription, e);
             }
         }
     }
@@ -273,7 +282,7 @@ public class PartialUpdateTest extends QueueTestCommon {
             long lastSequenceNumber = store.lastSequenceNumber(context);
             Jvm.startup().on(PartialUpdateTest.class, format("Last wp/seq = %x/%d (%s)", writePosition, lastSequenceNumber, description));
         } catch (StreamCorruptedException e) {
-            throw new RuntimeException("Error reading last sequence number", e);
+            throw new RuntimeException("Error reading last sequence number after recovery", e);
         }
     }
 

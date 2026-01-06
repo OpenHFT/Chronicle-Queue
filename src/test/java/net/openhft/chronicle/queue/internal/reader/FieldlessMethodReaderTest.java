@@ -13,6 +13,7 @@ import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -93,6 +94,7 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
     }
 
     @TestTemplate
+    @DisplayName("Fieldless method reader counts all messages")
     public void test() {
         File path = new File(getTmpDir(), "enum_test_" + enumType);
 
@@ -107,7 +109,7 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
             while (methodReader.readOne()) {
                 Jvm.nanoPause();
             }
-            assertEquals(2, msgCounter.get(), "methodReader: message count");
+            assertEquals(2, msgCounter.get(), "methodReader should read expected message count");
         } finally {
             IOTools.deleteDirWithFilesOrWait(1000, path);
         }

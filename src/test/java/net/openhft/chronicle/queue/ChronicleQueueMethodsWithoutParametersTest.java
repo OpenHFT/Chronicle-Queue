@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Method writer handles calls with and without parameters")
     public void test() {
         File file = getTmpDir();
 
@@ -28,14 +30,14 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
             final MethodReader reader = queue.createTailer()
                     .methodReader(someManager);
 
-            Jvm.debug().on(getClass(), "Writing to queue");
+            Jvm.debug().on(getClass(), "Writing method calls to queue");
             someListener.methodWithOneParam(1);
             someListener.methodWithoutParams();
 
-            Jvm.debug().on(getClass(), "Reading from queue");
-            assertTrue(reader.readOne(), "reader.readOne()");
-            assertTrue(reader.readOne(), "reader.readOne()");
-            assertFalse(reader.readOne(), "reader.readOne()");
+            Jvm.debug().on(getClass(), "Reading method calls from queue");
+            assertTrue(reader.readOne(), "methodReader should read first queued call");
+            assertTrue(reader.readOne(), "methodReader should read second queued call");
+            assertFalse(reader.readOne(), "methodReader should have no further queued calls");
 
             assertTrue(someManager.methodWithOneParamInvoked, "someManager.methodWithOneParamInvoked");       // one param method was invoked
             assertTrue(someManager.methodWithoutParamsInvoked, "someManager.methodWithoutParamsInvoked");      // no params method was NOT invoked

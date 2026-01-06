@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
@@ -26,9 +27,10 @@ public class MicroToucherTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Micro-touch counts touched pages for block size")
     public void touchPageTestBlockSize() {
         int pages = touchPage(b -> b.blockSize(64 << 20));
-        assertEquals(66561, pages, "micro-touch: pages touched");
+        assertEquals(66561, pages, "MicroTouch should report expected number of pages touched");
     }
 
     private int touchPage(Consumer<SingleChronicleQueueBuilder> configure) {
@@ -48,7 +50,7 @@ public class MicroToucherTest extends QueueTestCommon {
                         Jvm.pause(25);
                     }
                 } catch (ClosedIllegalStateException expected) {
-                    Jvm.debug().on(MicroToucherTest.class, "MicroTouch loop closed", expected);
+                    Jvm.debug().on(MicroToucherTest.class, "MicroTouch loop closed after appender shutdown", expected);
                 }
             });
             msync.setDaemon(true);
@@ -63,7 +65,8 @@ public class MicroToucherTest extends QueueTestCommon {
                 boolean touch = page != lastPage && appender.wire().bytes().bytesStore().inside(page, 8);
                 lastPage = page;
                 if (touch != appender.microTouch())
-                    assertEquals(touch, appender.microTouch(), "i: " + i);
+                    assertEquals(touch, appender.microTouch(),
+                            "microTouch flag should match touch at iteration " + i);
                 if (touch)
                     pages++;
             }

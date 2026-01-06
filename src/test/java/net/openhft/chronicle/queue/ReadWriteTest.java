@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -59,8 +60,9 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Read-only queue can read existing data")
     public void testReadFromReadOnlyChronicle() {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Read-only queue test is not supported on Windows");
 
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
@@ -81,8 +83,9 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Read-only queue recovers after metadata truncation")
     public void testNotInitializedMetadataFile() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Metadata truncation test is not supported on Windows");
 
         final String expectedException = "Failback to readonly tablestore";
         expectException(expectedException);
@@ -104,13 +107,14 @@ public class ReadWriteTest extends QueueTestCommon {
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
             long index = tailer.index();
-            assertNotEquals(0, index);
+            assertNotEquals(0, index, "Tailer index should advance for non-empty read-only queue");
         }
     }
 
     @Test
+    @DisplayName("Read-only queue waits for metadata initialisation")
     public void testProceedWhenMetadataFileInitialized() throws IOException {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Metadata initialisation test is not supported on Windows");
 
         File meta = new File(chroniclePath, "metadata.cq4t");
         assertTrue(meta.exists(), "Metadata file should exist before truncation test");
@@ -127,7 +131,7 @@ public class ReadWriteTest extends QueueTestCommon {
                     .binary(chroniclePath)
                     .testBlockSize()
                     .build()) {
-                assertNotNull(out, "Queue should be successfully created after metadata initialization completes");
+                assertNotNull(out, "Queue should be successfully created after metadata initialisation completes");
             }
         }).start();
 
@@ -141,16 +145,18 @@ public class ReadWriteTest extends QueueTestCommon {
                 .build();
              ExcerptTailer tailer = out.createTailer()) {
 
-            assertTrue(System.currentTimeMillis() - startTimeMillis.get() >= 200, "Should have waited for more than 200ms. Actual wait: " + (System.currentTimeMillis() - startTimeMillis.get()) + " ms");
+            long waitMillis = System.currentTimeMillis() - startTimeMillis.get();
+            assertTrue(waitMillis >= 200, "Queue open should wait for at least 200 ms. Actual wait: " + waitMillis + " ms");
 
             tailer.toEnd();
             long index = tailer.index();
-            assertNotEquals(0, index);
+            assertNotEquals(0, index, "Tailer index should advance after metadata initialisation");
         }
     }
 
     // Can't append to a read-only chronicle
     @Test
+    @DisplayName("Appender creation fails for read-only queue")
     public void testWriteToReadOnlyChronicle() {
         assumeFalse(OS.isWindows(), "#460 Read-only mode is not supported on Windows");
         assertThrows(IllegalStateException.class, () -> {
@@ -166,6 +172,7 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Read-only tailer can move to end")
     public void testToEndOnReadOnly() {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
@@ -177,13 +184,14 @@ public class ReadWriteTest extends QueueTestCommon {
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
             long index = tailer.index();
-            assertNotEquals(0, index);
+            assertNotEquals(0, index, "Tailer index should move past zero for read-only queue");
         }
     }
 
     @Test
+    @DisplayName("Read-only mode is enforced when files are not writeable")
     public void testNonWriteableFilesSetToReadOnly() {
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Read-only file permission test is not supported on Windows");
         expectException("Failback to readonly tablestore");
         expectException("Forcing queue to be readOnly");
 
@@ -198,7 +206,7 @@ public class ReadWriteTest extends QueueTestCommon {
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
             long index = tailer.index();
-            assertNotEquals(0, index);
+            assertNotEquals(0, index, "Tailer index should advance when files are forced read-only");
         }
     }
 }

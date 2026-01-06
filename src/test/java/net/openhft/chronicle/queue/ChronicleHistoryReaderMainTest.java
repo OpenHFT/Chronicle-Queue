@@ -9,6 +9,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -38,7 +39,7 @@ public class ChronicleHistoryReaderMainTest {
     @BeforeEach
     public void setUp() {
         // SecurityManager is effectively disabled from JDK 17 onwards
-        assumeTrue(Jvm.majorVersion() < 17);
+        assumeTrue(Jvm.majorVersion() < 17, "SecurityManager is required for this test");
         System.setSecurityManager(new NoExitSecurityManager());
     }
 
@@ -49,6 +50,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
+    @DisplayName("Run delegates to ChronicleHistoryReader execute call for main")
     public void testRunExecutesChronicleHistoryReader() {
         AtomicBoolean executed = new AtomicBoolean();
         // Setup
@@ -70,6 +72,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
+    @DisplayName("Setup applies command line options to history reader")
     public void testSetupChronicleHistoryReader() {
         // Simulate command line arguments
         String[] args = {"-d", "test-directory", "-p", "-m", "-t", "NANOSECONDS"};
@@ -121,6 +124,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
+    @DisplayName("Command line parsing reads directory and time unit")
     public void testParseCommandLine() {
         // Test that parseCommandLine correctly parses arguments
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
@@ -133,21 +137,24 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
+    @DisplayName("Help option invokes printHelpAndExit and exits")
     public void testParseCommandLineHelpOption() {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
             @Override
             protected void printHelpAndExit(Options options, int status, String message) {
                 assertEquals(0, status, "Help option should exit with success status code 0");  // Ensure help is printed with status 0 (success)
-                throw new ThreadDeath();  // Exit without calling System.exit()
+                throw new IllegalStateException("Help option should exit without System.exit");
             }
         };
         String[] args = {"-h"};
 
         // Manually setting the security manager to catch System.exit() if needed
-        assertThrows(ThreadDeath.class, () -> main.run(args));  // Should trigger the help message and exit with 0
+        assertThrows(IllegalStateException.class, () -> main.run(args),
+                "printHelpAndExit should terminate without calling System.exit");
     }
 
     @Test
+    @DisplayName("Options configuration exposes expected command line switches")
     public void testOptionsConfiguration() {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         Options options = main.options();
@@ -164,12 +171,13 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
+    @DisplayName("Print help exits with SecurityException under test security manager")
     public void testPrintHelpAndExit() {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         Options options = main.options();
         try {
             main.printHelpAndExit(options, 0, "Optional message");
-            fail("Expected SecurityException due to System.exit(0)");
+            fail("printHelpAndExit should raise SecurityException for System.exit(0)");
         } catch (SecurityException e) {
             assertTrue(e.getMessage().contains("System exit attempted with status: 0"), "Security exception should indicate system exit was attempted with status 0");
         }

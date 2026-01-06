@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -44,6 +45,7 @@ public final class QueueEpochTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Queue rolls according to UTC offset")
     public void shouldRollQueueFilesAccordingToUtcOffset() {
         logDebug("UTC offset is %dms%n", UTC_OFFSET);
         final File queueDir = getTmpDir();

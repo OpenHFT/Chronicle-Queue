@@ -13,6 +13,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -33,6 +34,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Method reader reuses objects during repeated reads")
     public void testOneOne() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-" + Time.uniqueId();
@@ -43,7 +45,8 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
             Pinger pinger = cq.methodWriter(Pinger.class);
             for (int i = 0; i < 5; i++) {
                 pinger.ping(pdtio);
-                assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get(), "PingDTO construction count should match expected count to verify object reuse");
+                assertEquals(PingDTO.constructionExpected.get(), PingDTO.constructionCounter.get(),
+                        "PingDTO construction count should match expected count at iteration " + i);
                 pdtio.bytes.append("hi");
             }
             StringBuilder sb = new StringBuilder();
@@ -78,6 +81,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Method reader snapshots payload before mutation")
     public void testPayloadSnapshotWhenSourceMutates() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-snapshot-" + Time.uniqueId();
@@ -103,6 +107,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Direct bytes payload snapshots before mutation")
     public void testZZDirectBytesSnapshotWhenSourceMutates() {
         ClassAliasPool.CLASS_ALIASES.addAlias(DirectPingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-direct-" + Time.uniqueId();
@@ -141,7 +146,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
 
         PingDTO() {
             if (constructionCounter.incrementAndGet() > constructionExpected.get())
-                throw new AssertionError();
+                throw new AssertionError("PingDTO constructed more times than expected");
         }
     }
 

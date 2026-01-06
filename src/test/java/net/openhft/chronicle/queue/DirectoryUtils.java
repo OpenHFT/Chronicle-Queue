@@ -33,7 +33,7 @@ public class DirectoryUtils {
 
         // Log the temporary directory in OSX as it is quite obscure
         if (OS.isMacOSX()) {
-            Jvm.debug().on(DirectoryUtils.class, "Tmp dir: " + tmpDir);
+            Jvm.debug().on(DirectoryUtils.class, "Temporary test directory: " + tmpDir);
         }
 
         return tmpDir;

@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SuppressWarnings({"deprecation", "removal"})
 public class TableStorePutGetTest extends QueueTestCommon {
     @Test
+    @DisplayName("Table store index entry is readable")
     public void indexEntry() {
         SetTimeProvider stp = new SetTimeProvider("2020/10/15T01:01:01");
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("indexEntry"))
@@ -102,6 +104,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Table store handles many entries without losing values")
     public void manyEntries() {
         final File tempDir = DirectoryUtils.tempDir("manyEntries");
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(tempDir)
@@ -126,6 +129,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
      * (see https://github.com/OpenHFT/Chronicle-Queue/issues/1025)
      */
     @Test
+    @DisplayName("Table store grows beyond initial size")
     public void testCanGrowBeyondInitialSize() {
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("canGrow"))
                 .rollCycle(TEST_DAILY)
@@ -136,8 +140,10 @@ public class TableStorePutGetTest extends QueueTestCommon {
             for (int j = 0; j < count; j++) {
                 cq.tableStorePut(keyPrefix + j, j);
             }
-            assertEquals(0L, cq.tableStoreGet(keyPrefix + 0), "tableStore: first entry");
-            assertEquals(count - 1L, cq.tableStoreGet(keyPrefix + (count - 1)), "tableStore: last entry");
+            assertEquals(0L, cq.tableStoreGet(keyPrefix + 0),
+                    "table store first entry should match index 0");
+            assertEquals(count - 1L, cq.tableStoreGet(keyPrefix + (count - 1)),
+                    "table store last entry should match the final index");
         }
     }
 }

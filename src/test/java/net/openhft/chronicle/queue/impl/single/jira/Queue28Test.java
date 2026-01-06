@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -22,7 +23,8 @@ public class Queue28Test extends QueueTestCommon {
      *
      * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-28
      */
-    @ParameterizedTest(name = "wireType={0}")
+    @DisplayName("Tailer created before appender still reads")
+    @ParameterizedTest(name = "wire type under test is {0}")
     @EnumSource(value = WireType.class, names = "BINARY")
     public void test(WireType wireType) {
         File dir = getTmpDir();

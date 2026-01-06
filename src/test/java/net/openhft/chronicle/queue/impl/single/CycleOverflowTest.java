@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class CycleOverflowTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Cycle overflow throws IllegalStateException when max messages exceeded")
     public void overflowingMaxMessagesInCycleShouldThrowException() {
         File path = getTmpDir();
         RollCycle rollCycle = TestRollCycles.TEST_DAILY;

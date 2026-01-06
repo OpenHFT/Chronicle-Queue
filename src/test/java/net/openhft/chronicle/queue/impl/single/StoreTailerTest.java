@@ -19,6 +19,7 @@ import net.openhft.chronicle.wire.Wires;
 import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -45,6 +46,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Entry count should update after a write")
     public void testEntryCount() {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -60,6 +62,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Read-only tailer should handle cycle roll")
     public void shouldHandleCycleRollWhenInReadOnlyMode() {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
@@ -97,6 +100,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should handle cycle roll in write mode")
     public void shouldHandleCycleRoll() {
         File dir = getTmpDir();
         MutableTimeProvider timeProvider = new MutableTimeProvider();
@@ -118,9 +122,10 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should halt at partially initialised roll cycle")
     public void shouldHaltAtPartiallyInitialisedRollCycle() throws ExecutionException, InterruptedException {
         // Windows doesn't support renaming a file that is open.
-        assumeFalse(OS.isWindows());
+        assumeFalse(OS.isWindows(), "Renaming open files is not supported on Windows");
         expectException("Renamed un-acquirable segment file to");
         File dir = getTmpDir();
         SetTimeProvider tp = new SetTimeProvider();
@@ -213,6 +218,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should allow disabling thread safety")
     public void disableThreadSafety() throws InterruptedException {
         AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
@@ -238,6 +244,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Disable thread safety with method reader")
     public void disableThreadSafetyWithMethodReader() throws InterruptedException {
         AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
@@ -246,7 +253,8 @@ public class StoreTailerTest extends QueueTestCommon {
             void doOnFirstThread(SingleChronicleQueue queue, ExcerptTailer tailer) {
                 writeMethodCall(queue, "Testing1");
                 writeMethodCall(queue, "Testing2");
-                assertEquals("Testing1", readMethodCall(tailer), "MethodReader on first thread should read 'Testing1' message");
+                assertEquals("Testing1", readMethodCall(tailer),
+                        "MethodReader on first thread should read 'Testing1' before thread switch");
             }
 
             @Override
@@ -265,6 +273,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should reset thread ownership correctly")
     public void clearUsedByThread() throws InterruptedException {
         AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
@@ -290,6 +299,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Reset thread ownership with method reader")
     public void clearUsedByThreadWithMethodReader() throws InterruptedException {
         AtomicBoolean illegalStateThrown = new AtomicBoolean();
         new ThreadSafetyTestingTemplate() {
@@ -299,7 +309,8 @@ public class StoreTailerTest extends QueueTestCommon {
                 writeMethodCall(queue, "Testing1");
                 writeMethodCall(queue, "Testing2");
                 writeMethodCall(queue, "Testing3");
-                assertEquals("Testing1", readMethodCall(tailer), "MethodReader on first thread should read 'Testing1' message");
+                assertEquals("Testing1", readMethodCall(tailer),
+                        "MethodReader on first thread should read 'Testing1' before reset");
             }
 
             @Override
@@ -330,6 +341,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should read metadata with readingDocument true flag")
     public void readMetaData() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build();
@@ -345,6 +357,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("toEnd should handle empty last cycle")
     public void toEndWorksWhenLastCycleIsEmpty() {
         File dir = getTmpDir();
         SetTimeProvider stp = new SetTimeProvider();
@@ -438,17 +451,17 @@ public class StoreTailerTest extends QueueTestCommon {
 
     public void cantMoveToStartDuringDocumentReading() {
         assertThrows(IllegalStateException.class,
-                () -> assertCannotMoveDuringDocumentReading(ExcerptTailer::toStart),
+                () -> verifyCannotMoveDuringDocumentReading(ExcerptTailer::toStart),
                 "Tailer should throw IllegalStateException when attempting toStart() while reading a document");
     }
 
     public void cantMoveToEndDuringDocumentReading() {
         assertThrows(IllegalStateException.class,
-                () -> assertCannotMoveDuringDocumentReading(ExcerptTailer::toEnd),
+                () -> verifyCannotMoveDuringDocumentReading(ExcerptTailer::toEnd),
                 "Tailer should throw IllegalStateException when attempting toEnd() while reading a document");
     }
 
-    private void assertCannotMoveDuringDocumentReading(Consumer<ExcerptTailer> move) {
+    private void verifyCannotMoveDuringDocumentReading(Consumer<ExcerptTailer> move) {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -457,8 +470,8 @@ public class StoreTailerTest extends QueueTestCommon {
             appender.writeText("Hello World");
             try (DocumentContext dc = tailer.readingDocument(true)) {
                 assertTrue(dc.isPresent(), "DocumentContext should be present when reading document");
-                assertTrue(dc.isMetaData(), "DocumentContext should indicate it contains metadata");
-                assertEquals("header", dc.wire().readEvent(String.class), "Metadata event should be named 'header'");
+                assertTrue(dc.isMetaData(), "DocumentContext should indicate metadata while guarding move");
+                assertEquals("header", dc.wire().readEvent(String.class), "Metadata event should be named 'header' during move guard");
                 assertTrue(tailer.toString().contains("StoreTailer{"), "Tailer toString() should contain 'StoreTailer{' type indicator");
                 move.accept(tailer); // forbidden
             }
@@ -466,6 +479,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should report striding mode enabled")
     public void testStriding() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -477,6 +491,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Striding tailer should read forward entries")
     public void testStridingReadForward() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -500,6 +515,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Striding tailer should read backward entries")
     public void testStridingReadBackward() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -523,6 +539,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("moveToIndex should advance after reading document")
     public void testMoveToIndex() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -538,6 +555,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should report excerpt count per cycle")
     public void testExcerptsInCycle() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -560,6 +578,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should reject invalid index values")
     public void testMoveToInvalidIndex() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -579,6 +598,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should read correctly after direction change")
     public void testDirectionChange() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -606,6 +626,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer should return null on empty queue document read attempt")
     public void testBehaviorOnEmptyQueue() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
@@ -622,6 +643,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Backward tailer should handle cycle roll")
     public void shouldHandleCycleRollBackward() {
         File dir = getTmpDir();
         MutableTimeProvider timeProvider = new MutableTimeProvider();
@@ -657,6 +679,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Backward toEnd should handle empty queue")
     public void testOriginalToEndBeforeInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
@@ -670,6 +693,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer currentFile should return file after document read")
     public void currentFileShouldReturnFileIfInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
@@ -683,6 +707,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer currentFile should return null before first document read operation")
     public void currentFileShouldReturnNullWhenNotInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
@@ -693,6 +718,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("sync should keep currentFile null before first document read")
     public void syncShouldReturnNullIfNotInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();

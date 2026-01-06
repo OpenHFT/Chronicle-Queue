@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
@@ -33,9 +34,11 @@ public final class FileModificationTimeTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Directory modification time updates after file changes")
     public void shouldUpdateDirectoryModificationTime() {
         final File dir = getTmpDir();
-        Assumptions.assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()));
+        Assumptions.assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()),
+                "Test requires a non-hugetlbfs directory");
         dir.mkdirs();
 
         final long startModTime = dir.lastModified();
@@ -64,7 +67,7 @@ public final class FileModificationTimeTest extends QueueTestCommon {
 
             writer.append("foo");
         } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            throw new UncheckedIOException("Failed to create test file " + file, e);
         }
     }
 }

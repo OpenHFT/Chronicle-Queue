@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -37,7 +38,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Wire marshalling reads map and DTO messages from files")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testWireMarshallingMapAndDTO() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(null, cw1, cw2);
@@ -64,7 +65,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Wire marshalling reads interface DTO message")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testWireMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface.class.getTypeName(), cw2);
@@ -86,7 +87,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
     }
 
     @Test
-
+    @DisplayName("Bytes marshalling reads interface DTO message")
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testBytesMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface2.class.getTypeName(), cw3);

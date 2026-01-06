@@ -10,6 +10,7 @@ import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -18,6 +19,7 @@ import java.io.File;
 public class DtoBytesMarshallableTest extends QueueTestCommon {
 
     @Test
+    @DisplayName("Bytes marshallable round-trips to wire")
     public void testDtoBytesMarshallable() {
 
         File tmp = getTmpDir();
@@ -46,6 +48,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Abstract marshallable round-trips via YAML")
     public void testDtoAbstractMarshallable() {
 
         File tmp = getTmpDir();
@@ -67,7 +70,8 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
 
                 DtoAbstractMarshallable who = (DtoAbstractMarshallable) dc.wire().read("who").object();
 
-                Assertions.assertTrue(yaml.contains(who.toString()), "yaml: should contain dto");
+                Assertions.assertTrue(yaml.contains(who.toString()),
+                        "yaml should contain dto text: " + who.toString());
             }
         }
     }

@@ -11,6 +11,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -18,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for ExcerptAppender interface implementations.
+ * Unit tests cover ExcerptAppender defaults, indexing updates, and no-op helpers.
  */
 @SuppressWarnings({"deprecation", "removal"})
 public class ExcerptAppenderTest extends QueueTestCommon {
@@ -99,56 +100,68 @@ public class ExcerptAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("writeBytes increments last index value on write")
     public void testWriteBytes() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
         Bytes<byte[]> bytes = Bytes.wrapForRead("Test data".getBytes(StandardCharsets.UTF_8));
 
         appender.writeBytes(bytes);
 
-        assertEquals(1, appender.lastIndexAppended(), "appender.lastIndexAppended()");
+        assertEquals(1, appender.lastIndexAppended(),
+                "lastIndexAppended should increment after writeBytes");
     }
 
     @Test
+    @DisplayName("lastIndexAppended tracks initial and updated values")
     public void testLastIndexAppended() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
-        assertEquals(0, appender.lastIndexAppended(), "appender.lastIndexAppended()");
+        assertEquals(0, appender.lastIndexAppended(),
+                "lastIndexAppended should start at 0 before writes");
 
         Bytes<byte[]> bytes = Bytes.wrapForRead("Test data".getBytes(StandardCharsets.UTF_8));
         appender.writeBytes(bytes);
 
-        assertEquals(1, appender.lastIndexAppended(), "appender.lastIndexAppended()");
+        assertEquals(1, appender.lastIndexAppended(),
+                "lastIndexAppended should increment to 1 after write");
     }
 
     @Test
+    @DisplayName("cycle reports current roll cycle value")
     public void testCycle() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
-        assertEquals(1, appender.cycle(), "appender.cycle()");
+        assertEquals(1, appender.cycle(),
+                "cycle should report current roll cycle value");
     }
 
     @Test
+    @DisplayName("Wire remains unset for new appender instance")
     public void testWire() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
-        assertNull(appender.wire(), "appender.wire()");  // As wire is not set in this example
+        assertNull(appender.wire(), "wire should be null when not configured");  // As wire is not set in this example
     }
 
     @Test
+    @DisplayName("pretouch leaves index unchanged for no-op")
     public void testPretouch() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
         long before = appender.lastIndexAppended();
         appender.pretouch();
         // Verify no side-effect on default no-op implementation
-        assertEquals(before, appender.lastIndexAppended(), "appender.lastIndexAppended()");
+        assertEquals(before, appender.lastIndexAppended(),
+                "pretouch should not change lastIndexAppended");
     }
 
     @Test
+    @DisplayName("normaliseEOFs leaves index unchanged for no-op")
     public void testNormaliseEOFs() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
         long before = appender.lastIndexAppended();
         appender.normaliseEOFs();
         // Verify no side-effect on default no-op implementation
-        assertEquals(before, appender.lastIndexAppended(), "appender.lastIndexAppended()");
+        assertEquals(before, appender.lastIndexAppended(),
+                "normaliseEOFs should not change lastIndexAppended");
     }
 }

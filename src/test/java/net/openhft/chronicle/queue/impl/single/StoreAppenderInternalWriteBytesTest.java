@@ -14,6 +14,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -49,12 +50,14 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Internal writeBytes is idempotent with concurrent updates")
     public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
         int compared = testInternalWriteBytes(5, true);
         assertEquals(MESSAGES_TO_WRITE, compared, "internalWriteBytes: compared messages (concurrent)");
     }
 
     @Test
+    @DisplayName("Internal writeBytes is idempotent in single thread")
     public void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
         int compared = testInternalWriteBytes(5, false);
         assertEquals(MESSAGES_TO_WRITE, compared, "internalWriteBytes: compared messages (single thread)");
@@ -86,12 +89,12 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                 try {
                     future.get();
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("copySourceToDestination: copier thread failed", e);
                 }
             });
         } finally {
             es.shutdown();
-            assertTrue(es.awaitTermination(30, TimeUnit.SECONDS), "copier threads stopped");
+            assertTrue(es.awaitTermination(30, TimeUnit.SECONDS), "copier threads should stop within timeout");
         }
     }
 
@@ -116,7 +119,9 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     assert sourceTailer.readBytes(sourceBuffer) : "Source queue is shorter than expected";
                     assert destinationTailer.readBytes(destinationBuffer) : "Destination queue is shorter than expected";
                     final String s = destinationBuffer.toString();
-                    assertEquals(sourceBuffer.toString(), s.replaceAll(" - .*", ""), format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s));
+                    assertEquals(sourceBuffer.toString(), s.replaceAll(" - .*", ""),
+                            format("Mismatch at copy %d index %s/%s was %s", i,
+                                    Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s));
                 }
             }
         }
@@ -153,12 +158,12 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                         index = sourceTailer.lastReadIndex();
 
                         if (prev.contentEquals(buffer))
-                            fail("duplicate " + buffer);
+                            fail("Duplicate payload detected for buffer " + buffer);
                         buffer.append(" - ").append(copyId);
                         ((InternalAppender) destinationAppender).writeBytes(index, buffer);
                         try (@NotNull DocumentContext dc = destinationTailer.readingDocument()) {
                             if (!dc.isPresent()) {
-                                fail("no write " + buffer);
+                                fail("No write detected for buffer " + buffer);
                             }
                             final long dtIndex = destinationTailer.index();
                             if (dtIndex != index)
@@ -167,8 +172,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                         prev.clear().append(buffer);
                         try (final ChronicleQueue dq = createQueue(destinationDir, null);
                              final ExcerptAppender da = dq.createAppender()) {
-                            assertNotNull(dq, "destination queue reopened");
-                            assertNotNull(da, "destination appender reopened");
+                            assertNotNull(dq, "Destination queue should reopen for copying");
+                            assertNotNull(da, "Destination appender should reopen for copying");
                         }
                     }
                 }
@@ -177,7 +182,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     }
 
     private void populateSourceQueue(Path queueDir) {
-        Jvm.debug().on(getClass(), "Populating source queue...");
+        Jvm.debug().on(getClass(), "Populating source queue with test data");
         try (final ChronicleQueue queue = createQueue(queueDir);
              final ExcerptAppender appender = queue.createAppender()) {
             Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
@@ -190,7 +195,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                 appender.writeBytes(buffer);
             }
         }
-        Jvm.debug().on(getClass(), "Populated source queue");
+        Jvm.debug().on(getClass(), "Populated source queue with test data");
     }
 
     private byte[] messageForIndex(long index) {

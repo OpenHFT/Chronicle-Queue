@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Appenders advance cycles without errors under load")
     public void testAppenderCycle() throws IOException {
         String id = "testAppenderCycle";
         Bytes<?> msg = Bytes.allocateDirect(64);
@@ -43,8 +45,10 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
             for (int i = 0; i < n; ++i) {
                 String runId = id + '-' + i;
                 Throwable[] errors = runTest(runId, msg);
-                assertNull(errors[0], "Writer thread should complete without errors during cycle test run " + runId);
-                assertNull(errors[1], "Cycler thread should complete without errors during cycle test run " + runId);
+                assertNull(errors[0], "Writer thread should complete without errors during cycle test run "
+                        + runId + " (iteration " + i + ")");
+                assertNull(errors[1], "Cycler thread should complete without errors during cycle test run "
+                        + runId + " (iteration " + i + ")");
             }
         } finally {
             msg.releaseLast();

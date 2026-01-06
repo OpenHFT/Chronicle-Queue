@@ -8,6 +8,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -16,10 +17,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
+ * Reproduces QUEUE-36: tailer should not create queue files when empty.
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-36
  */
 public class Queue36Test extends QueueTestCommon {
     @Test
+    @DisplayName("Tailer does not create files when queue is empty")
     public void testTail() {
         File basePath = getTmpDir();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
@@ -33,7 +36,7 @@ public class Queue36Test extends QueueTestCommon {
             checkNoFiles(basePath);
 
             assertFalse(tailer.readDocument(d -> {
-            }), "readDocument: empty queue");
+            }), "readDocument should return false for empty queue");
 
             checkNoFiles(basePath);
         }
@@ -41,6 +44,6 @@ public class Queue36Test extends QueueTestCommon {
 
     private void checkNoFiles(@NotNull File basePath) {
         String[] fileNames = basePath.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX));
-        assertTrue(fileNames == null || fileNames.length == 0, "basePath: no cq4 files");
+        assertTrue(fileNames == null || fileNames.length == 0, "Base path should contain no cq4 files");
     }
 }

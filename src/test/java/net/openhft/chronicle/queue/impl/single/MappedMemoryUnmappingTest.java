@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.wire.ValueOut;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -25,6 +26,7 @@ public final class MappedMemoryUnmappingTest extends QueueTestCommon {
     Path tmp;
 
     @Test
+    @DisplayName("Mapped memory drops after cycle roll")
     public void shouldUnmapMemoryAsCycleRolls() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         long initialQueueMappedMemory = 0L;

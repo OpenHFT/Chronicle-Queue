@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -30,6 +31,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Tailer reads raw payload written by C++")
     public void tailerInterop() {
         if (!assert_from_cpp())
             return;
@@ -55,23 +57,32 @@ public class RawAccessJavaTest extends QueueTestCommon {
                     // actual length of data
                     int dataLength = bytes.readInt();
 
-                    assertEquals((byte) 0xab, bytes.readByte(), "Byte value should match C++ written value 0xab");
-                    assertEquals((short) 12, bytes.readShort(), "Short value should match C++ written value 12");
-                    assertEquals(123, bytes.readInt(), "Int value should match C++ written value 123");
-                    assertEquals(123456789L, bytes.readLong(), "Long value should match C++ written value 123456789");
-                    assertEquals(1.234f, bytes.readFloat(), 1.0e-7, "Float value should match C++ written value 1.234");
-                    assertEquals(123.456, bytes.readDouble(), 1.0e-7, "Double value should match C++ written value 123.456");
-                    assertEquals('a', bytes.readChar(), "Char value should match C++ written value 'a'");
+                    assertEquals((byte) 0xab, bytes.readByte(),
+                            "Byte value should match C++ written value 0xab at message index " + i);
+                    assertEquals((short) 12, bytes.readShort(),
+                            "Short value should match C++ written value 12 at message index " + i);
+                    assertEquals(123, bytes.readInt(),
+                            "Int value should match C++ written value 123 at message index " + i);
+                    assertEquals(123456789L, bytes.readLong(),
+                            "Long value should match C++ written value 123456789 at message index " + i);
+                    assertEquals(1.234f, bytes.readFloat(), 1.0e-7,
+                            "Float value should match C++ written value 1.234 at message index " + i);
+                    assertEquals(123.456, bytes.readDouble(), 1.0e-7,
+                            "Double value should match C++ written value 123.456 at message index " + i);
+                    assertEquals('a', bytes.readChar(),
+                            "Char value should match C++ written value 'a' at message index " + i);
 
                     StringBuilder sb = new StringBuilder();
                     bytes.read8bit(sb);
-                    assertEquals("Hello World", sb.toString(), "String value should match C++ written text 'Hello World'");
+                    assertEquals("Hello World", sb.toString(),
+                            "String value should match C++ written text 'Hello World' at message index " + i);
                 }
             }
         }
     }
 
     @Test
+    @DisplayName("Appender writes raw payload readable by C++")
     public void appenderInterop() {
         if (!assert_from_cpp())
             return;
@@ -111,6 +122,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Length prefix matches payload without C++ interop")
     public void testLengthPrefixValidationWithoutCppInterop() {
         File dir = getTmpDir();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
@@ -152,6 +164,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
+    @DisplayName("Zero length payload remains readable by tailer")
     public void testZeroLengthInteropPayloadIsReadable() {
         File dir = getTmpDir();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
