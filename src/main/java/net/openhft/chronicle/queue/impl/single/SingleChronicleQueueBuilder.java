@@ -63,7 +63,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     static final boolean DEBUG_FILE_RELEASED = Jvm.getBoolean("debug.file.released", false);
     private static final long DEFAULT_BLOCK_SIZE = Math.min(
             Jvm.getSize("SingleChronicleQueueBuilder.blocksize", OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE),
-            OS.is64Bit() && OS.isLinux() && !isWsl() ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
+            OS.is64Bit() && OS.isLinux() /*&& !isWsl()*/ ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
 
     @Deprecated(/* to be removed in 2027 */)
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
