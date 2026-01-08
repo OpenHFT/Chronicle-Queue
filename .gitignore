@@ -54,3 +54,4 @@ local.properties
 benchmarks/dependency-reduced-pom.xml
 
 dependency-reduced-pom.xml
+logs/
