@@ -31,7 +31,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
-                <version>2026.0</version>
+                <version>2026.XYZ</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
