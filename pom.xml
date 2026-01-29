@@ -227,9 +227,9 @@
                             <goal>enforcer</goal>
                         </goals>
                         <configuration>
-                            <referenceVersion>5.27ea0</referenceVersion>
+                            <referenceVersion>2026.0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
-                            <binaryCompatibilityPercentageRequired>99.8</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>100.0</binaryCompatibilityPercentageRequired>
                             <extraOptions>
                                 <!--This skips "internal" but checks "impl"-->
                                 <extraOption>
