@@ -5,10 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
@@ -20,30 +17,41 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
+import java.util.*;
 
-import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.*;
 
 @RunWith(Parameterized.class)
 public class TestBinarySearch extends QueueTestCommon {
 
+    private final Map<Integer, Long> keyToIndex = new HashMap<>();
     private final int numberOfMessages;
+    private final int numberOfMessagesToVerify;
+    private final RetrievalStrategy retrievalStrategy;
 
-    public TestBinarySearch(int numberOfMessages) {
+    public TestBinarySearch(int numberOfMessages, int numberOfMessagesToVerify) {
         this.numberOfMessages = numberOfMessages;
+        this.numberOfMessagesToVerify = numberOfMessagesToVerify;
+        this.retrievalStrategy = numberOfMessages == numberOfMessagesToVerify ? RetrievalStrategy.LINEAR : RetrievalStrategy.RANDOM;
     }
 
-    @Parameterized.Parameters(name = "items in queue: {0}")
+    @Parameterized.Parameters(name = "items in queue: {0} items to verify: {1}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {0},
-                {1},
-                {2},
-                {100}
+                {0, 0},
+
+                {1, 1},
+
+                {2, 2},
+
+                {100, 100},
+
+                {1000, 100},
+
+                {100000, 500},
         });
     }
+
 
     @Test
     public void testBinarySearch() throws ParseException {
@@ -62,48 +70,47 @@ public class TestBinarySearch extends QueueTestCommon {
                     final MyData myData = new MyData();
                     myData.key = i;
                     myData.value = "some value where the key=" + i;
-                    dc.wire().getValueOut().typedMarshallable(myData);
+                    myData.writeMarshallable(dc.wire());
                     time += 300;
                     stp.currentTimeMillis(time);
+                    keyToIndex.put(myData.key, dc.index());
                 }
+
+                if (i > 0 && numberOfMessages > 10 && i % (numberOfMessages / 10) == 0) {
+                    System.out.println("Written " + i + " messages");
+                }
+
             }
+            System.out.println("Written " + numberOfMessages + " messages");
 
+            MyData reusableComparatorData = new MyData();
             final Comparator<Wire> comparator = (o1, o2) -> {
-                final long readPositionO1 = o1.bytes().readPosition();
-                final long readPositionO2 = o2.bytes().readPosition();
-                try {
-                    final MyData myDataO1;
-                    try (final DocumentContext dc = o1.readingDocument()) {
-                        myDataO1 = dc.wire().getValueIn().typedMarshallable();
-                    }
-
-                    final MyData myDataO2;
-                    try (final DocumentContext dc = o2.readingDocument()) {
-                        myDataO2 = dc.wire().getValueIn().typedMarshallable();
-                    }
-
-                    final int compare = Integer.compare(myDataO1.key, myDataO2.key);
-                    return compare;
-                } finally {
-                    o1.bytes().readPosition(readPositionO1);
-                    o2.bytes().readPosition(readPositionO2);
-                }
+                reusableComparatorData.readMarshallable(o1);
+                int o1Key = reusableComparatorData.key;
+                reusableComparatorData.readMarshallable(o2);
+                int o2Key = reusableComparatorData.key;
+                return Integer.compare(o1Key, o2Key);
             };
 
             try (final ExcerptTailer tailer = queue.createTailer();
                  final ExcerptTailer binarySearchTailer = queue.createTailer()) {
-                for (int j = 0; j < numberOfMessages; j++) {
-                    try (DocumentContext ignored = tailer.readingDocument()) {
-                        assert ignored != null;
-                        Wire key = toWire(j);
-                        long index = BinarySearch.search(binarySearchTailer, key, comparator);
-                        Assert.assertEquals(tailer.index(), index);
-                        key.bytes().releaseLast();
+                for (int j = 0; j < numberOfMessagesToVerify; j++) {
+                    int indexToVerify = (int) retrievalStrategy.retrieveIndex(j, numberOfMessages);
+                    Wire key = toWire(indexToVerify);
+                    long index = BinarySearch.search(binarySearchTailer, key, comparator);
+                    long expectedIndex = keyToIndex.get(indexToVerify);
+                    Assert.assertEquals("Failed looking for item at index: " + expectedIndex, expectedIndex, index);
+                    key.bytes().releaseLast();
+
+                    if (j > 0 && numberOfMessagesToVerify > 10 && j % (numberOfMessagesToVerify / 10) == 0) {
+                        System.out.println("Verified " + j + " messages");
                     }
                 }
+                System.out.println("Verified " + numberOfMessagesToVerify + " messages");
 
                 Wire key = toWire(numberOfMessages);
-                Assert.assertTrue("Should not find non-existent", BinarySearch.search(tailer, key, comparator) < 0);
+                long result = BinarySearch.search(tailer, key, comparator);
+                Assert.assertTrue("Should not find non-existent", result < 0);
             }
         }
     }
@@ -115,10 +122,7 @@ public class TestBinarySearch extends QueueTestCommon {
         myData.value = Integer.toString(key);
         Wire wire = WireType.BINARY.apply(Bytes.allocateElasticOnHeap());
         wire.usePadding(true);
-
-        try (final DocumentContext dc = wire.writingDocument()) {
-            dc.wire().getValueOut().typedMarshallable(myData);
-        }
+        myData.writeMarshallable(wire);
 
         return wire;
     }
@@ -135,5 +139,23 @@ public class TestBinarySearch extends QueueTestCommon {
                     ", value='" + value + '\'' +
                     '}';
         }
+    }
+
+    public enum RetrievalStrategy {
+        LINEAR {
+            @Override
+            public long retrieveIndex(long currentIndex, long totalNumberOfMessages) {
+                return currentIndex;
+            }
+        },
+        RANDOM {
+            final Random random = new Random();
+            @Override
+            public long retrieveIndex(long currentIndex, long totalNumberOfMessages) {
+                return random.nextInt((int) totalNumberOfMessages);
+            }
+        };
+
+        public abstract long retrieveIndex(long currentIndex, long totalNumberOfMessages);
     }
 }

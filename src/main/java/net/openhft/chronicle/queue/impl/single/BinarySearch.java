@@ -91,7 +91,7 @@ public enum BinarySearch {
 
             final Long current = iterator.next();
 
-            final boolean b = tailer.moveToIndex(rollCycle.toIndex((int) (long) current, 0));
+            final boolean b = tailer.moveToIndex(rollCycle.toIndex(current.intValue(), 0));
             if (!b)
                 return prevIndex;
 
