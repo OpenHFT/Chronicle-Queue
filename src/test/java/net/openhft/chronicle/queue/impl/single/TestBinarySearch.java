@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -40,7 +41,7 @@ public class TestBinarySearch extends QueueTestCommon {
         this.emptyCyclesStrategy = emptyCyclesStrategy;
     }
 
-    @Parameterized.Parameters(name = "items: {0} verify: {1} strategy: {2}")
+    @Parameterized.Parameters(name = "items: {0} verify: {1} emptyCycles: {2}")
     public static Collection<Object[]> data() {
         return Arrays.asList(runForEveryEmptyCycleStrategy(new Object[][]{
                 {0, 0},
@@ -91,13 +92,13 @@ public class TestBinarySearch extends QueueTestCommon {
                     myData.key = i;
                     myData.value = "some value where the key=" + i;
                     myData.writeMarshallable(dc.wire());
-                    System.out.println("written key: " + myData.key + " at index: " + dc.index() + " cycle: " + appender.cycle());
+                    Jvm.startup().on(getClass(), "written key: " + myData.key + " at index: " + dc.index() + " cycle: " + appender.cycle());
                     stp.advanceMillis(300);
                     keyToIndex.put(myData.key, dc.index());
                 }
 
                 if (i > 0 && numberOfMessages > 10 && i % (numberOfMessages / 10) == 0) {
-                    System.out.println("Written " + i + " messages");
+                    Jvm.startup().on(getClass(), "Written " + i + " messages");
                 }
 
                 if (!writtenEmptyCycles && emptyCyclesStrategy.inMiddle() && appender.cycle() != queue.firstCycle()) {
@@ -106,7 +107,7 @@ public class TestBinarySearch extends QueueTestCommon {
                 }
 
             }
-            System.out.println("Written " + numberOfMessages + " messages");
+            Jvm.startup().on(getClass(), "Written " + numberOfMessages + " messages");
 
             if (emptyCyclesStrategy.atEnd()) {
                 writeEmptyCycles(appender);
@@ -121,8 +122,7 @@ public class TestBinarySearch extends QueueTestCommon {
                 return Integer.compare(o1Key, o2Key);
             };
 
-            try (final ExcerptTailer tailer = queue.createTailer();
-                 final ExcerptTailer binarySearchTailer = queue.createTailer()) {
+            try (final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessagesToVerify; j++) {
                     int indexToVerify = (int) retrievalStrategy.retrieveIndex(j, numberOfMessages);
                     Wire key = toWire(indexToVerify);
@@ -132,13 +132,13 @@ public class TestBinarySearch extends QueueTestCommon {
                     key.bytes().releaseLast();
 
                     if (j > 0 && numberOfMessagesToVerify > 10 && j % (numberOfMessagesToVerify / 10) == 0) {
-                        System.out.println("Verified " + j + " messages");
+                        Jvm.startup().on(getClass(), "Verified " + j + " messages");
                     }
                 }
-                System.out.println("Verified " + numberOfMessagesToVerify + " messages");
+                Jvm.startup().on(getClass(), "Verified " + numberOfMessagesToVerify + " messages");
 
                 Wire key = toWire(numberOfMessages);
-                long result = BinarySearch.search(tailer, key, comparator);
+                long result = BinarySearch.search(binarySearchTailer, key, comparator);
                 Assert.assertTrue("Should not find non-existent", result < 0);
             }
         }
@@ -189,7 +189,7 @@ public class TestBinarySearch extends QueueTestCommon {
             }
         },
         RANDOM {
-            final Random random = new Random();
+            final Random random = new Random(234563434L);
             @Override
             public long retrieveIndex(long currentIndex, long totalNumberOfMessages) {
                 return random.nextInt((int) totalNumberOfMessages);
@@ -224,10 +224,6 @@ public class TestBinarySearch extends QueueTestCommon {
 
         public boolean single() {
             return this == SINGLE_EMPTY_AT_START || this == SINGLE_EMPTY_AT_END || this == SINGLE_EMPTY_IN_MIDDLE;
-        }
-
-        public boolean multiple() {
-            return this == MULTIPLE_EMPTY_AT_START || this == MULTIPLE_EMPTY_AT_END || this == MULTIPLE_CONCURRENTLY_EMPTY_IN_MIDDLE;
         }
     }
 }
