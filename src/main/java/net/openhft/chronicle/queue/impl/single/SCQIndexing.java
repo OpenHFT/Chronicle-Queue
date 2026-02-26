@@ -28,6 +28,8 @@ import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -70,10 +72,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     LongValue writePosition;
     Sequence sequence;
     // visible for testing
-    int linearScanCount;
-    int linearScanByPositionCount;
+    final AtomicInteger linearScanCount = new AtomicInteger();
+    final AtomicInteger linearScanByPositionCount = new AtomicInteger();
     Collection<Closeable> closeables = new ArrayList<>();
-    private long lastScannedIndex = -1;
+    private final AtomicLong lastScannedIndex = new AtomicLong(-1);
 
     /**
      * Constructor used for demarshalling via {@link Demarshallable}.
@@ -428,7 +430,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
         if (REPORT_LINEAR_SCAN) {
-            printLinearScanTime(lastScannedIndex, fromKnownIndex, start, "linearScan by index");
+            printLinearScanTime(lastScannedIndex.get(), fromKnownIndex, start, "linearScan by index");
         }
         return scanResult;
     }
@@ -493,7 +495,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                    final long toIndex,
                                    long fromKnownIndex,
                                    long knownAddress) {
-        this.linearScanCount++;
+        linearScanCount.incrementAndGet();
         @NotNull final Bytes<?> bytes = wire.bytes();
 
         // optimized if the `toIndex` is the last sequence
@@ -511,12 +513,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             try {
                 if (wire.readDataHeader()) {
                     if (i == toIndex) {
-                        lastScannedIndex = i;
+                        lastScannedIndex.set(i);
                         return ScanResult.FOUND;
                     }
                     int header = bytes.readVolatileInt();
                     if (Wires.isNotComplete(header)) { // or isEndOfFile
-                        lastScannedIndex = i;
+                        lastScannedIndex.set(i);
                         return ScanResult.NOT_REACHED;
                     }
                     bytes.readSkip(Wires.lengthOf(header));
@@ -528,7 +530,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     return ScanResult.END_OF_FILE;
                 }
             }
-            lastScannedIndex = i;
+            lastScannedIndex.set(i);
             return i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
         }
     }
@@ -591,7 +593,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                long indexOfNext,
                                long startAddress,
                                boolean inclusive) throws EOFException {
-        linearScanByPositionCount++;
+        linearScanByPositionCount.incrementAndGet();
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
         long i;
@@ -728,44 +730,37 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         @NotNull Wire wire = ec.wireForIndex();
         try {
             final LongArrayValues index2indexArr = getIndex2index(wire);
-            int used2 = getUsedAsInt(index2indexArr);
+            int usedPrimarySlots = getUsedAsInt(index2indexArr);
 
-            // Outer loop: Iterate through index2index array to find the relevant secondary index.
-            Outer:
-            for (int index2 = used2 - 1; index2 >= 0; index2--) {
-                long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
+            for (int primarySlot = usedPrimarySlots - 1; primarySlot >= 0; primarySlot--) {
+                long secondaryAddress = getSecondaryAddressReadOnly(index2indexArr, primarySlot);
                 if (secondaryAddress == 0)
                     continue;
 
                 LongArrayValues indexValues = arrayForAddress(wire, secondaryAddress);
-                // TODO use a binary rather than linear search
 
-                // check the first one to see if any in the index is appropriate.
-                int used = getUsedAsInt(indexValues);
-                if (used == 0)
+                // Check the first slot to quickly eliminate indexes that are fully after the target position.
+                int usedSecondarySlots = getUsedAsInt(indexValues);
+                if (usedSecondarySlots == 0)
                     continue;
 
-                // Check if the first value in the index is appropriate.
-                long posN = indexValues.getVolatileValueAt(0);
-                assert posN >= 0;
-                if (posN > position)
+                long firstPosition = indexValues.getVolatileValueAt(0);
+                assert firstPosition >= 0;
+                if (firstPosition > position)
                     continue;
 
-                // Inner loop: Search within the secondary index.
-                for (int index1 = used - 1; index1 >= 0; index1--) {
-                    long pos = indexValues.getVolatileValueAt(index1);
-                    // TODO pos shouldn't be 0, but holes in the index appear..
-                    if (pos == 0 || pos > position) {
-                        continue;
-                    }
-                    lastKnownAddress = pos;
-                    indexOfNext = ((long) index2 << (indexCountBits + indexSpacingBits)) + ((long) index1 << indexSpacingBits);
+                int secondarySlot = findBestSecondarySlotForPosition(indexValues, usedSecondarySlots, position);
+                if (secondarySlot < 0)
+                    continue;
 
-                    if (lastKnownAddress == position)
-                        return indexOfNext;
+                long candidateAddress = indexValues.getVolatileValueAt(secondarySlot);
+                lastKnownAddress = candidateAddress;
+                indexOfNext = toSequenceIndex(primarySlot, secondarySlot);
 
-                    break Outer;
-                }
+                if (lastKnownAddress == position)
+                    return indexOfNext;
+
+                break;
             }
         } catch (IllegalStateException e) {
             if (Jvm.isDebugEnabled(getClass()))
@@ -777,6 +772,57 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         } catch (EOFException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Finds the rightmost slot whose non-zero position is <= {@code position}.
+     *
+     * @return slot index or {@code -1} if no usable anchor exists.
+     */
+    private int findBestSecondarySlotForPosition(@NotNull LongArrayValues indexValues,
+                                                 int usedSecondarySlots,
+                                                 long position) {
+        int lo = 0;
+        int hi = usedSecondarySlots - 1;
+        int bestSlot = -1;
+        boolean sawHole = false;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            long candidatePosition = indexValues.getVolatileValueAt(mid);
+            // candidatePosition == 0 means this slot was never written (hole), so it cannot be an anchor.
+            if (candidatePosition == 0 || candidatePosition > position) {
+                if (candidatePosition == 0)
+                    sawHole = true;
+                hi = mid - 1;
+            } else {
+                bestSlot = mid;
+                lo = mid + 1;
+            }
+        }
+
+        // Holey secondary indexes are not strictly ordered for binary-search comparisons.
+        // Fall back to reverse scan to preserve correctness when any hole was observed.
+        if (sawHole)
+            return findBestSecondarySlotByReverseScan(indexValues, usedSecondarySlots, position);
+
+        return bestSlot;
+    }
+
+    private int findBestSecondarySlotByReverseScan(@NotNull LongArrayValues indexValues,
+                                                   int usedSecondarySlots,
+                                                   long position) {
+        for (int slot = usedSecondarySlots - 1; slot >= 0; slot--) {
+            long candidatePosition = indexValues.getVolatileValueAt(slot);
+            if (candidatePosition == 0 || candidatePosition > position)
+                continue;
+            return slot;
+        }
+        return -1;
+    }
+
+    private long toSequenceIndex(int primarySlot, int secondarySlot) {
+        return ((long) primarySlot << (indexCountBits + indexSpacingBits))
+                + ((long) secondarySlot << indexSpacingBits);
     }
 
     /**
@@ -859,6 +905,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         return secondaryAddress;
     }
 
+    private long getSecondaryAddressReadOnly(@NotNull LongArrayValues index2indexArr, int index2) {
+        return index2indexArr.getVolatileValueAt(index2);
+    }
+
     /**
      * add an entry to the sequenceNumber, so stores the position of an sequenceNumber
      *
@@ -901,15 +951,15 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             throwSecondaryAddressError(secondaryAddress);
         bytes.readLimitToCapacity();
         LongArrayValues indexValues = arrayForAddress(wire, secondaryAddress);
-        int index3 = (int) ((sequenceNumber >>> indexSpacingBits) & (indexCount - 1));
+        int secondarySlot = (int) ((sequenceNumber >>> indexSpacingBits) & (indexCount - 1));
 
         // check the last one first.
-        long posN = indexValues.getValueAt(index3);
-        if (posN == 0) {
-            indexValues.setValueAt(index3, position);
-            indexValues.setMaxUsed(index3 + 1L);
+        long existingPosition = indexValues.getValueAt(secondarySlot);
+        if (existingPosition == 0) {
+            indexValues.setValueAt(secondarySlot, position);
+            indexValues.setMaxUsed(secondarySlot + 1L);
         } else {
-            indexValues.setValueAt(index3, position);
+            indexValues.setValueAt(secondarySlot, position);
             return;
         }
         nextEntryToBeIndexed.setMaxValue(sequenceNumber + indexSpacing);
@@ -1062,7 +1112,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      */
     @Override
     public int linearScanCount() {
-        return linearScanCount;
+        return linearScanCount.get();
     }
 
     /**
@@ -1072,7 +1122,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      */
     @Override
     public int linearScanByPositionCount() {
-        return linearScanByPositionCount;
+        return linearScanByPositionCount.get();
     }
 
     /**
