@@ -42,12 +42,14 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
+    private static final long FUTURE_TIMEOUT_SECONDS = 120L;
+    private static final int FILE_CLOSE_RETRY_COUNT = 30;
+    private static final long FILE_CLOSE_RETRY_PAUSE_MS = 100L;
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
-    private static final int TRIES = 10;
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
             new NamedThreadFactory("test"));
@@ -114,13 +116,14 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             }
 
             for (Future<Boolean> future : futures) {
-                assertTrue(future.get(1, TimeUnit.MINUTES));
+                assertTrue(future.get(FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS));
             }
             assertFalse(gcGuard.isEmpty());
             gcGuard.clear();
 
         }
 
+        drainBackgroundCleanup();
         Assert.assertTrue(queueFilesAreAllClosed());
         finishedNormally = true;
     }
@@ -150,12 +153,14 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             }
 
             for (Future<Boolean> future : futures) {
-                assertTrue(future.get(1, TimeUnit.MINUTES));
+                assertTrue(future.get(FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS));
             }
 
             assertFalse(gcGuard.isEmpty());
+            gcGuard.clear();
         }
 
+        drainBackgroundCleanup();
         Assert.assertTrue(queueFilesAreAllClosed());
 
     }
@@ -179,23 +184,24 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             int acquiredBefore = storeFileListener.acquiredCounts.size();
             storeFileListener.reset();
 
-            final ExcerptTailer tailer = queue.createTailer();
-            tailer.toStart();
-            int messageCount = 0;
-            int notFoundAttempts = 5;
-            while (true) {
-                try (final DocumentContext ctx = tailer.readingDocument()) {
-                    if (!ctx.isPresent()) {
-                        if (--notFoundAttempts > 0)
-                            continue;
-                        break;
+            try (final ExcerptTailer tailer = queue.createTailer()) {
+                tailer.toStart();
+                int messageCount = 0;
+                int notFoundAttempts = 5;
+                while (true) {
+                    try (final DocumentContext ctx = tailer.readingDocument()) {
+                        if (!ctx.isPresent()) {
+                            if (--notFoundAttempts > 0)
+                                continue;
+                            break;
+                        }
+
+                        messageCount++;
                     }
-
-                    messageCount++;
                 }
-            }
 
-            assertEquals(messagesPerThread, messageCount);
+                assertEquals(messagesPerThread, messageCount);
+            }
 
             // StoreFileListener#onAcquired() is called on the background resource releaser thread
             BackgroundResourceReleaser.releasePendingResources();
@@ -205,6 +211,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
         }
 
+        drainBackgroundCleanup();
         Assert.assertTrue(queueFilesAreAllClosed());
     }
 
@@ -306,24 +313,38 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         } catch (InterruptedException e) {
             throw new AssertionError(e);
         }
+        drainBackgroundCleanup();
         super.assertReferencesReleased();
+    }
+
+    @Override
+    protected void preAfter() {
+        threadPool.shutdownNow();
+        drainBackgroundCleanup();
     }
 
     private boolean queueFilesAreAllClosed() {
         List<String> openQueueFiles = null;
-        for (int i = 0; i < TRIES; i++) {
-            GcControls.waitForGcCycle();
+        for (int i = 0; i < FILE_CLOSE_RETRY_COUNT; i++) {
+            drainBackgroundCleanup();
             openQueueFiles = MappedFileUtil.getAllMappedFiles().stream()
                     .filter(str -> str.contains(queuePath.getAbsolutePath()))
                     .collect(Collectors.toList());
             if (openQueueFiles.isEmpty())
                 return true;
-            Jvm.pause(10);
+            Jvm.pause(FILE_CLOSE_RETRY_PAUSE_MS);
         }
 
         openQueueFiles.forEach(qf ->
                 Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open queue file: " + qf));
         return false;
+    }
+
+    private void drainBackgroundCleanup() {
+        BackgroundResourceReleaser.releasePendingResources();
+        requestGcCycle();
+        GcControls.waitForGcCycle();
+        BackgroundResourceReleaser.releasePendingResources();
     }
 
     private ChronicleQueue createQueue(final TimeProvider timeProvider) {

@@ -12,10 +12,14 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
@@ -72,6 +76,32 @@ class SCQIndexingArchTest {
                                 .forEach(call -> events.add(SimpleConditionEvent.violated(call,
                                         "sequenceForPosition must use getSecondaryAddressReadOnly, " +
                                         "not getSecondaryAddress (write-on-read bug)")));
+                    }
+                }).check(importedClasses);
+    }
+
+    @Test
+    void searchHelperMethodsMustExist() {
+        JavaClasses importedClasses = new ClassFileImporter().importClasses(SCQIndexing.class);
+        List<String> requiredHelpers = Arrays.asList(
+                "findBestSecondarySlotForPosition",
+                "findBestSecondarySlotByReverseScan",
+                "toSequenceIndex"
+        );
+
+        classes().that().haveSimpleName("SCQIndexing")
+                .should(new ArchCondition<JavaClass>("have extracted search helper methods") {
+                    @Override
+                    public void check(JavaClass javaClass, ConditionEvents events) {
+                        Set<String> methodNames = javaClass.getMethods().stream()
+                                .map(m -> m.getName())
+                                .collect(Collectors.toSet());
+                        for (String helper : requiredHelpers) {
+                            if (!methodNames.contains(helper)) {
+                                events.add(SimpleConditionEvent.violated(javaClass,
+                                        "SCQIndexing must contain helper method " + helper));
+                            }
+                        }
                     }
                 }).check(importedClasses);
     }

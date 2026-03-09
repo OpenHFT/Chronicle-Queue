@@ -3,11 +3,17 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.table.Metadata;
+import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
+import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Test;
 
@@ -28,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SCQIndexingTest {
@@ -262,7 +269,7 @@ class SCQIndexingTest {
                 }
 
                 int threadCount = 4;
-                int readsPerThread = 50;
+                int readsPerThread = indices.length / threadCount;
                 CyclicBarrier barrier = new CyclicBarrier(threadCount);
                 List<Future<?>> futures = new ArrayList<>();
                 for (int t = 0; t < threadCount; t++) {
@@ -273,10 +280,11 @@ class SCQIndexingTest {
                             try (ExcerptTailer tailer = queue.createTailer()) {
                                 for (int r = 0; r < readsPerThread; r++) {
                                     int entry = offset + (r * threadCount);
-                                    long target = indices[entry % indices.length];
+                                    long target = indices[entry];
                                     assertTrue(tailer.moveToIndex(target), "Unable to move to index " + target);
                                     try (DocumentContext dc = tailer.readingDocument()) {
                                         assertTrue(dc.isPresent(), "Expected document at index " + target);
+                                        assertEquals("concurrent-" + entry, dc.wire().read().text());
                                     }
                                 }
                             }
@@ -293,6 +301,50 @@ class SCQIndexingTest {
         } finally {
             executor.shutdownNow();
             IOTools.deleteDirWithFiles(tmpDir.toFile());
+        }
+    }
+
+    @Test
+    void tableStoreWriteLockSubprocessStartsWithin15Seconds() throws Exception {
+        Path tempDir = IOTools.createTempDirectory("cq-iter2-t7");
+        Process process = null;
+        try {
+            Path storePath = tempDir.resolve("test_store.cq4t");
+            try (TableStore<Metadata.NoMeta> tableStore =
+                         SingleTableBuilder.binary(storePath, Metadata.NoMeta.INSTANCE).build();
+                 TableStoreWriteLock lock = new TableStoreWriteLock(tableStore, Pauser::balanced, 15_000L, "testLock")) {
+
+                long startNanos = System.nanoTime();
+                process = JavaProcessBuilder.create(TableStoreWriteLockTest.LockAndHoldUntilInterrupted.class)
+                        .withProgramArguments(tableStore.file().getAbsolutePath(), Boolean.TRUE.toString())
+                        .start();
+
+                while (!lock.locked()) {
+                    long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+                    if (elapsedMs >= 15_000) {
+                        fail("Locking subprocess did not acquire the lock within 15000 ms (elapsed=" + elapsedMs + " ms)");
+                    }
+                    Jvm.pause(25);
+                    if (Thread.currentThread().isInterrupted()) {
+                        throw new InterruptedException("Interrupted while waiting for locking subprocess");
+                    }
+                }
+
+                long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+                assertTrue(elapsedMs < 10_000,
+                        "Locking subprocess startup took " + elapsedMs
+                                + " ms; TableStoreWriteLockTest timeouts may be marginal on this environment");
+            }
+        } finally {
+            if (process != null) {
+                process.destroy();
+                if (!process.waitFor(3, TimeUnit.SECONDS)) {
+                    process.destroyForcibly();
+                    process.waitFor(3, TimeUnit.SECONDS);
+                }
+            }
+            Jvm.pause(50);
+            IOTools.deleteDirWithFiles(tempDir.toFile());
         }
     }
 }

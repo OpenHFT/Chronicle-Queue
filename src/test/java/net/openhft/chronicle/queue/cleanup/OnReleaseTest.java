@@ -15,6 +15,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
+import net.openhft.chronicle.testframework.GcControls;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,7 +69,20 @@ public class OnReleaseTest extends QueueTestCommon {
                 stp.advanceMillis(66_000);
             }
         } finally {
+            drainBackgroundCleanup();
             IOTools.deleteDirWithFiles(path);
         }
+    }
+
+    @Override
+    protected void preAfter() {
+        drainBackgroundCleanup();
+    }
+
+    private static void drainBackgroundCleanup() {
+        BackgroundResourceReleaser.releasePendingResources();
+        GcControls.requestGcCycle();
+        GcControls.waitForGcCycle();
+        BackgroundResourceReleaser.releasePendingResources();
     }
 }
