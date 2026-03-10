@@ -123,7 +123,6 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
         }
 
-        drainBackgroundCleanup();
         Assert.assertTrue(queueFilesAreAllClosed());
         finishedNormally = true;
     }
@@ -160,7 +159,6 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             gcGuard.clear();
         }
 
-        drainBackgroundCleanup();
         Assert.assertTrue(queueFilesAreAllClosed());
 
     }
@@ -211,7 +209,6 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
         }
 
-        drainBackgroundCleanup();
         Assert.assertTrue(queueFilesAreAllClosed());
     }
 
@@ -313,14 +310,12 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         } catch (InterruptedException e) {
             throw new AssertionError(e);
         }
-        drainBackgroundCleanup();
         super.assertReferencesReleased();
     }
 
     @Override
     protected void preAfter() {
         threadPool.shutdownNow();
-        drainBackgroundCleanup();
     }
 
     private boolean queueFilesAreAllClosed() {
@@ -338,13 +333,6 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         openQueueFiles.forEach(qf ->
                 Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open queue file: " + qf));
         return false;
-    }
-
-    private void drainBackgroundCleanup() {
-        BackgroundResourceReleaser.releasePendingResources();
-        requestGcCycle();
-        GcControls.waitForGcCycle();
-        BackgroundResourceReleaser.releasePendingResources();
     }
 
     private ChronicleQueue createQueue(final TimeProvider timeProvider) {
