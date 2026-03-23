@@ -16,9 +16,8 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -29,15 +28,16 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @SuppressWarnings("this-escape")
 public class StoreTailerTest extends QueueTestCommon {
     private final Path dataDirectory = getTmpDir().toPath();
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -59,7 +59,7 @@ public class StoreTailerTest extends QueueTestCommon {
 
     @Test
     public void shouldHandleCycleRollWhenInReadOnlyMode() {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
         try (ChronicleQueue queue = build(createQueue(dataDirectory, MINUTELY, 0, "cycleRoll", false).
@@ -113,7 +113,7 @@ public class StoreTailerTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text"));
 
-            if (!tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals))) {
+            if (!tailer.readDocument(w -> w.read("test").text("text", Assertions::assertEquals))) {
                 // System.out.println("dump chronicle:\n" + chronicle.dump());
                 // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");
@@ -432,40 +432,44 @@ public class StoreTailerTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void cantMoveToStartDuringDocumentReading() {
-        File dir = getTmpDir();
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
-                .testBlockSize().build();
-             ExcerptTailer tailer = queue.createTailer();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeText("Hello World");
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isPresent());
-                assertTrue(dc.isMetaData());
-                assertEquals("header", dc.wire().readEvent(String.class));
-                assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toStart(); // forbidden
+        assertThrows(IllegalStateException.class, () -> {
+            File dir = getTmpDir();
+            try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                    .testBlockSize().build();
+                 ExcerptTailer tailer = queue.createTailer();
+                 ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("Hello World");
+                try (DocumentContext dc = tailer.readingDocument(true)) {
+                    assertTrue(dc.isPresent());
+                    assertTrue(dc.isMetaData());
+                    assertEquals("header", dc.wire().readEvent(String.class));
+                    assertTrue(tailer.toString().contains("StoreTailer{"));
+                    tailer.toStart(); // forbidden
+                }
             }
-        }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void cantMoveToEndDuringDocumentReading() {
-        File dir = getTmpDir();
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
-                .testBlockSize().build();
-             ExcerptTailer tailer = queue.createTailer();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeText("Hello World");
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isPresent());
-                assertTrue(dc.isMetaData());
-                assertEquals("header", dc.wire().readEvent(String.class));
-                assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toEnd(); // forbidden
+        assertThrows(IllegalStateException.class, () -> {
+            File dir = getTmpDir();
+            try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                    .testBlockSize().build();
+                 ExcerptTailer tailer = queue.createTailer();
+                 ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("Hello World");
+                try (DocumentContext dc = tailer.readingDocument(true)) {
+                    assertTrue(dc.isPresent());
+                    assertTrue(dc.isMetaData());
+                    assertEquals("header", dc.wire().readEvent(String.class));
+                    assertTrue(tailer.toString().contains("StoreTailer{"));
+                    tailer.toEnd(); // forbidden
+                }
             }
-        }
+        });
     }
 
     @Test
@@ -550,15 +554,15 @@ public class StoreTailerTest extends QueueTestCommon {
 
             int cycle = queue.cycle();
 
-            assertEquals("No excerpts should be present initially", -1, tailer.excerptsInCycle(cycle));
+            assertEquals(-1, tailer.excerptsInCycle(cycle), "No excerpts should be present initially");
 
             appender.writeText("Message 1");
             appender.writeText("Message 2");
 
-            assertEquals("Should have 2 excerpts in cycle", 2, tailer.excerptsInCycle(cycle));
+            assertEquals(2, tailer.excerptsInCycle(cycle), "Should have 2 excerpts in cycle");
 
             int nonExistentCycle = cycle + 1;
-            assertEquals("Excerpts in non-existent cycle should be -1", -1, tailer.excerptsInCycle(nonExistentCycle));
+            assertEquals(-1, tailer.excerptsInCycle(nonExistentCycle), "Excerpts in non-existent cycle should be -1");
         }
     }
 
@@ -569,15 +573,15 @@ public class StoreTailerTest extends QueueTestCommon {
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
             // Negative index
-            assertFalse("Should not move to a negative index", tailer.moveToIndex(-1));
+            assertFalse(tailer.moveToIndex(-1), "Should not move to a negative index");
 
             // Index beyond the last index
-            assertFalse("Should not move to an index beyond the last index", tailer.moveToIndex(100));
+            assertFalse(tailer.moveToIndex(100), "Should not move to an index beyond the last index");
 
             // Index in a non-existent cycle
             int nonExistentCycle = queue.rollCycle().toCycle(tailer.index()) + 10;
             long nonExistentIndex = queue.rollCycle().toIndex(nonExistentCycle, 0);
-            assertFalse("Should not move to an index in a non-existent cycle", tailer.moveToIndex(nonExistentIndex));
+            assertFalse(tailer.moveToIndex(nonExistentIndex), "Should not move to an index in a non-existent cycle");
         }
     }
 
@@ -598,10 +602,10 @@ public class StoreTailerTest extends QueueTestCommon {
             assertEquals("Message 3", tailer.readText());
             assertEquals("Message 2", tailer.readText());
             assertEquals("Message 1", tailer.readText());
-            assertNull("Should be null", tailer.readText());
+            assertNull(tailer.readText(), "Should be null");
 
             tailer.direction(TailerDirection.FORWARD);
-            assertNull("Should be null", tailer.readText());
+            assertNull(tailer.readText(), "Should be null");
             assertEquals("Message 1", tailer.readText());
             assertEquals("Message 2", tailer.readText());
             assertEquals("Message 3", tailer.readText());
@@ -615,12 +619,12 @@ public class StoreTailerTest extends QueueTestCommon {
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
 
-            assertNull("Should return null when reading from an empty queue", tailer.readText());
+            assertNull(tailer.readText(), "Should return null when reading from an empty queue");
 
             tailer.toStart();
             tailer.toEnd();
 
-            assertNull("Should still return null after moving to end", tailer.readText());
+            assertNull(tailer.readText(), "Should still return null after moving to end");
         }
     }
 

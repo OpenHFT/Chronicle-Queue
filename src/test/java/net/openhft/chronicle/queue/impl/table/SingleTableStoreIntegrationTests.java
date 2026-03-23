@@ -7,9 +7,9 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.io.File;
@@ -18,18 +18,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SingleTableStoreIntegrationTests extends QueueTestCommon {
 
     private TestContext context;
 
-    @Before
+    @BeforeEach
     public void beforeEach() {
         context = new TestContext();
     }
 
-    @After
+    @AfterEach
     public void after() throws IOException {
         context.close();
     }

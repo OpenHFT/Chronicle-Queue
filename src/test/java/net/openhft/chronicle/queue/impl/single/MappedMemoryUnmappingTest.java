@@ -8,20 +8,21 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.GcControls;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public final class MappedMemoryUnmappingTest extends QueueTestCommon {
-    @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    @TempDir
+    Path tmp;
 
     @Test
     public void shouldUnmapMemoryAsCycleRolls() throws IOException {
@@ -29,7 +30,7 @@ public final class MappedMemoryUnmappingTest extends QueueTestCommon {
         long initialQueueMappedMemory = 0L;
 
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
-                binary(tmp.newFolder()).testBlockSize().rollCycle(TEST_SECONDLY).
+                binary(Files.createTempDirectory(tmp, "queue").toFile()).testBlockSize().rollCycle(TEST_SECONDLY).
                 timeProvider(clock::get).build();
              final ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < 100; i++) {

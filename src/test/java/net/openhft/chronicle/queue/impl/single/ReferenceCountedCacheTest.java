@@ -9,10 +9,8 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ReferenceCounted;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import org.junit.Before;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -22,7 +20,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ReferenceCountedCacheTest extends QueueTestCommon {
 
@@ -33,13 +31,17 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     private AtomicInteger releasedCount;
     private ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> cache;
 
+    @BeforeEach
+    public void beforeEachReferenceCountedCacheTest() {
+        threadDump();
+        setUp();
+    }
+
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
-    @BeforeEach
     void setUp() {
         createdCount = new AtomicInteger(0);
         releasedCount = new AtomicInteger(0);
@@ -54,31 +56,41 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     @Test
     void shouldNeverGiveOutReleasedReferences() {
         final ExecutorService executorService = Executors.newCachedThreadPool();
-        int numThreads = Math.min(MAX_THREADS_TO_RUN, Math.max(MIN_THREADS_TO_RUN, Runtime.getRuntime().availableProcessors()));
-        AtomicBoolean running = new AtomicBoolean(true);
-        List<Future<?>> executors = new ArrayList<>();
-        for (int i = 0; i < numThreads; i++) {
-            executors.add(executorService.submit(new ReferenceGetter(NUM_RESOURCES, cache, running)));
-        }
-        Jvm.pause(5_000);
-        running.set(false);
-        executors.forEach(f -> {
+        try {
+            int numThreads = Math.min(MAX_THREADS_TO_RUN, Math.max(MIN_THREADS_TO_RUN, Runtime.getRuntime().availableProcessors()));
+            AtomicBoolean running = new AtomicBoolean(true);
+            List<Future<?>> executors = new ArrayList<>();
+            for (int i = 0; i < numThreads; i++) {
+                executors.add(executorService.submit(new ReferenceGetter(NUM_RESOURCES, cache, running)));
+            }
+            Jvm.pause(5_000);
+            running.set(false);
+            executors.forEach(f -> {
+                try {
+                    f.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            Closeable.closeQuietly(cache);
+            Jvm.startup().on(ReferenceCountedCache.class, "Created " + createdCount.get() + ", released " + releasedCount.get());
+            assertTrue(true); // if we got here without an exception, the test passes
+        } finally {
+            executorService.shutdownNow();
             try {
-                f.get();
-            } catch (InterruptedException | ExecutionException e) {
+                assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS), "Executor did not terminate");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
-        });
-        Closeable.closeQuietly(cache);
-        Jvm.startup().on(ReferenceCountedCache.class, "Created " + createdCount.get() + ", released " + releasedCount.get());
-        assertTrue(true); // if we got here without an exception, the test passes
+        }
     }
 
     @Test
     void shouldReturnSameObjectWhileNotReleased() {
         final Reservation reservation = cache.get(1);
         final Reservation otherReservation = cache.get(1);
-        Assertions.assertSame(reservation.referenceCounted, otherReservation.referenceCounted);
+        assertSame(reservation.referenceCounted, otherReservation.referenceCounted);
         reservation.release();
         otherReservation.release();
     }
@@ -89,7 +101,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
         reservation.release();
         Jvm.pause(100);
         final Reservation otherReservation = cache.get(1);
-        Assertions.assertNotSame(reservation.referenceCounted, otherReservation.referenceCounted);
+        assertNotSame(reservation.referenceCounted, otherReservation.referenceCounted);
         otherReservation.release();
     }
 
@@ -149,7 +161,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
 
         void assertNotReleased() {
             final int referenceCount = this.referenceCounted.refCount();
-            assertTrue("Expected reference count of at least 2, got " + referenceCount, referenceCount > 1);
+            assertTrue(referenceCount > 1, "Expected reference count of at least 2, got " + referenceCount);
         }
     }
 

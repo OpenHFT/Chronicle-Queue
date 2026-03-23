@@ -20,9 +20,8 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.ValueOut;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,9 +35,10 @@ import java.util.stream.Collectors;
 import static java.lang.Thread.currentThread;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
+@SuppressWarnings("this-escape")
 public class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     private final long SLEEP_PER_WRITE_NANOS;
@@ -61,10 +61,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     private ChronicleQueue sharedWriterQueue;
 
     public RollCycleMultiThreadStressTest() {
-        this(StressTestType.VANILLA);
-    }
-
-    RollCycleMultiThreadStressTest(StressTestType type) {
+        StressTestType type = stressTestType();
         SLEEP_PER_WRITE_NANOS = Jvm.getLong("writeLatency", 30_000L);
         TEST_TIME = Jvm.getInteger("testTime", 15);
         ROLL_EVERY_MS = Jvm.getInteger("rollEvery", 300);
@@ -88,6 +85,10 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 throw new IllegalStateException("This test will run out of memory - change your system properties");
             }
         }
+    }
+
+    protected StressTestType stressTestType() {
+        return StressTestType.VANILLA;
     }
 
     private static boolean areAllReadersComplete(final int expectedNumberOfMessages, final List<Reader> readers) {
@@ -116,8 +117,13 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         }
     }
 
+    @BeforeEach
+    public void beforeEachRollCycleMultiThreadStressTest() {
+        threadDump();
+        multiCPU();
+    }
+
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
@@ -231,8 +237,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n");
         });
 
-        assertTrue("Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
-                wrote.get() >= expectedNumberOfMessages);
+        assertTrue(wrote.get() >= expectedNumberOfMessages, "Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions);
 
         readers.stream().filter(r -> r.exception != null).findAny().ifPresent(reader -> {
             throw new AssertionError("Reader encountered exception, so stopped reading messages",
@@ -271,8 +276,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
                 // System.out.printf("Not all readers are complete. Waiting...%n");
                 Jvm.pause(2000);
             }
-            assertTrue("Readers did not catch up",
-                    areAllReadersComplete(expectedNumberOfMessages, readers));
+            assertTrue(areAllReadersComplete(expectedNumberOfMessages, readers), "Readers did not catch up");
 
         } finally {
 
@@ -333,9 +337,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         return sharedWriterQueue != null ? sharedWriterQueue : createQueue(path);
     }
 
-    @Before
     public void multiCPU() {
-        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+        assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
     }
 
     enum StressTestType {

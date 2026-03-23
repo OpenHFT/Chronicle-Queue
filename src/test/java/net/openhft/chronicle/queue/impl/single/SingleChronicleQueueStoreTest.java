@@ -8,16 +8,16 @@ import net.openhft.chronicle.core.util.ThrowingConsumer;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final int INDEX_SPACING = 4;
@@ -25,8 +25,8 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final RollCycles ROLL_CYCLE = RollCycles.DEFAULT;
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
-    @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
+    @TempDir
+    Path tmpDir;
 
     private static void assertExcerptsAreIndexed(final RollingChronicleQueue queue, final long[] indices,
                                                  final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {
@@ -57,7 +57,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
 
         for (int i = 0; i < RECORD_COUNT; i++) {
             try (final DocumentContext ctx = tailer.readingDocument()) {
-                assertTrue("Expected record at index " + i, ctx.isPresent());
+                assertTrue(ctx.isPresent(), "Expected record at index " + i);
                 indices[i] = tailer.index();
             }
         }
@@ -75,7 +75,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     }
 
     private <T extends Exception> void runTest(final ThrowingConsumer<RollingChronicleQueue, T> testMethod) throws T, IOException {
-        try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(tmpDir.newFolder()).
+        try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(Files.createTempDirectory(tmpDir, "queue").toFile()).
                 testBlockSize().timeProvider(clock::get).
                 rollCycle(ROLL_CYCLE).indexSpacing(INDEX_SPACING).
                 build()) {

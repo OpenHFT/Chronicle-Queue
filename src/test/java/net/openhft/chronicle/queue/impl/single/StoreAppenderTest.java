@@ -11,36 +11,36 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
     private static final String TEST_TEXT = "Some text some text some text";
     private static final long ONE_DAY = TimeUnit.DAYS.toMillis(1);
 
-    @Rule
-    public final TemporaryFolder queueDirectory = new TemporaryFolder();
+    @TempDir
+    Path queueDirectory;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
     public void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException, IOException {
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(Files.createTempDirectory(queueDirectory, "queue").toFile()).build()) {
             final BlockingWriter blockingWriter = new BlockingWriter(queue);
             final BlockedWriter blockedWriter = new BlockedWriter(queue);
 
@@ -67,7 +67,7 @@ public class StoreAppenderTest extends QueueTestCommon {
 
         clock.addAndGet(-clock.get() % ONE_DAY);
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(Files.createTempDirectory(queueDirectory, "queue").toFile())
                 .timeProvider(clock::get)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {

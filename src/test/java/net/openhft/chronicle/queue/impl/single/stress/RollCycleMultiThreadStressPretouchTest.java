@@ -4,20 +4,21 @@
 package net.openhft.chronicle.queue.impl.single.stress;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThreadStressTest {
 
-    public RollCycleMultiThreadStressPretouchTest() {
-        super(StressTestType.PRETOUCH);
+    @Override
+    protected StressTestType stressTestType() {
+        return StressTestType.PRETOUCH;
     }
 
     @Test
     public void stress() throws Exception {
-        Assume.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
+        assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
         super.stress();
         assertTrue(true); // parent has asserts
     }

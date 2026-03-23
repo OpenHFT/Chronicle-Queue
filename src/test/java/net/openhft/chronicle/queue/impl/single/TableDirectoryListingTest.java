@@ -11,13 +11,13 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TableDirectoryListingTest extends QueueTestCommon {
     private DirectoryListing listing;
@@ -32,7 +32,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         return getTmpDir();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         testDirectory = testDirectory();
         testDirectory.mkdirs();
@@ -58,10 +58,10 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         Closeable.closeQuietly(tablestore, tablestoreReadOnly, listing, listingReadOnly);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void shouldBlowUpIfClosed() {
         listing.close();
-        listing.getMaxCreatedCycle();
+        assertThrows(IllegalStateException.class, () -> listing.getMaxCreatedCycle());
     }
 
     @Test

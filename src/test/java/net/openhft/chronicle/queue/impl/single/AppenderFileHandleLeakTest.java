@@ -19,9 +19,8 @@ import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -38,8 +37,8 @@ import java.util.stream.IntStream;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.testframework.GcControls.requestGcCycle;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
@@ -82,7 +81,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
      * These only run on Linux because {@link MappedFileUtil#getAllMappedFiles()} only works
      * on Linux
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         assumeTrue(OS.isLinux());
         System.gc();
@@ -121,7 +120,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        assertTrue(queueFilesAreAllClosed());
         finishedNormally = true;
     }
 
@@ -156,7 +155,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             assertFalse(gcGuard.isEmpty());
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        assertTrue(queueFilesAreAllClosed());
 
     }
 
@@ -205,7 +204,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        assertTrue(queueFilesAreAllClosed());
     }
 
     @Test

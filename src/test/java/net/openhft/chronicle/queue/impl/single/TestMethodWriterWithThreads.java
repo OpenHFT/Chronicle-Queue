@@ -7,19 +7,15 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.main.DumpMain;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -28,50 +24,46 @@ import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
-import static junit.framework.TestCase.fail;
 import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 /**
  * check that method writes are thread safe when used with queue.methodWriter
  */
-@RunWith(Parameterized.class)
 public class TestMethodWriterWithThreads extends QueueTestCommon {
 
     private static final int AMEND = 1;
     private static final int CREATE = 2;
-    @Rule
-    public final TestName testName = new TestName();
     private ThreadLocal<Amend> amendTL = ThreadLocal.withInitial(Amend::new);
     private ThreadLocal<Create> createTL = ThreadLocal.withInitial(Create::new);
     private I methodWriter;
     private AtomicBoolean fail = new AtomicBoolean();
-    private boolean doubleBuffer;
 
-    public TestMethodWriterWithThreads(boolean doubleBuffer) {
-        this.doubleBuffer = doubleBuffer;
-    }
-
-    @Parameterized.Parameters(name = "doubleBuffer={0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[]{true}, new Object[]{false});
     }
 
-    @Before
+    @BeforeEach
+    public void beforeEachTestMethodWriterWithThreads() {
+        check64bit();
+        threadDump();
+    }
+
     public void check64bit() {
         assumeTrue(Jvm.is64bit());
     }
 
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
-    @Test(timeout = 30_000)
-    public void test() throws FileNotFoundException {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void test(boolean doubleBuffer) throws FileNotFoundException {
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue q = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).doubleBuffer(doubleBuffer).build()) {

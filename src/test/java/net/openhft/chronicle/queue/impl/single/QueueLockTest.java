@@ -10,20 +10,20 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class QueueLockTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -101,7 +101,7 @@ public class QueueLockTest extends QueueTestCommon {
                     long time = endTime - startTime;
                     assertEquals(shouldThrowException, threwException.get());
                     assertEquals(shouldThrowException, !recoveredAndAcquiredTheLock.get());
-                    assertTrue("timeout, time: " + time, time >= timeoutMs);
+                    assertTrue(time >= timeoutMs, "timeout, time: " + time);
                 }
             }
             finishedNormally = true;

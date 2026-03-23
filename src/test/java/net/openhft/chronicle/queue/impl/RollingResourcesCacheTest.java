@@ -6,8 +6,9 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
+import net.openhft.chronicle.queue.rollcycles.LegacyRollCycles;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Instant;
@@ -18,8 +19,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RollingResourcesCacheTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;
@@ -104,8 +104,8 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         final RollingResourcesCache.Resource repeat = cache.resourceFor(0);
         final RollingResourcesCache.Resource next = cache.resourceFor(1);
 
-        assertSame("Expected identical instance for cached cycle", first, repeat);
-        assertNotSame("Different cycle should produce a new resource", first, next);
+        assertSame(first, repeat, "Expected identical instance for cached cycle");
+        assertNotSame(first, next, "Different cycle should produce a new resource");
 
         final int firstCount = cache.parseCount(first.text);
         final int cachedCount = cache.parseCount(first.text);
@@ -246,11 +246,13 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976287");
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void parseIncorrectlyFormattedName() {
-        final RollingResourcesCache cache =
-                new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
-        cache.parseCount("foobar-qux");
+        assertThrows(RuntimeException.class, () -> {
+            final RollingResourcesCache cache =
+                    new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
+            cache.parseCount("foobar-qux");
+        });
     }
 
     @Test

@@ -15,8 +15,8 @@ import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -25,7 +25,7 @@ import java.util.TreeMap;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SingleCQFormat2Test extends QueueTestCommon {
 
@@ -38,7 +38,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
     private static void assertHexEquals(long a, long b) {
         if (a != b)
-            assertEquals(Long.toHexString(a) + " != " + Long.toHexString(b), a, b);
+            assertEquals(a, b, Long.toHexString(a) + " != " + Long.toHexString(b));
     }
 
     @Test
@@ -61,12 +61,12 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 name2.writeMarshallable(dc.wire());
             }
             String dump = queue.dump();
-            assertTrue(dump, dump.contains("--- !!meta-data #binary\n" +
+            assertTrue(dump.contains("--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  400,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]"));
+                    "]"), dump);
         }
     }
 
@@ -540,7 +540,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 "...\n");
     }
 
-    @Before
+    @BeforeEach
     public void resetAppendMode() {
         appendMode = 0;
     }
@@ -841,8 +841,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                                 "00000150 90 01 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
                                 "00000160 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
                                 "........\n" +
-                                "00000190 06 00 00 00 e5 6d 73 67  2d 31 00 00 00 00 00 00 ·····msg -1······\n",
-                        s);
+                                "00000190 06 00 00 00 e5 6d 73 67  2d 31 00 00 00 00 00 00 ·····msg -1······\n", s);
                 dc.rollbackOnClose();
             }
             assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));

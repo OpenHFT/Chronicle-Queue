@@ -15,10 +15,8 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,17 +24,11 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-@RunWith(Parameterized.class)
 public class RollingCycleTest extends QueueTestCommon {
-    private final boolean named;
 
-    public RollingCycleTest(boolean named) {
-        this.named = named;
-    }
-
-    @Parameterized.Parameters(name = "named={0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(
                 new Object[]{true},
@@ -44,14 +36,15 @@ public class RollingCycleTest extends QueueTestCommon {
         );
     }
 
-    @Test
-    public void testRollCycle() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testRollCycle(boolean named) {
         SetTimeProvider stp = new SetTimeProvider();
         long start = 19059 * 86_400_000L;
         stp.currentTimeMillis(start);
 
         String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
+        assumeFalse(PageUtil.isHugePage(basePath), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .timeoutMS(5)
@@ -109,55 +102,6 @@ public class RollingCycleTest extends QueueTestCommon {
                             "# 130508 bytes remaining\n"
                             : "...\n" +
                             "# 130572 bytes remaining\n") +
-                    "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  writePosition: [\n" +
-                    "    496,\n" +
-                    "    2130303778818\n" +
-                    "  ],\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 200,\n" +
-                    "    lastIndex: 3\n" +
-                    "  },\n" +
-                    "  dataFormat: 1\n" +
-                    "}\n" +
-                    "# position: 200, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  304,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 304, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 3\n" +
-                    "  400,\n" +
-                    "  448,\n" +
-                    "  496,\n" +
-                    "  0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 400, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "00000190             10 6e 61 6d  65 5f 2d 31 31 35 35 34     ·nam e_-11554\n" +
-                    "000001a0 38 34 35 37 36 7a cb 93  3d 38 51 d9 d4 f6 c9 2d 84576z·· =8Q····-\n" +
-                    "000001b0 a3 bd 70 39 9b b7 70 e9  8c 39 f0 1d 4f          ··p9··p· ·9··O   \n" +
-                    "# position: 448, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "000001c0             10 6e 61 6d  65 5f 2d 31 31 35 35 38     ·nam e_-11558\n" +
-                    "000001d0 36 39 33 32 35 6f 0e fb  68 d8 9c b8 19 fc cc 2c 69325o·· h······,\n" +
-                    "000001e0 35 92 f9 4d 68 e5 f1 2c  55 f0 b8 46 09          5··Mh··, U··F·   \n" +
-                    "# position: 496, header: 2\n" +
-                    "--- !!data #binary\n" +
-                    "000001f0             10 6e 61 6d  65 5f 2d 31 31 35 34 37     ·nam e_-11547\n" +
-                    "00000200 31 35 30 37 39 90 45 c5  e6 f7 b9 1a 4b ea c3 2f 15079·E· ····K··/\n" +
-                    "00000210 7f 17 5f 10 01 5c 6e 62  fc cc 5e cc da          ··_··\\nb ··^··   \n" +
-                    "# position: 544, header: 2 EOF\n" +
-                    "--- !!not-ready-meta-data #binary\n" +
-                    "...\n" +
-                    "# 130524 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

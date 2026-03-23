@@ -10,9 +10,9 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -23,20 +23,19 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class EmptyRollCycleTest extends QueueTestCommon {
 
     private static final String EMPTY_ROLL_CYCLE_NAME = "19700101-0020X.cq4";
     private Path dataDirectory;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         dataDirectory = IOTools.createTempDirectory("EmptyRollCycleTest");
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         IOTools.deleteDirWithFiles(dataDirectory.toFile());
     }
@@ -95,7 +94,8 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 6_000)
+    @Test
+    @Timeout(value = 6_000, unit = TimeUnit.MILLISECONDS)
     public void appropriateExceptionIsThrownWhenLockCannotBeAcquiredForRecovery() throws IOException, InterruptedException {
         createQueueWithEmptyRollCycleAtEnd();
 

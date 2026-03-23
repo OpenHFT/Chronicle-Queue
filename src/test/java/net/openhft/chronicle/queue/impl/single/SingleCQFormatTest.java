@@ -17,7 +17,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,8 +31,8 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class SingleCQFormatTest extends QueueTestCommon {
     static {
@@ -74,8 +74,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     tailer.toEnd();
                     fail();
                 } catch (Exception e) {
-                    assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
-                            e.toString());
+                    assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37", e.toString());
                 }
             }
         }
@@ -169,8 +168,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 }
             }
 
-            assertEquals(1,
-                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
+            assertEquals(1, dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
@@ -291,8 +289,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 "8e 02 00 00 00 00 00 a7 00 00 00 00 00 00 00 00 # 0\n";
         assertEquals(bytes instanceof HexDumpBytes
                         ? expectedHexDump
-                        : expected,
-                bytes.toHexString());
+                        : expected, bytes.toHexString());
 
         assertEquals("" +
                 "--- !!meta-data #binary\n" +
@@ -382,8 +379,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
             testQueue(queue);
             fail();
         } catch (Exception e) {
-            assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required",
-                    e.toString());
+            assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required", e.toString());
         }
         System.gc();
         try {

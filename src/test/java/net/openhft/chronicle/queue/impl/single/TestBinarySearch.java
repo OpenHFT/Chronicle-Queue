@@ -16,32 +16,17 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
 public class TestBinarySearch extends QueueTestCommon {
 
     private final Map<Integer, Long> keyToIndex = new HashMap<>();
-    private final int numberOfMessages;
-    private final int numberOfMessagesToVerify;
-    private final RetrievalStrategy retrievalStrategy;
-    private final EmptyCyclesStrategy emptyCyclesStrategy;
 
-    public TestBinarySearch(int numberOfMessages, int numberOfMessagesToVerify, EmptyCyclesStrategy emptyCyclesStrategy) {
-        this.numberOfMessages = numberOfMessages;
-        this.numberOfMessagesToVerify = numberOfMessagesToVerify;
-        this.retrievalStrategy = numberOfMessages == numberOfMessagesToVerify ? RetrievalStrategy.LINEAR : RetrievalStrategy.RANDOM;
-        this.emptyCyclesStrategy = emptyCyclesStrategy;
-    }
-
-    @Parameterized.Parameters(name = "items: {0} verify: {1} emptyCycles: {2}")
     public static Collection<Object[]> data() {
         return Arrays.asList(runForEveryEmptyCycleStrategy(new Object[][]{
                 {0, 0},
@@ -68,8 +53,10 @@ public class TestBinarySearch extends QueueTestCommon {
         return result;
     }
 
-    @Test
-    public void testBinarySearch() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testBinarySearch(int numberOfMessages, int numberOfMessagesToVerify, EmptyCyclesStrategy emptyCyclesStrategy) {
+        RetrievalStrategy retrievalStrategy = numberOfMessages == numberOfMessagesToVerify ? RetrievalStrategy.LINEAR : RetrievalStrategy.RANDOM;
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
 
@@ -128,7 +115,7 @@ public class TestBinarySearch extends QueueTestCommon {
                     Wire key = toWire(indexToVerify);
                     long index = BinarySearch.search(binarySearchTailer, key, comparator);
                     long expectedIndex = keyToIndex.get(indexToVerify);
-                    assertEquals("Failed looking for item at index: " + expectedIndex, expectedIndex, index);
+                    assertEquals(expectedIndex, index, "Failed looking for item at index: " + expectedIndex);
                     key.bytes().releaseLast();
 
                     if (j > 0 && numberOfMessagesToVerify > 10 && j % (numberOfMessagesToVerify / 10) == 0) {
@@ -139,13 +126,13 @@ public class TestBinarySearch extends QueueTestCommon {
 
                 Wire key = toWire(numberOfMessages);
                 long result = BinarySearch.search(binarySearchTailer, key, comparator);
-                Assert.assertTrue("Should not find non-existent", result < 0);
+                assertTrue(result < 0, "Should not find non-existent");
             }
         }
     }
 
     private void writeEmptyCycles(ExcerptAppender appender) {
-        int numberOfEmptyCycles = emptyCyclesStrategy.single() ? 1 : 2;
+        int numberOfEmptyCycles = 2;
         for (int i = 0; i < numberOfEmptyCycles; i++) {
             try (final DocumentContext dc = appender.writingDocument()) {
                 // easiest way to write an empty cycle is to start writing a document and then rollback

@@ -11,15 +11,14 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class RollCycleMultiThreadTest extends QueueTestCommon {
 
@@ -50,14 +49,14 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     .build();
                  ExcerptAppender appender = queue.createAppender()) {
 
-                Assert.assertEquals(-2, (int) scheduledExecutorService.submit(observer::call).get());
+                assertEquals(-2, (int) scheduledExecutorService.submit(observer::call).get());
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("say").text("Day 3 data");
                 }
-                Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer::call).get());
+                assertEquals(1, (int) scheduledExecutorService.submit(observer::call).get());
                 assertEquals(1, observer.documentsRead);
 
             }
@@ -72,7 +71,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
     public void testRead2() throws ExecutionException, InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
+        assumeFalse(PageUtil.isHugePage(path.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         final ExecutorService es = Executors.newSingleThreadExecutor(
@@ -98,7 +97,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 1 data");
                 }
 
-                Assert.assertEquals(1, (int) es.submit(observer).get());
+                assertEquals(1, (int) es.submit(observer).get());
 
                 assertEquals("" +
                                 "--- !!meta-data #binary\n" +
@@ -167,8 +166,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "say: Day 1 data\n" +
                                 "...\n" +
-                                "# 130648 bytes remaining\n",
-                        queue.dump());
+                                "# 130648 bytes remaining\n", queue.dump());
 
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
@@ -279,9 +277,8 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "say: Day 3 data\n" +
                                 "...\n" +
-                                "# 130648 bytes remaining\n",
-                        queue.dump());
-                Assert.assertEquals(2, (int) es.submit(observer).get());
+                                "# 130648 bytes remaining\n", queue.dump());
+                assertEquals(2, (int) es.submit(observer).get());
 
                 // System.out.println(queue.dump());
                 assertEquals(2, observer.documentsRead);

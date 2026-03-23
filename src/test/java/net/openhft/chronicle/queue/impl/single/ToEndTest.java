@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -13,9 +12,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -26,7 +23,8 @@ import java.util.List;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
@@ -71,9 +69,9 @@ public class ToEndTest extends QueueTestCommon {
                 appender.writeDocument(wire -> wire.write("msg").int32(4));
 
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
+                    assertTrue(dc.isPresent(), "Should be able to read entry in this cycle. Got NoDocumentContext.");
                     int i = dc.wire().read("msg").int32();
-                    assertEquals("Should've read 4, instead we read: " + i, 4, i);
+                    assertEquals(4, i, "Should've read 4, instead we read: " + i);
                 }
 
                 // read from the beginning
@@ -295,7 +293,7 @@ public class ToEndTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(queue.file().getAbsolutePath()));
+            assumeFalse(PageUtil.isHugePage(queue.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
             writeMetadataToQueue(queue);
             assertEquals("" +
                     "--- !!meta-data #binary\n" +
@@ -432,7 +430,7 @@ public class ToEndTest extends QueueTestCommon {
             return;
 
         if (files.length == 1)
-            assertTrue(files[0], files[0].startsWith("2"));
+            assertTrue(files[0].startsWith("2"), files[0]);
         else
             fail("Too many files " + Arrays.toString(files));
     }

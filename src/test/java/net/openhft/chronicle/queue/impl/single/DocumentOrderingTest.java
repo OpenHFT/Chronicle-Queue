@@ -8,9 +8,8 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
@@ -19,7 +18,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public final class DocumentOrderingTest extends QueueTestCommon {
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
@@ -38,8 +38,13 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     private Thread thread;
 
+    @BeforeEach
+    public void beforeEachDocumentOrderingTest() {
+        threadDump();
+        multiCPU();
+    }
+
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
@@ -258,7 +263,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             }
             return new RecordInfo(counterValue);
         });
-        assertTrue("Task did not start", startedLatch.await(1, TimeUnit.MINUTES));
+        assertTrue(startedLatch.await(1, TimeUnit.MINUTES), "Task did not start");
         return future;
     }
 
@@ -276,8 +281,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         }
     }
 
-    @Before
     public void multiCPU() {
-        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+        assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
     }
 }

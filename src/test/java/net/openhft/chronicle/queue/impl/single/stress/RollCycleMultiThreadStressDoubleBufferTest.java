@@ -9,23 +9,23 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.internal.main.InternalDumpMain;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Ignore("double buffering is turned off currently")
+@Disabled("double buffering is turned off currently")
 public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiThreadStressTest {
 
     private AtomicBoolean queueDumped = new AtomicBoolean(false);
 
-    public RollCycleMultiThreadStressDoubleBufferTest() {
-        super(StressTestType.DOUBLEBUFFER);
+    @Override
+    protected StressTestType stressTestType() {
+        return StressTestType.DOUBLEBUFFER;
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         queueDumped = new AtomicBoolean(false);
     }

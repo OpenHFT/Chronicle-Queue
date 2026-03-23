@@ -13,10 +13,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -24,13 +21,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class RollCycleTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -76,7 +73,7 @@ public class RollCycleTest extends QueueTestCommon {
     public void newRollCycleIgnored2() throws InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
+        assumeFalse(PageUtil.isHugePage(path.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
 
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
@@ -273,8 +270,7 @@ public class RollCycleTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "\"3\"\n" +
                                 "...\n" +
-                                "# 130660 bytes remaining\n",
-                        queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
+                                "# 130660 bytes remaining\n", queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
 
                 // allow parallel tailer to finish iteration
                 for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
@@ -289,7 +285,7 @@ public class RollCycleTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    @After
+    @AfterEach
     public void clearInterrupt() {
         Thread.interrupted();
     }

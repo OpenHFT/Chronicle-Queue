@@ -5,8 +5,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class IndexOffsetTest extends QueueTestCommon {
 
@@ -15,22 +15,22 @@ public class IndexOffsetTest extends QueueTestCommon {
 
     @Test
     public void testFindExcerpt2() {
-        Assert.assertEquals(1, indexing.toAddress0(1L << (17L + 6L)));
-        Assert.assertEquals(1, indexing2.toAddress0(1L << (7L + 3L)));
+        assertEquals(1, indexing.toAddress0(1L << (17L + 6L)));
+        assertEquals(1, indexing2.toAddress0(1L << (7L + 3L)));
     }
 
     @Test
     public void testFindExcerpt() {
-        Assert.assertEquals(1, indexing.toAddress1(64));
-        Assert.assertEquals(1, indexing.toAddress1(65));
-        Assert.assertEquals(2, indexing.toAddress1(128));
-        Assert.assertEquals(2, indexing.toAddress1(129));
-        Assert.assertEquals(3, indexing.toAddress1(128 + 64));
+        assertEquals(1, indexing.toAddress1(64));
+        assertEquals(1, indexing.toAddress1(65));
+        assertEquals(2, indexing.toAddress1(128));
+        assertEquals(2, indexing.toAddress1(129));
+        assertEquals(3, indexing.toAddress1(128 + 64));
 
-        Assert.assertEquals(1, indexing2.toAddress1(8));
-        Assert.assertEquals(1, indexing2.toAddress1(9));
-        Assert.assertEquals(16, indexing2.toAddress1(128));
-        Assert.assertEquals(16, indexing2.toAddress1(129));
-        Assert.assertEquals(17, indexing2.toAddress1(128 + 8));
+        assertEquals(1, indexing2.toAddress1(8));
+        assertEquals(1, indexing2.toAddress1(9));
+        assertEquals(16, indexing2.toAddress1(128));
+        assertEquals(16, indexing2.toAddress1(129));
+        assertEquals(17, indexing2.toAddress1(128 + 8));
     }
 }

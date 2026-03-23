@@ -17,8 +17,8 @@ import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,14 +29,14 @@ import java.util.Arrays;
 import java.util.List;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
     private static final String BASE_PATH = OS.getTarget() + "/singleChronicleQueueBuilderTest";
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() {
         IOTools.deleteDirWithFiles(BASE_PATH, 2);
     }
@@ -70,12 +70,14 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         assertTrue(new File(TEST_QUEUE_FILE).length() < (1 << 20));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws IOException {
-        final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
-        tempFile.deleteOnExit();
-        SingleChronicleQueueBuilder.
-                binary(tempFile);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
+            tempFile.deleteOnExit();
+            SingleChronicleQueueBuilder.
+                    binary(tempFile);
+        });
     }
 
     @Test
@@ -89,13 +91,15 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         assertEquals(98765, b2.bufferCapacity());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
-        OneExtendedBuilder b1 = new OneExtendedBuilder();
-        OtherExtendedBuilder b2 = new OtherExtendedBuilder();
-        b2.bufferCapacity(98765);
-        b1.blockSize(1234567);
-        b2.setAllNullFields(b1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            OneExtendedBuilder b1 = new OneExtendedBuilder();
+            OtherExtendedBuilder b2 = new OtherExtendedBuilder();
+            b2.bufferCapacity(98765);
+            b1.blockSize(1234567);
+            b2.setAllNullFields(b1);
+        });
     }
 
     static class OneExtendedBuilder extends SingleChronicleQueueBuilder {
@@ -241,8 +245,8 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 .rollCycle(rollCycle)
                 .build();
              ExcerptTailer tailer = reopened.createTailer()) {
-            assertEquals("Roll cycle should be read from metadata", rollCycle, reopened.rollCycle());
-            assertEquals("SourceId should be read from metadata", sourceId, reopened.sourceId());
+            assertEquals(rollCycle, reopened.rollCycle(), "Roll cycle should be read from metadata");
+            assertEquals(sourceId, reopened.sourceId(), "SourceId should be read from metadata");
 
             for (String expected : messages) {
                 assertEquals(expected, tailer.readText());

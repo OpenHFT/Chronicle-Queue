@@ -6,12 +6,12 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
     @SuppressWarnings("try")
