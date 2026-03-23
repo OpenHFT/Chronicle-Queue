@@ -23,9 +23,9 @@ import net.openhft.chronicle.queue.reader.Reader;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,8 +50,8 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static net.openhft.chronicle.testframework.GcControls.waitForGcCycle;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class ChronicleReaderTest extends QueueTestCommon {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
@@ -74,18 +74,23 @@ public class ChronicleReaderTest extends QueueTestCommon {
         }
     }
 
-    @Before
+    @BeforeEach
+    public void beforeEachChronicleReaderTest() {
+        before();
+        threadDump();
+    }
+
     public void before() {
         assumeFalse(Jvm.isArm());
 
         // Reader opens queues in read-only mode
         if (OS.isWindows())
-            if (!(testName.getMethodName().equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") ||
-                    testName.getMethodName().equals("shouldNotShowIndexForHistoryMessages") ||
-                    testName.getMethodName().equals("shouldBeAbleToReadFromReadOnlyFile") ||
-                    testName.getMethodName().equals("shouldPrintTimestampsToLocalTime") ||
-                    testName.getMethodName().equals("namedTailerRequiresReadWrite") ||
-                    testName.getMethodName().equals("matchLimitThenNamedTailer")))
+            if (!(testMethodName.equals("shouldThrowExceptionIfInputDirectoryDoesNotExist") ||
+                    testMethodName.equals("shouldNotShowIndexForHistoryMessages") ||
+                    testMethodName.equals("shouldBeAbleToReadFromReadOnlyFile") ||
+                    testMethodName.equals("shouldPrintTimestampsToLocalTime") ||
+                    testMethodName.equals("namedTailerRequiresReadWrite") ||
+                    testMethodName.equals("matchLimitThenNamedTailer")))
                 expectException("Read-only mode is not supported on Windows");
 
         dataDir = getTmpDir().toPath();
@@ -106,12 +111,12 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
-    @Test(timeout = 10_000L)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void shouldReadQueueInReverse() {
         addCountToEndOfQueue();
 
@@ -153,24 +158,24 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertEquals(Arrays.asList("\"2\"\n", "\"1\"\n"), firstFourElements);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void reverseOrderThrowsWhenStartPositionIsAfterEndOfQueue() {
-        new ChronicleReader().withBasePath(dataDir)
+        assertThrows(IllegalArgumentException.class, () -> new ChronicleReader().withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add)
                 .inReverseOrder()
                 .suppressDisplayIndex()
                 .withStartIndex(lastIndex + 1)
-                .execute();
+                .execute());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void reverseOrderThrowsWhenStartPositionIsBeforeStartOfQueue() {
-        new ChronicleReader().withBasePath(dataDir)
+        assertThrows(IllegalArgumentException.class, () -> new ChronicleReader().withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add)
                 .inReverseOrder()
                 .suppressDisplayIndex()
                 .withStartIndex(firstIndex - 1)
-                .execute();
+                .execute());
     }
 
     private List<Long> addCountToEndOfQueue() {
@@ -187,7 +192,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
         return indices;
     }
 
-    @Test(timeout = 10_000L)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
@@ -207,7 +213,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertFalse(capturedOutput.isEmpty());
     }
 
-    @Test(timeout = 10_000L)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
@@ -362,13 +369,14 @@ public class ChronicleReaderTest extends QueueTestCommon {
         String first = capturedOutput.poll();
         assertTrue(first.startsWith("0x"));
         String second = capturedOutput.poll();
-        assertTrue(second, second.matches("VanillaMessageHistory *. *sources: ..,? timings: .[0-9]+.,? addSourceDetails=false ?}" +
+        assertTrue(second.matches("VanillaMessageHistory *. *sources: ..,? timings: .[0-9]+.,? addSourceDetails=false ?}" +
                 System.lineSeparator() +
                 "say: hello\n" +
-                "...\n"));
+                "...\n"), second);
     }
 
-    @Test(timeout = 5000)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         IOTools.deleteDirWithFiles(dataDir.toFile());
         dataDir.toFile().mkdirs();
@@ -405,7 +413,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
-        assumeFalse("#460 read-only not supported on Windows", OS.isWindows());
+        assumeFalse(OS.isWindows(), "#460 read-only not supported on Windows");
 
         final Path queueFile = Files.list(dataDir).
                 filter(f -> f.getFileName().toString().endsWith(SingleChronicleQueue.SUFFIX)).findFirst().
@@ -445,9 +453,9 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 forEach(msg -> assertThat(msg, not(containsString("hello"))));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
-        basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
+        assertThrows(IllegalArgumentException.class, () -> basicReader().withBasePath(Paths.get("/does/not/exist")).execute());
     }
 
     @Test
@@ -490,9 +498,11 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertTrue(capturedOutput.poll().contains(Long.toHexString(knownIndex)));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
-        basicReader().withStartIndex(1L).execute();
+        assertThrows(IllegalArgumentException.class, () -> {
+            basicReader().withStartIndex(1L).execute();
+        });
     }
 
     @Test
@@ -517,7 +527,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @RequiredForClient
-    @Test(timeout = 20_000)
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 20_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void shouldPrintTimestampsToLocalTime() throws IOException {
         finishedNormally = false;
         final File queueDir = getTmpDir();
@@ -570,10 +581,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 filter(msg -> !msg.startsWith("0x")).count());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void namedTailerRequiresReadWrite() {
         assumeFalse(OS.isWindows());
-        basicReader().withTailerId("tailerId").withReadOnly(true).execute();
+        assertThrows(IllegalArgumentException.class, () -> basicReader().withTailerId("tailerId").withReadOnly(true).execute());
     }
 
     @Test
@@ -622,7 +633,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         for (Long timestamp : timestamps) {
             final String expectedTimestamp = mtlc.asString(timestamp);
             int timestampIndex = output.indexOf(expectedTimestamp);
-            assertTrue(String.format("%s contains %s", output, expectedTimestamp), timestampIndex > 0);
+            assertTrue(timestampIndex > 0, String.format("%s contains %s", output, expectedTimestamp));
             output = output.substring(timestampIndex + expectedTimestamp.length());
         }
     }
@@ -934,7 +945,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
         BackgroundResourceReleaser.releasePendingResources();
 
         // delete the 4th roll cycle
-        assertTrue("Couldn't delete cycle, test is broken", queueDir.toPath().resolve("19700101-000009T.cq4").toFile().delete());
+        assertTrue(queueDir.toPath().resolve("19700101-000009T.cq4").toFile().delete(), "Couldn't delete cycle, test is broken");
 
         // this should be before the start
         long tsToLookFor = getTimestampAtIndex(22); // third index in 3rd roll cycle, should be ({reps=5} * 8) + ({remaining_cycles=1} * ({reps=5} * {entries=10})) = 90 in output
@@ -956,8 +967,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 execute();
 
         capturedOutput.poll();
-        assertEquals("{\"say\":\"hello\"}",
-                capturedOutput.poll().trim());
+        assertEquals("{\"say\":\"hello\"}", capturedOutput.poll().trim());
     }
 
     @Test
@@ -968,8 +978,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 .execute();
 
         capturedOutput.poll();
-        assertEquals("{\"say\":\"hello\"}",
-                capturedOutput.poll().trim());
+        assertEquals("{\"say\":\"hello\"}", capturedOutput.poll().trim());
     }
 
     private void populateQueueWithTimestamps(SingleChronicleQueue queue, int entries, int repeatsPerEntry) {
@@ -1019,7 +1028,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 .withMessageSink(capturedOutput::add);
     }
 
-    @After
+    @AfterEach
     public void clearInterrupt() {
         Thread.interrupted();
     }

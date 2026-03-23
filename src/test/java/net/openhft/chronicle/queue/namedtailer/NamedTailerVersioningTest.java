@@ -12,8 +12,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +23,8 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class NamedTailerVersioningTest extends QueueTestCommon {
 
@@ -55,7 +55,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
     public void verifyBackwardsCompatibility_tailerPositionsAreRetained() throws IOException, URISyntaxException {
-        Assume.assumeFalse("This test must be ignored on hugetlbfs because the test file was generated on a standard linux file system", PageUtil.isHugePage(OS.getTarget()));
+        assumeFalse(PageUtil.isHugePage(OS.getTarget()), "This test must be ignored on hugetlbfs because the test file was generated on a standard linux file system");
 
         // Copy the data from src/test/resources
         Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").toURI());
@@ -183,7 +183,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptTailer tailer = queue.createTailer("replicated:resumer")) {
-            assertTrue("moveToIndex should succeed", tailer.moveToIndex(indexes[2]));
+            assertTrue(tailer.moveToIndex(indexes[2]), "moveToIndex should succeed");
             assertEquals("payload-2", tailer.readText());
         } finally {
             IOTools.deleteDirWithFiles(queuePath);

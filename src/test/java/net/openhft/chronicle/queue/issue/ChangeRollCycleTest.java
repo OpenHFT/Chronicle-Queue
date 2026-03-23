@@ -10,10 +10,9 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test class to verify the behavior of Chronicle Queue when changing Roll Cycles.
@@ -50,7 +49,7 @@ public class ChangeRollCycleTest {
 
             // Verify the queue is initially empty
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse("Queue should be empty initially", dc.isPresent());
+                assertFalse(dc.isPresent(), "Queue should be empty initially");
             }
 
             // Step 2: Reopen the queue with a WEEKLY roll cycle and write data
@@ -73,8 +72,7 @@ public class ChangeRollCycleTest {
                     appender3.writeText("World");
 
                     if (readOnly && !OS.isWindows())
-                        assertEquals("Roll cycle should match WEEKLY for read-only mode",
-                                RollCycles.WEEKLY, q3.rollCycle());
+                        assertEquals(RollCycles.WEEKLY, q3.rollCycle(), "Roll cycle should match WEEKLY for read-only mode");
                 }
 
                 // If the tailer is read-only, the roll cycle cannot not be changed
@@ -82,20 +80,18 @@ public class ChangeRollCycleTest {
                 if (readOnly) return;
 
                 // Step 4: Verify the data can be read back correctly
-                assertEquals("First message should match", "Hello", tailer.readText());
+                assertEquals("Hello", tailer.readText(), "First message should match");
 
                 if (readOnly)
-                    assertEquals("Roll cycle should match WEEKLY for read-only mode",
-                            RollCycles.WEEKLY,
-                            q1.rollCycle());
+                    assertEquals(RollCycles.WEEKLY, q1.rollCycle(), "Roll cycle should match WEEKLY for read-only mode");
 
-                assertEquals("Second message should match", "World", tailer.readText());
+                assertEquals("World", tailer.readText(), "Second message should match");
 
                 assertEquals(q2.rollCycle(), q1.rollCycle());
 
                 // Verify there is no extra data in the queue
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertFalse("No more data should be present in the queue", dc.isPresent());
+                    assertFalse(dc.isPresent(), "No more data should be present in the queue");
                 }
             }
         } finally {

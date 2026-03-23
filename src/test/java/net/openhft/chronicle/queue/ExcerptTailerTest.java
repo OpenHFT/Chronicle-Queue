@@ -4,27 +4,27 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ExcerptTailerTest extends QueueTestCommon {
 
     private ExcerptTailer excerptTailer;
     private ChronicleQueue queue;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         File dir = new File(System.getProperty("java.io.tmpdir"), "queue-test");
         queue = ChronicleQueue.single(dir.getPath());
         excerptTailer = queue.createTailer();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         excerptTailer.close();
         queue.close();

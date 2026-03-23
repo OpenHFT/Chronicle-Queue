@@ -11,13 +11,13 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
 import static java.lang.System.currentTimeMillis;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
 public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
@@ -60,7 +60,7 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
             }
             myIndex = HOURLY.toIndex(++myCycle, 0);
         }
-        Assert.assertEquals(expected, count);
+        assertEquals(expected, count);
     }
 
     private ReadMarshallable read() {

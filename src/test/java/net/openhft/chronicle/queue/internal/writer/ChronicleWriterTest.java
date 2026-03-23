@@ -10,13 +10,13 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleWriterTest extends QueueTestCommon {
     private static final String METHOD_NAME = "doit";
@@ -32,7 +32,9 @@ public class ChronicleWriterTest extends QueueTestCommon {
         dir = IOTools.createTempFile(this.getClass().getSimpleName());
     }
 
-    @Test(timeout = 5000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void testWireMarshallingMapAndDTO() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(null, cw1, cw2);
         chronicleWriter.execute();
@@ -40,10 +42,10 @@ public class ChronicleWriterTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
             StringBuilder sb = new StringBuilder();
             @NotNull MethodReader mr = queue.createTailer().methodReader(Mocker.intercepting(MyInterface.class, "*", sb::append));
-            Assert.assertTrue(mr.readOne());
-            Assert.assertTrue(mr.readOne());
-            Assert.assertFalse(mr.readOne());
-            Assert.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
+            assertTrue(mr.readOne());
+            assertTrue(mr.readOne());
+            assertFalse(mr.readOne());
+            assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
                     "  age: 19,\n" +
                     "  name: Henry\n" +
                     "}\n" +
@@ -57,7 +59,9 @@ public class ChronicleWriterTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void testWireMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface.class.getTypeName(), cw2);
         chronicleWriter.execute();
@@ -65,9 +69,9 @@ public class ChronicleWriterTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
             StringBuilder sb = new StringBuilder();
             @NotNull MethodReader mr = queue.createTailer().methodReader(Mocker.intercepting(MyInterface.class, "*", sb::append));
-            Assert.assertTrue(mr.readOne());
-            Assert.assertFalse(mr.readOne());
-            Assert.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
+            assertTrue(mr.readOne());
+            assertFalse(mr.readOne());
+            assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO {\n" +
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +
@@ -77,7 +81,9 @@ public class ChronicleWriterTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void testBytesMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface2.class.getTypeName(), cw3);
         chronicleWriter.execute();
@@ -85,9 +91,9 @@ public class ChronicleWriterTest extends QueueTestCommon {
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build()) {
             StringBuilder sb = new StringBuilder();
             @NotNull MethodReader mr = queue.createTailer().methodReader(Mocker.intercepting(MyInterface2.class, "*", sb::append));
-            Assert.assertTrue(mr.readOne());
-            Assert.assertFalse(mr.readOne());
-            Assert.assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO2 {\n" +
+            assertTrue(mr.readOne());
+            assertFalse(mr.readOne());
+            assertEquals("*doit[!net.openhft.chronicle.queue.internal.writer.ChronicleWriterTest$DTO2 {\n" +
                     "  age: 42,\n" +
                     "  name: Percy\n" +
                     "}\n" +

@@ -11,16 +11,14 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.File;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
 public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
@@ -29,13 +27,14 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     private static final long INTERVAL_US = 10;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Ignore("long running test")
-    @Test(timeout = 60000)
+    @Disabled("long running test")
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 60000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void testUnbuffered() throws InterruptedException {
         doTest(false, 50_000);
     }
@@ -161,7 +160,6 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     }
 
     private static void assumeBufferingAvailable() {
-        assumeTrue("BufferMode.Asynchronous requires Chronicle Queue Enterprise",
-                SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
+        assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable(), "BufferMode.Asynchronous requires Chronicle Queue Enterprise");
     }
 }

@@ -8,12 +8,12 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.reader.ChronicleReader;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleReaderMainCliTest extends QueueTestCommon {
 
@@ -35,21 +35,25 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         }
 
         final String out = capture.toString();
-        assertTrue("Expected output to contain written text", out.contains("hello"));
+        assertTrue(out.contains("hello"), "Expected output to contain written text");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void invalidContentBasedLimiterClassThrows() {
-        final java.io.File dir = getTmpDir();
-        ChronicleReaderMain main = new ChronicleReaderMain();
-        main.run(new String[]{"-d", dir.getAbsolutePath(), "-cbl", "not.a.RealClass"});
+        assertThrows(IllegalArgumentException.class, () -> {
+            final java.io.File dir = getTmpDir();
+            ChronicleReaderMain main = new ChronicleReaderMain();
+            main.run(new String[]{"-d", dir.getAbsolutePath(), "-cbl", "not.a.RealClass"});
+        });
     }
 
-    @Test(expected = ClassNotFoundException.class)
+    @Test
     public void invalidBinarySearchComparatorClassThrows() {
-        final java.io.File dir = getTmpDir();
-        ChronicleReaderMain main = new ChronicleReaderMain();
-        main.run(new String[]{"-d", dir.getAbsolutePath(), "-b", "not.a.RealClass"});
+        assertThrows(ClassNotFoundException.class, () -> {
+            final java.io.File dir = getTmpDir();
+            ChronicleReaderMain main = new ChronicleReaderMain();
+            main.run(new String[]{"-d", dir.getAbsolutePath(), "-b", "not.a.RealClass"});
+        });
     }
 
     @Test
@@ -79,7 +83,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
         final String out = capture.toString();
         assertTrue(out.contains("second"));
         assertTrue(out.contains("third"));
-        assertTrue("Start index should skip earlier entries", !out.contains("first"));
+        assertTrue(!out.contains("first"), "Start index should skip earlier entries");
     }
 
     @Test

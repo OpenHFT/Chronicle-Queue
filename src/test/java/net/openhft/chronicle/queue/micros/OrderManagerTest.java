@@ -13,19 +13,19 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class OrderManagerTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -215,13 +215,13 @@ public class OrderManagerTest extends QueueTestCommon {
 
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer("test");
-                    assertEquals("tailer.index()=" + Long.toHexString(tailer.index()), i, in.rollCycle().toSequenceNumber(tailer.index()));
+                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()), "tailer.index()=" + Long.toHexString(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 
                     // System.out.println("#### IN\n" + in.dump());
                     // System.out.println("#### OUT:\n" + out.dump());
-                    assertTrue("i: " + i, reader.readOne());
+                    assertTrue(reader.readOne(), "i: " + i);
                 }
             }
         } finally {

@@ -8,8 +8,8 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
@@ -17,19 +17,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ThreadedQueueTest extends QueueTestCommon {
 
     private static final int REQUIRED_COUNT = 10;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Test(timeout = 10000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 10000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
         final File path = getTmpDir();

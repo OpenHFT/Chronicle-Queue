@@ -12,15 +12,14 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
 public class LastAcknowledgedTest extends QueueTestCommon {
@@ -78,19 +77,19 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             ExcerptAppender appender = queue.createAppender();
 
             ExcerptTailer tailer = queue.createTailer();
-            Assert.assertFalse(tailer.readAfterReplicaAcknowledged());
+            assertFalse(tailer.readAfterReplicaAcknowledged());
 
             // Set up the tailer to use a custom acknowledged index replicated check
             tailer.acknowledgedIndexReplicatedCheck((index, lastSequenceAck) -> index <= lastSequenceAck);
-            Assert.assertTrue(tailer.readAfterReplicaAcknowledged());
+            assertTrue(tailer.readAfterReplicaAcknowledged());
 
             // tolerateNumberOfUnAckedMessages
             {
                 appender.writeText("hello1");
-                Assert.assertEquals(null, tailer.readText());
+                assertEquals(null, tailer.readText());
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
-                Assert.assertEquals("hello1", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertEquals("hello1", tailer.readText());
+                assertEquals(null, tailer.readText());
             }
 
             // tolerateNumberOfUnAckedMessages = 1
@@ -100,9 +99,9 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 appender.writeText("hello2");
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
                 appender.writeText("hello3");
-                Assert.assertEquals("hello2", tailer.readText());
-                Assert.assertEquals("hello3", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertEquals("hello2", tailer.readText());
+                assertEquals("hello3", tailer.readText());
+                assertEquals(null, tailer.readText());
             }
 
             // tolerateNumberOfUnAckedMessages = 2
@@ -113,10 +112,10 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
                 appender.writeText("hello5");
                 appender.writeText("hello6");
-                Assert.assertEquals("hello4", tailer.readText());
-                Assert.assertEquals("hello5", tailer.readText());
-                Assert.assertEquals("hello6", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertEquals("hello4", tailer.readText());
+                assertEquals("hello5", tailer.readText());
+                assertEquals("hello6", tailer.readText());
+                assertEquals(null, tailer.readText());
             }
         }
     }
@@ -145,22 +144,22 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             ExcerptAppender appender = queue.createAppender();
             timeProvider.set(1);
             ExcerptTailer tailer = queue.createTailer();
-            Assert.assertFalse(tailer.readAfterReplicaAcknowledged());
+            assertFalse(tailer.readAfterReplicaAcknowledged());
 
             // Set up the tailer to use a custom acknowledged index replicated check
             tailer.acknowledgedIndexReplicatedCheck((index, lastSequenceAck) -> index <= lastSequenceAck);
-            Assert.assertTrue(tailer.readAfterReplicaAcknowledged());
+            assertTrue(tailer.readAfterReplicaAcknowledged());
 
             timeProvider.set(1);
             // tolerateNumberOfUnAckedMessages
             {
                 appender.writeText("hello1");
                 appender.writeText("hello2");
-                Assert.assertEquals(null, tailer.readText());
+                assertEquals(null, tailer.readText());
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
-                Assert.assertEquals("hello1", tailer.readText());
-                Assert.assertEquals("hello2", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertEquals("hello1", tailer.readText());
+                assertEquals("hello2", tailer.readText());
+                assertEquals(null, tailer.readText());
             }
 
             timeProvider.set(2);
@@ -171,8 +170,8 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             // causing the roll
             timeProvider.set(1002);
 
-            Assert.assertEquals("hello3", tailer.readText());
-            Assert.assertEquals(null, tailer.readText());
+            assertEquals("hello3", tailer.readText());
+            assertEquals(null, tailer.readText());
         }
     }
 }

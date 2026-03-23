@@ -15,8 +15,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ReaderResizesFileTest {
     private static final File QUEUE_DIR = new File(OS.getTarget(), "ReaderResizesFileTest-" + System.nanoTime());
 
-    @After
+    @AfterEach
     public void cleanup() {
         IOTools.deleteDirWithFiles(QUEUE_DIR);
     }

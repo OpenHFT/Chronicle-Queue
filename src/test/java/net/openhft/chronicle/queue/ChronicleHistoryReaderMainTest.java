@@ -7,17 +7,15 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.nio.file.Path;
 import java.security.Permission;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReaderMainTest {
@@ -34,14 +32,14 @@ public class ChronicleHistoryReaderMainTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         // SecurityManager is effectively disabled from JDK 17 onwards
         assumeTrue(Jvm.majorVersion() < 17);
         System.setSecurityManager(new NoExitSecurityManager());
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         System.setSecurityManager(null);
     }

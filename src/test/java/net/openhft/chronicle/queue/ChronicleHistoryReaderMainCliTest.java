@@ -6,7 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
 

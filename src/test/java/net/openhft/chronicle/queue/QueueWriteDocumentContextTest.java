@@ -12,13 +12,12 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.WriteDocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class QueueWriteDocumentContextTest extends QueueTestCommon {
 
@@ -47,7 +46,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         String s = "/nestedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
-            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
+            assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
             writeThreeKeys(appender);
             assertEquals("" +
                     "--- !!meta-data #binary\n" +
@@ -127,7 +126,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
         String s = "/chainedPlainText";
         try (ChronicleQueue cq = createQueue(s);
              final ExcerptAppender appender = cq.createAppender()) {
-            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
+            assumeFalse(PageUtil.isHugePage(cq.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
             writeThreeChainedKeys(appender);
             assertEquals("" +
                             "--- !!meta-data #binary\n" +
@@ -198,8 +197,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
                             "key: 1\n" +
                             "key: 2\n" +
                             "...\n" +
-                            "# 130644 bytes remaining\n",
-                    cq.dump());
+                            "# 130644 bytes remaining\n", cq.dump());
         }
     }
 

@@ -7,10 +7,10 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * To avoid the arg[] array created via the methodWriter java.lang.reflect.Proxy, this test shows how you can create a custom proxy
@@ -51,7 +51,7 @@ public class ProxyTest extends QueueTestCommon {
                 methodReader.readOne();
             }
         }
-        Assert.assertEquals("!net.openhft.chronicle.queue.ProxyTest$Message {\n" +
+        assertEquals("!net.openhft.chronicle.queue.ProxyTest$Message {\n" +
                 "  message: test 0\n" +
                 "}\n" +
                 "!net.openhft.chronicle.queue.ProxyTest$Message {\n" +

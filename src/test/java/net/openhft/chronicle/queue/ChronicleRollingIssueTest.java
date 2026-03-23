@@ -10,9 +10,9 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,13 +28,13 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
     private String path;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
         path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         IOTools.deleteDirWithFiles(path);
     }

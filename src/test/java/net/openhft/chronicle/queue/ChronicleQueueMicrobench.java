@@ -12,7 +12,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
 
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Idea borrowed from Netty - https://github.com/netty/netty - microbench/src/main/java/io/netty/microbench/util/AbstractMicrobenchmarkBase.java

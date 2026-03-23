@@ -6,11 +6,10 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST8_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ToEndPaddingTest extends QueueTestCommon {
     @Test

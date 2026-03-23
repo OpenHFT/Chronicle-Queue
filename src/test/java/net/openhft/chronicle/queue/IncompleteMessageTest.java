@@ -7,18 +7,17 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class IncompleteMessageTest extends QueueTestCommon {
-    @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
+    @TempDir
+    Path tmpDir;
 
     @Test
     public void incompleteMessageShouldBeSkipped() {
@@ -52,6 +51,6 @@ public class IncompleteMessageTest extends QueueTestCommon {
     }
 
     private SingleChronicleQueue createQueue() {
-        return SingleChronicleQueueBuilder.binary(tmpDir.getRoot()).timeoutMS(250).build();
+        return SingleChronicleQueueBuilder.binary(tmpDir.toFile()).timeoutMS(250).build();
     }
 }

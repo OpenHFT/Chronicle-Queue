@@ -15,13 +15,12 @@ import net.openhft.chronicle.values.Array;
 import net.openhft.chronicle.values.MaxUtf8Length;
 import net.openhft.chronicle.values.Values;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class SingleChroniclePerfMainTest extends QueueTestCommon {

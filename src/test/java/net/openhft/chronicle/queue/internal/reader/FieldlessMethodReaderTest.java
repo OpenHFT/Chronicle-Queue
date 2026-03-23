@@ -11,10 +11,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.Arrays;
@@ -24,18 +22,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.*;
+
 public class FieldlessMethodReaderTest extends QueueTestCommon {
 
-    private final CustomEnumType enumType;
-    private final AtomicInteger msgCounter = new AtomicInteger();
-
-    public FieldlessMethodReaderTest(CustomEnumType enumType) {
-        this.enumType = enumType;
-    }
-
-    @Test
-    public void test() throws InterruptedException {
+    @ParameterizedTest
+    @MethodSource("enums")
+    public void test(CustomEnumType enumType) throws InterruptedException {
+        final AtomicInteger msgCounter = new AtomicInteger();
         File path = new File(getTmpDir(), "enum_test_" + enumType);
 
         try (SingleChronicleQueue chronicle = SingleChronicleQueueBuilder.builder().path(path)
@@ -49,13 +43,12 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
             //noinspection StatementWithEmptyBody
             while (methodReader.readOne()) {
             }
-            Assert.assertEquals(2, msgCounter.get());
+            assertEquals(2, msgCounter.get());
         } finally {
             IOTools.deleteDirWithFilesOrWait(1000, path);
         }
     }
 
-    @Parameterized.Parameters
     public static Collection<CustomEnumType> enums() {
         return Stream.concat(Stream.of((CustomEnumType) null), Arrays.stream(CustomEnumType.values()))
                 .collect(Collectors.toList());

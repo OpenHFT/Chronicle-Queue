@@ -14,15 +14,14 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
@@ -51,9 +50,9 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         MessageHistory.set(mh);
 
         int extraTiming = 1;
-        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
-        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
-        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
+        File queuePath1 = IOTools.createTempFile(testMethodName + "1-");
+        File queuePath2 = IOTools.createTempFile(testMethodName + "2-");
+        File queuePath3 = IOTools.createTempFile(testMethodName + "3-");
         try {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out
@@ -71,15 +70,15 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 DummyListenerId dummy = msg -> {
                     numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
-                    Assert.assertEquals(1, history.sources());
+                    assertEquals(1, history.sources());
                     // written 1st then received by me
-                    Assert.assertEquals(1 + extraTiming, history.timings());
+                    assertEquals(1 + extraTiming, history.timings());
                     // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
                 assertTrue(reader.readOne());
-                assertEquals("check routed to correct dest", 1, numberRead.get());
+                assertEquals(1, numberRead.get(), "check routed to correct dest");
                 assertFalse(reader.readOne());
             }
 
@@ -91,14 +90,14 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 DummyListenerId dummy = msg -> {
                     numberRead.incrementAndGet();
                     MessageHistory history = MessageHistory.get();
-                    Assert.assertEquals(2, history.sources());
-                    Assert.assertEquals(3 + extraTiming, history.timings());
+                    assertEquals(2, history.sources());
+                    assertEquals(3 + extraTiming, history.timings());
                     // this writes 2 more timestamps
                     writer.say(msg);
                 };
                 MethodReader reader = in.createTailer().methodReader(dummy);
                 assertTrue(reader.readOne());
-                assertEquals("check routed to correct dest", 1, numberRead.get());
+                assertEquals(1, numberRead.get(), "check routed to correct dest");
                 assertFalse(reader.readOne());
             }
 
@@ -109,8 +108,8 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 Map<String, Histogram> histos = chronicleHistoryReader.readChronicle();
                 chronicleHistoryReader.outputData();
 
-                Assert.assertEquals(5, histos.size());
-                Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
+                assertEquals(5, histos.size());
+                assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
             }
         } finally {
             IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
@@ -203,9 +202,9 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         mh.addSourceDetails(true);
         MessageHistory.set(mh);
 
-        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
-        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
-        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
+        File queuePath1 = IOTools.createTempFile(testMethodName + "1-");
+        File queuePath2 = IOTools.createTempFile(testMethodName + "2-");
+        File queuePath3 = IOTools.createTempFile(testMethodName + "3-");
         try {
             StringBuilder sb = new StringBuilder();
             try (ChronicleQueue q1 = queue(queuePath1, 1);
@@ -235,7 +234,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                     chronicleHistoryReader.withStartIndex(startIndexOffset + q3.firstIndex());
                 chronicleHistoryReader.readChronicle();
                 chronicleHistoryReader.outputData();
-                Assert.assertEquals(output, sb.toString());
+                assertEquals(output, sb.toString());
 
                 writer1.say("again");
                 assertTrue(reader1.readOne());
@@ -246,19 +245,17 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 sb.setLength(0);
                 chronicleHistoryReader.readChronicle();
                 chronicleHistoryReader.outputData();
-                Assert.assertEquals("re-reading should only show new data",
-                        "Timings below in MICROSECONDS\n" +
-                                "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
-                                "count:                     1            1            1            1            1 \n" +
-                                "50:                        9           19            9           19           60 \n" +
-                                "90:                        9           19            9           19           60 \n" +
-                                "99:                        9           19            9           19           60 \n" +
-                                "99.9:                                                                            \n" +
-                                "99.99:                                                                           \n" +
-                                "99.999:                                                                          \n" +
-                                "99.9999:                                                                         \n" +
-                                "worst:                     9           19            9           19           60 \n",
-                        sb.toString());
+                assertEquals("Timings below in MICROSECONDS\n" +
+                        "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
+                        "count:                     1            1            1            1            1 \n" +
+                        "50:                        9           19            9           19           60 \n" +
+                        "90:                        9           19            9           19           60 \n" +
+                        "99:                        9           19            9           19           60 \n" +
+                        "99.9:                                                                            \n" +
+                        "99.99:                                                                           \n" +
+                        "99.999:                                                                          \n" +
+                        "99.9999:                                                                         \n" +
+                        "worst:                     9           19            9           19           60 \n", sb.toString(), "re-reading should only show new data");
             }
         } finally {
             IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());

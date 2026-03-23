@@ -4,12 +4,12 @@
 package net.openhft.chronicle.queue.internal.domestic;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.LocalTime;
 import java.time.ZoneId;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class QueueOffsetSpecTest {
 
@@ -42,9 +42,11 @@ public class QueueOffsetSpecTest {
         assertEquals("NONE", QueueOffsetSpec.formatNone());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void parseWithTooFewTokensThrows() {
-        QueueOffsetSpec.parse("ROLL_TIME;12:00");
+        assertThrows(IllegalArgumentException.class, () -> {
+            QueueOffsetSpec.parse("ROLL_TIME;12:00");
+        });
     }
 
     @Test
@@ -67,14 +69,18 @@ public class QueueOffsetSpecTest {
         assertEquals("NONE;", builder.queueOffsetSpec().format());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void parseUnknownTypeThrows() {
-        QueueOffsetSpec.parse("INVALID;foo");
+        assertThrows(IllegalArgumentException.class, () -> {
+            QueueOffsetSpec.parse("INVALID;foo");
+        });
     }
 
-    @Test(expected = java.time.DateTimeException.class)
+    @Test
     public void parseRollTimeWithInvalidZoneFailsValidation() {
-        QueueOffsetSpec spec = QueueOffsetSpec.parse("ROLL_TIME;12:00;Invalid/Zone");
-        spec.validate();
+        assertThrows(java.time.DateTimeException.class, () -> {
+            QueueOffsetSpec spec = QueueOffsetSpec.parse("ROLL_TIME;12:00;Invalid/Zone");
+            spec.validate();
+        });
     }
 }

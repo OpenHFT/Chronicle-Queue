@@ -14,16 +14,14 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.nio.file.Paths;
 import java.util.Random;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
 public class TailerCloseInParallelTest extends QueueTestCommon {
@@ -39,12 +37,12 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
     private static Random random = new Random();
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanup() {
         IOTools.deleteDirWithFiles(file, 3);
     }

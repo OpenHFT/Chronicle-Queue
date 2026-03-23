@@ -8,19 +8,19 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class ChunkCountTest extends QueueTestCommon {
     @Test
     public void chunks() {
         File tempFile = IOTools.createTempFile("chunks");
-        Assume.assumeFalse("Ignored on hugetlbfs as chunk count will vary under huge pages", PageUtil.isHugePage(tempFile.getAbsolutePath()));
+        assumeFalse(PageUtil.isHugePage(tempFile.getAbsolutePath()), "Ignored on hugetlbfs as chunk count will vary under huge pages");
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder
                 .binary(tempFile)
                 .testBlockSize()
@@ -39,7 +39,7 @@ public class ChunkCountTest extends QueueTestCommon {
                 }
                 final long expected = 1 + (pos >> 18);
 
-                assertEquals("i: " + i, expected, queue.chunkCount());
+                assertEquals(expected, queue.chunkCount(), "i: " + i);
             }
         } finally {
             IOTools.deleteDirWithFiles(tempFile);

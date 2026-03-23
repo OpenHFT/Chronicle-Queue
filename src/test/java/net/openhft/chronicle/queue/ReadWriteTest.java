@@ -9,9 +9,7 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,9 +17,8 @@ import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
 public class ReadWriteTest extends QueueTestCommon {
@@ -29,7 +26,12 @@ public class ReadWriteTest extends QueueTestCommon {
     private static final String STR1 = "hello", STR2 = "hey";
     private File chroniclePath;
 
-    @Before
+    @BeforeEach
+    public void beforeEachReadWriteTest() {
+        setup();
+        threadDump();
+    }
+
     public void setup() {
         chroniclePath = getTmpDir();
         try (ChronicleQueue readWrite = ChronicleQueue.singleBuilder(chroniclePath)
@@ -48,13 +50,12 @@ public class ReadWriteTest extends QueueTestCommon {
      * Some flakiness with this test in build server due to background resources not released, we will revisit shortly
      * to deliver proper fix.
      */
-    @After
+    @AfterEach
     public void forceCleanupToDeFlakeTests() {
         BackgroundResourceReleaser.releasePendingResources();
     }
 
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
@@ -128,7 +129,7 @@ public class ReadWriteTest extends QueueTestCommon {
                     .binary(chroniclePath)
                     .testBlockSize()
                     .build()) {
-                assumeNotNull(out);
+                assumeTrue(out != null);
                 // Do nothing, just create
             }
         }).start();
@@ -142,8 +143,7 @@ public class ReadWriteTest extends QueueTestCommon {
                 .readOnly(true)
                 .build()) {
 
-            assertTrue("Should have waited for more than 200ms. Actual wait: " + (System.currentTimeMillis() - startTimeMillis.get()) + " ms",
-                    System.currentTimeMillis() - startTimeMillis.get() >= 200);
+            assertTrue(System.currentTimeMillis() - startTimeMillis.get() >= 200, "Should have waited for more than 200ms. Actual wait: " + (System.currentTimeMillis() - startTimeMillis.get()) + " ms");
 
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
@@ -153,27 +153,29 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     // Can't append to a read-only chronicle
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testWriteToReadOnlyChronicle() {
-        if (OS.isWindows()) {
-            System.err.println("#460 Cannot test read only mode on windows");
-            throw new IllegalStateException("not run");
-        }
+        assertThrows(IllegalStateException.class, () -> {
+            if (OS.isWindows()) {
+                System.err.println("#460 Cannot test read only mode on windows");
+                throw new IllegalStateException("not run");
+            }
 
-        try (ChronicleQueue out = SingleChronicleQueueBuilder
-                .binary(chroniclePath)
-                .testBlockSize()
-                .readOnly(true)
-                .build();
-             final ExcerptAppender appender = out.createAppender()) {
-            assumeNotNull(appender);
-            // Do nothing
-        }
+            try (ChronicleQueue out = SingleChronicleQueueBuilder
+                    .binary(chroniclePath)
+                    .testBlockSize()
+                    .readOnly(true)
+                    .build();
+                 final ExcerptAppender appender = out.createAppender()) {
+                assumeTrue(appender != null);
+                // Do nothing
+            }
+        });
     }
 
     @Test
     public void testToEndOnReadOnly() {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)

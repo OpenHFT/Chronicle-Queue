@@ -4,12 +4,11 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for ExcerptCommon interface implementations.

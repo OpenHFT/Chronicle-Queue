@@ -13,8 +13,8 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,8 +33,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.lang.Long.toHexString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @SuppressWarnings("this-escape")
 public class TestDeleteQueueFile extends QueueTestCommon {
@@ -92,7 +92,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
+    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
     public void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
@@ -143,7 +143,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
+    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
     public void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());

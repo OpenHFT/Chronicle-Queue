@@ -13,16 +13,15 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
 public class WriteBytesTest extends QueueTestCommon {
@@ -68,7 +67,7 @@ public class WriteBytesTest extends QueueTestCommon {
     @Test
     public void testWriteBytesAndDump() {
         File dir = getTmpDir();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(dir.getAbsolutePath()));
+        assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         final SingleChronicleQueueBuilder builder = binary(dir)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .rollCycle(TEST4_DAILY)
@@ -1070,7 +1069,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     directPayload.readPositionRemaining(0, directPayload.writePosition());
                     appender.writeBytes(directPayload);
 
-                    assertTrue("entry " + i + " should be readable", tailer.readBytes(readBuffer));
+                    assertTrue(tailer.readBytes(readBuffer), "entry " + i + " should be readable");
                     assertEquals("direct-entry-" + i, readBuffer.readUtf8());
                     readBuffer.clear();
                 }
@@ -1115,7 +1114,7 @@ public class WriteBytesTest extends QueueTestCommon {
                 postRollCapacity = bytes.bytesStore().capacity();
                 bytes.writeUtf8("cycle-2");
             }
-            assertEquals("Wire buffer capacity should remain stable across rolls", initialCapacity, postRollCapacity);
+            assertEquals(initialCapacity, postRollCapacity, "Wire buffer capacity should remain stable across rolls");
             assertNextUtf8(tailer, "cycle-2");
         } finally {
             try {
@@ -1128,7 +1127,7 @@ public class WriteBytesTest extends QueueTestCommon {
 
     private static void assertNextUtf8(ExcerptTailer tailer, String expected) {
         try (DocumentContext dc = tailer.readingDocument()) {
-            assertTrue("Document should be present for " + expected, dc.isPresent());
+            assertTrue(dc.isPresent(), "Document should be present for " + expected);
             assertEquals(expected, dc.wire().bytes().readUtf8());
         }
     }

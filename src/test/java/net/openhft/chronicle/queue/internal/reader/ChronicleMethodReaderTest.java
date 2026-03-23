@@ -15,10 +15,7 @@ import net.openhft.chronicle.wire.BytesInBinaryMarshallable;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,15 +27,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
 
-    @Before
+    @BeforeEach
     public void before() {
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
@@ -79,7 +76,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     @NotNull
     private ChronicleReader basicReader(Path path) {
         if (OS.isWindows())
-            if (!testName.getMethodName().startsWith("shouldThrowExceptionIfInputDirectoryDoesNotExist"))
+            if (!testMethodName.startsWith("shouldThrowExceptionIfInputDirectoryDoesNotExist"))
                 expectException("Read-only mode is not supported on Windows");
 
         return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
@@ -118,7 +115,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Test
     public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
-        assumeFalse("#460 read-only not supported on Windows", OS.isWindows());
+        assumeFalse(OS.isWindows(), "#460 read-only not supported on Windows");
         final Path queueFile = Files.list(dataDir).
                 filter(f -> f.getFileName().toString().endsWith(SingleChronicleQueue.SUFFIX)).findFirst().
                 orElseThrow(() ->
@@ -186,9 +183,9 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
                 forEach(msg -> assertThat(msg, not(containsString("hello"))));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
-        basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
+        assertThrows(IllegalArgumentException.class, () -> basicReader().withBasePath(Paths.get("/does/not/exist")).execute());
     }
 
     @Test
@@ -204,7 +201,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
+    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
         basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
@@ -216,24 +213,22 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReaderMethodReader().historyRecords(5).execute();
 
-        assertEquals(5,
-                capturedOutput.stream()
-                        .filter(msg -> !msg.startsWith("0x")).count());
+        assertEquals(5, capturedOutput.stream()
+                .filter(msg -> !msg.startsWith("0x")).count());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
-        basicReader().withStartIndex(1L).execute();
+        assertThrows(IllegalArgumentException.class, () -> basicReader().withStartIndex(1L).execute());
     }
 
     @Test
     public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
-        assertEquals(24,
-                capturedOutput.stream()
-                        .filter(msg -> !msg.startsWith("0x"))
-                        .count());
+        assertEquals(24, capturedOutput.stream()
+                .filter(msg -> !msg.startsWith("0x"))
+                .count());
     }
 
     private ChronicleReader basicReader() {
@@ -244,7 +239,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         return basicReaderMethodReader(dataDir);
     }
 
-    @After
+    @AfterEach
     public void clearInterrupt() {
         Thread.interrupted();
     }

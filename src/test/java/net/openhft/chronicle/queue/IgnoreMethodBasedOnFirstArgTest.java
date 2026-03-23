@@ -7,9 +7,9 @@ import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MethodFilterOnFirstArg;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class IgnoreMethodBasedOnFirstArgTest extends QueueTestCommon {
 

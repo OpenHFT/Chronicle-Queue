@@ -10,7 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.queue.main.RemovableRollFileCandidatesMain;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -18,8 +18,8 @@ import java.io.PrintStream;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class InternalRemovableRollFileCandidatesMainTest extends QueueTestCommon {
 
@@ -31,7 +31,7 @@ public class InternalRemovableRollFileCandidatesMainTest extends QueueTestCommon
 
         final String output = invokeMain(InternalRemovableRollFileCandidatesMain::main, dir.getAbsolutePath());
 
-        assertFalse("Expected removable candidates to be printed", output.trim().isEmpty());
+        assertFalse(output.trim().isEmpty(), "Expected removable candidates to be printed");
         assertTrue(output.contains(dir.getAbsolutePath()));
     }
 

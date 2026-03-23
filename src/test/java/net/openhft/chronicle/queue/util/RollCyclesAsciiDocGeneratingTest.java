@@ -8,10 +8,10 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.RollCyclesTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
     /**

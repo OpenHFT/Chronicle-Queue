@@ -7,15 +7,13 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WireType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DumpMainTest extends QueueTestCommon {
 
@@ -37,9 +35,9 @@ public class DumpMainTest extends QueueTestCommon {
         DumpMain.dump(dir, out, Long.MAX_VALUE);
         final String dump = baos.toString();
 
-        assertFalse("Dump should not be empty", dump.trim().isEmpty());
-        assertTrue("Should include header with file path", dump.contains("## "));
-        assertTrue("Should include first message", dump.contains("hello"));
-        assertTrue("Should include second message", dump.contains("world"));
+        assertFalse(dump.trim().isEmpty(), "Dump should not be empty");
+        assertTrue(dump.contains("## "), "Should include header with file path");
+        assertTrue(dump.contains("hello"), "Should include first message");
+        assertTrue(dump.contains("world"), "Should include second message");
     }
 }

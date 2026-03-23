@@ -10,8 +10,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,7 +24,7 @@ import java.util.stream.IntStream;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ChronicleQueueIndexTest extends QueueTestCommon {
 
@@ -67,7 +66,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
             writer1.accept(appender);
 
-            Assert.assertFalse(hasEOFAtEndOfFile(file1));
+            assertFalse(hasEOFAtEndOfFile(file1));
         }
 
         tpConsumer.accept(tp, rollCycle);
@@ -142,7 +141,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     results.add(forRead.to8bitString());
                     forRead.clear();
                 }
-                assertTrue(results.toString(), results.contains("Hello World 1"));
+                assertTrue(results.contains("Hello World 1"), results.toString());
                 assertTrue(results.contains("Hello World 2"));
                 // The reader fails to read the third message. The reason for this is
                 // that there was no EOF marker placed at end of the 18264 indexed file
@@ -228,7 +227,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 dc.wire().write("a").text("hello");
             }
             try (DocumentContext dc = tailer.readingDocument(metadata)) {
-                Assert.assertTrue(dc.isPresent());
+                assertTrue(dc.isPresent());
             }
         }
     }

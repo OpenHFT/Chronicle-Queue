@@ -5,28 +5,28 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    Path temporaryFolder;
 
     private File dataDir;
     private SetTimeProvider timeProvider;
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
-        this.dataDir = temporaryFolder.newFolder();
+        this.dataDir = Files.createTempDirectory(temporaryFolder, "queue").toFile();
         this.timeProvider = new SetTimeProvider();
     }
 

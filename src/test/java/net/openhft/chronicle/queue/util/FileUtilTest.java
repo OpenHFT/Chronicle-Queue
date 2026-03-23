@@ -14,15 +14,18 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
@@ -31,18 +34,22 @@ import static java.util.stream.Collectors.toList;
 import static net.openhft.chronicle.queue.internal.util.InternalFileUtil.getAllOpenFilesIsSupportedOnOS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class FileUtilTest extends QueueTestCommon {
 
-    @Test(timeout = 30_000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void stateNonExisting() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
 
-    @Test(timeout = 30_000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void state() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
@@ -73,29 +80,35 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
+    @Test
     public void stateWindows() {
         assumeTrue(OS.isWindows());
 
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
 
-        FileUtil.state(new File("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> FileUtil.state(new File("foo")));
     }
 
-    @Test(timeout = 30_000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void hasQueueSuffixFalse() {
         final File file = new File("foo");
         assertFalse(FileUtil.hasQueueSuffix(file));
     }
 
-    @Test(timeout = 30_000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
         assertTrue(FileUtil.hasQueueSuffix(file));
     }
 
-    @Test(timeout = 30_000)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void removableQueueFileCandidates() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;
@@ -157,12 +170,12 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
+    @Test
     public void removableQueueFileCandidatesWindows() {
         assumeTrue(OS.isWindows());
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
-        FileUtil.removableRollFileCandidates(new File("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> FileUtil.removableRollFileCandidates(new File("foo")));
     }
 
     private <T> void assertSorted(List<T> list, Comparator<T> comparator) {

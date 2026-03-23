@@ -9,13 +9,13 @@ import net.openhft.chronicle.core.util.Mocker;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.StringWriter;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StridingAQueueTest extends QueueTestCommon {
     @Test
@@ -59,8 +59,7 @@ public class StridingAQueueTest extends QueueTestCommon {
                             "hi[2, 5]\n" +
                             "hi[2, 1]\n" +
                             "hi[1, 4]\n" +
-                            "hi[1, 0]\n",
-                    sw.toString().replace("\r", ""));
+                            "hi[1, 0]\n", sw.toString().replace("\r", ""));
         }
     }
 

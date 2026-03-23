@@ -3,15 +3,15 @@
  */
 package net.openhft.chronicle.queue;
 
-import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.apache.commons.cli.Options;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for ChronicleReaderMain class.
@@ -39,7 +39,7 @@ public class ChronicleReaderMainTest extends QueueTestCommon {
 
                 ChronicleReaderMain.main(args);  // Run the main method with valid args
 
-                assertTrue("Expected valid arguments to run without issues.", true);
+                assertTrue(true, "Expected valid arguments to run without issues.");
             } finally {
                 // Reset System.out and System.err
                 System.setOut(originalOut);

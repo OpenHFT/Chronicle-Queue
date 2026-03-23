@@ -12,20 +12,19 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class MethodReaderObjectReuseTest extends QueueTestCommon {
-    @Before
+    @BeforeEach
     public void resetCounters() {
         PingDTO.constructionCounter = 0;
         PingDTO.constructionExpected = 0;
@@ -38,7 +37,6 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
             PingDTO.constructionExpected++;
             PingDTO pdtio = new PingDTO();
-            PingDTO.constructionExpected++;
             Pinger pinger = cq.methodWriter(Pinger.class);
             for (int i = 0; i < 5; i++) {
                 pinger.ping(pdtio);

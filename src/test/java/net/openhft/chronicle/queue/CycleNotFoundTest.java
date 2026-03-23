@@ -7,9 +7,8 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,7 +17,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
 public class CycleNotFoundTest extends QueueTestCommon {
@@ -29,12 +28,14 @@ public class CycleNotFoundTest extends QueueTestCommon {
     // reduced so that it runs quicker for the continuous integration (CI)
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
-    @Test(timeout = 50_000L)
+    @Test
+
+    @org.junit.jupiter.api.Timeout(value = 50_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
     public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
         File path = getTmpDir();  // added nano time just to make
 
@@ -60,19 +61,19 @@ public class CycleNotFoundTest extends QueueTestCommon {
                         if (!dc.isPresent())
                             continue;
 
-                        Assert.assertTrue(dc.isData());
-                        Assert.assertEquals(last + 1, last = dc.wire().read().int64());
+                        assertTrue(dc.isData());
+                        assertEquals(last + 1, last = dc.wire().read().int64());
                         count++;
                         counter.incrementAndGet();
                     }
 
                     if (executorService.isShutdown())
-                        Assert.fail();
+                        fail();
                 }
 
                 // check nothing after the NUMBER_OF_MSG
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    Assert.assertFalse(dc.isPresent());
+                    assertFalse(dc.isPresent());
                 }
             } finally {
                 // System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);

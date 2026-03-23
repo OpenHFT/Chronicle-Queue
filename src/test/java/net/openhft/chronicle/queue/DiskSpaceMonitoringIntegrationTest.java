@@ -16,7 +16,7 @@ import java.lang.reflect.Field;
 import java.nio.file.FileStore;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Whilst {@link DiskSpaceMonitor} is defined in the Threads module Queue is heavily dependent on it. Of particular

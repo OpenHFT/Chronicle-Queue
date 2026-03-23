@@ -11,10 +11,10 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
 public class WriteReadTextTest extends QueueTestCommon {
@@ -169,7 +169,7 @@ public class WriteReadTextTest extends QueueTestCommon {
                 }
                 for (int p = 0; p < problematic.length; p++) {
                     tailer.readText(tmpReadback);
-                    Assert.assertEquals("write/readText", problematic[p], tmpReadback.toString());
+                    assertEquals(problematic[p], tmpReadback.toString(), "write/readText");
                 }
             }
 
@@ -180,10 +180,10 @@ public class WriteReadTextTest extends QueueTestCommon {
 
                     tailer.readDocument(reader -> reader.getValueIn().textTo(tmpReadback));
                     String actual = tmpReadback.toString();
-                    Assert.assertEquals(problematic[p].length(), actual.length());
+                    assertEquals(problematic[p].length(), actual.length());
                     for (int i = 0; i < actual.length(); i += 1024)
-                        Assert.assertEquals("i: " + i, problematic[p].substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)));
-                    Assert.assertEquals(problematic[p], actual);
+                        assertEquals(problematic[p].substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)), "i: " + i);
+                    assertEquals(problematic[p], actual);
                 }
             }
         }

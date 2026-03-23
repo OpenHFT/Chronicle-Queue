@@ -9,23 +9,22 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.OutputStream;
 import java.io.Writer;
 
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("deprecation")
 public class ChronicleQueueTest extends QueueTestCommon {
 
     private static final String PATH_NAME = OS.getTarget() + "/test-path";
 
-    @AfterClass
+    @AfterAll
     public static void cleanup() {
         // Clean up the test directory
         IOTools.deleteDirWithFiles(PATH_NAME);
