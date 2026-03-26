@@ -33,7 +33,7 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
 
     @BeforeEach
     void beforeEachReferenceCountedCacheTest() {
-        public threadDump();
+        threadDump();
         setUp();
     }
 

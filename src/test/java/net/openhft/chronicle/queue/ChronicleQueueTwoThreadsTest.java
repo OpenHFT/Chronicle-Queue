@@ -12,9 +12,11 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,7 +36,7 @@ class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
     @Disabled("long running test")
     @Test
-    @org.junit.jupiter.api.Timeout(value = 60000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     void testUnbuffered() throws InterruptedException {
         doTest(false, 50_000);
     }

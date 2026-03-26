@@ -40,7 +40,7 @@ class RareAppenderLatencyTest extends QueueTestCommon {
 
     @BeforeEach
     void beforeEachRareAppenderLatencyTest() {
-        public threadDump();
+        threadDump();
         before();
     }
 

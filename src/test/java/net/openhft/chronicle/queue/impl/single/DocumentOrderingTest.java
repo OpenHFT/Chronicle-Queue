@@ -40,7 +40,7 @@ final class DocumentOrderingTest extends QueueTestCommon {
 
     @BeforeEach
     void beforeEachDocumentOrderingTest() {
-        public threadDump();
+        threadDump();
         multiCPU();
     }
 

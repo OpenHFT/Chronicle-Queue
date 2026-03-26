@@ -49,7 +49,7 @@ class TestMethodWriterWithThreads extends QueueTestCommon {
     @BeforeEach
     void beforeEachTestMethodWriterWithThreads() {
         check64bit();
-        public threadDump();
+        threadDump();
     }
 
     public void check64bit() {

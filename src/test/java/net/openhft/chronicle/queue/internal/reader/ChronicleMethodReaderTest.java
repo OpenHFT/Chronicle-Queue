@@ -24,9 +24,6 @@ import java.nio.file.Paths;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
@@ -166,7 +163,7 @@ class ChronicleMethodReaderTest extends QueueTestCommon {
         assertEquals(24, capturedOutput.size());
         capturedOutput.stream()
                 .filter(msg -> !msg.startsWith("0x"))
-                .forEach(msg -> assertThat(msg, containsString("goodbye")));
+                .forEach(msg -> assertTrue(msg.contains("goodbye")));
     }
 
     @Test
@@ -178,9 +175,9 @@ class ChronicleMethodReaderTest extends QueueTestCommon {
 
         assertEquals(24, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertThat(msg, containsString("goodbye")));
+                forEach(msg -> assertTrue(msg.contains("goodbye")));
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertThat(msg, not(containsString("hello"))));
+                forEach(msg -> assertFalse(msg.contains("hello")));
     }
 
     @Test
@@ -198,7 +195,7 @@ class ChronicleMethodReaderTest extends QueueTestCommon {
 //                        .peek(System.out::println)
                         .count();
         assertEquals(12, msgCount);
-        capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
+        capturedOutput.forEach(msg -> assertFalse(msg.contains("goodbye")));
     }
 
     @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")

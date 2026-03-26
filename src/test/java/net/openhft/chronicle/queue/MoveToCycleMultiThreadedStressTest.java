@@ -10,10 +10,12 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Threads;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,7 +37,7 @@ class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     @BeforeEach
     void beforeEachMoveToCycleMultiThreadedStressTest() {
-        public threadDump();
+        threadDump();
         disableResourceTracing();
     }
 
@@ -58,7 +60,7 @@ class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 60000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
     void test() throws ExecutionException, InterruptedException {
         final String path = OS.getTarget() + "/stressMoveToCycle-" + Time.uniqueId();
         final ExecutorService es = Executors.newCachedThreadPool();

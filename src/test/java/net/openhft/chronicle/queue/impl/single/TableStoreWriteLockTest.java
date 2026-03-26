@@ -17,12 +17,14 @@ import net.openhft.chronicle.threads.Threads;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -41,7 +43,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     @BeforeEach
     void beforeEachTableStoreWriteLockTest() {
         setUp();
-        public threadDump();
+        threadDump();
     }
 
     public void setUp() {
@@ -63,7 +65,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void lockWillThrowIllegalStateExceptionIfInterruptedWhileWaitingForLock() throws InterruptedException {
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 5_000)) {
             testLock.lock();
@@ -84,7 +86,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void testIsLockedByCurrentProcess() {
         AtomicLong actualPid = new AtomicLong(-1);
         try (final TableStoreWriteLock testLock = createTestLock()) {
@@ -98,7 +100,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void lockWillBeAcquiredAfterTimeoutWithAWarning() throws InterruptedException {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 50)) {
@@ -114,7 +116,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void lockWillThrowExceptionAfterTimeoutWhenDontRecoverLockTimeoutIsTrue() throws InterruptedException {
         assertThrows(UnrecoverableTimeoutException.class, () -> {
             System.setProperty("queue.force.unlock.mode", "NEVER");
@@ -131,7 +133,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void lockWillThrowExceptionAfterTimeoutWhenOnlyUnlockIfProcessDeadIsTrue() throws InterruptedException {
         assertThrows(UnrecoverableTimeoutException.class, () -> {
             System.setProperty("queue.force.unlock.mode", "LOCKING_PROCESS_DEAD");
@@ -148,7 +150,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void unlockWillWarnIfNotLocked() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.unlock();
@@ -157,7 +159,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 15_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 15_000, unit = TimeUnit.MILLISECONDS)
     void unlockWillNotUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
@@ -171,7 +173,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 15_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 15_000, unit = TimeUnit.MILLISECONDS)
     void forceUnlockWillUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
@@ -185,7 +187,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void forceUnlockWillNotWarnIfLockIsNotLocked() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.forceUnlock();
@@ -194,7 +196,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void forceUnlockWillWarnIfLockIsLockedByCurrentProcess() {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             testLock.lock();
@@ -205,7 +207,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 15_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 15_000, unit = TimeUnit.MILLISECONDS)
     void lockPreventsConcurrentAcquisition() {
         AtomicBoolean lockIsAcquired = new AtomicBoolean(false);
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 10_000)) {
@@ -228,7 +230,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 15_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 15_000, unit = TimeUnit.MILLISECONDS)
     void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws IOException, TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(true);
         try (TableStoreWriteLock lock = createTestLock()) {
@@ -241,7 +243,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 15_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 15_000, unit = TimeUnit.MILLISECONDS)
     void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws IOException, TimeoutException, InterruptedException {
         ignoreException("Forced unlock");
         Process lockingProcess = runLockingProcess(false);
@@ -255,7 +257,7 @@ class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5_000, unit = TimeUnit.MILLISECONDS)
     void forceUnlockIfProcessIsDeadWillSucceedWhenLockIsNotLocked() {
         try (TableStoreWriteLock lock = createTestLock()) {
             assertTrue(lock.forceUnlockIfProcessIsDead());

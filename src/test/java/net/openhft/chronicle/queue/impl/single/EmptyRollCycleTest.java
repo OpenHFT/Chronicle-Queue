@@ -116,7 +116,7 @@ class EmptyRollCycleTest extends QueueTestCommon {
                         assertTrue(readingDocument.isPresent());
                     }
                 }
-                assertEquals(false, tailer.readingDocument().isPresent());
+                assertFalse(tailer.readingDocument().isPresent());
             }
         } finally {
             start.destroy();

@@ -27,12 +27,14 @@ import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -65,7 +67,7 @@ class RollEOFTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 5000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     void testRollWritesEOF() throws IOException {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
@@ -98,7 +100,7 @@ class RollEOFTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 5000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     void testRollWithoutEOFDoesntBlowup() throws IOException {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
@@ -139,7 +141,7 @@ class RollEOFTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 5000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
     void testRollWithoutEOF() throws IOException {
 //        expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");

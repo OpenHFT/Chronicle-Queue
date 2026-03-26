@@ -18,7 +18,7 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.jupiter.api.Assertions.*;
 
-class RollCycleDefaultingTest extends QueueTestCommon {
+public class RollCycleDefaultingTest extends QueueTestCommon {
 
     private static final String BASE_PATH = OS.getTarget() + "/rollCycleDefaultingTest";
 
@@ -74,7 +74,7 @@ class RollCycleDefaultingTest extends QueueTestCommon {
         assertEquals(RollCycles.DEFAULT, builder.rollCycle());
     }
 
-    static class MyRollcycle implements RollCycle {
+    public static class MyRollcycle implements RollCycle {
         private final RollCycle delegate = TEST_SECONDLY;
 
         @Override

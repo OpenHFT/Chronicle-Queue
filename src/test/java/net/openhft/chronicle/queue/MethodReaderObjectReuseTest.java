@@ -37,6 +37,7 @@ class MethodReaderObjectReuseTest extends QueueTestCommon {
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
             PingDTO.constructionExpected++;
             PingDTO pdtio = new PingDTO();
+            PingDTO.constructionExpected++;
             Pinger pinger = cq.methodWriter(Pinger.class);
             for (int i = 0; i < 5; i++) {
                 pinger.ping(pdtio);

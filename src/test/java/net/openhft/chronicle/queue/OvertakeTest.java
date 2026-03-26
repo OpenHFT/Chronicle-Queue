@@ -56,7 +56,7 @@ class OvertakeTest extends QueueTestCommon {
     @BeforeEach
     void beforeEachOvertakeTest() {
         before();
-        public threadDump();
+        threadDump();
     }
 
     public void before() {
@@ -102,7 +102,7 @@ class OvertakeTest extends QueueTestCommon {
     }
 
     @Override
-    protected public void tearDown() {
+    protected void tearDown() {
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception ignored) {

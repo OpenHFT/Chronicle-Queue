@@ -119,7 +119,7 @@ class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     @BeforeEach
     void beforeEachRollCycleMultiThreadStressTest() {
-        public threadDump();
+        threadDump();
         multiCPU();
     }
 

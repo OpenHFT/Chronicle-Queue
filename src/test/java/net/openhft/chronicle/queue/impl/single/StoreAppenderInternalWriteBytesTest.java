@@ -37,7 +37,7 @@ class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     @BeforeEach
     void beforeEachStoreAppenderInternalWriteBytesTest() {
         check64bit();
-        public threadDump();
+        threadDump();
     }
 
     public void check64bit() {

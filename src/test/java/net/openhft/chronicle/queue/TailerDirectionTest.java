@@ -13,6 +13,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -200,7 +201,7 @@ class TailerDirectionTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 10_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
     void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();

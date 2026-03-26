@@ -9,10 +9,12 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -31,7 +33,7 @@ class ThreadedQueueTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 10000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
         final File path = getTmpDir();

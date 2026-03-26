@@ -24,6 +24,7 @@ import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
@@ -48,8 +50,6 @@ import java.util.stream.Collectors;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.testframework.GcControls.waitForGcCycle;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
@@ -77,7 +77,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     @BeforeEach
     void beforeEachChronicleReaderTest() {
         before();
-        public threadDump();
+        threadDump();
     }
 
     public void before() {
@@ -116,7 +116,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
     void shouldReadQueueInReverse() {
         addCountToEndOfQueue();
 
@@ -193,7 +193,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
     void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
@@ -214,7 +214,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
     void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
@@ -338,15 +338,15 @@ class ChronicleReaderTest extends QueueTestCommon {
 
         methodReaderForQueue.execute();
 
-        assertThat(capturedOutput.size(), is(8));
+        assertEquals(8, capturedOutput.size());
         capturedOutput.poll();
-        assertThat(capturedOutput.poll(), containsString("goodbye"));
+        assertTrue(capturedOutput.poll().contains("goodbye"));
         capturedOutput.poll();
-        assertThat(capturedOutput.poll(), containsString("hello"));
+        assertTrue(capturedOutput.poll().contains("hello"));
         capturedOutput.poll();
-        assertThat(capturedOutput.poll(), containsString("goodbye"));
+        assertTrue(capturedOutput.poll().contains("goodbye"));
         capturedOutput.poll();
-        assertThat(capturedOutput.poll(), containsString("hello"));
+        assertTrue(capturedOutput.poll().contains("hello"));
         capturedOutput.poll();
     }
 
@@ -376,7 +376,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         IOTools.deleteDirWithFiles(dataDir.toFile());
         dataDir.toFile().mkdirs();
@@ -439,7 +439,7 @@ class ChronicleReaderTest extends QueueTestCommon {
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertThat(msg, containsString("goodbye")));
+                forEach(msg -> assertTrue(msg.contains("goodbye")));
     }
 
     @Test
@@ -448,9 +448,9 @@ class ChronicleReaderTest extends QueueTestCommon {
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertThat(msg, containsString("goodbye")));
+                forEach(msg -> assertTrue(msg.contains("goodbye")));
         capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
-                forEach(msg -> assertThat(msg, not(containsString("hello"))));
+                forEach(msg -> assertFalse(msg.contains("hello")));
     }
 
     @Test
@@ -463,7 +463,7 @@ class ChronicleReaderTest extends QueueTestCommon {
         basicReader().withExclusionRegex(".*good.*").execute();
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
-        capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
+        capturedOutput.forEach(msg -> assertFalse(msg.contains("goodbye")));
     }
 
     @Test
@@ -509,8 +509,8 @@ class ChronicleReaderTest extends QueueTestCommon {
     void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
-        assertThat(capturedOutput.stream().
-                filter(msg -> !msg.startsWith("0x")).count(), is(TOTAL_EXCERPTS_IN_QUEUE));
+        assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.stream().
+                filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test
@@ -528,7 +528,7 @@ class ChronicleReaderTest extends QueueTestCommon {
 
     @RequiredForClient
     @Test
-    @org.junit.jupiter.api.Timeout(value = 20_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 20_000, unit = TimeUnit.MILLISECONDS)
     void shouldPrintTimestampsToLocalTime() throws IOException {
         finishedNormally = false;
         final File queueDir = getTmpDir();

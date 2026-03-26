@@ -29,7 +29,7 @@ class ReadWriteTest extends QueueTestCommon {
     @BeforeEach
     void beforeEachReadWriteTest() {
         setup();
-        public threadDump();
+        threadDump();
     }
 
     public void setup() {

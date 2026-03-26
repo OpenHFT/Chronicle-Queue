@@ -55,7 +55,7 @@ final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     @Override
-    protected public void tearDown() {
+    protected void tearDown() {
         super.tearDown();
         threadPool.shutdownNow();
     }

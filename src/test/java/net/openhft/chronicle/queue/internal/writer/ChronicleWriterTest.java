@@ -11,15 +11,17 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ChronicleWriterTest extends QueueTestCommon {
+public class ChronicleWriterTest extends QueueTestCommon {
     private static final String METHOD_NAME = "doit";
     private final String cw1;
     private final String cw2;
@@ -35,7 +37,7 @@ class ChronicleWriterTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     void testWireMarshallingMapAndDTO() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(null, cw1, cw2);
         chronicleWriter.execute();
@@ -62,7 +64,7 @@ class ChronicleWriterTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     void testWireMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface.class.getTypeName(), cw2);
         chronicleWriter.execute();
@@ -84,7 +86,7 @@ class ChronicleWriterTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     void testBytesMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface2.class.getTypeName(), cw3);
         chronicleWriter.execute();
@@ -122,12 +124,12 @@ class ChronicleWriterTest extends QueueTestCommon {
         void doit(DTO2 dto);
     }
 
-    static class DTO extends SelfDescribingMarshallable {
+    public static class DTO extends SelfDescribingMarshallable {
         private int age;
         private String name;
     }
 
-    static class DTO2 extends DTO {
+    public static class DTO2 extends DTO {
         @Override
         public boolean usesSelfDescribingMessage() {
             return false;

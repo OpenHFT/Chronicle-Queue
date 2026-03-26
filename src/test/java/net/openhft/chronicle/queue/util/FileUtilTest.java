@@ -18,10 +18,12 @@ import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.*;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +43,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
     void stateNonExisting() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
@@ -49,7 +51,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
     void state() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
@@ -92,7 +94,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
     void hasQueueSuffixFalse() {
         final File file = new File("foo");
         assertFalse(FileUtil.hasQueueSuffix(file));
@@ -100,7 +102,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
     void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
         assertTrue(FileUtil.hasQueueSuffix(file));
@@ -108,7 +110,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
     void removableQueueFileCandidates() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;
