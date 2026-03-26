@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 
-public class CheckIndicesTest extends QueueTestCommon {
+class CheckIndicesTest extends QueueTestCommon {
 
     private static final int BATCH_SIZE = 10;
     private ChronicleQueue queue0;
@@ -32,7 +32,7 @@ public class CheckIndicesTest extends QueueTestCommon {
 
     @Disabled("stress test to run manually")
     @Test
-    public void test() throws ExecutionException, InterruptedException {
+    void test() throws ExecutionException, InterruptedException {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).epoch(System.currentTimeMillis()).build()) {
             queue0 = queue;
             newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::appendToQueue, 0, 1, TimeUnit.MICROSECONDS);

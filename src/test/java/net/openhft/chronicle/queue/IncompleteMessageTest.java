@@ -15,12 +15,12 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class IncompleteMessageTest extends QueueTestCommon {
+class IncompleteMessageTest extends QueueTestCommon {
     @TempDir
     Path tmpDir;
 
     @Test
-    public void incompleteMessageShouldBeSkipped() {
+    void incompleteMessageShouldBeSkipped() {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock after ");
         expectException("Forced unlock for the lock ");

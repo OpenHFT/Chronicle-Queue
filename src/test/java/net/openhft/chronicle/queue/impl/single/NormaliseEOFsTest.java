@@ -30,14 +30,14 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NormaliseEOFsTest extends QueueTestCommon {
+class NormaliseEOFsTest extends QueueTestCommon {
 
     private static final String LOG_LEVEL_PROPERTY = "org.slf4j.simpleLogger.log." + StoreAppender.class.getName();
     private static final File QUEUE_PATH = Paths.get(OS.getTarget(), "normaliseEOFsTest").toFile();
     private Map<ExceptionKey, Integer> exceptionMap;
 
     @BeforeEach
-    public void beforeEachNormaliseEOFsTest() {
+    void beforeEachNormaliseEOFsTest() {
         setLogLevelProperty();
         clearDataFromPreviousRun();
         recordExceptions();
@@ -62,7 +62,7 @@ public class NormaliseEOFsTest extends QueueTestCommon {
     }
 
     @AfterEach
-    public void afterEachNormaliseEOFsTest() {
+    void afterEachNormaliseEOFsTest() {
         clearLogLevelProperty();
         cleanupQueueData();
     }
@@ -77,7 +77,7 @@ public class NormaliseEOFsTest extends QueueTestCommon {
     }
 
     @Test
-    public void normaliseShouldResumeFromPreviousNormalisation() {
+    void normaliseShouldResumeFromPreviousNormalisation() {
         SetTimeProvider setTimeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(setTimeProvider);
              final ExcerptAppender excerptAppender = queue.createAppender()) {

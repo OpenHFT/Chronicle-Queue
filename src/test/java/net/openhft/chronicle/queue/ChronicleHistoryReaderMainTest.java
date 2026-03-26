@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @SuppressWarnings({"deprecation", "removal"})
-public class ChronicleHistoryReaderMainTest {
+class ChronicleHistoryReaderMainTest {
 
     private static class NoExitSecurityManager extends SecurityManager {
         @Override
@@ -33,19 +33,19 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         // SecurityManager is effectively disabled from JDK 17 onwards
         assumeTrue(Jvm.majorVersion() < 17);
         System.setSecurityManager(new NoExitSecurityManager());
     }
 
     @AfterEach
-    public void tearDown() {
+    protected void tearDown() {
         System.setSecurityManager(null);
     }
 
     @Test
-    public void testRunExecutesChronicleHistoryReader() {
+    void testRunExecutesChronicleHistoryReader() {
         // Setup
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
             @Override
@@ -65,7 +65,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
-    public void testSetupChronicleHistoryReader() {
+    void testSetupChronicleHistoryReader() {
         // Simulate command line arguments
         String[] args = {"-d", "test-directory", "-p", "-m", "-t", "NANOSECONDS"};
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
@@ -116,7 +116,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
-    public void testParseCommandLine() {
+    void testParseCommandLine() {
         // Test that parseCommandLine correctly parses arguments
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         Options options = main.options();
@@ -128,7 +128,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
-    public void testParseCommandLineHelpOption() {
+    void testParseCommandLineHelpOption() {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
             @Override
             protected void printHelpAndExit(Options options, int status, String message) {
@@ -152,7 +152,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
-    public void testOptionsConfiguration() {
+    void testOptionsConfiguration() {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         Options options = main.options();
 
@@ -168,7 +168,7 @@ public class ChronicleHistoryReaderMainTest {
     }
 
     @Test
-    public void testPrintHelpAndExit() {
+    void testPrintHelpAndExit() {
         ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
         Options options = main.options();
         try {

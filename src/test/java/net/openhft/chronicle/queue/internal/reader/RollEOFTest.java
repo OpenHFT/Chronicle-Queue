@@ -43,7 +43,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class RollEOFTest extends QueueTestCommon {
+class RollEOFTest extends QueueTestCommon {
 
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
@@ -66,7 +66,7 @@ public class RollEOFTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 5000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testRollWritesEOF() throws IOException {
+    void testRollWritesEOF() throws IOException {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
 //        expectException("Overriding roll length from existing metadata");
@@ -99,7 +99,7 @@ public class RollEOFTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 5000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testRollWithoutEOFDoesntBlowup() throws IOException {
+    void testRollWithoutEOFDoesntBlowup() throws IOException {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
 //        expectException("Overriding roll length from existing metadata");
@@ -140,7 +140,7 @@ public class RollEOFTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 5000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testRollWithoutEOF() throws IOException {
+    void testRollWithoutEOF() throws IOException {
 //        expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
 

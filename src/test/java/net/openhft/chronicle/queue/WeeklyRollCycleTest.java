@@ -13,10 +13,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class WeeklyRollCycleTest extends QueueTestCommon {
+class WeeklyRollCycleTest extends QueueTestCommon {
 
     @Test
-    public void testWeekly() {
+    void testWeekly() {
         @NotNull String tmpDir = OS.getTarget() + "/testWeekly";
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.WEEKLY).build()) {
             // 1970-02-01 is a Sunday

@@ -23,17 +23,17 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class InternalAppenderWriteBytesTest extends QueueTestCommon {
+class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
     @BeforeEach
-    public void before() {
+    void before() {
         if (OS.isMacOSX())
             ignoreException(exceptionKey -> exceptionKey.clazz == DirectoryUtils.class, "Ignore DirectoryUtils");
         ignoreException(e -> e.level == LogLevel.PERF, "ignore all PERF");
     }
 
     @Test
-    public void canWriteAtEndOfLastExistingRollCycle() {
+    void canWriteAtEndOfLastExistingRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -61,7 +61,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void canWriteAtBeginningOfNextRollCycle() {
+    void canWriteAtBeginningOfNextRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -89,7 +89,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotOverwriteExistingEntries() {
+    void cannotOverwriteExistingEntries() {
         @NotNull Bytes<byte[]> originalBytes = Bytes.from("hello world");
         final Bytes<byte[]> overwriteBytes = Bytes.from("HELLO WORLD");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -108,7 +108,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotOverwriteExistingEntries_DifferentQueueInstance() {
+    void cannotOverwriteExistingEntries_DifferentQueueInstance() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -209,7 +209,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotAppendToExistingCycleIfNotNextIndex() {
+    void cannotAppendToExistingCycleIfNotNextIndex() {
         assertThrows(IllegalIndexException.class, () -> {
             @NotNull Bytes<byte[]> test = Bytes.from("hello world");
             try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build();
@@ -224,7 +224,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotWriteToNonZeroIndexOfNewRollCycle() {
+    void cannotWriteToNonZeroIndexOfNewRollCycle() {
         assertThrows(IllegalIndexException.class, () -> {
             final RollCycle rollCycle = RollCycles.DEFAULT;
             try (SingleChronicleQueue q = binary(tempDir("q"))
@@ -240,7 +240,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotAppendToPreviousCycle() {
+    void cannotAppendToPreviousCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");

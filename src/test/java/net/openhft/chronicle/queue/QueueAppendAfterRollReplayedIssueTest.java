@@ -23,10 +23,10 @@ import static org.junit.jupiter.api.Assertions.*;
     Queue is reloaded with roll files present and
     writingDocument retrieved with acquireDocument
  */
-public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
+class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
 
     @Test
-    public void test() {
+    void test() {
         int messages = 10;
 
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();

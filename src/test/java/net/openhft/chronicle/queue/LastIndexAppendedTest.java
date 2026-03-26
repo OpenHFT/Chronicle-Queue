@@ -18,10 +18,10 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class LastIndexAppendedTest extends QueueTestCommon {
+class LastIndexAppendedTest extends QueueTestCommon {
 
     @Test
-    public void testLastIndexAppendedAcrossRestarts() {
+    void testLastIndexAppendedAcrossRestarts() {
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
 
         try {
@@ -48,7 +48,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
     }
 
     @Test
-    public void testTwoAppenders() {
+    void testTwoAppenders() {
         File path = getTmpDir();
         long a_index;
 

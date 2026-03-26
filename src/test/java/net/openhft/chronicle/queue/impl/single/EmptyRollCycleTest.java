@@ -25,23 +25,23 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class EmptyRollCycleTest extends QueueTestCommon {
+class EmptyRollCycleTest extends QueueTestCommon {
 
     private static final String EMPTY_ROLL_CYCLE_NAME = "19700101-0020X.cq4";
     private Path dataDirectory;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         dataDirectory = IOTools.createTempDirectory("EmptyRollCycleTest");
     }
 
     @AfterEach
-    public void tearDown() {
+    protected void tearDown() {
         IOTools.deleteDirWithFiles(dataDirectory.toFile());
     }
 
     @Test
-    public void tailerShouldTolerateEmptyRollCycleAtEnd() throws IOException {
+    void tailerShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
         createQueueWithEmptyRollCycleAtEnd();
 
@@ -65,7 +65,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     }
 
     @Test
-    public void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
+    void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
         ignoreException("Renamed un-acquirable segment file");
         createQueueWithEmptyRollCycleAtEnd();
@@ -96,7 +96,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
     @Test
     @Timeout(value = 6_000, unit = TimeUnit.MILLISECONDS)
-    public void appropriateExceptionIsThrownWhenLockCannotBeAcquiredForRecovery() throws IOException, InterruptedException {
+    void appropriateExceptionIsThrownWhenLockCannotBeAcquiredForRecovery() throws IOException, InterruptedException {
         createQueueWithEmptyRollCycleAtEnd();
 
         final Path emptyRollCycle = dataDirectory.resolve(EMPTY_ROLL_CYCLE_NAME);

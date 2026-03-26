@@ -21,7 +21,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public final class DocumentOrderingTest extends QueueTestCommon {
+final class DocumentOrderingTest extends QueueTestCommon {
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private final ExecutorService executorService = Executors.newCachedThreadPool(
             new NamedThreadFactory("test"));
@@ -39,8 +39,8 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     private Thread thread;
 
     @BeforeEach
-    public void beforeEachDocumentOrderingTest() {
-        threadDump();
+    void beforeEachDocumentOrderingTest() {
+        public threadDump();
         multiCPU();
     }
 
@@ -50,7 +50,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
+    void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 1_000L).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -88,7 +88,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
+    void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         final File dir = getTmpDir();
         // must be different instances of queue to work around synchronization on acquireStore()
@@ -138,7 +138,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
+    void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");
@@ -170,7 +170,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
+    void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 3_000L).build();
@@ -201,7 +201,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
+    void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 3_000L).build();

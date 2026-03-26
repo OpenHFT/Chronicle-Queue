@@ -17,9 +17,9 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-36
  */
-public class Queue36Test extends QueueTestCommon {
+class Queue36Test extends QueueTestCommon {
     @Test
-    public void testTail() {
+    void testTail() {
         File basePath = getTmpDir();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
                 .testBlockSize()

@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class AppenderListenerTest extends QueueTestCommon {
+class AppenderListenerTest extends QueueTestCommon {
 
     @Test
-    public void appenderListenerTest() {
+    void appenderListenerTest() {
         String path = OS.getTarget() + "/appenderListenerTest";
         StringBuilder results = new StringBuilder();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)

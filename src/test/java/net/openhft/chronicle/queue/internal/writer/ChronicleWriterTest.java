@@ -16,9 +16,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ChronicleWriterTest extends QueueTestCommon {
+class ChronicleWriterTest extends QueueTestCommon {
     private static final String METHOD_NAME = "doit";
     private final String cw1;
     private final String cw2;
@@ -35,7 +36,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testWireMarshallingMapAndDTO() throws IOException {
+    void testWireMarshallingMapAndDTO() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(null, cw1, cw2);
         chronicleWriter.execute();
 
@@ -62,7 +63,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testWireMarshallingWithInterface() throws IOException {
+    void testWireMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface.class.getTypeName(), cw2);
         chronicleWriter.execute();
 
@@ -84,7 +85,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testBytesMarshallingWithInterface() throws IOException {
+    void testBytesMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface2.class.getTypeName(), cw3);
         chronicleWriter.execute();
 
@@ -121,12 +122,12 @@ public class ChronicleWriterTest extends QueueTestCommon {
         void doit(DTO2 dto);
     }
 
-    public static class DTO extends SelfDescribingMarshallable {
+    static class DTO extends SelfDescribingMarshallable {
         private int age;
         private String name;
     }
 
-    public static class DTO2 extends DTO {
+    static class DTO2 extends DTO {
         @Override
         public boolean usesSelfDescribingMessage() {
             return false;

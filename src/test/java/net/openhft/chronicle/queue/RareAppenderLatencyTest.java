@@ -32,15 +32,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * The rare appender will have very bad latency proportional to the number of messages written since
  * it last appended.
  */
-public class RareAppenderLatencyTest extends QueueTestCommon {
+class RareAppenderLatencyTest extends QueueTestCommon {
     private final static int HEAVY_MSGS = 1_000_000;
     private final static int RARE_MSGS = 50;
 
     private ExecutorService appenderES;
 
     @BeforeEach
-    public void beforeEachRareAppenderLatencyTest() {
-        threadDump();
+    void beforeEachRareAppenderLatencyTest() {
+        public threadDump();
         before();
     }
 
@@ -60,7 +60,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
     }
 
     @Test
-    public void testRareAppenderLatency() throws InterruptedException, ExecutionException {
+    void testRareAppenderLatency() throws InterruptedException, ExecutionException {
         System.setProperty("ignoreHeaderCountIfNumberOfExcerptsBehindExceeds", "" + (1 << 12));
 
         if (Jvm.isDebug())

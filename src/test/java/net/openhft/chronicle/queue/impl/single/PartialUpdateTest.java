@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class PartialUpdateTest extends QueueTestCommon {
+class PartialUpdateTest extends QueueTestCommon {
 
     private static final long LAST_INDEX = RollCycles.FAST_DAILY.toIndex(2, 2);
     private Path queuePath;
@@ -67,20 +67,20 @@ public class PartialUpdateTest extends QueueTestCommon {
     }
 
     @BeforeAll
-    public static void disableCheckIndexAssertions() {
+    static void disableCheckIndexAssertions() {
         // This turns off assertions, so we see what would happen in the real world
         originalCheckIndexValue = QueueSystemProperties.CHECK_INDEX;
         QueueSystemProperties.CHECK_INDEX = false;
     }
 
     @AfterAll
-    public static void restoreCheckIndexAssertions() {
+    static void restoreCheckIndexAssertions() {
         QueueSystemProperties.CHECK_INDEX = originalCheckIndexValue;
     }
 
     @ParameterizedTest
     @MethodSource("params")
-    public void testBackwardsToEndArrivesAtCorrectPosition(PartialQueueCreator queueCreator) {
+    void testBackwardsToEndArrivesAtCorrectPosition(PartialQueueCreator queueCreator) {
         setUp(queueCreator);
         try {
             try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -96,7 +96,7 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("params")
-    public void testBackwardsToEndReportsCorrectIndex(PartialQueueCreator queueCreator) {
+    void testBackwardsToEndReportsCorrectIndex(PartialQueueCreator queueCreator) {
         setUp(queueCreator);
         try {
             try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -112,7 +112,7 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("params")
-    public void testForwardsToEndArrivesAtCorrectPosition(PartialQueueCreator queueCreator) {
+    void testForwardsToEndArrivesAtCorrectPosition(PartialQueueCreator queueCreator) {
         setUp(queueCreator);
         try {
             try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -128,7 +128,7 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("params")
-    public void testForwardsToEndReportsCorrectIndex(PartialQueueCreator queueCreator) {
+    void testForwardsToEndReportsCorrectIndex(PartialQueueCreator queueCreator) {
         setUp(queueCreator);
         try {
             try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
@@ -144,7 +144,7 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("params")
-    public void testLastIndexIsCorrect(PartialQueueCreator queueCreator) {
+    void testLastIndexIsCorrect(PartialQueueCreator queueCreator) {
         setUp(queueCreator);
         try {
             try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath)) {
@@ -158,7 +158,7 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("params")
-    public void testAppendReturnsCorrectLastAppendedIndex(PartialQueueCreator queueCreator) {
+    void testAppendReturnsCorrectLastAppendedIndex(PartialQueueCreator queueCreator) {
         setUp(queueCreator);
         try {
             try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);

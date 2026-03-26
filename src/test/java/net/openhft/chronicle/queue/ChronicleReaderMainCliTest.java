@@ -15,10 +15,10 @@ import java.io.PrintStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ChronicleReaderMainCliTest extends QueueTestCommon {
+class ChronicleReaderMainCliTest extends QueueTestCommon {
 
     @Test
-    public void mainReadsAndPrintsQueueRecords() {
+    void mainReadsAndPrintsQueueRecords() {
         final java.io.File dir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build();
              ExcerptAppender appender = queue.createAppender()) {
@@ -39,7 +39,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void invalidContentBasedLimiterClassThrows() {
+    void invalidContentBasedLimiterClassThrows() {
         assertThrows(IllegalArgumentException.class, () -> {
             final java.io.File dir = getTmpDir();
             ChronicleReaderMain main = new ChronicleReaderMain();
@@ -48,7 +48,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void invalidBinarySearchComparatorClassThrows() {
+    void invalidBinarySearchComparatorClassThrows() {
         assertThrows(ClassNotFoundException.class, () -> {
             final java.io.File dir = getTmpDir();
             ChronicleReaderMain main = new ChronicleReaderMain();
@@ -57,7 +57,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void mainHonoursStartIndex() {
+    void mainHonoursStartIndex() {
         final java.io.File dir = getTmpDir();
         long secondIndex;
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build();
@@ -87,7 +87,7 @@ public class ChronicleReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void methodReaderOptionsEnableMessageHistory() {
+    void methodReaderOptionsEnableMessageHistory() {
         final java.io.File dir = getTmpDir();
         TestChronicleReaderMain main = new TestChronicleReaderMain();
 

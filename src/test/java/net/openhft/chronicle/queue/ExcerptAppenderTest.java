@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for ExcerptAppender interface implementations.
  */
-public class ExcerptAppenderTest extends QueueTestCommon {
+class ExcerptAppenderTest extends QueueTestCommon {
 
     private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptAppenderTest";
 
@@ -93,12 +93,12 @@ public class ExcerptAppenderTest extends QueueTestCommon {
     }
 
     @AfterAll
-    public static void cleanup() {
+    static void cleanup() {
         IOTools.deleteDirWithFiles(TEST_QUEUE);
     }
 
     @Test
-    public void testWriteBytes() {
+    void testWriteBytes() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
         Bytes<byte[]> bytes = Bytes.wrapForRead("Test data".getBytes(StandardCharsets.UTF_8));
 
@@ -108,7 +108,7 @@ public class ExcerptAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testLastIndexAppended() {
+    void testLastIndexAppended() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
         assertEquals(0, appender.lastIndexAppended());
@@ -120,21 +120,21 @@ public class ExcerptAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCycle() {
+    void testCycle() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
         assertEquals(1, appender.cycle());
     }
 
     @Test
-    public void testWire() {
+    void testWire() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
 
         assertNull(appender.wire());  // As wire is not set in this example
     }
 
     @Test
-    public void testPretouch() {
+    void testPretouch() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
         long before = appender.lastIndexAppended();
         appender.pretouch();
@@ -143,7 +143,7 @@ public class ExcerptAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testNormaliseEOFs() {
+    void testNormaliseEOFs() {
         ExcerptAppenderImpl appender = new ExcerptAppenderImpl();
         long before = appender.lastIndexAppended();
         appender.normaliseEOFs();

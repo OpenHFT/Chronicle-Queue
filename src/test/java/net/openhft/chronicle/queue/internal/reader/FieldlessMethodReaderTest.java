@@ -24,11 +24,11 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class FieldlessMethodReaderTest extends QueueTestCommon {
+class FieldlessMethodReaderTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("enums")
-    public void test(CustomEnumType enumType) throws InterruptedException {
+    void test(CustomEnumType enumType) throws InterruptedException {
         final AtomicInteger msgCounter = new AtomicInteger();
         File path = new File(getTmpDir(), "enum_test_" + enumType);
 

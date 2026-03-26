@@ -19,7 +19,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class CreateAtIndexTest extends QueueTestCommon {
+class CreateAtIndexTest extends QueueTestCommon {
 
     @Test
     public void
@@ -91,7 +91,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() {
+    void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() {
         File tmp = getTmpDir();
 
         long expected;

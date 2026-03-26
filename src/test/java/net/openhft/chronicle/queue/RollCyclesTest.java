@@ -32,7 +32,7 @@ public class RollCyclesTest extends QueueTestCommon {
     private final TimeProvider timeProvider = clock::get;
 
     @BeforeAll
-    public static void generateTimes() {
+    static void generateTimes() {
         incrementalTimes = generateIncrementalTimes();
     }
 
@@ -58,7 +58,7 @@ public class RollCyclesTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void shouldBe32bitShifted(String cycleName, RollCycle cycle) {
+    void shouldBe32bitShifted(String cycleName, RollCycle cycle) {
         long factor = (long) cycle.defaultIndexCount() * cycle.defaultIndexCount() * cycle.defaultIndexSpacing();
         if (factor < 1L << 32)
             factor = 1L << 32;
@@ -67,19 +67,19 @@ public class RollCyclesTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void shouldDetermineCurrentCycle(String cycleName, RollCycle cycle) {
+    void shouldDetermineCurrentCycle(String cycleName, RollCycle cycle) {
         assertCycleRollTimes(cycle, NO_EPOCH_OFFSET, withDelta(timeProvider, NO_EPOCH_OFFSET));
     }
 
     @ParameterizedTest
     @MethodSource("data")
-    public void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle(String cycleName, RollCycle cycle) {
+    void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle(String cycleName, RollCycle cycle) {
         assertCycleRollTimes(cycle, SOME_EPOCH_OFFSET, withDelta(timeProvider, SOME_EPOCH_OFFSET));
     }
 
     @ParameterizedTest
     @MethodSource("data")
-    public void shouldHandleReasonableDateRange(String cycleName, RollCycle cycle) {
+    void shouldHandleReasonableDateRange(String cycleName, RollCycle cycle) {
         final int currentCycle = DefaultCycleCalculator.INSTANCE.currentCycle(cycle, timeProvider, 0);
         // ~ 14 Jul 2017 to 18 May 2033
         for (long nowMillis = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += (long) 3e10) {
@@ -111,7 +111,7 @@ public class RollCyclesTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void lexicographicOrderShouldCorrelateToChronologicalOrder(String cycleName, RollCycle cycle) {
+    void lexicographicOrderShouldCorrelateToChronologicalOrder(String cycleName, RollCycle cycle) {
         String lastName = null;
         Instant lastDate = null;
         final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(cycle.format()).withZone(ZoneId.of("UTC"));

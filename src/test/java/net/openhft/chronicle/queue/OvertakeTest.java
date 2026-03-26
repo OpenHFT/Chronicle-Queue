@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Index runs away on double close - AM
  */
 @RequiredForClient
-public class OvertakeTest extends QueueTestCommon {
+class OvertakeTest extends QueueTestCommon {
 
     private String path;
 
@@ -54,9 +54,9 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @BeforeEach
-    public void beforeEachOvertakeTest() {
+    void beforeEachOvertakeTest() {
         before();
-        threadDump();
+        public threadDump();
     }
 
     public void before() {
@@ -84,7 +84,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Test
-    public void appendAndTail() {
+    void appendAndTail() {
         try (ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .writeBufferMode(BufferMode.None)
@@ -102,7 +102,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Override
-    public void tearDown() {
+    protected public void tearDown() {
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception ignored) {
@@ -110,7 +110,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Test
-    public void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
+    void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
         // System.out.println("Continue appending");
         ExecutorService execService = Executors.newFixedThreadPool(2,
                 new NamedThreadFactory("test"));

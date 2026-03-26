@@ -30,13 +30,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class ChronicleMethodReaderTest extends QueueTestCommon {
+class ChronicleMethodReaderTest extends QueueTestCommon {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
 
     @BeforeEach
-    public void before() {
+    void before() {
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
@@ -64,7 +64,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotFailOnEmptyQueue() {
+    void shouldNotFailOnEmptyQueue() {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
@@ -88,7 +88,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotFailWhenNoMetadata() throws IOException {
+    void shouldNotFailWhenNoMetadata() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
@@ -97,14 +97,14 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldIncludeMessageHistoryByDefault() {
+    void shouldIncludeMessageHistoryByDefault() {
         basicReader().execute();
 
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test
-    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
+    void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessages() {
         basicReader()
                 .withInclusionRegex("goodbye") // matches goodbye, but not hello or history
                 .asMethodReader("")
@@ -114,7 +114,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
+    void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
         assumeFalse(OS.isWindows(), "#460 read-only not supported on Windows");
         final Path queueFile = Files.list(dataDir).
                 filter(f -> f.getFileName().toString().endsWith(SingleChronicleQueue.SUFFIX)).findFirst().
@@ -127,7 +127,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldConvertEntriesToTextMethodReader() {
+    void shouldConvertEntriesToTextMethodReader() {
         basicReaderMethodReader().execute();
         long msgCount =
                 capturedOutput.stream()
@@ -141,7 +141,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotConvertEntriesToText() {
+    void shouldNotConvertEntriesToText() {
         basicReader().execute();
         long msgCount =
                 capturedOutput.stream()
@@ -160,7 +160,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldFilterByInclusionRegex() {
+    void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
         assertEquals(24, capturedOutput.size());
@@ -170,7 +170,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldFilterByMultipleInclusionRegex() {
+    void shouldFilterByMultipleInclusionRegex() {
         basicReader()
                 .withInclusionRegex(".*bye.*")
                 .withInclusionRegex(".*o.*")
@@ -184,12 +184,12 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
+    void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
         assertThrows(IllegalArgumentException.class, () -> basicReader().withBasePath(Paths.get("/does/not/exist")).execute());
     }
 
     @Test
-    public void shouldFilterByExclusionRegex() {
+    void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
         long msgCount =
@@ -203,14 +203,14 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
-    public void shouldFilterByMultipleExclusionRegex() {
+    void shouldFilterByMultipleExclusionRegex() {
         basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test
-    public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
+    void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReaderMethodReader().historyRecords(5).execute();
 
         assertEquals(5, capturedOutput.stream()
@@ -218,12 +218,12 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
+    void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
         assertThrows(IllegalArgumentException.class, () -> basicReader().withStartIndex(1L).execute());
     }
 
     @Test
-    public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
+    void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
         assertEquals(24, capturedOutput.stream()
@@ -240,7 +240,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @AfterEach
-    public void clearInterrupt() {
+    void clearInterrupt() {
         Thread.interrupted();
     }
 

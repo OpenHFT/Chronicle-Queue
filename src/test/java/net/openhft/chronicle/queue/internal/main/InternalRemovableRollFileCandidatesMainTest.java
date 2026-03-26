@@ -21,10 +21,10 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class InternalRemovableRollFileCandidatesMainTest extends QueueTestCommon {
+class InternalRemovableRollFileCandidatesMainTest extends QueueTestCommon {
 
     @Test
-    public void internalMainPrintsRemovableFiles() {
+    void internalMainPrintsRemovableFiles() {
         assumeTrue(OS.isLinux());
 
         final File dir = prepareQueueWithMultipleCycles();
@@ -36,7 +36,7 @@ public class InternalRemovableRollFileCandidatesMainTest extends QueueTestCommon
     }
 
     @Test
-    public void publicMainDelegatesToInternal() {
+    void publicMainDelegatesToInternal() {
         assumeTrue(OS.isLinux());
 
         final File dir = prepareQueueWithMultipleCycles();

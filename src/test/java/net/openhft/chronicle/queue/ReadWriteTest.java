@@ -21,15 +21,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
-public class ReadWriteTest extends QueueTestCommon {
+class ReadWriteTest extends QueueTestCommon {
 
     private static final String STR1 = "hello", STR2 = "hey";
     private File chroniclePath;
 
     @BeforeEach
-    public void beforeEachReadWriteTest() {
+    void beforeEachReadWriteTest() {
         setup();
-        threadDump();
+        public threadDump();
     }
 
     public void setup() {
@@ -51,7 +51,7 @@ public class ReadWriteTest extends QueueTestCommon {
      * to deliver proper fix.
      */
     @AfterEach
-    public void forceCleanupToDeFlakeTests() {
+    void forceCleanupToDeFlakeTests() {
         BackgroundResourceReleaser.releasePendingResources();
     }
 
@@ -61,7 +61,7 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
-    public void testReadFromReadOnlyChronicle() {
+    void testReadFromReadOnlyChronicle() {
         assumeFalse(OS.isWindows());
 
         try (ChronicleQueue out = SingleChronicleQueueBuilder
@@ -83,7 +83,7 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
-    public void testNotInitializedMetadataFile() throws IOException {
+    void testNotInitializedMetadataFile() throws IOException {
         assumeFalse(OS.isWindows());
 
         final String expectedException = "Failback to readonly tablestore";
@@ -111,7 +111,7 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
-    public void testProceedWhenMetadataFileInitialized() throws IOException {
+    void testProceedWhenMetadataFileInitialized() throws IOException {
         assumeFalse(OS.isWindows());
 
         File meta = new File(chroniclePath, "metadata.cq4t");
@@ -154,7 +154,7 @@ public class ReadWriteTest extends QueueTestCommon {
 
     // Can't append to a read-only chronicle
     @Test
-    public void testWriteToReadOnlyChronicle() {
+    void testWriteToReadOnlyChronicle() {
         assertThrows(IllegalStateException.class, () -> {
             if (OS.isWindows()) {
                 System.err.println("#460 Cannot test read only mode on windows");
@@ -174,7 +174,7 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
-    public void testToEndOnReadOnly() {
+    void testToEndOnReadOnly() {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
         try (ChronicleQueue out = SingleChronicleQueueBuilder
@@ -190,7 +190,7 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     @Test
-    public void testNonWriteableFilesSetToReadOnly() {
+    void testNonWriteableFilesSetToReadOnly() {
         assumeFalse(OS.isWindows());
         expectException("Failback to readonly tablestore");
         expectException("Forcing queue to be readOnly");

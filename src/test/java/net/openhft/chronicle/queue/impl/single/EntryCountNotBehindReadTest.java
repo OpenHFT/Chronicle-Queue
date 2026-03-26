@@ -24,7 +24,7 @@ import java.util.function.LongConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class EntryCountNotBehindReadTest extends QueueTestCommon {
+final class EntryCountNotBehindReadTest extends QueueTestCommon {
     private static final int TOTAL_EVENTS = 100_000;
 
     @Override
@@ -34,7 +34,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     }
 
     @Test
-    public void testExcerptsPerCycleNotBehind() throws IOException {
+    void testExcerptsPerCycleNotBehind() throws IOException {
         final File file = Files.createTempDirectory("exact-excerpts-per-cycle").toFile();
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(file).build();
@@ -61,7 +61,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     }
 
     @Test
-    public void testToEndNotBehind() throws IOException {
+    void testToEndNotBehind() throws IOException {
         final File file = Files.createTempDirectory("to-end").toFile();
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.binary(file).build()) {

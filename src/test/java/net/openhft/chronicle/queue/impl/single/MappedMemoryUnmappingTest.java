@@ -20,12 +20,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class MappedMemoryUnmappingTest extends QueueTestCommon {
+final class MappedMemoryUnmappingTest extends QueueTestCommon {
     @TempDir
     Path tmp;
 
     @Test
-    public void shouldUnmapMemoryAsCycleRolls() throws IOException {
+    void shouldUnmapMemoryAsCycleRolls() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         long initialQueueMappedMemory = 0L;
 

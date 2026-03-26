@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
+class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
     @TempDir
     Path temporaryFolder;
 
@@ -25,13 +25,13 @@ public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestC
     private SetTimeProvider timeProvider;
 
     @BeforeEach
-    public void setup() throws IOException {
+    void setup() throws IOException {
         this.dataDir = Files.createTempDirectory(temporaryFolder, "queue").toFile();
         this.timeProvider = new SetTimeProvider();
     }
 
     @Test
-    public void testReadForwards() {
+    void testReadForwards() {
         RollCycle rollingCycle = WeeklyRollCycle.INSTANCE;
         // Write a message to the queue
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)

@@ -37,12 +37,12 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class FileUtilTest extends QueueTestCommon {
+class FileUtilTest extends QueueTestCommon {
 
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void stateNonExisting() {
+    void stateNonExisting() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
@@ -50,7 +50,7 @@ public class FileUtilTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void state() throws IOException {
+    void state() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
         dir.toFile().mkdir();
@@ -81,7 +81,7 @@ public class FileUtilTest extends QueueTestCommon {
     }
 
     @Test
-    public void stateWindows() {
+    void stateWindows() {
         assumeTrue(OS.isWindows());
 
         expectException("closable tracing disabled");
@@ -93,7 +93,7 @@ public class FileUtilTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void hasQueueSuffixFalse() {
+    void hasQueueSuffixFalse() {
         final File file = new File("foo");
         assertFalse(FileUtil.hasQueueSuffix(file));
     }
@@ -101,7 +101,7 @@ public class FileUtilTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void hasQueueSuffixTrue() {
+    void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
         assertTrue(FileUtil.hasQueueSuffix(file));
     }
@@ -109,7 +109,7 @@ public class FileUtilTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 30_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void removableQueueFileCandidates() {
+    void removableQueueFileCandidates() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;
         final int intermediateRolls = rolls / 2;
@@ -171,7 +171,7 @@ public class FileUtilTest extends QueueTestCommon {
     }
 
     @Test
-    public void removableQueueFileCandidatesWindows() {
+    void removableQueueFileCandidatesWindows() {
         assumeTrue(OS.isWindows());
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
@@ -188,7 +188,7 @@ public class FileUtilTest extends QueueTestCommon {
     }
 
     @Test
-    public void testOpenFilesWithPid() throws IOException {
+    void testOpenFilesWithPid() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
 
         // open file for writing, keeping file handle open

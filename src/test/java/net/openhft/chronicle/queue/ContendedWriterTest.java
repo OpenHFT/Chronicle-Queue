@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Disabled("long running")
 @TestMethodOrder(MethodOrderer.MethodName.class)
 @RequiredForClient
-public class ContendedWriterTest extends QueueTestCommon {
+class ContendedWriterTest extends QueueTestCommon {
     private static final long NUMBER_OF_LONGS = 3;
     private final AtomicBoolean running = new AtomicBoolean(true);
 
@@ -37,64 +37,64 @@ public class ContendedWriterTest extends QueueTestCommon {
     }
 
     @Test
-    public void oneThread() {
+    void oneThread() {
         test("oneThread", new Config(false, 1, 0));
     }
 
     @Test
-    public void oneThreadDeferred() {
+    void oneThreadDeferred() {
         test("oneThreadDeferred", new Config(true, 1, 0));
     }
 
     @Test
-    public void sixThreads() {
+    void sixThreads() {
         Config config15 = new Config(false, 1, 5);
         test("sixThreads", config15, config15, config15, config15, config15, config15);
     }
 
     @Test
-    public void sixThreadsDeferred() {
+    void sixThreadsDeferred() {
         Config config15 = new Config(true, 1, 5);
         test("sixThreadsDeferred", config15, config15, config15, config15, config15, config15);
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesAtSameSlowRate() {
+    void twoThreadsWritingLargeMessagesAtSameSlowRate() {
         test("twoThreadsWritingLargeMessagesAtSameSlowRate",
                 new Config(false, 1, 5),
                 new Config(false, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred() {
+    void twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred() {
         test("twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred",
                 new Config(true, 1, 5),
                 new Config(true, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesOneFastOneSlow() {
+    void twoThreadsWritingLargeMessagesOneFastOneSlow() {
         test("twoThreadsWritingLargeMessagesOneFastOneSlow",
                 new Config(false, 1, 0),
                 new Config(false, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred() {
+    void twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred() {
         test("twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred",
                 new Config(false, 1, 0),
                 new Config(true, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow() {
+    void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow() {
         test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow",
                 new Config(false, 1, 0),
                 new Config(false, 0, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred() {
+    void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred() {
         test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred",
                 new Config(false, 1, 0),
                 new Config(true, 0, 5));

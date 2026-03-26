@@ -21,19 +21,19 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TailerTest extends QueueTestCommon {
+class TailerTest extends QueueTestCommon {
 
     private static final Path QUEUE_PATH = Paths.get(OS.getTarget() + "/host-1/queue/broker_out");
     private static final int OFFSET = 3;
 
     @BeforeEach
     @AfterEach
-    public void cleanupFiles() {
+    void cleanupFiles() {
         IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
     }
 
     @Test
-    public void reproduce() {
+    void reproduce() {
         IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
 
         long firstOutputIndex = Long.MAX_VALUE;

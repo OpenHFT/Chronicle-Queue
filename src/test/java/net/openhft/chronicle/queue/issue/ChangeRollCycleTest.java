@@ -19,15 +19,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * It checks the compatibility and visibility of data written with one Roll Cycle
  * and accessed with another.
  */
-public class ChangeRollCycleTest {
+class ChangeRollCycleTest {
 
     @Test
-    public void changeRollCycleWithReadOnlyTailer() {
+    void changeRollCycleWithReadOnlyTailer() {
         testChangeRollCycle(true);
     }
 
     @Test
-    public void changeRollCycleWithReadWriteTailer() {
+    void changeRollCycleWithReadWriteTailer() {
         testChangeRollCycle(false);
     }
 

@@ -12,13 +12,14 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class DtoBytesMarshallableTest extends QueueTestCommon {
+class DtoBytesMarshallableTest extends QueueTestCommon {
 
     @Test
-    public void testDtoBytesMarshallable() {
+    void testDtoBytesMarshallable() {
 
         File tmp = getTmpDir();
 
@@ -46,7 +47,7 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
     }
 
     @Test
-    public void testDtoAbstractMarshallable() {
+    void testDtoAbstractMarshallable() {
 
         File tmp = getTmpDir();
 

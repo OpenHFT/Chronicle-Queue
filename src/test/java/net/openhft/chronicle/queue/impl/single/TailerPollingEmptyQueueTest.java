@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
+final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
     @Test
-    public void shouldNotGenerateExcessGarbage() {
+    void shouldNotGenerateExcessGarbage() {
         // Perform a GC prior to the test to ensure an unrelated GC does not occur which would devalue this test
         GcControls.waitForGcCycle();
 
@@ -40,7 +40,7 @@ public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
     private SingleChronicleQueue createQueue() {
         return ChronicleQueue.singleBuilder(
-                getTmpDir()).
+                        getTmpDir()).
                 testBlockSize().
                 build();
     }

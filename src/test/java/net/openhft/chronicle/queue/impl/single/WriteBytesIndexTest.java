@@ -16,9 +16,9 @@ import java.io.File;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class WriteBytesIndexTest extends QueueTestCommon {
+class WriteBytesIndexTest extends QueueTestCommon {
     @Test
-    public void writeMultipleAppenders() {
+    void writeMultipleAppenders() {
         File path = IOTools.createTempFile("writeMultipleAppenders");
         try (ChronicleQueue q0 = createQueue(path);
              ExcerptAppender a0 = q0.createAppender();

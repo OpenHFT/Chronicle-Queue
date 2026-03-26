@@ -16,10 +16,10 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DumpQueueMainTest extends QueueTestCommon {
+class DumpQueueMainTest extends QueueTestCommon {
 
     @Test
-    public void shouldBeAbleToDumpReadOnlyQueueFile() throws IOException {
+    void shouldBeAbleToDumpReadOnlyQueueFile() throws IOException {
         if (OS.isWindows())
             return;
 
@@ -47,7 +47,7 @@ public class DumpQueueMainTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldDumpDirectoryListing() {
+    void shouldDumpDirectoryListing() {
         final File dataDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.
                 binary(dataDir).

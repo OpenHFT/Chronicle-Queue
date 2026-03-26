@@ -15,7 +15,7 @@ import java.io.File;
 import static org.junit.jupiter.api.Assertions.*;
 
 // For use with C++ RawAccessJava. Called from C++
-public class RawAccessJavaTest extends QueueTestCommon {
+class RawAccessJavaTest extends QueueTestCommon {
 
     private final long QUEUE_HEADER_SIZE = 4;
     private final long RAW_SIZE_PREFIX = 4;
@@ -28,7 +28,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void Tailer() {
+    void Tailer() {
         if (!assert_from_cpp())
             return;
 
@@ -70,7 +70,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void Appender() {
+    void Appender() {
         if (!assert_from_cpp())
             return;
 
@@ -109,7 +109,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void testLengthPrefixValidationWithoutCppInterop() {
+    void testLengthPrefixValidationWithoutCppInterop() {
         File dir = getTmpDir();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
              ExcerptAppender appender = cq.createAppender();
@@ -150,7 +150,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void testZeroLengthInteropPayloadIsReadable() {
+    void testZeroLengthInteropPayloadIsReadable() {
         File dir = getTmpDir();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
              ExcerptAppender appender = cq.createAppender();

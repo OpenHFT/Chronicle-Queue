@@ -22,7 +22,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BackwardsTailerBoundaryTest extends QueueTestCommon {
+class BackwardsTailerBoundaryTest extends QueueTestCommon {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerBoundaryTest.class);
 
@@ -34,7 +34,7 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void verifyConsistency(RollCycle rollCycle) {
+    void verifyConsistency(RollCycle rollCycle) {
         SetTimeProvider timeProvider = new SetTimeProvider();
         @NotNull File path = getTmpDir();
         IOTools.deleteDirWithFiles(path);

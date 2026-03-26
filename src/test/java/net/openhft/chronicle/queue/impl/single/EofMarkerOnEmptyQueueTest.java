@@ -29,7 +29,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
+final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     @TempDir
     Path tmpFolder;
@@ -41,7 +41,7 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         assumeFalse(OS.isWindows());
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");

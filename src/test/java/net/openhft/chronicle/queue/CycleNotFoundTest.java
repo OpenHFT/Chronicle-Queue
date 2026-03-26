@@ -20,7 +20,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class CycleNotFoundTest extends QueueTestCommon {
+class CycleNotFoundTest extends QueueTestCommon {
 
     private static final int NUMBER_OF_TAILERS = 20;
     private static final long INTERVAL_US = 50;
@@ -36,7 +36,7 @@ public class CycleNotFoundTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 50_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
+    void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
         File path = getTmpDir();  // added nano time just to make
 
         ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG,

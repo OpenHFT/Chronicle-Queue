@@ -30,14 +30,14 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECOND
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
+class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
     private static final int MESSAGES_TO_WRITE = 200;
 
     @BeforeEach
-    public void beforeEachStoreAppenderInternalWriteBytesTest() {
+    void beforeEachStoreAppenderInternalWriteBytesTest() {
         check64bit();
-        threadDump();
+        public threadDump();
     }
 
     public void check64bit() {
@@ -50,12 +50,12 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
+    void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
         testInternalWriteBytes(5, true);
     }
 
     @Test
-    public void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
+    void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
         testInternalWriteBytes(5, false);
     }
 

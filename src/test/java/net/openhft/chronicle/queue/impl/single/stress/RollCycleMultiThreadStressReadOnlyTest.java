@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThreadStressTest {
+class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThreadStressTest {
 
     @Override
     protected StressTestType stressTestType() {
@@ -17,7 +17,7 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
     }
 
     @Test
-    public void stress() throws Exception {
+    void stress() throws Exception {
         assumeFalse(OS.isWindows(), "Windows does not support read only");
         super.stress();
         assertTrue(true); // parent has asserts

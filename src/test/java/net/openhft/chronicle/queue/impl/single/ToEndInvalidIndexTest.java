@@ -17,26 +17,26 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ToEndInvalidIndexTest extends QueueTestCommon {
+class ToEndInvalidIndexTest extends QueueTestCommon {
 
     private static final long LAST_INDEX = RollCycles.FAST_DAILY.toIndex(2, 2);
     private Path queuePath;
     private SetTimeProvider setTimeProvider;
 
     @BeforeEach
-    public void setUp() throws StreamCorruptedException {
+    void setUp() throws StreamCorruptedException {
         queuePath = IOTools.createTempDirectory("partialIndex");
         setTimeProvider = new SetTimeProvider();
         createQueueWithZeroFirstSubIndexValue(setTimeProvider, queuePath);
     }
 
     @AfterEach
-    public void tearDown() {
+    protected void tearDown() {
         IOTools.deleteDirWithFiles(queuePath.toFile());
     }
 
     @Test
-    public void testBackwardsToEndReportsCorrectIndex() {
+    void testBackwardsToEndReportsCorrectIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
 

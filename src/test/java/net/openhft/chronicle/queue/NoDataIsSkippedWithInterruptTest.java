@@ -12,17 +12,17 @@ import org.junit.jupiter.api.Test;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
+class NoDataIsSkippedWithInterruptTest extends QueueTestCommon {
 
     private static final String EXPECTED = "Hello World";
 
     @AfterEach
-    public void clearInterrupt() {
+    void clearInterrupt() {
         Thread.interrupted();
     }
 
     @Test
-    public void test() {
+    void test() {
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(DirectoryUtils.tempDir("."))
                 .rollCycle(MINUTELY)

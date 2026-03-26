@@ -40,7 +40,7 @@ import static net.openhft.chronicle.testframework.GcControls.requestGcCycle;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public final class AppenderFileHandleLeakTest extends QueueTestCommon {
+final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
@@ -82,14 +82,14 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
      * on Linux
      */
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         assumeTrue(OS.isLinux());
         System.gc();
         queuePath = getTmpDir();
     }
 
     @Test
-    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
+    void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
 
@@ -125,7 +125,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerResourcesCanBeReleasedManually() throws Exception {
+    void tailerResourcesCanBeReleasedManually() throws Exception {
         FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
     }
 
@@ -160,7 +160,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws InterruptedException {
+    void tailerShouldReleaseFileHandlesAsQueueRolls() throws InterruptedException {
 
         System.gc();
         Thread.sleep(100);
@@ -208,7 +208,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+    void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
         FlakyTestRunner.<RuntimeException>builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
@@ -229,7 +229,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+    void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
         FlakyTestRunner.<RuntimeException>builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()

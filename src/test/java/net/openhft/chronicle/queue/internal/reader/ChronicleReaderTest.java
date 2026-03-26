@@ -53,7 +53,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class ChronicleReaderTest extends QueueTestCommon {
+class ChronicleReaderTest extends QueueTestCommon {
     private static final byte[] ONE_KILOBYTE = new byte[1024];
     private static final long TOTAL_EXCERPTS_IN_QUEUE = 24;
 
@@ -75,9 +75,9 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @BeforeEach
-    public void beforeEachChronicleReaderTest() {
+    void beforeEachChronicleReaderTest() {
         before();
-        threadDump();
+        public threadDump();
     }
 
     public void before() {
@@ -117,7 +117,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void shouldReadQueueInReverse() {
+    void shouldReadQueueInReverse() {
         addCountToEndOfQueue();
 
         new ChronicleReader().withBasePath(dataDir)
@@ -130,7 +130,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void reverseOrderShouldIgnoreOptionsThatDontMakeSense() {
+    void reverseOrderShouldIgnoreOptionsThatDontMakeSense() {
         addCountToEndOfQueue();
 
         new ChronicleReader().withBasePath(dataDir)
@@ -145,7 +145,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void reverseOrderWorksWithStartPosition() {
+    void reverseOrderWorksWithStartPosition() {
         List<Long> indices = addCountToEndOfQueue();
 
         new ChronicleReader().withBasePath(dataDir)
@@ -159,7 +159,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void reverseOrderThrowsWhenStartPositionIsAfterEndOfQueue() {
+    void reverseOrderThrowsWhenStartPositionIsAfterEndOfQueue() {
         assertThrows(IllegalArgumentException.class, () -> new ChronicleReader().withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add)
                 .inReverseOrder()
@@ -169,7 +169,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void reverseOrderThrowsWhenStartPositionIsBeforeStartOfQueue() {
+    void reverseOrderThrowsWhenStartPositionIsBeforeStartOfQueue() {
         assertThrows(IllegalArgumentException.class, () -> new ChronicleReader().withBasePath(dataDir)
                 .withMessageSink(capturedOutput::add)
                 .inReverseOrder()
@@ -194,7 +194,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void shouldReadQueueWithNonDefaultRollCycle() {
+    void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
@@ -215,7 +215,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
+    void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
         Path path = getTmpDir().toPath();
@@ -237,7 +237,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotFailOnEmptyQueue() {
+    void shouldNotFailOnEmptyQueue() {
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         if (!OS.isWindows())
@@ -247,7 +247,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotFailWhenNoMetadata() throws IOException {
+    void shouldNotFailWhenNoMetadata() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
         Files.list(dataDir).filter(f -> f.getFileName().toString().endsWith(SingleTableStore.SUFFIX)).findFirst().ifPresent(path -> path.toFile().delete());
@@ -256,14 +256,14 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldIncludeMessageHistoryByDefault() {
+    void shouldIncludeMessageHistoryByDefault() {
         basicReader().execute();
 
         assertTrue(capturedOutput.stream().anyMatch(msg -> msg.contains("history:")));
     }
 
     @Test
-    public void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessagesMethodReaderDummy() {
+    void shouldApplyIncludeRegexToHistoryMessagesAndBusinessMessagesMethodReaderDummy() {
         basicReader()
                 // matches goodbye, but not hello or history
                 .withInclusionRegex("goodbye")
@@ -273,7 +273,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotShowIndexForFilteredMessages() {
+    void shouldNotShowIndexForFilteredMessages() {
         basicReader()
                 .asMethodReader(SayWhen.class.getName())
                 .execute();
@@ -282,7 +282,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotShowIndexForHistoryMessages() {
+    void shouldNotShowIndexForHistoryMessages() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build();
              final ExcerptAppender appender = queue.createAppender()) {
             try (DocumentContext dc = appender.writingDocument()) {
@@ -299,7 +299,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 //    }
 
     @Test
-    public void canReadPastEmptyMessageInReverseOrder() {
+    void canReadPastEmptyMessageInReverseOrder() {
         dataDir = getTmpDir().toPath();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir)
                 .sourceId(1)
@@ -351,7 +351,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
+    void shouldNotIncludeMessageHistoryByDefaultMethodReader() {
         basicReader().
                 asMethodReader(Say.class.getName()).
                 execute();
@@ -360,7 +360,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldIncludeMessageHistoryMethodReaderShowHistory() {
+    void shouldIncludeMessageHistoryMethodReaderShowHistory() {
         basicReader().
                 asMethodReader(Say.class.getName()).
                 showMessageHistory(true).
@@ -377,7 +377,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @Test
     @org.junit.jupiter.api.Timeout(value = 5000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
+    void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         IOTools.deleteDirWithFiles(dataDir.toFile());
         dataDir.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dataDir).testBlockSize().build()) {
@@ -412,7 +412,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
+    void shouldBeAbleToReadFromReadOnlyFile() throws IOException {
         assumeFalse(OS.isWindows(), "#460 read-only not supported on Windows");
 
         final Path queueFile = Files.list(dataDir).
@@ -426,7 +426,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldConvertEntriesToText() {
+    void shouldConvertEntriesToText() {
         basicReader().execute();
 
         assertEquals(48, capturedOutput.size());
@@ -434,7 +434,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldFilterByInclusionRegex() {
+    void shouldFilterByInclusionRegex() {
         basicReader().withInclusionRegex(".*good.*").execute();
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
@@ -443,7 +443,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldFilterByMultipleInclusionRegex() {
+    void shouldFilterByMultipleInclusionRegex() {
         basicReader().withInclusionRegex(".*bye$").withInclusionRegex(".*o.*").execute();
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
@@ -454,12 +454,12 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
+    void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
         assertThrows(IllegalArgumentException.class, () -> basicReader().withBasePath(Paths.get("/does/not/exist")).execute());
     }
 
     @Test
-    public void shouldFilterByExclusionRegex() {
+    void shouldFilterByExclusionRegex() {
         basicReader().withExclusionRegex(".*good.*").execute();
 
         assertEquals(TOTAL_EXCERPTS_IN_QUEUE, capturedOutput.size());
@@ -467,14 +467,14 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldFilterByMultipleExclusionRegex() {
+    void shouldFilterByMultipleExclusionRegex() {
         basicReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test
-    public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
+    void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReader().historyRecords(5).execute();
 
         assertEquals(5L, capturedOutput.stream().
@@ -482,7 +482,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldCombineIncludeFilterAndMaxRecords() {
+    void shouldCombineIncludeFilterAndMaxRecords() {
         basicReader().historyRecords(5).withInclusionRegex("hello").execute();
 
         assertEquals(2L, capturedOutput.stream().
@@ -490,7 +490,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldForwardToSpecifiedIndex() {
+    void shouldForwardToSpecifiedIndex() {
         final long knownIndex = Long.decode(findAnExistingIndex());
         basicReader().withStartIndex(knownIndex).execute();
 
@@ -499,14 +499,14 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
+    void shouldFailIfSpecifiedIndexIsBeforeFirstIndex() {
         assertThrows(IllegalArgumentException.class, () -> {
             basicReader().withStartIndex(1L).execute();
         });
     }
 
     @Test
-    public void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
+    void shouldNotRewindPastStartOfQueueWhenDisplayingHistory() {
         basicReader().historyRecords(Long.MAX_VALUE).execute();
 
         assertThat(capturedOutput.stream().
@@ -514,7 +514,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldContinueToPollQueueWhenTailModeIsEnabled() {
+    void shouldContinueToPollQueueWhenTailModeIsEnabled() {
         final int expectedPollCountWhenDocumentIsEmpty = 3;
         final FiniteDocumentPollMethod pollMethod = new FiniteDocumentPollMethod(expectedPollCountWhenDocumentIsEmpty);
         try {
@@ -529,7 +529,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     @RequiredForClient
     @Test
     @org.junit.jupiter.api.Timeout(value = 20_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void shouldPrintTimestampsToLocalTime() throws IOException {
+    void shouldPrintTimestampsToLocalTime() throws IOException {
         finishedNormally = false;
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -556,7 +556,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldOnlyOutputUpToMatchLimitAfterFiltering() {
+    void shouldOnlyOutputUpToMatchLimitAfterFiltering() {
         basicReader().withInclusionRegex("goodbye").withMatchLimit(3).execute();
 
         final List<String> matchedMessages = capturedOutput.stream()
@@ -567,7 +567,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void matchLimitThenNamedTailer() {
+    void matchLimitThenNamedTailer() {
         final long maxRecords = 5;
         final String tailerId = "myTailer";
         basicReader().withMatchLimit(maxRecords).withReadOnly(false).withTailerId(tailerId).execute();
@@ -582,13 +582,13 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void namedTailerRequiresReadWrite() {
+    void namedTailerRequiresReadWrite() {
         assumeFalse(OS.isWindows());
         assertThrows(IllegalArgumentException.class, () -> basicReader().withTailerId("tailerId").withReadOnly(true).execute());
     }
 
     @Test
-    public void shouldStopReadingWhenContentBasedLimitHasBeenReached() {
+    void shouldStopReadingWhenContentBasedLimitHasBeenReached() {
         AtomicInteger helloCount = new AtomicInteger();
         AtomicInteger goodbyeCount = new AtomicInteger();
         final Say say = msg -> {
@@ -639,7 +639,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearch() {
+    void findByBinarySearch() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -662,7 +662,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchReverse() {
+    void findByBinarySearchReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -686,7 +686,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchSparseRepeated() {
+    void findByBinarySearchSparseRepeated() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -714,7 +714,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchSparseRepeatedReverse() {
+    void findByBinarySearchSparseRepeatedReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -743,7 +743,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchSparseApprox() {
+    void findByBinarySearchSparseApprox() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -770,7 +770,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchSparseApproxReverse() {
+    void findByBinarySearchSparseApproxReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -798,7 +798,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchApprox() {
+    void findByBinarySearchApprox() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
             final int reps = 5;
@@ -821,7 +821,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchApproxReverse() {
+    void findByBinarySearchApproxReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
             final int reps = 5;
@@ -845,7 +845,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchAfterEnd() {
+    void findByBinarySearchAfterEnd() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -865,7 +865,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchAfterEndReverse() {
+    void findByBinarySearchAfterEndReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -886,7 +886,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchBeforeStart() {
+    void findByBinarySearchBeforeStart() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -906,7 +906,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchBeforeStartReverse() {
+    void findByBinarySearchBeforeStartReverse() {
         final File queueDir = getTmpDir();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
 
@@ -927,7 +927,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void findByBinarySearchWithDeletedRollCyles() {
+    void findByBinarySearchWithDeletedRollCyles() {
         final File queueDir = getTmpDir();
         final SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir)
@@ -960,7 +960,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldRespectWireType() {
+    void shouldRespectWireType() {
         basicReader().
                 asMethodReader(Say.class.getName()).
                 withWireType(WireType.JSON).
@@ -971,7 +971,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldRespectWireType2() {
+    void shouldRespectWireType2() {
         basicReader()
                 .asMethodReader(Say.class.getName())
                 .withWireType(WireType.JSON_ONLY)
@@ -1029,7 +1029,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @AfterEach
-    public void clearInterrupt() {
+    void clearInterrupt() {
         Thread.interrupted();
     }
 

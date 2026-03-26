@@ -20,7 +20,7 @@ import static net.openhft.chronicle.queue.rollcycles.LargeRollCycles.HUGE_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class RollCycleEncodeSequenceTest extends QueueTestCommon {
+class RollCycleEncodeSequenceTest extends QueueTestCommon {
 
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
@@ -34,7 +34,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void forWritePosition(RollCycle cycle) {
+    void forWritePosition(RollCycle cycle) {
         BinaryTwoLongReference longValue = new BinaryTwoLongReference();
         Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
         try {
@@ -54,7 +54,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void setGet(RollCycle cycle) {
+    void setGet(RollCycle cycle) {
         BinaryTwoLongReference longValue = new BinaryTwoLongReference();
         Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
         try {
@@ -73,7 +73,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void setGetPositionNeedsMasking(RollCycle cycle) {
+    void setGetPositionNeedsMasking(RollCycle cycle) {
         BinaryTwoLongReference longValue = new BinaryTwoLongReference();
         Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
         try {
@@ -92,7 +92,7 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void setGetPositionMinus1(RollCycle cycle) {
+    void setGetPositionMinus1(RollCycle cycle) {
         BinaryTwoLongReference longValue = new BinaryTwoLongReference();
         Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
         try {

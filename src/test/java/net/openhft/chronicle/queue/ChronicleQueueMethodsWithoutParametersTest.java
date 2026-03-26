@@ -12,10 +12,10 @@ import java.io.File;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon {
+class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon {
 
     @Test
-    public void test() {
+    void test() {
         File file = getTmpDir();
 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(file)
@@ -50,7 +50,7 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
         void methodWithOneParam(int i);
     }
 
-    public static class SomeManager implements SomeListener {
+    static class SomeManager implements SomeListener {
 
         boolean methodWithoutParamsInvoked = false;
         boolean methodWithOneParamInvoked = false;

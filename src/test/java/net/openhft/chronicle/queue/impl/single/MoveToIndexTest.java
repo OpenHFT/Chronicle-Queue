@@ -20,12 +20,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class MoveToIndexTest extends QueueTestCommon {
+final class MoveToIndexTest extends QueueTestCommon {
     @TempDir
     Path tmpFolder;
 
     @Test
-    public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
+    void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
         File queuePath = Files.createDirectory(tmpFolder.resolve("cq")).toFile();
 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).build();
@@ -47,7 +47,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/401
     @Test
-    public void testRandomMove() throws IOException {
+    void testRandomMove() throws IOException {
         final Map<Long, String> messageByIndex = new HashMap<>();
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.
@@ -83,7 +83,7 @@ public final class MoveToIndexTest extends QueueTestCommon {
      * @throws Exception If failed.
      */
     @Test
-    public void testNotReachedInCycle() throws Exception {
+    void testNotReachedInCycle() throws Exception {
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(Files.createTempDirectory(tmpFolder, "queue").toFile()).build();
              ExcerptAppender appender = q.createAppender()) {
             ExcerptTailer tailer = q.createTailer();

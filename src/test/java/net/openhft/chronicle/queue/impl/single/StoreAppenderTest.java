@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class StoreAppenderTest extends QueueTestCommon {
+class StoreAppenderTest extends QueueTestCommon {
 
     private static final String TEST_TEXT = "Some text some text some text";
     private static final long ONE_DAY = TimeUnit.DAYS.toMillis(1);
@@ -39,7 +39,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException, IOException {
+    void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException, IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(Files.createTempDirectory(queueDirectory, "queue").toFile()).build()) {
             final BlockingWriter blockingWriter = new BlockingWriter(queue);
             final BlockedWriter blockedWriter = new BlockedWriter(queue);
@@ -62,7 +62,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
+    void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
         clock.addAndGet(-clock.get() % ONE_DAY);

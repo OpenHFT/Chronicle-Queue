@@ -20,9 +20,9 @@ import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class TableStoreTest extends QueueTestCommon {
+class TableStoreTest extends QueueTestCommon {
     @Test
-    public void acquireValueFor() throws IOException {
+    void acquireValueFor() throws IOException {
 
         final File file = tempDir("table");
         assumeFalse(PageUtil.isHugePage(file.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
@@ -77,7 +77,7 @@ public class TableStoreTest extends QueueTestCommon {
     }
 
     @Test
-    public void acquireValueForReadOnly() throws IOException {
+    void acquireValueForReadOnly() throws IOException {
 
         final File file = tempDir("table");
         file.mkdir();

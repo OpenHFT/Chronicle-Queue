@@ -20,25 +20,25 @@ import java.io.Writer;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("deprecation")
-public class ChronicleQueueTest extends QueueTestCommon {
+class ChronicleQueueTest extends QueueTestCommon {
 
     private static final String PATH_NAME = OS.getTarget() + "/test-path";
 
     @AfterAll
-    public static void cleanup() {
+    static void cleanup() {
         // Clean up the test directory
         IOTools.deleteDirWithFiles(PATH_NAME);
     }
 
     @Test
-    public void testSingleBuilderCreatesNewInstance() {
+    void testSingleBuilderCreatesNewInstance() {
         // Test that the singleBuilder() method returns a valid SingleChronicleQueueBuilder instance
         SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder();
         assertNotNull(builder);
     }
 
     @Test
-    public void testIndexForIdThrowsUnsupportedOperationException() {
+    void testIndexForIdThrowsUnsupportedOperationException() {
         // Test that indexForId(String id) throws an UnsupportedOperationException as expected
         try (ChronicleQueue queue = new StubChronicleQueue()) {
             assertThrows(UnsupportedOperationException.class, () -> queue.indexForId("someId"));
@@ -46,7 +46,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCreateTailerThrowsUnsupportedOperationExceptionForNamedTailer() {
+    void testCreateTailerThrowsUnsupportedOperationExceptionForNamedTailer() {
         // Test that createTailer(String id) throws an UnsupportedOperationException for the default implementation
         try (ChronicleQueue queue = new StubChronicleQueue()) {
             assertThrows(UnsupportedOperationException.class, () -> queue.createTailer("namedTailer"));
@@ -54,7 +54,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCreateTailerCreatesNewExcerptTailer() {
+    void testCreateTailerCreatesNewExcerptTailer() {
         // Assuming createTailer() creates a valid ExcerptTailer when not overridden
         try (ChronicleQueue queue = ChronicleQueue.single(PATH_NAME);  // Adjust with a proper path
              ExcerptTailer tailer = queue.createTailer()) {
@@ -63,7 +63,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testFileAbsolutePath() {
+    void testFileAbsolutePath() {
         // Assuming fileAbsolutePath() returns the correct absolute path of the Chronicle Queue
         try (ChronicleQueue queue = ChronicleQueue.single(PATH_NAME)) {  // Use a test path
             String path = queue.fileAbsolutePath();
@@ -73,7 +73,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testDumpCallsOutputStreamWriter() {
+    void testDumpCallsOutputStreamWriter() {
         // Test that dump(OutputStream stream, long fromIndex, long toIndex) calls the writer version correctly
         try (ChronicleQueue queue = new StubChronicleQueue() {
 
@@ -91,7 +91,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testLastIndexReplicatedReturnsMinusOne() {
+    void testLastIndexReplicatedReturnsMinusOne() {
         // Test that lastIndexReplicated() returns -1
         try (ChronicleQueue queue = new StubChronicleQueue()) {
             assertEquals(-1, queue.lastIndexReplicated());
@@ -99,7 +99,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testLastAcknowledgedIndexReplicatedReturnsMinusOne() {
+    void testLastAcknowledgedIndexReplicatedReturnsMinusOne() {
         // Test that lastAcknowledgedIndexReplicated() returns -1
         try (ChronicleQueue queue = new StubChronicleQueue()) {
             assertEquals(-1, queue.lastAcknowledgedIndexReplicated());
@@ -107,7 +107,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testLastIndexMSyncedReturnsMinusOne() {
+    void testLastIndexMSyncedReturnsMinusOne() {
         // Test that lastIndexMSynced() returns -1
         try (ChronicleQueue queue = new StubChronicleQueue()) {
             assertEquals(-1, queue.lastIndexMSynced());
@@ -115,7 +115,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testLastIndexMSyncedThrowsUnsupportedOperationException() {
+    void testLastIndexMSyncedThrowsUnsupportedOperationException() {
         // Test that lastIndexMSynced(long lastIndexMSynced) throws UnsupportedOperationException
         try (ChronicleQueue queue = new StubChronicleQueue()) {
             assertThrows(UnsupportedOperationException.class, () -> queue.lastIndexMSynced(100L));
@@ -123,7 +123,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testAwaitAsyncReturnsTrue() {
+    void testAwaitAsyncReturnsTrue() {
         // Test that awaitAsync() always returns true
         try (ChronicleQueue queue = new StubChronicleQueue()) {
             assertTrue(queue.awaitAsync());
@@ -131,7 +131,7 @@ public class ChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testNonAsyncTailerCallsCreateTailer() {
+    void testNonAsyncTailerCallsCreateTailer() {
         // Test that nonAsyncTailer() calls createTailer()
         try (ChronicleQueue queue = ChronicleQueue.single(PATH_NAME)) {  // Adjust with a proper path
             assertNotNull(queue.nonAsyncTailer());

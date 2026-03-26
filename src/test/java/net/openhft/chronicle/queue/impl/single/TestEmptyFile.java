@@ -21,25 +21,25 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class TestEmptyFile {
+class TestEmptyFile {
     private Path tmpDir = DirectoryUtils.tempDir(TestEmptyFile.class.getSimpleName()).toPath();
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @BeforeEach
-    public void setup() throws IOException {
+    void setup() throws IOException {
         tmpDir.toFile().mkdirs();
         File file = tmpDir.resolve("20170320.cq4").toFile();
         new FileOutputStream(file).close();
     }
 
     @AfterEach
-    public void cleanup() {
+    void cleanup() {
         IOTools.deleteDirWithFiles(tmpDir.toFile());
     }
 
     @Test
     @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
-    public void shouldHandleEmptyFile() {
+    void shouldHandleEmptyFile() {
         assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue =
                      ChronicleQueue.singleBuilder(tmpDir)

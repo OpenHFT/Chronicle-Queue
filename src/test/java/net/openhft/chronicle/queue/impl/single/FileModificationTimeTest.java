@@ -15,7 +15,7 @@ import java.util.function.LongSupplier;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public final class FileModificationTimeTest extends QueueTestCommon {
+final class FileModificationTimeTest extends QueueTestCommon {
     private final AtomicInteger fileCount = new AtomicInteger();
 
     private static void waitForDiff(final long a, final LongSupplier b) {
@@ -31,7 +31,7 @@ public final class FileModificationTimeTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldUpdateDirectoryModificationTime() {
+    void shouldUpdateDirectoryModificationTime() {
         final File dir = getTmpDir();
         assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()));
         dir.mkdirs();

@@ -19,9 +19,9 @@ import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DeleteFileTest {
+class DeleteFileTest {
     @Test
-    public void testMain() {
+    void testMain() {
         final long[] clock = {1730366325_000L};
         final long delay = 1_000L;
         try {

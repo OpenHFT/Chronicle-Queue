@@ -8,15 +8,16 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ValueStringArrayTest extends QueueTestCommon {
+class ValueStringArrayTest extends QueueTestCommon {
 
     private static final String EXPECTED = "hello world";
     private final ValueStringArray using = new ValueStringArray();
 
     @Test
-    public void test() {
+    void test() {
         // No explicit support of putting a Value into Wire.
         expectException("BytesMarshallable found in field which is not matching exactly");
 

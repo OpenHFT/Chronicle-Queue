@@ -16,7 +16,7 @@ import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Disabled("double buffering is turned off currently")
-public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiThreadStressTest {
+class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiThreadStressTest {
 
     private AtomicBoolean queueDumped = new AtomicBoolean(false);
 
@@ -26,7 +26,7 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         queueDumped = new AtomicBoolean(false);
     }
 

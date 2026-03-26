@@ -26,14 +26,14 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class ToEndTest extends QueueTestCommon {
+class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
     private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
     private long lastCycle;
 
     @Test
-    public void missingCyclesToEndTest() {
+    void missingCyclesToEndTest() {
         String path = OS.getTarget() + "/missingCyclesToEndTest-" + Time.uniqueId();
         try {
             IOTools.shallowDeleteDirWithFiles(path);
@@ -111,7 +111,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
+    void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
         String path = OS.getTarget() + "/toEndIncRefCount-" + Time.uniqueId();
         IOTools.shallowDeleteDirWithFiles(path);
 
@@ -150,7 +150,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void toEndTest() {
+    void toEndTest() {
         File baseDir = getTmpDir();
 
         try {
@@ -194,7 +194,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void toEndBeforeWriteTest() {
+    void toEndBeforeWriteTest() {
         File baseDir = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
@@ -232,7 +232,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void toEndAfterWriteTest() {
+    void toEndAfterWriteTest() {
         File file = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(file);
         final SetTimeProvider stp = new SetTimeProvider();
@@ -280,7 +280,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForEmptyQueue() {
+    void shouldReturnExpectedValuesForEmptyQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
@@ -289,7 +289,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
+    void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
@@ -371,7 +371,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
+    void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {

@@ -13,10 +13,10 @@ import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class PretouchUtilTest extends QueueTestCommon {
+class PretouchUtilTest extends QueueTestCommon {
 
     @Test
-    public void createEventHandlerAndPretoucherFallback() {
+    void createEventHandlerAndPretoucherFallback() {
         ignoreException("Pretoucher is only supported");
         final File dir = getTmpDir();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
@@ -35,7 +35,7 @@ public class PretouchUtilTest extends QueueTestCommon {
     }
 
     @Test
-    public void eventHandlerActionOnClosedQueueDoesNotThrow() {
+    void eventHandlerActionOnClosedQueueDoesNotThrow() {
         ignoreException("Pretoucher is only supported");
         final File dir = getTmpDir();
         EventHandler handler;

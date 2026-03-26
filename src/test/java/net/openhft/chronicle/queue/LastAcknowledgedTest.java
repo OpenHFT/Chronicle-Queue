@@ -22,9 +22,9 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class LastAcknowledgedTest extends QueueTestCommon {
+class LastAcknowledgedTest extends QueueTestCommon {
     @Test
-    public void testLastAcknowledge() {
+    void testLastAcknowledge() {
         String name = OS.getTarget() + "/testLastAcknowledge-" + Time.uniqueId();
         long lastIndexAppended;
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(name).testBlockSize().build();
@@ -66,7 +66,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
     }
 
     @Test
-    public void testReadBeforeAcknowledgment() throws IOException {
+    void testReadBeforeAcknowledgment() throws IOException {
 
         // Set up a Chronicle Queue and a StoreTailer for testing
         String pathName = "target" + System.nanoTime();
@@ -130,7 +130,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
      * @throws IOException if the Chronicle Queue cannot be created
      */
     @Test
-    public void testReadBeforeAcknowledgmentOnRoll() throws IOException {
+    void testReadBeforeAcknowledgmentOnRoll() throws IOException {
 
         // Set up a Chronicle Queue and a StoreTailer for testing
         String pathName = "target" + System.nanoTime();

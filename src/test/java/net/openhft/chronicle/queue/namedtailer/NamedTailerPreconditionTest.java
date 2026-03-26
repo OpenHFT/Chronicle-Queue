@@ -15,10 +15,10 @@ import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NamedTailerPreconditionTest extends QueueTestCommon {
+class NamedTailerPreconditionTest extends QueueTestCommon {
 
     @Test
-    public void canCreateNonReplicatedNamedTailerOnSink() {
+    void canCreateNonReplicatedNamedTailerOnSink() {
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build()) {
             setQueueAsSink(queue);
@@ -31,7 +31,7 @@ public class NamedTailerPreconditionTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotCreateNonReplicatedNamedTailerOnSink() {
+    void cannotCreateNonReplicatedNamedTailerOnSink() {
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build()) {
             setQueueAsSink(queue);

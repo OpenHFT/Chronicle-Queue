@@ -27,7 +27,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class RollingCycleTest extends QueueTestCommon {
+class RollingCycleTest extends QueueTestCommon {
 
     public static Collection<Object[]> data() {
         return Arrays.asList(
@@ -38,7 +38,7 @@ public class RollingCycleTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void testRollCycle(boolean named) {
+    void testRollCycle(boolean named) {
         SetTimeProvider stp = new SetTimeProvider();
         long start = 19059 * 86_400_000L;
         stp.currentTimeMillis(start);

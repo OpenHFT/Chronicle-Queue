@@ -20,33 +20,33 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class SingleTableStoreIntegrationTests extends QueueTestCommon {
+class SingleTableStoreIntegrationTests extends QueueTestCommon {
 
     private TestContext context;
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         context = new TestContext();
     }
 
     @AfterEach
-    public void after() throws IOException {
+    void after() throws IOException {
         context.close();
     }
 
     @Test
-    public void baseCasePutAndGet() {
+    void baseCasePutAndGet() {
         context.newQueueInstance().tableStorePut("a", 1);
         assertEquals(1, context.newQueueInstance().tableStoreGet("a"));
     }
 
     @Test
-    public void getMissingKeyWithoutDefault() {
+    void getMissingKeyWithoutDefault() {
         assertEquals(Long.MIN_VALUE, context.newQueueInstance().tableStoreGet("test"));
     }
 
     @Test
-    public void growNumberOfKeys() {
+    void growNumberOfKeys() {
         SingleChronicleQueue queue1 = context.newQueueInstance();
         queue1.tableStorePut("a", 1);
         queue1.tableStorePut("b", 2);
@@ -61,7 +61,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     }
 
     @Test
-    public void largeNumberOfKeyValuePairs() {
+    void largeNumberOfKeyValuePairs() {
         finishedNormally = false;
         SingleChronicleQueue queue1 = context.newQueueInstance();
         int count = 4_000;
@@ -75,7 +75,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     }
 
     @Test
-    public void longKeyPutAndGet() {
+    void longKeyPutAndGet() {
         SingleChronicleQueue queue1 = context.newQueueInstance();
         StringBuilder keyBuffer = new StringBuilder("AAAA");
         Random random = new Random();

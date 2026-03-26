@@ -20,10 +20,10 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
+class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
 
     @Test
-    public void test() {
+    void test() {
         String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         final SingleChronicleQueueBuilder myBuilder = SingleChronicleQueueBuilder.single(basePath)
                 .testBlockSize()

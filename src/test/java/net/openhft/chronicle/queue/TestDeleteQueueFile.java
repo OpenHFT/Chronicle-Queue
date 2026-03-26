@@ -37,14 +37,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @SuppressWarnings("this-escape")
-public class TestDeleteQueueFile extends QueueTestCommon {
+class TestDeleteQueueFile extends QueueTestCommon {
 
     private static final int NUM_REPEATS = 10;
     private static final int CYCLES_TO_DELETE_PER_ITERATION = 20;
     private final Path tempQueueDir = getTmpDir().toPath();
 
     @Test
-    public void testRefreshDirectoryListingWillUpdateFirstAndLastIndicesCorrectly() throws IOException {
+    void testRefreshDirectoryListingWillUpdateFirstAndLastIndicesCorrectly() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
@@ -68,7 +68,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void tailerToStartWorksInFaceOfDeletedStoreFile() throws IOException {
+    void tailerToStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
@@ -94,7 +94,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
-    public void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
+    void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
@@ -119,7 +119,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void tailerToEndWorksInFaceOfDeletedStoreFile() throws IOException {
+    void tailerToEndWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
@@ -145,7 +145,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
-    public void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
+    void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
@@ -170,7 +170,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void firstAndLastIndexAreRefreshedAfterForceRefreshInterval() throws IOException {
+    void firstAndLastIndexAreRefreshedAfterForceRefreshInterval() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, builder -> builder.forceDirectoryListingRefreshIntervalMs(250))) {
@@ -202,12 +202,12 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void tailingThroughDeletedCyclesWillRefreshThenRetry_Writable() throws IOException {
+    void tailingThroughDeletedCyclesWillRefreshThenRetry_Writable() throws IOException {
         tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> qwcd.queue);
     }
 
     @Test
-    public void tailingThroughDeletedCyclesWillRefreshThenRetry_ReadOnly() throws IOException {
+    void tailingThroughDeletedCyclesWillRefreshThenRetry_ReadOnly() throws IOException {
         tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())
                 .rollCycle(RollCycles.FAST_DAILY)
                 .readOnly(true)
@@ -215,7 +215,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void deletingOldFilesChaosTest() throws InterruptedException {
+    void deletingOldFilesChaosTest() throws InterruptedException {
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         final int numberOfCycles = 300;
         final AtomicBoolean running = new AtomicBoolean(true);
@@ -235,17 +235,17 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void deleteFileFromUnderTailerTest_StartOfRange() throws IOException {
+    void deleteFileFromUnderTailerTest_StartOfRange() throws IOException {
         deleteFileFromUnderTailerTest(10, 0);
     }
 
     @Test
-    public void deleteFileFromUnderTailerTest_MiddleOfRange() throws IOException {
+    void deleteFileFromUnderTailerTest_MiddleOfRange() throws IOException {
         deleteFileFromUnderTailerTest(10, 5);
     }
 
     @Test
-    public void deleteFileFromUnderTailerTest_EndOfRange() throws IOException {
+    void deleteFileFromUnderTailerTest_EndOfRange() throws IOException {
         deleteFileFromUnderTailerTest(10, 8);
     }
 
@@ -327,7 +327,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void deletingRandomRollCyclesChaosTest() throws InterruptedException {
+    void deletingRandomRollCyclesChaosTest() throws InterruptedException {
         assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         final int numberOfCycles = 300;

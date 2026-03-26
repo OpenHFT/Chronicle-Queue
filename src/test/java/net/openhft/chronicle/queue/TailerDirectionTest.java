@@ -26,7 +26,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class TailerDirectionTest extends QueueTestCommon {
+class TailerDirectionTest extends QueueTestCommon {
 
     private static final String TEST_MESSAGE_PREFIX = "Test entry: ";
 
@@ -81,7 +81,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     // 3) Redo step 1)
     //
     @Test
-    public void testTailerForwardBackwardRead() {
+    void testTailerForwardBackwardRead() {
         String basePath = OS.getTarget() + "/tailerForwardBackward-" + Time.uniqueId();
 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
@@ -133,7 +133,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     }
 
     @Test
-    public void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
+    void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
@@ -156,7 +156,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     }
 
     @Test
-    public void testTailerBackwardsReadBeyondCycle() {
+    void testTailerBackwardsReadBeyondCycle() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
@@ -201,7 +201,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 10_000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
+    void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)

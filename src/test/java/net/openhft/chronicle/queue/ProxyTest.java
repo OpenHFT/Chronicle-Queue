@@ -10,6 +10,7 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -17,10 +18,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Created by Rob Austin
  */
-public class ProxyTest extends QueueTestCommon {
+class ProxyTest extends QueueTestCommon {
 
     @Test
-    public void testReadWrite() {
+    void testReadWrite() {
 
         File tempDir = getTmpDir();
         StringBuilder result = new StringBuilder();

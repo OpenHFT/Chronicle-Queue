@@ -15,10 +15,10 @@ import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CycleOverflowTest extends QueueTestCommon {
+class CycleOverflowTest extends QueueTestCommon {
 
     @Test
-    public void overflowingMaxMessagesInCycleShouldThrowException() {
+    void overflowingMaxMessagesInCycleShouldThrowException() {
         File path = getTmpDir();
         RollCycle rollCycle = TestRollCycles.TEST_DAILY;
         SetTimeProvider timeProvider = new SetTimeProvider();

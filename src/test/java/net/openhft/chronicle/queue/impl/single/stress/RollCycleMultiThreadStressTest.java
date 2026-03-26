@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @SuppressWarnings("this-escape")
-public class RollCycleMultiThreadStressTest extends QueueTestCommon {
+class RollCycleMultiThreadStressTest extends QueueTestCommon {
 
     private final long SLEEP_PER_WRITE_NANOS;
     private final int TEST_TIME;
@@ -118,8 +118,8 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     @BeforeEach
-    public void beforeEachRollCycleMultiThreadStressTest() {
-        threadDump();
+    void beforeEachRollCycleMultiThreadStressTest() {
+        public threadDump();
         multiCPU();
     }
 
@@ -129,7 +129,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
     }
 
     @Test
-    public void stress() throws Exception {
+    void stress() throws Exception {
         ignoreException(" us to grow file");
         ignoreException("ms to check the disk space of");
         ignoreException("seconds to ASYNC");

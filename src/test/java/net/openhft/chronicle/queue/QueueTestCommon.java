@@ -51,7 +51,7 @@ public class QueueTestCommon {
     protected String testMethodName;
 
     @BeforeEach
-    public void beforeEachQueueTestCommon(TestInfo testInfo) {
+    void beforeEachQueueTestCommon(TestInfo testInfo) {
         initTestInfo(testInfo);
         recordTargetDirContents();
         recordDiskSpace();
@@ -103,7 +103,7 @@ public class QueueTestCommon {
     }
 
     @AfterEach
-    public void afterEachQueueTestCommon() {
+    void afterEachQueueTestCommon() {
         checkSpaceUsed();
         deleteTargetDirTestArtifacts();
         afterChecks();

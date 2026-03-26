@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MicroToucherTest extends QueueTestCommon {
+class MicroToucherTest extends QueueTestCommon {
 
     @Override
     @BeforeEach
@@ -26,7 +26,7 @@ public class MicroToucherTest extends QueueTestCommon {
     }
 
     @Test
-    public void touchPageTestBlockSize() {
+    void touchPageTestBlockSize() {
         touchPage(b -> b.blockSize(64 << 20), 66561);
     }
 

@@ -15,10 +15,10 @@ import java.io.PrintStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DumpMainTest extends QueueTestCommon {
+class DumpMainTest extends QueueTestCommon {
 
     @Test
-    public void dumpDirectoryPrintsQueueContents() {
+    void dumpDirectoryPrintsQueueContents() {
         final File dir = getTmpDir();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
             // write a couple of simple messages

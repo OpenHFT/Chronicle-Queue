@@ -19,7 +19,7 @@ import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class SingleChronicleQueueStoreTest extends QueueTestCommon {
+class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final int INDEX_SPACING = 4;
     private static final int RECORD_COUNT = INDEX_SPACING * 10;
     private static final RollCycles ROLL_CYCLE = RollCycles.DEFAULT;
@@ -65,7 +65,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldPerformIndexingOnAppend() throws IOException {
+    void shouldPerformIndexingOnAppend() throws IOException {
         runTest(queue -> {
             try (ExcerptAppender appender = queue.createAppender()) {
                 final long[] indices = writeMessagesStoreIndices(appender, queue.createTailer());

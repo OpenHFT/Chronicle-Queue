@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Idea borrowed from Netty - https://github.com/netty/netty - microbench/src/main/java/io/netty/microbench/util/AbstractMicrobenchmarkBase.java
  */
-public class ChronicleQueueMicrobench {
+class ChronicleQueueMicrobench {
 
     protected static final int DEFAULT_WARMUP_ITERATIONS = 10;
     protected static final int DEFAULT_MEASURE_ITERATIONS = 10;

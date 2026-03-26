@@ -18,10 +18,10 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class MessageReaderWriterTest extends QueueTestCommon {
+class MessageReaderWriterTest extends QueueTestCommon {
 
     @Test
-    public void testWriteWhileReading() {
+    void testWriteWhileReading() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class);
 

@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 
 @RequiredForClient
-public class ChronicleRollingIssueTest extends QueueTestCommon {
+class ChronicleRollingIssueTest extends QueueTestCommon {
 
     private String path;
 
@@ -35,12 +35,12 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
     }
 
     @AfterEach
-    public void tearDown() {
+    protected void tearDown() {
         IOTools.deleteDirWithFiles(path);
     }
 
     @Test
-    public void test() throws InterruptedException {
+    void test() throws InterruptedException {
         int threads = Math.min(64, Runtime.getRuntime().availableProcessors() * 4) - 1;
         int messages = 100;
 

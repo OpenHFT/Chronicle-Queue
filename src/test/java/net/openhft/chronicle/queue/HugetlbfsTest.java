@@ -14,10 +14,10 @@ import static net.openhft.chronicle.queue.util.HugetlbfsTestUtil.isHugetlbfsAvai
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class HugetlbfsTest extends QueueTestCommon {
+class HugetlbfsTest extends QueueTestCommon {
 
     @Test
-    public void queueHugetlbfsEndToEndSimpleAcceptanceTest() {
+    void queueHugetlbfsEndToEndSimpleAcceptanceTest() {
         assumeTrue(isHugetlbfsAvailable());
         String path = getHugetlbfsQueueDirectory(testMethodName);
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single()

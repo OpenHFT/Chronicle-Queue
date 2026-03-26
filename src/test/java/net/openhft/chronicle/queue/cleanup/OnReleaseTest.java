@@ -22,9 +22,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class OnReleaseTest extends QueueTestCommon {
+class OnReleaseTest extends QueueTestCommon {
     @Test
-    public void onRelease() throws Throwable {
+    void onRelease() throws Throwable {
         FlakyTestRunner.builder(this::onRelease0).build().run();
     }
 

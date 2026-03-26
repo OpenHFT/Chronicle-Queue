@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
-public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
+class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
     private static final int BYTES_LENGTH = 256;
     private static final long INTERVAL_US = 10;
@@ -35,23 +35,23 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     @Disabled("long running test")
     @Test
     @org.junit.jupiter.api.Timeout(value = 60000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testUnbuffered() throws InterruptedException {
+    void testUnbuffered() throws InterruptedException {
         doTest(false, 50_000);
     }
 
     @Test
-    public void testConcurrentShortRun() throws InterruptedException {
+    void testConcurrentShortRun() throws InterruptedException {
         doTest(false, 1_000);
     }
 
     @Test
-    public void testBufferedShortRun() throws InterruptedException {
+    void testBufferedShortRun() throws InterruptedException {
         assumeBufferingAvailable();
         doTest(BufferMode.Asynchronous, false, false, 1_000);
     }
 
     @Test
-    public void testBufferedHeapBytes() throws InterruptedException {
+    void testBufferedHeapBytes() throws InterruptedException {
         assumeBufferingAvailable();
         doTest(BufferMode.Asynchronous, true, true, 512);
     }

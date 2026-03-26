@@ -19,7 +19,7 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ThreadedQueueTest extends QueueTestCommon {
+class ThreadedQueueTest extends QueueTestCommon {
 
     private static final int REQUIRED_COUNT = 10;
 
@@ -32,7 +32,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 10000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
+    void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
         final File path = getTmpDir();
 
@@ -91,7 +91,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testTailerReadingEmptyQueue() {
+    void testTailerReadingEmptyQueue() {
         final File path = getTmpDir();
 
         try (final ChronicleQueue rqueue = SingleChronicleQueueBuilder.builder(path, WireType.FIELDLESS_BINARY)

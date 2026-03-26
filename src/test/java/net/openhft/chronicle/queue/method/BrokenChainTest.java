@@ -18,7 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BrokenChainTest extends QueueTestCommon {
+class BrokenChainTest extends QueueTestCommon {
     interface First {
         Second pre(String pre);
     }
@@ -28,7 +28,7 @@ public class BrokenChainTest extends QueueTestCommon {
     }
 
     @Test
-    public void brokenChainQueue() {
+    void brokenChainQueue() {
         String tmpName = OS.getTarget() + "/brokenChain-" + System.nanoTime();
         try (ChronicleQueue queue = ChronicleQueue.single(tmpName);
              // using createAppender() doesn't work as the chained methods uses acquireAppender()

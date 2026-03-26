@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
+final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     private final AtomicBoolean failedToMoveToEnd = new AtomicBoolean(false);
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8,
             new NamedThreadFactory("test"));
@@ -32,7 +32,7 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldAlwaysBeAbleToTail() throws InterruptedException {
+    void shouldAlwaysBeAbleToTail() throws InterruptedException {
         ChronicleQueue[] queues = new ChronicleQueue[10];
         for (int i = 0; i < 10; i++) {
             final ChronicleQueue queue = createNewQueue();
@@ -55,7 +55,7 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     @Override
-    public void tearDown() {
+    protected public void tearDown() {
         super.tearDown();
         threadPool.shutdownNow();
     }

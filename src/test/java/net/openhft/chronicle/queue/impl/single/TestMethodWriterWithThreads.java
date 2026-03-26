@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assumptions.*;
 /**
  * check that method writes are thread safe when used with queue.methodWriter
  */
-public class TestMethodWriterWithThreads extends QueueTestCommon {
+class TestMethodWriterWithThreads extends QueueTestCommon {
 
     private static final int AMEND = 1;
     private static final int CREATE = 2;
@@ -47,9 +47,9 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
     }
 
     @BeforeEach
-    public void beforeEachTestMethodWriterWithThreads() {
+    void beforeEachTestMethodWriterWithThreads() {
         check64bit();
-        threadDump();
+        public threadDump();
     }
 
     public void check64bit() {
@@ -63,7 +63,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void test(boolean doubleBuffer) throws FileNotFoundException {
+    void test(boolean doubleBuffer) throws FileNotFoundException {
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue q = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).doubleBuffer(doubleBuffer).build()) {

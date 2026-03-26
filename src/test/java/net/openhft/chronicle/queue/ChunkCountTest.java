@@ -16,9 +16,9 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class ChunkCountTest extends QueueTestCommon {
+class ChunkCountTest extends QueueTestCommon {
     @Test
-    public void chunks() {
+    void chunks() {
         File tempFile = IOTools.createTempFile("chunks");
         assumeFalse(PageUtil.isHugePage(tempFile.getAbsolutePath()), "Ignored on hugetlbfs as chunk count will vary under huge pages");
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder

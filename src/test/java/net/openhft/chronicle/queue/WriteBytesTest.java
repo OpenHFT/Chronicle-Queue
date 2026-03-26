@@ -24,13 +24,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
-public class WriteBytesTest extends QueueTestCommon {
+class WriteBytesTest extends QueueTestCommon {
     private final Bytes<?> outgoingBytes = Bytes.elasticByteBuffer();
     private final byte[] incomingMsgBytes = new byte[100];
     private final byte[] outgoingMsgBytes = new byte[100];
 
     @Test
-    public void testWriteBytes() {
+    void testWriteBytes() {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
@@ -65,7 +65,7 @@ public class WriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWriteBytesAndDump() {
+    void testWriteBytesAndDump() {
         File dir = getTmpDir();
         assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         final SingleChronicleQueueBuilder builder = binary(dir)
@@ -1052,7 +1052,7 @@ public class WriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWriteBytesWithDirectBufferReuse() {
+    void testWriteBytesWithDirectBufferReuse() {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()
@@ -1087,7 +1087,7 @@ public class WriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void testRollCycleCapacityConsistency() {
+    void testRollCycleCapacityConsistency() {
         File dir = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider("2024/01/01T00:00:00")
                 .autoIncrement(0, TimeUnit.MILLISECONDS);

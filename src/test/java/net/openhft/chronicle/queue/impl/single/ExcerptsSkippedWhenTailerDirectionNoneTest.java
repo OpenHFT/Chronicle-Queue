@@ -13,10 +13,10 @@ import java.io.File;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
+final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
     @SuppressWarnings("try")
     @Test
-    public void shouldNotSkipMessageAtStartOfQueue() {
+    void shouldNotSkipMessageAtStartOfQueue() {
         final File tmpDir = getTmpDir();
         try (final ChronicleQueue writeQueue =
                      ChronicleQueue.singleBuilder(tmpDir)

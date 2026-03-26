@@ -34,13 +34,13 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class SingleCQFormatTest extends QueueTestCommon {
+class SingleCQFormatTest extends QueueTestCommon {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
 
     @Test
-    public void testEmptyDirectory() {
+    void testEmptyDirectory() {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
         try (RollingChronicleQueue queue = binary(dir).testBlockSize().build()) {
@@ -53,7 +53,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testInvalidFile() throws FileNotFoundException {
+    void testInvalidFile() throws FileNotFoundException {
         // based on the file name
         expectException("Overriding roll cycle from TEST4_DAILY to DAILY");
 
@@ -87,7 +87,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testNoHeader() throws IOException {
+    void testNoHeader() throws IOException {
         ignoreException("Channel closed while unlocking");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()));
@@ -117,7 +117,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testDeadHeader() throws IOException {
+    void testDeadHeader() throws IOException {
         ignoreException("Channel closed while unlocking");
         final File dir = getTmpDir();
 
@@ -141,7 +141,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testDeadHeaderAppend() throws IOException {
+    void testDeadHeaderAppend() throws IOException {
         ignoreException("Channel closed while unlocking");
         expectException("Renamed un-acquirable segment file to");
         final File dir = getTmpDir();
@@ -183,7 +183,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
 
     // "see https://github.com/OpenHFT/Chronicle-Queue/issues/719")
     @Test
-    public void testCompleteHeader() throws FileNotFoundException {
+    void testCompleteHeader() throws FileNotFoundException {
         finishedNormally = false;
         ignoreException("reading control code as text");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
@@ -288,8 +288,8 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 "64 49 6e 64 65 78 52 65 70 6c 69 63 61 74 65 64 # int64 for binding\n" +
                 "8e 02 00 00 00 00 00 a7 00 00 00 00 00 00 00 00 # 0\n";
         assertEquals(bytes instanceof HexDumpBytes
-                        ? expectedHexDump
-                        : expected, bytes.toHexString());
+                ? expectedHexDump
+                : expected, bytes.toHexString());
 
         assertEquals("" +
                 "--- !!meta-data #binary\n" +
@@ -312,7 +312,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCompleteHeader2() throws FileNotFoundException {
+    void testCompleteHeader2() throws FileNotFoundException {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
 
@@ -357,7 +357,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testIncompleteHeader() throws FileNotFoundException {
+    void testIncompleteHeader() throws FileNotFoundException {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
 

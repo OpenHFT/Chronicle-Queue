@@ -17,13 +17,13 @@ import java.io.InputStreamReader;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
+class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
     static {
         // load the lass
         HalfWriteAMessage.class.getName();
     }
 
-    public static class HalfWriteAMessage {
+    static class HalfWriteAMessage {
 
         // writes three messages the third messas is half written
         public static void main(String[] args) throws InterruptedException {
@@ -64,7 +64,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void checkTailerOnlyReadsTwoMessageOneProcess() throws InterruptedException {
+    void checkTailerOnlyReadsTwoMessageOneProcess() throws InterruptedException {
         assumeTrue(!OS.isWindows());
         final File queueDirectory = DirectoryUtils.tempDir("halfWritten");
 
@@ -102,7 +102,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
+    void checkTailerOnlyReadsTwoMessageTwoProcesses() throws IOException, InterruptedException {
         assumeTrue(OS.isLinux() && OS.is64Bit());
         ignoreException("Forced unlocking `chronicle.write.lock` in lock file:target/halfWritten");
 

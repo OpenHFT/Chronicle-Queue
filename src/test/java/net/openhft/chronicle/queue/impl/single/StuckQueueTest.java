@@ -23,10 +23,10 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class StuckQueueTest extends QueueTestCommon {
+class StuckQueueTest extends QueueTestCommon {
 
     @Test
-    public void test() throws IOException {
+    void test() throws IOException {
 
         // java.nio.file.InvalidPathException: Illegal char <:> at index 2: /D:/BuildAgent/work/1e5875c1db7235db/target/test-classes/stuck.queue.test/20180508-1249.cq4
         assumeFalse(OS.isWindows());

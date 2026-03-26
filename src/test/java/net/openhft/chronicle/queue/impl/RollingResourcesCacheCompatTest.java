@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Compatibility coverage lifted from adv/code-review branch to boost coverage of
  * RollingResourcesCache date/format arithmetic across epochs, cycles, and formats.
  */
-public class RollingResourcesCacheCompatTest extends QueueTestCommon {
+class RollingResourcesCacheCompatTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;
 
     private static final long AM_EPOCH = 1523498933145L; //2018-04-12 02:08:53.145 UTC
@@ -71,7 +71,7 @@ public class RollingResourcesCacheCompatTest extends QueueTestCommon {
     private static final String NEGATIVE_RELATIVE_MINUTELY_FILE_NAME_10 = "19761019-0010";
 
     @Test
-    public void testToLong() {
+    void testToLong() {
         doTestToLong(DAILY, AM_EPOCH, 0, Long.valueOf("17633"));
         doTestToLong(HOURLY, AM_EPOCH, 0, Long.valueOf("423192"));
         doTestToLong(MINUTELY, AM_EPOCH, 0, Long.valueOf("25391520"));

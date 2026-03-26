@@ -32,17 +32,17 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
+class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
     private static final String BASE_PATH = OS.getTarget() + "/singleChronicleQueueBuilderTest";
 
     @AfterAll
-    public static void afterClass() {
+    static void afterClass() {
         IOTools.deleteDirWithFiles(BASE_PATH, 2);
     }
 
     @Test
-    public void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
+    void shouldDetermineQueueDirectoryFromQueueFile() throws IOException {
         ignoreException("reading control code as text");
         ignoreException("Unable to copy TimedStoreRecovery safely");
         expectException("Queues should be configured with the queue directory, not a specific filename");
@@ -71,7 +71,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws IOException {
+    void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws IOException {
         assertThrows(IllegalArgumentException.class, () -> {
             final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
             tempFile.deleteOnExit();
@@ -81,7 +81,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void setAllNullFields() {
+    void setAllNullFields() {
         SingleChronicleQueueBuilder b1 = SingleChronicleQueueBuilder.builder();
         SingleChronicleQueueBuilder b2 = SingleChronicleQueueBuilder.builder();
         b1.blockSize(1234567);
@@ -92,7 +92,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
+    void setAllNullFieldsShouldFailWithDifferentHierarchy() {
         assertThrows(IllegalArgumentException.class, () -> {
             OneExtendedBuilder b1 = new OneExtendedBuilder();
             OtherExtendedBuilder b2 = new OtherExtendedBuilder();
@@ -109,7 +109,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testReadMarshallable() {
+    void testReadMarshallable() {
         expectException("Overriding roll epoch from existing metadata");
         final String tmpDir = getTmpDir().toString();
         SingleChronicleQueueBuilder builder = Marshallable.fromString("!net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder {\n" +
@@ -133,7 +133,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWriteMarshallableBinary() {
+    void testWriteMarshallableBinary() {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(BASE_PATH).rollCycle(HOURLY);
 
         builder.build().close();
@@ -149,7 +149,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWriteMarshallable() {
+    void testWriteMarshallable() {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(BASE_PATH).rollCycle(HOURLY);
 
         builder.build().close();
@@ -161,7 +161,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void tryOverrideSourceId() {
+    void tryOverrideSourceId() {
         expectException("Overriding sourceId from existing metadata");
 
         final File tmpDir = getTmpDir();
@@ -176,7 +176,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
-    public void buildWillNotSetCreateAppenderConditionWhenQueueIsReadOnly() {
+    void buildWillNotSetCreateAppenderConditionWhenQueueIsReadOnly() {
         assumeFalse(OS.isWindows());
 
         final File tmpDir = getTmpDir();
@@ -201,13 +201,13 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
      * Ensure that drainer priority is set to default value on constructing a SingleChronicleQueueBuilder
      */
     @Test
-    public void drainerPriorityIsSetByDefault() {
+    void drainerPriorityIsSetByDefault() {
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single();
         assertNotNull(builder.drainerPriority()); // priority may change from CONCURRENT in future
     }
 
     @Test
-    public void builderAppliesCoreOverridesForLoggerConfigs() {
+    void builderAppliesCoreOverridesForLoggerConfigs() {
         final File tmpDir = getTmpDir();
         final int blockSize = 512 << 10;
         final long requestedBufferCapacity = 64 << 10;

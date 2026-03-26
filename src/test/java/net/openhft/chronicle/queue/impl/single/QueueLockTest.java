@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class QueueLockTest extends QueueTestCommon {
+class QueueLockTest extends QueueTestCommon {
 
     @Override
     @BeforeEach
@@ -29,12 +29,12 @@ public class QueueLockTest extends QueueTestCommon {
     }
 
     @Test
-    public void testTimeout() throws InterruptedException {
+    void testTimeout() throws InterruptedException {
         check(true);
     }
 
     @Test
-    public void testRecover() throws InterruptedException {
+    void testRecover() throws InterruptedException {
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try {
             check(false);
@@ -53,7 +53,7 @@ public class QueueLockTest extends QueueTestCommon {
             expectException("Forced unlock for the lock");
 
         try {
-            System.setProperty("queue.force.unlock.mode", shouldThrowException ? "NEVER" : "ALWAYS" );
+            System.setProperty("queue.force.unlock.mode", shouldThrowException ? "NEVER" : "ALWAYS");
 
             final long timeoutMs = 2_000;
             final File queueDir = DirectoryUtils.tempDir("check");

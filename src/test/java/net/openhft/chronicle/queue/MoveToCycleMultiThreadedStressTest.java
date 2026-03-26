@@ -18,9 +18,10 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
+class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private ThreadLocal<ExcerptTailer> tailer;
     private final AtomicLong last = new AtomicLong();
@@ -33,8 +34,8 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
     private boolean resourceTracing;
 
     @BeforeEach
-    public void beforeEachMoveToCycleMultiThreadedStressTest() {
-        threadDump();
+    void beforeEachMoveToCycleMultiThreadedStressTest() {
+        public threadDump();
         disableResourceTracing();
     }
 
@@ -51,14 +52,14 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
     }
 
     @AfterEach
-    public void resetResourceTracing() {
+    void resetResourceTracing() {
         Jvm.setResourceTracing(resourceTracing);
     }
 
     @Test
 
     @org.junit.jupiter.api.Timeout(value = 60000, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
-    public void test() throws ExecutionException, InterruptedException {
+    void test() throws ExecutionException, InterruptedException {
         final String path = OS.getTarget() + "/stressMoveToCycle-" + Time.uniqueId();
         final ExecutorService es = Executors.newCachedThreadPool();
 

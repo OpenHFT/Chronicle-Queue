@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class RollCycleMultiThreadStressPretouchEATest extends RollCycleMultiThreadStressTest {
+class RollCycleMultiThreadStressPretouchEATest extends RollCycleMultiThreadStressTest {
 
     @Override
     protected StressTestType stressTestType() {
@@ -17,7 +17,7 @@ public class RollCycleMultiThreadStressPretouchEATest extends RollCycleMultiThre
     }
 
     @Test
-    public void stress() throws Exception {
+    void stress() throws Exception {
         assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
         super.stress();
         assertTrue(true); // parent has asserts

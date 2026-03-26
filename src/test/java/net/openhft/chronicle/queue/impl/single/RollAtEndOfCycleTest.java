@@ -21,7 +21,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public final class RollAtEndOfCycleTest extends QueueTestCommon {
+final class RollAtEndOfCycleTest extends QueueTestCommon {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
     private static void assertQueueFileCount(final Path path, final long expectedCount) throws IOException {
@@ -34,7 +34,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldRollAndAppendToNewFile() throws IOException {
+    void shouldRollAndAppendToNewFile() throws IOException {
         assumeFalse(Jvm.isArm());
 
         try (final SingleChronicleQueue queue = createQueue();
@@ -80,7 +80,7 @@ public final class RollAtEndOfCycleTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldAppendToExistingQueueFile() throws IOException {
+    void shouldAppendToExistingQueueFile() throws IOException {
         try (final SingleChronicleQueue queue = createQueue();
              final ExcerptAppender appender = queue.createAppender()) {
 

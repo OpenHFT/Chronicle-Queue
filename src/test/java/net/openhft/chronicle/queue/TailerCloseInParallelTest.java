@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 // Run until failure (several thousand times) to detect tailer parallel closing issues
-public class TailerCloseInParallelTest extends QueueTestCommon {
+class TailerCloseInParallelTest extends QueueTestCommon {
     private static String file = OS.getTarget() + "/deleteme-" + Time.uniqueId();
 
     private static final int size = 1 << 10;
@@ -43,12 +43,12 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
     }
 
     @AfterAll
-    public static void cleanup() {
+    static void cleanup() {
         IOTools.deleteDirWithFiles(file, 3);
     }
 
     @Test
-    public void runTenTimes() throws InterruptedException {
+    void runTenTimes() throws InterruptedException {
         finishedNormally = false;
         assumeTrue(OS.is64Bit());
 

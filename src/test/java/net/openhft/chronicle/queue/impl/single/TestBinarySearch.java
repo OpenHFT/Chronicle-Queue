@@ -23,7 +23,7 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestBinarySearch extends QueueTestCommon {
+class TestBinarySearch extends QueueTestCommon {
 
     private final Map<Integer, Long> keyToIndex = new HashMap<>();
 
@@ -47,7 +47,7 @@ public class TestBinarySearch extends QueueTestCommon {
             for (int j = 0; j < noStrategies; j++) {
                 Object[] newParameter = Arrays.copyOf(parameter, parameter.length + 1);
                 newParameter[parameter.length] = emptyCyclesStrategies[j];
-                result[i*noStrategies + j] = newParameter;
+                result[i * noStrategies + j] = newParameter;
             }
         }
         return result;
@@ -55,7 +55,7 @@ public class TestBinarySearch extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void testBinarySearch(int numberOfMessages, int numberOfMessagesToVerify, EmptyCyclesStrategy emptyCyclesStrategy) {
+    void testBinarySearch(int numberOfMessages, int numberOfMessagesToVerify, EmptyCyclesStrategy emptyCyclesStrategy) {
         RetrievalStrategy retrievalStrategy = numberOfMessages == numberOfMessagesToVerify ? RetrievalStrategy.LINEAR : RetrievalStrategy.RANDOM;
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
@@ -138,7 +138,7 @@ public class TestBinarySearch extends QueueTestCommon {
                 // easiest way to write an empty cycle is to start writing a document and then rollback
                 dc.rollbackOnClose();
             }
-            ((SetTimeProvider)appender.queue().time()).advanceMillis(appender.queue().rollCycle().lengthInMillis() + 1);
+            ((SetTimeProvider) appender.queue().time()).advanceMillis(appender.queue().rollCycle().lengthInMillis() + 1);
         }
     }
 
@@ -154,7 +154,7 @@ public class TestBinarySearch extends QueueTestCommon {
         return wire;
     }
 
-    public static class MyData extends SelfDescribingMarshallable {
+    static class MyData extends SelfDescribingMarshallable {
         private int key;
         private String value;
 
@@ -177,6 +177,7 @@ public class TestBinarySearch extends QueueTestCommon {
         },
         RANDOM {
             final Random random = new Random(234563434L);
+
             @Override
             public long retrieveIndex(long currentIndex, long totalNumberOfMessages) {
                 return random.nextInt((int) totalNumberOfMessages);
@@ -194,8 +195,7 @@ public class TestBinarySearch extends QueueTestCommon {
         MULTIPLE_EMPTY_AT_START,
         MULTIPLE_EMPTY_AT_END,
         SINGLE_EMPTY_IN_MIDDLE,
-        MULTIPLE_CONCURRENTLY_EMPTY_IN_MIDDLE
-        ;
+        MULTIPLE_CONCURRENTLY_EMPTY_IN_MIDDLE;
 
         public boolean atStart() {
             return this == SINGLE_EMPTY_AT_START || this == MULTIPLE_EMPTY_AT_START;

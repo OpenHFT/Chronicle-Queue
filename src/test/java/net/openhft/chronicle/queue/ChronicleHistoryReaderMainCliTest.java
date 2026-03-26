@@ -16,10 +16,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
+class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
 
     @Test
-    public void runConfiguresReaderFromArguments() throws Exception {
+    void runConfiguresReaderFromArguments() throws Exception {
         final Path queueDir = Files.createTempDirectory("history-reader");
         final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
 
@@ -39,7 +39,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void parseCommandLineWithHelpOption() {
+    void parseCommandLineWithHelpOption() {
         final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
 
         try {
@@ -52,7 +52,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void parseCommandLineMissingDirectoryPrintsError() {
+    void parseCommandLineMissingDirectoryPrintsError() {
         final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
 
         try {

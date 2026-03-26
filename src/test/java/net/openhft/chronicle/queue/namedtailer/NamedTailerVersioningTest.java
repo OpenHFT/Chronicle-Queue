@@ -26,10 +26,10 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class NamedTailerVersioningTest extends QueueTestCommon {
+class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
-    public void nonReplicatedNamedTailerShouldNotCreateVersionInMetdata() {
+    void nonReplicatedNamedTailerShouldNotCreateVersionInMetdata() {
         finishedNormally = false;
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
@@ -54,7 +54,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     }
 
     @Test
-    public void verifyBackwardsCompatibility_tailerPositionsAreRetained() throws IOException, URISyntaxException {
+    void verifyBackwardsCompatibility_tailerPositionsAreRetained() throws IOException, URISyntaxException {
         assumeFalse(PageUtil.isHugePage(OS.getTarget()), "This test must be ignored on hugetlbfs because the test file was generated on a standard linux file system");
 
         // Copy the data from src/test/resources
@@ -85,7 +85,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     }
 
     @Test
-    public void versionAndIndexRetentionAcrossMultipleLifecycles() {
+    void versionAndIndexRetentionAcrossMultipleLifecycles() {
         File queuePath = getTmpDir();
 
         // Open for first time
@@ -110,7 +110,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     }
 
     @Test
-    public void noVersionIncrements() {
+    void noVersionIncrements() {
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
@@ -128,7 +128,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     }
 
     @Test
-    public void multipleVersionIncrements() {
+    void multipleVersionIncrements() {
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
@@ -150,7 +150,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     }
 
     @Test
-    public void namedTailerCanRewindToStart() {
+    void namedTailerCanRewindToStart() {
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
@@ -170,7 +170,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     }
 
     @Test
-    public void namedTailerCanMoveToStoredIndexAfterRestart() {
+    void namedTailerCanMoveToStoredIndexAfterRestart() {
         File queuePath = getTmpDir();
         long[] indexes = new long[4];
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();

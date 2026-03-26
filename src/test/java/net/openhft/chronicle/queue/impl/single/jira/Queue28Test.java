@@ -16,7 +16,7 @@ import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class Queue28Test extends QueueTestCommon {
+class Queue28Test extends QueueTestCommon {
 
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
@@ -33,7 +33,7 @@ public class Queue28Test extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void test(WireType wireType) {
+    void test(WireType wireType) {
         File dir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(dir, wireType)
                 .testBlockSize()

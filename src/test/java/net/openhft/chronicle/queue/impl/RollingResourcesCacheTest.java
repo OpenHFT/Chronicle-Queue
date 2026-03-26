@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class RollingResourcesCacheTest extends QueueTestCommon {
+class RollingResourcesCacheTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;
 
     private static final long AM_EPOCH = 1523498933145L; //2018-04-12 02:08:53.145 UTC
@@ -96,7 +96,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void resourceLookupIsCached() {
+    void resourceLookupIsCached() {
         final File dir = getTmpDir();
         final RollingResourcesCache cache = newCache(dir);
 
@@ -113,7 +113,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void toLongCachesAndClearsWhenFull() {
+    void toLongCachesAndClearsWhenFull() {
         final File dir = getTmpDir();
         final RollingResourcesCache cache = newCache(dir);
 
@@ -134,7 +134,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void parseWeeklyFormatValid() {
+    void parseWeeklyFormatValid() {
         // round-trip property: resourceFor(cycle).text parses back to the same cycle
         final RollingResourcesCache weeklyCache = new RollingResourcesCache(
                 WeeklyRollCycle.INSTANCE, 0, File::new, File::getName);
@@ -148,7 +148,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldConvertCyclesToResourceNamesWithNoEpoch() {
+    void shouldConvertCyclesToResourceNamesWithNoEpoch() {
         final int epoch = 0;
         final RollingResourcesCache cache =
                 new RollingResourcesCache(DAILY, epoch, File::new, File::getName);
@@ -166,7 +166,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() {
+    void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() {
         // AM_EPOCH is 2018-04-12 02:08:53.145 UTC
         // cycle 24 should be formatted as:
         // 2018-04-12 00:00:00 UTC (1523491200000) +
@@ -247,7 +247,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void parseIncorrectlyFormattedName() {
+    void parseIncorrectlyFormattedName() {
         assertThrows(RuntimeException.class, () -> {
             final RollingResourcesCache cache =
                     new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
@@ -256,7 +256,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void fuzzyConversionTest() {
+    void fuzzyConversionTest() {
         final int maxAddition = (int) ChronoUnit.DECADES.getDuration().toMillis();
         final Random random = new Random(SEED);
 
@@ -308,7 +308,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void testToLong() {
+    void testToLong() {
         doTestToLong(DAILY, AM_EPOCH, 0, Long.valueOf("17633"));
         doTestToLong(HOURLY, AM_EPOCH, 0, Long.valueOf("423192"));
         doTestToLong(MINUTELY, AM_EPOCH, 0, Long.valueOf("25391520"));

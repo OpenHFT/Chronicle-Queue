@@ -7,81 +7,81 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NoMessageHistoryTest extends QueueTestCommon {
+class NoMessageHistoryTest extends QueueTestCommon {
 
     @Test
-    public void testSingletonInstance() {
+    void testSingletonInstance() {
         // Test that the singleton instance is available and not null
         assertNotNull(NoMessageHistory.INSTANCE);
     }
 
     @Test
-    public void testTimings() {
+    void testTimings() {
         // Test that timings() always returns 0
         assertEquals(0, NoMessageHistory.INSTANCE.timings());
     }
 
     @Test
-    public void testTimingForIndex() {
+    void testTimingForIndex() {
         // Test that timing(int n) always returns -1
         assertEquals(-1, NoMessageHistory.INSTANCE.timing(0));
         assertEquals(-1, NoMessageHistory.INSTANCE.timing(1));
     }
 
     @Test
-    public void testSources() {
+    void testSources() {
         // Test that sources() always returns 0
         assertEquals(0, NoMessageHistory.INSTANCE.sources());
     }
 
     @Test
-    public void testSourceIdForIndex() {
+    void testSourceIdForIndex() {
         // Test that sourceId(int n) always returns -1
         assertEquals(-1, NoMessageHistory.INSTANCE.sourceId(0));
         assertEquals(-1, NoMessageHistory.INSTANCE.sourceId(1));
     }
 
     @Test
-    public void testSourceIdsEndsWith() {
+    void testSourceIdsEndsWith() {
         // Test that sourceIdsEndsWith(int[] sourceIds) always returns false
-        assertFalse(NoMessageHistory.INSTANCE.sourceIdsEndsWith(new int[] {1, 2, 3}));
+        assertFalse(NoMessageHistory.INSTANCE.sourceIdsEndsWith(new int[]{1, 2, 3}));
     }
 
     @Test
-    public void testSourceIndexForIndex() {
+    void testSourceIndexForIndex() {
         // Test that sourceIndex(int n) always returns -1
         assertEquals(-1, NoMessageHistory.INSTANCE.sourceIndex(0));
         assertEquals(-1, NoMessageHistory.INSTANCE.sourceIndex(1));
     }
 
     @Test
-    public void testResetWithParameters() {
+    void testResetWithParameters() {
         // Test that reset(int sourceId, long sourceIndex) performs no action (no exceptions thrown)
         NoMessageHistory.INSTANCE.reset(1, 100L);
         assertTrue(true); // if we got here without an exception, the test passes
     }
 
     @Test
-    public void testResetWithoutParameters() {
+    void testResetWithoutParameters() {
         // Test that reset() performs no action (no exceptions thrown)
         NoMessageHistory.INSTANCE.reset();
         assertTrue(true); // if we got here without an exception, the test passes
     }
 
     @Test
-    public void testLastSourceId() {
+    void testLastSourceId() {
         // Test that lastSourceId() always returns -1
         assertEquals(-1, NoMessageHistory.INSTANCE.lastSourceId());
     }
 
     @Test
-    public void testLastSourceIndex() {
+    void testLastSourceIndex() {
         // Test that lastSourceIndex() always returns -1
         assertEquals(-1, NoMessageHistory.INSTANCE.lastSourceIndex());
     }
 
     @Test
-    public void testIsDirty() {
+    void testIsDirty() {
         // Test that isDirty() always returns false
         assertFalse(NoMessageHistory.INSTANCE.isDirty());
     }

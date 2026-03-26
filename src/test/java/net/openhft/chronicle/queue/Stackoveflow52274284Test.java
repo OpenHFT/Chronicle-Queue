@@ -13,9 +13,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class Stackoveflow52274284Test extends QueueTestCommon {
+class Stackoveflow52274284Test extends QueueTestCommon {
     @Test
-    public void fails() throws IOException {
+    void fails() throws IOException {
         String basePath = OS.getTarget();
         String path = Files.createTempDirectory(Paths.get(basePath), "chronicle-")
                 .toAbsolutePath()

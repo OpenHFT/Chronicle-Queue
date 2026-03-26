@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * The ChronicleQueueIT class implements a test that causes Chronicle Queue to
  * fail with a BufferUnderflowException whilst executing a tailer.toEnd() call.
  */
-public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
+class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
     private static final int msgSize = 64;
 
@@ -62,7 +62,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     }
 
     @AfterEach
-    public void after() {
+    void after() {
         outbound.releaseLast();
         closeQuietly(appender, queue);
     }
@@ -80,7 +80,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void testBufferUnderflowException() throws InterruptedException {
+    void testBufferUnderflowException() throws InterruptedException {
         finishedNormally = false;
         append();
         append();

@@ -19,10 +19,10 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST2_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class RollingChronicleQueueTest extends QueueTestCommon {
+class RollingChronicleQueueTest extends QueueTestCommon {
 
     @Test
-    public void testCountExcerptsWhenTheCycleIsRolled() {
+    void testCountExcerptsWhenTheCycleIsRolled() {
 
         final AtomicLong time = new AtomicLong();
 
@@ -201,8 +201,8 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
             Thread.yield();
             // on a roll, the file might be truncated making the size remaining just a few bytes
             assertEquals(expected
-                            .replaceAll(" \\d+ (bytes remaining)", " X $1"), q.dump()
-                                    .replaceAll(" \\d+ (bytes remaining)", " X $1"));
+                    .replaceAll(" \\d+ (bytes remaining)", " X $1"), q.dump()
+                    .replaceAll(" \\d+ (bytes remaining)", " X $1"));
         }
     }
 

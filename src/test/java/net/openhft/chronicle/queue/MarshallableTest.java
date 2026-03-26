@@ -12,9 +12,9 @@ import java.io.File;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MarshallableTest extends QueueTestCommon {
+class MarshallableTest extends QueueTestCommon {
     @Test
-    public void testWriteText() {
+    void testWriteText() {
         File dir = getTmpDir();
         try (ChronicleQueue queue = binary(dir)
                 .testBlockSize()

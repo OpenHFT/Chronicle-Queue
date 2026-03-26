@@ -10,10 +10,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NoOpConditionTest {
+class NoOpConditionTest {
 
     @Test
-    public void noOpMethodsReturnImmediately() throws Exception {
+    void noOpMethodsReturnImmediately() throws Exception {
         NoOpCondition c = NoOpCondition.INSTANCE;
         c.await();
         c.awaitUninterruptibly();

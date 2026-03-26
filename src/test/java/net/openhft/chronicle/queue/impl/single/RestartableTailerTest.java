@@ -14,9 +14,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class RestartableTailerTest extends QueueTestCommon {
+class RestartableTailerTest extends QueueTestCommon {
     @Test
-    public void restartable() {
+    void restartable() {
         String tmp = OS.getTarget() + "/restartable-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();
              final ExcerptAppender excerptAppender = cq.createAppender()) {

@@ -20,7 +20,7 @@ import java.util.Collection;
 import static net.openhft.chronicle.queue.impl.single.StoreTailer.INDEXING_LINEAR_SCAN_THRESHOLD;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class IndexTest extends QueueTestCommon {
+class IndexTest extends QueueTestCommon {
 
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
@@ -31,7 +31,7 @@ public class IndexTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void test(@NotNull WireType wireType) {
+    void test(@NotNull WireType wireType) {
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
@@ -53,7 +53,7 @@ public class IndexTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex(@NotNull WireType wireType) {
+    void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex(@NotNull WireType wireType) {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()

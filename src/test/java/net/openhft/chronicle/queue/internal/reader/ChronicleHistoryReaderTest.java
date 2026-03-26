@@ -23,10 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ChronicleHistoryReaderTest extends QueueTestCommon {
+class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
-    public void testWithQueueHistoryRecordHistoryInitial() {
+    void testWithQueueHistoryRecordHistoryInitial() {
         if (OS.isWindows())
             expectException("Read-only mode is not supported on Windows");
 
@@ -34,7 +34,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithQueueHistoryRecordHistoryInitialMethodIds() {
+    void testWithQueueHistoryRecordHistoryInitialMethodIds() {
         if (OS.isWindows())
             expectException("Read-only mode is not supported on Windows");
 
@@ -117,7 +117,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testPredictable() {
+    void testPredictable() {
         runPredictable(0, null, "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
                 "count:                   100          100          100          100          100 \n" +
@@ -132,7 +132,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testPredictableStartIndex() {
+    void testPredictableStartIndex() {
         runPredictable(0, 33L, "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
                 "count:                    67           67           67           67           67 \n" +
@@ -147,7 +147,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testPredictableMeasurementWindow() {
+    void testPredictableMeasurementWindow() {
         runPredictable(2_800, null, "Timings below in MICROSECONDS\n" +
                 "sourceId                   1     startTo1            2         1to2     endToEnd \n" +
                 "count:                     1            1            1            1            1 \n" +

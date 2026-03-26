@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class MessageHistoryTest extends QueueTestCommon {
+final class MessageHistoryTest extends QueueTestCommon {
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     private File inputQueueDir;
     private File middleQueueDir;
@@ -45,7 +45,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void shouldAccessMessageHistory(boolean named) {
+    void shouldAccessMessageHistory(boolean named) {
         setUp();
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
@@ -63,7 +63,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void shouldAccessMessageHistoryWhenTailerIsMovedToEnd(boolean named) {
+    void shouldAccessMessageHistoryWhenTailerIsMovedToEnd(boolean named) {
         setUp();
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue outputQueue = createQueue(outputQueueDir, 2)) {
@@ -82,7 +82,7 @@ public final class MessageHistoryTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void chainedMessageHistory(boolean named) {
+    void chainedMessageHistory(boolean named) {
         setUp();
         try (final ChronicleQueue inputQueue = createQueue(inputQueueDir, 1);
              final ChronicleQueue middleQueue = createQueue(middleQueueDir, 2);

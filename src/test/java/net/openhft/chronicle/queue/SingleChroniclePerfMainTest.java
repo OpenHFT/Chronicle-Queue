@@ -23,7 +23,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
-public class SingleChroniclePerfMainTest extends QueueTestCommon {
+class SingleChroniclePerfMainTest extends QueueTestCommon {
     private static final int count = 1_000_000;
     private static final int size = 4 << 10;
     // blackholes to avoid code elimination.
@@ -109,7 +109,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
     }
 
     @Test
-    public void testFacade() {
+    void testFacade() {
         IFacade f = Values.newNativeReference(IFacade.class);
         Byteable byteable = (Byteable) f;
         long capacity = byteable.maxSize();

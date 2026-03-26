@@ -18,7 +18,7 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
+class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
 
     private volatile long lastWrittenIndex = Long.MIN_VALUE;
 
@@ -32,7 +32,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
      * check if a message is written with an appender its visible to the tailor, without locks etc.
      */
     @Test
-    public void test() throws InterruptedException, ExecutionException {
+    void test() throws InterruptedException, ExecutionException {
 
         try (ChronicleQueue x = SingleChronicleQueueBuilder
                 .binary(getTmpDir())

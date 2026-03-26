@@ -19,25 +19,25 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvider {
+class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvider {
 
     private long currentTime = 0;
     private SingleChronicleQueue queue;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         queue = binary(getTmpDir()).rollCycle(TEST_SECONDLY).timeProvider(this).build();
     }
 
     @Override
     @AfterEach
-    public void tearDown() {
+    protected void tearDown() {
         closeQuietly(queue);
     }
 
     @Disabled("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
     @Test
-    public void test() {
+    void test() {
         Executors.newSingleThreadExecutor().submit(this::append);
 
         Executors.newSingleThreadExecutor().submit(this::toEnd);

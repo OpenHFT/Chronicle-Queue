@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BareSyncTest extends QueueTestCommon {
+class BareSyncTest extends QueueTestCommon {
     @Test
-    public void sync() {
+    void sync() {
         try (ChronicleQueue cq = ChronicleQueue.single(OS.getTarget() + "/bare-sync-test");
              ExcerptAppender appender = cq.createAppender()) {
             appender.sync();

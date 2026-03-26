@@ -18,10 +18,10 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class InternalDumpMainTest extends QueueTestCommon {
+class InternalDumpMainTest extends QueueTestCommon {
 
     @Test
-    public void shouldDumpDirectoryAndIncludeMetadataAndQueueFiles() throws Exception {
+    void shouldDumpDirectoryAndIncludeMetadataAndQueueFiles() throws Exception {
         final File dir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build();
              ExcerptAppender appender = queue.createAppender()) {

@@ -32,8 +32,8 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
     private ReferenceCountedCache<Integer, TestReferenceCounted, Reservation, RuntimeException> cache;
 
     @BeforeEach
-    public void beforeEachReferenceCountedCacheTest() {
-        threadDump();
+    void beforeEachReferenceCountedCacheTest() {
+        public threadDump();
         setUp();
     }
 

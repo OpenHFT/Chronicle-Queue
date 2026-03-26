@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class QueueReadBackwardsTest extends QueueTestCommon {
+class QueueReadBackwardsTest extends QueueTestCommon {
     @TempDir
     Path temporaryFolder;
 
@@ -25,13 +25,13 @@ public class QueueReadBackwardsTest extends QueueTestCommon {
     private SetTimeProvider timeProvider;
 
     @BeforeEach
-    public void setup() throws IOException {
+    void setup() throws IOException {
         this.dataDir = Files.createTempDirectory(temporaryFolder, "queue").toFile();
         this.timeProvider = new SetTimeProvider(new Date().getTime());
     }
 
     @Test
-    public void testReadBackwardsAfterWriteJustOneMessage() {
+    void testReadBackwardsAfterWriteJustOneMessage() {
         RollCycles rollingCycle = RollCycles.DEFAULT;
         // Write a message to the queue
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)

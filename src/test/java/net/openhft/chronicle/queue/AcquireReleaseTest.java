@@ -22,9 +22,9 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class AcquireReleaseTest extends QueueTestCommon {
+class AcquireReleaseTest extends QueueTestCommon {
     @Test
-    public void testAcquireAndRelease() {
+    void testAcquireAndRelease() {
         File dir = IOTools.createTempDirectory("testAcquireAndRelease").toFile();
 
         AtomicInteger acount = new AtomicInteger();
@@ -71,7 +71,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
     }
 
     @Test
-    public void testReserveAndRelease() {
+    void testReserveAndRelease() {
         File dir = getTmpDir();
 
         SetTimeProvider stp = new SetTimeProvider();
@@ -96,7 +96,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithCleanupStoreFilesWithNoDataAcquireAndRelease() throws InterruptedException, ExecutionException {
+    void testWithCleanupStoreFilesWithNoDataAcquireAndRelease() throws InterruptedException, ExecutionException {
         final File dir = getTmpDir();
         final SetTimeProvider stp = new SetTimeProvider();
         final AtomicInteger acount = new AtomicInteger();

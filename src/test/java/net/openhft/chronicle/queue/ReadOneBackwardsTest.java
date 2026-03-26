@@ -19,15 +19,15 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * test reading the queue backwards using readOne
  */
-public class ReadOneBackwardsTest extends QueueTestCommon {
+class ReadOneBackwardsTest extends QueueTestCommon {
 
     @Test
-    public void test() {
+    void test() {
         doTest(false);
     }
 
     @Test
-    public void testScanning() {
+    void testScanning() {
         doTest(true);
     }
 

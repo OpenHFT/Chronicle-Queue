@@ -18,27 +18,27 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class RollCycleDefaultingTest extends QueueTestCommon {
+class RollCycleDefaultingTest extends QueueTestCommon {
 
     private static final String BASE_PATH = OS.getTarget() + "/rollCycleDefaultingTest";
 
     @Test
-    public void alias() {
+    void alias() {
         assertSame(RollCycles.class, ObjectUtils.implementationToUse(RollCycle.class));
     }
 
     @AfterEach
-    public void clearDefaultRollCycleProperty() {
+    void clearDefaultRollCycleProperty() {
         System.clearProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY);
     }
 
     @AfterAll
-    public static void afterClass() {
+    static void afterClass() {
         IOTools.deleteDirWithFiles(BASE_PATH, 2);
     }
 
     @Test
-    public void correctConfigGetsLoaded() {
+    void correctConfigGetsLoaded() {
         String aClass = HOURLY.getClass().getName();
         String configuredCycle = aClass + ":HOURLY";
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
@@ -47,7 +47,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     }
 
     @Test
-    public void customDefinitionGetsLoaded() {
+    void customDefinitionGetsLoaded() {
         String configuredCycle = MyRollcycle.class.getName();
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH);
@@ -56,7 +56,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     }
 
     @Test
-    public void unknownClassDefaultsToDaily() {
+    void unknownClassDefaultsToDaily() {
         expectException("Default roll cycle class: foobarblah was not found");
         String configuredCycle = "foobarblah";
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
@@ -66,7 +66,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
     }
 
     @Test
-    public void nonRollCycleDefaultsToDaily() {
+    void nonRollCycleDefaultsToDaily() {
         expectException("Configured default rollcycle is not a subclass of RollCycle");
         String configuredCycle = String.class.getName();
         System.setProperty(QueueSystemProperties.DEFAULT_ROLL_CYCLE_PROPERTY, configuredCycle);
@@ -74,7 +74,7 @@ public class RollCycleDefaultingTest extends QueueTestCommon {
         assertEquals(RollCycles.DEFAULT, builder.rollCycle());
     }
 
-    public static class MyRollcycle implements RollCycle {
+    static class MyRollcycle implements RollCycle {
         private final RollCycle delegate = TEST_SECONDLY;
 
         @Override

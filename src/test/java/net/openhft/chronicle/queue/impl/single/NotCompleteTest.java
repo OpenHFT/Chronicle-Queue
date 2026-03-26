@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * We want to ensure that messages are completely written or not written - no half measures.
  */
 @RequiredForClient
-public class NotCompleteTest extends QueueTestCommon {
+class NotCompleteTest extends QueueTestCommon {
 
     @Override
     @BeforeEach
@@ -43,7 +43,7 @@ public class NotCompleteTest extends QueueTestCommon {
     }
 
     @Test
-    public void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
+    void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
 
         final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
         try {
@@ -161,7 +161,7 @@ public class NotCompleteTest extends QueueTestCommon {
     }
 
     @AfterEach
-    public void clearInterrupt() {
+    void clearInterrupt() {
         Thread.interrupted();
     }
 

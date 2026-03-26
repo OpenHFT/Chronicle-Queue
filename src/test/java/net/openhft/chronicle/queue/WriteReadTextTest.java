@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @RequiredForClient
-public class WriteReadTextTest extends QueueTestCommon {
+class WriteReadTextTest extends QueueTestCommon {
 
     private static final String CONSTRUCTED = "[\"abc\",\"comm_link\"," + "[[1469743199691,1469743199691],"
             + "[\"ABCDEFXH\",\"ABCDEFXH\"]," + "[321,456]," + "[\"\",\"\"]]]";
@@ -124,23 +124,23 @@ public class WriteReadTextTest extends QueueTestCommon {
     }
 
     @Test
-    public void testConstructed() {
+    void testConstructed() {
         doTest(CONSTRUCTED);
     }
 
     @Test
-    public void testExtremelyLarge() {
+    void testExtremelyLarge() {
         assumeTrue(Jvm.is64bit());
         doTest(EXTREMELY_LARGE);
     }
 
     @Test
-    public void testMinimal() {
+    void testMinimal() {
         doTest(MINIMAL);
     }
 
     @Test
-    public void testRealistic() {
+    void testRealistic() {
         doTest(REALISTIC);
     }
 

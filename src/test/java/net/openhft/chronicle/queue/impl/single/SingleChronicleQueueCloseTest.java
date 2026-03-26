@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test;
 import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class SingleChronicleQueueCloseTest extends QueueTestCommon {
+class SingleChronicleQueueCloseTest extends QueueTestCommon {
 
     @Test
-    public void testTailAfterClose() {
+    void testTailAfterClose() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
             final ExcerptAppender appender = queue.createAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(1));
@@ -32,7 +32,7 @@ public class SingleChronicleQueueCloseTest extends QueueTestCommon {
      * NOTE: Still uses thread local appender as that is the intent of the test.
      */
     @Test
-    public void reacquireAppenderAfterClose() {
+    void reacquireAppenderAfterClose() {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), WireType.BINARY).build()) {
             final ExcerptAppender appender = acquireThreadLocalAppender(queue);
             appender.writeText("hello1");

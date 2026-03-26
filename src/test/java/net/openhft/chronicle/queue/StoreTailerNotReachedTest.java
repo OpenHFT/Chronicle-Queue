@@ -11,9 +11,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class StoreTailerNotReachedTest extends QueueTestCommon {
+class StoreTailerNotReachedTest extends QueueTestCommon {
     @Test
-    public void afterNotReached() {
+    void afterNotReached() {
         String path = OS.getTarget() + "/afterNotReached-" + Time.uniqueId();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(path)
                 .testBlockSize()

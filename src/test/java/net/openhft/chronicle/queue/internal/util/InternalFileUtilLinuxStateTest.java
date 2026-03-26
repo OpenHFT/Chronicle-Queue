@@ -15,10 +15,10 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
-public class InternalFileUtilLinuxStateTest extends QueueTestCommon {
+class InternalFileUtilLinuxStateTest extends QueueTestCommon {
 
     @Test
-    public void stateOpenAndClosedOnLinux() throws Exception {
+    void stateOpenAndClosedOnLinux() throws Exception {
         assumeTrue(OS.isLinux(), "Linux-only test");
         assumeTrue(InternalFileUtil.getAllOpenFilesIsSupportedOnOS(), "/proc required");
 

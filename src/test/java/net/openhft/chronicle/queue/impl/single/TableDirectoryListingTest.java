@@ -19,7 +19,7 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TableDirectoryListingTest extends QueueTestCommon {
+class TableDirectoryListingTest extends QueueTestCommon {
     private DirectoryListing listing;
     private DirectoryListing listingReadOnly;
     private TableStore<Metadata.NoMeta> tablestore;
@@ -33,7 +33,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @BeforeEach
-    public void setUp() throws IOException {
+    void setUp() throws IOException {
         testDirectory = testDirectory();
         testDirectory.mkdirs();
         File tableFile = new File(testDirectory, "dir-list" + SingleTableStore.SUFFIX);
@@ -59,13 +59,13 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldBlowUpIfClosed() {
+    void shouldBlowUpIfClosed() {
         listing.close();
         assertThrows(IllegalStateException.class, () -> listing.getMaxCreatedCycle());
     }
 
     @Test
-    public void shouldTrackMaxValue() {
+    void shouldTrackMaxValue() {
         listing.refresh(true);
 
         listing.onFileCreated(tempFile, 7);
@@ -84,7 +84,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldInitialiseFromFilesystem() throws IOException {
+    void shouldInitialiseFromFilesystem() throws IOException {
         new File(testDirectory, 1 + SingleChronicleQueue.SUFFIX).createNewFile();
         new File(testDirectory, 2 + SingleChronicleQueue.SUFFIX).createNewFile();
         new File(testDirectory, 3 + SingleChronicleQueue.SUFFIX).createNewFile();
@@ -98,7 +98,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void lockShouldTimeOut() {
+    void lockShouldTimeOut() {
         listing.onFileCreated(tempFile, 8);
 
         listing.onFileCreated(tempFile, 9);

@@ -25,7 +25,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
+class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerToEndPerfAcceptanceTest.class);
 
@@ -52,7 +52,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     @Disabled("Disabled as too flaky when run as part of the full test suite")
     @ParameterizedTest
     @MethodSource("data")
-    public void fromBeginning(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+    void fromBeginning(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
         long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration, baseline);
@@ -61,7 +61,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     @Disabled("Disabled as too flaky when run as part of the full test suite")
     @ParameterizedTest
     @MethodSource("data")
-    public void lessThanBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+    void lessThanBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
         long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration, baseline);
@@ -70,7 +70,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     @Disabled("Disabled as too flaky when run as part of the full test suite")
     @ParameterizedTest
     @MethodSource("data")
-    public void onBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+    void onBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
         long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing(), TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration, baseline);
@@ -79,7 +79,7 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
     @Disabled("Disabled as too flaky when run as part of the full test suite")
     @ParameterizedTest
     @MethodSource("data")
-    public void greaterThanBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+    void greaterThanBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
         long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() - 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         assertReasonablePerformance(duration, baseline);

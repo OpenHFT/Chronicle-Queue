@@ -23,7 +23,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class SparseBinarySearchTest extends QueueTestCommon {
+class SparseBinarySearchTest extends QueueTestCommon {
 
     private static final GapTolerantComparator GAP_TOLERANT_COMPARATOR = new GapTolerantComparator();
 
@@ -42,13 +42,13 @@ public class SparseBinarySearchTest extends QueueTestCommon {
 
     @ParameterizedTest
     @MethodSource("data")
-    public void testBinarySearchWithManyGapsAndManyRollCycles(int numberOfMessages, float percentageWithValues) throws ParseException {
+    void testBinarySearchWithManyGapsAndManyRollCycles(int numberOfMessages, float percentageWithValues) throws ParseException {
         runWithTimeParameters(TEST_SECONDLY, 300, numberOfMessages, percentageWithValues);
     }
 
     @ParameterizedTest
     @MethodSource("data")
-    public void testBinarySearchWithManyGaps(int numberOfMessages, float percentageWithValues) throws ParseException {
+    void testBinarySearchWithManyGaps(int numberOfMessages, float percentageWithValues) throws ParseException {
         runWithTimeParameters(DAILY, 1, numberOfMessages, percentageWithValues);
     }
 
@@ -145,7 +145,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         return wire;
     }
 
-    public static class MyData extends SelfDescribingMarshallable {
+    static class MyData extends SelfDescribingMarshallable {
         private int key;
         private String value;
 

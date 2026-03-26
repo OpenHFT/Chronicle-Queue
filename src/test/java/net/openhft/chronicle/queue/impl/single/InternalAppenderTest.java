@@ -14,10 +14,10 @@ import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class InternalAppenderTest extends QueueTestCommon {
+class InternalAppenderTest extends QueueTestCommon {
 
     @Test
-    public void replicationTest() throws Exception {
+    void replicationTest() throws Exception {
         final File file = Files.createTempDirectory("queue").toFile();
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.single(file).build();

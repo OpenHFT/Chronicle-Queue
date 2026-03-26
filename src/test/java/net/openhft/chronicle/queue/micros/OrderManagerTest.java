@@ -22,7 +22,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class OrderManagerTest extends QueueTestCommon {
+class OrderManagerTest extends QueueTestCommon {
 
     @Override
     @BeforeEach
@@ -31,7 +31,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testOnOrderIdea() {
+    void testOnOrderIdea() {
         ignoreException("Cannot get access to vectorizedMismatch");
         // what we expect to happen
         OrderListener listener = createMock(OrderListener.class);
@@ -56,7 +56,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithQueue() {
+    void testWithQueue() {
         File queuePath = new File(OS.getTarget(), "testWithQueue-" + Time.uniqueId());
         try {
             try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
@@ -100,7 +100,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithQueueHistory() throws Throwable {
+    void testWithQueueHistory() throws Throwable {
         FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
 
@@ -173,7 +173,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testRestartingAService() {
+    void testRestartingAService() {
         File queuePath = DirectoryUtils.tempDir("testRestartingAService");
         File queuePath2 = DirectoryUtils.tempDir("testRestartingAService-down");
         try {
