@@ -1372,27 +1372,21 @@ class SingleChronicleQueueTest extends QueueTestCommon {
     void testLastWrittenIndexPerAppenderNoData(@NotNull WireType wireType, boolean named) {
         this.wireType = wireType;
         this.named = named;
-        assertThrows(IllegalStateException.class, () -> {
-            try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                    .build();
-                 final ExcerptAppender appender = chronicle.createAppender()) {
-                appender.lastIndexAppended();
-                fail();
-            }
-        });
+        try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
+                .build();
+             final ExcerptAppender appender = chronicle.createAppender()) {
+            assertThrows(IllegalStateException.class, appender::lastIndexAppended);
+        }
     }
 
     @Test
         //: no messages written
     void testNoMessagesWritten() {
-        assertThrows(IllegalStateException.class, () -> {
-            try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                    .build();
-                 final ExcerptAppender appender = chronicle.createAppender()) {
-
-                appender.lastIndexAppended();
-            }
-        });
+        try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
+                .build();
+             final ExcerptAppender appender = chronicle.createAppender()) {
+            assertThrows(IllegalStateException.class, appender::lastIndexAppended);
+        }
     }
 
     @ParameterizedTest

@@ -14,8 +14,8 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.jupiter.api.Assertions.*;
 
 final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
-    @SuppressWarnings("try")
     @Test
+    @SuppressWarnings("try")
     void shouldNotSkipMessageAtStartOfQueue() {
         final File tmpDir = getTmpDir();
         try (final ChronicleQueue writeQueue =

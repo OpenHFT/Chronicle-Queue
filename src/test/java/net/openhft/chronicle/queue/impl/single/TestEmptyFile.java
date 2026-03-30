@@ -9,14 +9,11 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
@@ -38,7 +35,7 @@ class TestEmptyFile {
     }
 
     @Test
-    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     void shouldHandleEmptyFile() {
         assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue =

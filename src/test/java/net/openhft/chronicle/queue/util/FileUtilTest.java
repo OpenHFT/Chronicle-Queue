@@ -14,7 +14,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
@@ -22,12 +21,9 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
@@ -43,7 +39,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     void stateNonExisting() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
@@ -51,7 +47,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     void state() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
@@ -94,7 +90,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     void hasQueueSuffixFalse() {
         final File file = new File("foo");
         assertFalse(FileUtil.hasQueueSuffix(file));
@@ -102,7 +98,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
         assertTrue(FileUtil.hasQueueSuffix(file));
@@ -110,7 +106,7 @@ class FileUtilTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     void removableQueueFileCandidates() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;

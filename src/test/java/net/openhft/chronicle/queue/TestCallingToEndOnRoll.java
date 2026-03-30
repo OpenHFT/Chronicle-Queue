@@ -5,11 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
@@ -17,7 +13,6 @@ import java.util.concurrent.locks.LockSupport;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.jupiter.api.Assertions.*;
 
 class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvider {
 
@@ -35,8 +30,8 @@ class TestCallingToEndOnRoll extends QueueTestCommon implements TimeProvider {
         closeQuietly(queue);
     }
 
-    @Disabled("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
     @Test
+    @Disabled("long running soak test to check https://github.com/OpenHFT/Chronicle-Queue/issues/702")
     void test() {
         Executors.newSingleThreadExecutor().submit(this::append);
 

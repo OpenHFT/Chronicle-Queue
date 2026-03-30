@@ -6,7 +6,6 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
-import net.openhft.chronicle.queue.rollcycles.LegacyRollCycles;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.jupiter.api.Test;
 
@@ -248,11 +247,10 @@ class RollingResourcesCacheTest extends QueueTestCommon {
 
     @Test
     void parseIncorrectlyFormattedName() {
-        assertThrows(RuntimeException.class, () -> {
-            final RollingResourcesCache cache =
-                    new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
-            cache.parseCount("foobar-qux");
-        });
+        final RollingResourcesCache cache =
+                new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
+
+        assertThrows(RuntimeException.class, () -> cache.parseCount("foobar-qux"));
     }
 
     @Test

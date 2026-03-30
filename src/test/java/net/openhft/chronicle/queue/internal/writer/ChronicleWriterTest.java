@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,7 +36,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(5)
     void testWireMarshallingMapAndDTO() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(null, cw1, cw2);
         chronicleWriter.execute();
@@ -64,7 +63,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(5)
     void testWireMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface.class.getTypeName(), cw2);
         chronicleWriter.execute();
@@ -86,7 +85,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(5)
     void testBytesMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface2.class.getTypeName(), cw3);
         chronicleWriter.execute();

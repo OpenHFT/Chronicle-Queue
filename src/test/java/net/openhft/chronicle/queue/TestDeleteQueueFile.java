@@ -92,8 +92,8 @@ class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
+    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
@@ -143,8 +143,8 @@ class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
+    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 

@@ -198,8 +198,8 @@ class ChronicleMethodReaderTest extends QueueTestCommon {
         capturedOutput.forEach(msg -> assertFalse(msg.contains("goodbye")));
     }
 
-    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
+    @Disabled("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     void shouldFilterByMultipleExclusionRegex() {
         basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 

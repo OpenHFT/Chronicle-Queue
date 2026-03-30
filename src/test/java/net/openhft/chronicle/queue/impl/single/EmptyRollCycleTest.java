@@ -11,8 +11,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -95,7 +93,7 @@ class EmptyRollCycleTest extends QueueTestCommon {
     }
 
     @Test
-    @Timeout(value = 6_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(6)
     void appropriateExceptionIsThrownWhenLockCannotBeAcquiredForRecovery() throws IOException, InterruptedException {
         createQueueWithEmptyRollCycleAtEnd();
 

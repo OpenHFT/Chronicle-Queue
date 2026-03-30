@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -37,7 +36,7 @@ class CycleNotFoundTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 50_000L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(50)
     void tailerCycleNotFoundTest() throws InterruptedException, ExecutionException {
         File path = getTmpDir();  // added nano time just to make
 

@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Calendar;
-import java.util.concurrent.TimeUnit;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -67,7 +66,7 @@ class RollEOFTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(5)
     void testRollWritesEOF() throws IOException {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
@@ -100,7 +99,7 @@ class RollEOFTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(5)
     void testRollWithoutEOFDoesntBlowup() throws IOException {
         assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
@@ -141,7 +140,7 @@ class RollEOFTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(5)
     void testRollWithoutEOF() throws IOException {
 //        expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");

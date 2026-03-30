@@ -24,11 +24,12 @@ class CycleOverflowTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.set(System.currentTimeMillis());
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().timeProvider(timeProvider).rollCycle(rollCycle).path(path).build(); ExcerptAppender appender = queue.createAppender();) {
-            assertThrows(IllegalStateException.class, () -> {
-                for (int i = 0; i < rollCycle.maxMessagesPerCycle() + 1; i++) {
-                    appender.writeText(Integer.toString(i));
-                }
-            });
+            for (int i = 0; i < rollCycle.maxMessagesPerCycle(); i++) {
+                appender.writeText(Integer.toString(i));
+            }
+
+            assertThrows(IllegalStateException.class,
+                    () -> appender.writeText(Long.toString(rollCycle.maxMessagesPerCycle())));
         } finally {
             IOTools.deleteDirWithFiles(path);
         }

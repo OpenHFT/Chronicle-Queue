@@ -36,7 +36,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
@@ -116,7 +115,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(10)
     void shouldReadQueueInReverse() {
         addCountToEndOfQueue();
 
@@ -193,7 +192,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(10)
     void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
@@ -214,7 +213,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(10)
     void shouldReadQueueWithNonDefaultRollCycleWhenMetadataDeleted() throws IOException {
         if (!OS.isWindows())
             expectException("Failback to readonly tablestore");
@@ -376,7 +375,7 @@ class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(5)
     void readOnlyQueueTailerShouldObserveChangesAfterInitiallyObservedReadLimit() throws IOException, InterruptedException, TimeoutException, ExecutionException {
         IOTools.deleteDirWithFiles(dataDir.toFile());
         dataDir.toFile().mkdirs();
@@ -526,9 +525,9 @@ class ChronicleReaderTest extends QueueTestCommon {
         assertEquals(expectedPollCountWhenDocumentIsEmpty, pollMethod.invocationCount);
     }
 
-    @RequiredForClient
     @Test
-    @Timeout(value = 20_000, unit = TimeUnit.MILLISECONDS)
+    @RequiredForClient
+    @Timeout(20)
     void shouldPrintTimestampsToLocalTime() throws IOException {
         finishedNormally = false;
         final File queueDir = getTmpDir();

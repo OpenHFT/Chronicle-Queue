@@ -201,7 +201,7 @@ class TailerDirectionTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(10)
     void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();

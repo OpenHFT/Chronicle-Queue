@@ -30,8 +30,8 @@ class CheckIndicesTest extends QueueTestCommon {
         super.threadDump();
     }
 
-    @Disabled("stress test to run manually")
     @Test
+    @Disabled("stress test to run manually")
     void test() throws ExecutionException, InterruptedException {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).epoch(System.currentTimeMillis()).build()) {
             queue0 = queue;

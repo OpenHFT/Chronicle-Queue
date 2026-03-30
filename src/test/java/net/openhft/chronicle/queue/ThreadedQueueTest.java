@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -33,7 +32,7 @@ class ThreadedQueueTest extends QueueTestCommon {
 
     @Test
 
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(10)
     void testMultipleThreads() throws InterruptedException, ExecutionException, TimeoutException {
 
         final File path = getTmpDir();

@@ -40,20 +40,20 @@ class ChronicleReaderMainCliTest extends QueueTestCommon {
 
     @Test
     void invalidContentBasedLimiterClassThrows() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            final java.io.File dir = getTmpDir();
-            ChronicleReaderMain main = new ChronicleReaderMain();
-            main.run(new String[]{"-d", dir.getAbsolutePath(), "-cbl", "not.a.RealClass"});
-        });
+        final java.io.File dir = getTmpDir();
+        ChronicleReaderMain main = new ChronicleReaderMain();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> main.run(new String[]{"-d", dir.getAbsolutePath(), "-cbl", "not.a.RealClass"}));
     }
 
     @Test
     void invalidBinarySearchComparatorClassThrows() {
-        assertThrows(ClassNotFoundException.class, () -> {
-            final java.io.File dir = getTmpDir();
-            ChronicleReaderMain main = new ChronicleReaderMain();
-            main.run(new String[]{"-d", dir.getAbsolutePath(), "-b", "not.a.RealClass"});
-        });
+        final java.io.File dir = getTmpDir();
+        ChronicleReaderMain main = new ChronicleReaderMain();
+
+        assertThrows(ClassNotFoundException.class,
+                () -> main.run(new String[]{"-d", dir.getAbsolutePath(), "-b", "not.a.RealClass"}));
     }
 
     @Test
