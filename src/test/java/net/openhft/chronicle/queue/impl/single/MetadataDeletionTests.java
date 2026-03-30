@@ -152,5 +152,4 @@ class MetadataDeletionTests extends QueueTestCommon {
             IOTools.deleteDirWithFiles(queuePath);
         }
     }
-
 }
