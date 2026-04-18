@@ -747,6 +747,26 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         if (appendLock.locked() && id.startsWith(REPLICATED_NAMED_TAILER_PREFIX)) {
             throw new NamedTailerNotAvailableException(id, NamedTailerNotAvailableException.Reason.NOT_AVAILABLE_ON_SINK);
         }
+        // Named tailers need a writable metadata store so that their index value (and,
+        // for replicated tailers, the version index lock) can be acquired under an
+        // exclusive lock. When the queue is read-only - either because the caller
+        // requested it, or because initializeMetadata() silently fell back to a
+        // ReadonlyTableStore after failing to open metadata.cq4t for writing - reaching
+        // indexForId() surfaces as UnsupportedOperationException("Read only") from
+        // deep inside ReadonlyTableStore, which is the misleading failure mode reported
+        // in issue #1703 / QUEUE-118. Fail fast here with a message that explains the
+        // root cause, so the caller doesn't have to reason about internal table-store
+        // fallbacks.
+        if (readOnly) {
+            throw new IllegalStateException(
+                    "Cannot create named tailer \"" + id + "\": queue at " + fileAbsolutePath
+                            + " is read-only. Named tailers persist their index in the metadata "
+                            + "table store and require write access. If the queue was built with "
+                            + "readOnly(false), check earlier \"Failback to readonly tablestore\" "
+                            + "warnings - the metadata file could not be opened for writing "
+                            + "(e.g. file permissions, concurrent lock, or a stale mapping from a "
+                            + "previous process).");
+        }
     }
 
     /**
