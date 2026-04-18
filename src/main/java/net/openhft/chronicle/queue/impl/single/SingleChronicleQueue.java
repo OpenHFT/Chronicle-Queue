@@ -737,6 +737,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for the tailer, may be null for non-named tailers
      * @throws NamedTailerNotAvailableException if a named tailer is not available
+     * @throws IllegalStateException if a named tailer is requested against a read-only queue
      */
     private void verifyTailerPreconditions(String id) {
         // Preconditions for all tailer types
