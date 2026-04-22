@@ -18,6 +18,7 @@ public final class UnlockMain {
      * @param args Command-line arguments for unlocking operations
      */
     public static void main(String[] args) {
+        // CSPrivilegedOperatorTool REVIEW emit InternalUnlockMain.main here because this operator-facing diagnostic in UnlockMain#main still needs an explicit reviewed operator-diagnostic contract.
         InternalUnlockMain.main(args);
     }
 }

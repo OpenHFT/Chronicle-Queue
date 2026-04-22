@@ -62,6 +62,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
         }
         forceUnlockOnTimeoutWhen = UnlockMode.valueOf(Jvm.getProperty("queue.force.unlock.mode", UnlockMode.LOCKING_PROCESS_DEAD.name()).toUpperCase());
 
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in AbstractTSQueueLock#AbstractTSQueueLock still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 
@@ -111,6 +112,7 @@ public abstract class AbstractTSQueueLock extends AbstractCloseable implements C
      * Otherwise {@code false} is returned if the lock is held by this process or another live process.
      */
     public boolean forceUnlockIfProcessIsDead() {
+        // CSForceUnlock REVIEW keep forceUnlockIfProcessIsDead here because this recovery override in AbstractTSQueueLock#forceUnlockIfProcessIsDead still needs an explicit reviewed recovery contract.
         return forceUnlockIfProcessIsDead(true);
     }
 

@@ -33,6 +33,7 @@ public final class MessageCountingMessageConsumer implements MessageConsumer {
      * @param message The message content
      * @return {@code true} if the message was consumed, {@code false} otherwise
      */
+    // CQNumericalConstraint REVIEW keep consume(long index, String message) here because this API boundary in MessageCountingMessageConsumer#consume leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public boolean consume(long index, String message) {
         final boolean consume = wrappedConsumer.consume(index, message);

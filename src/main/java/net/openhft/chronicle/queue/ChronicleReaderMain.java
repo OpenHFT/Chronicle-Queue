@@ -67,6 +67,8 @@ public class ChronicleReaderMain {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap ChronicleReader chronicleReader in try-with-resources or document explicit close ownership.
         final ChronicleReader chronicleReader = chronicleReader();
 
         configureReader(chronicleReader, commandLine);
@@ -125,6 +127,8 @@ public class ChronicleReaderMain {
      * @param message Optional message to display before help
      */
     protected void printHelpAndExit(final Options options, int status, String message) {
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap PrintWriter writer in try-with-resources or document explicit close ownership.
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
@@ -138,6 +142,7 @@ public class ChronicleReaderMain {
                 true
         );
         writer.flush();
+        // CSSystemExitInLibrary REVIEW keep System.exit here because this runtime execution boundary in ChronicleReaderMain#printHelpAndExit still needs an explicit reviewed runtime-admission contract.
         System.exit(status);
     }
 
@@ -150,10 +155,12 @@ public class ChronicleReaderMain {
      */
     protected void configureReader(final ChronicleReader chronicleReader, final CommandLine commandLine) {
         final Consumer<String> messageSink = commandLine.hasOption('l') ?
+                // CSStdoutStderrOutput REVIEW System.out.println because this direct console output in ChronicleReaderMain#configureReader still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
                 s -> System.out.println(s.replaceAll("\n", "")) :
                 System.out::println;
         chronicleReader.
                 withMessageSink(messageSink).
+                // CSPathFromInput REVIEW keep withBasePath here because this filesystem boundary in ChronicleReaderMain#configureReader still needs an explicit reviewed path-handling contract.
                 withBasePath(Paths.get(commandLine.getOptionValue('d')));
 
         if (commandLine.hasOption('i')) {
@@ -177,6 +184,7 @@ public class ChronicleReaderMain {
             chronicleReader.showMessageHistory(commandLine.hasOption('g'));
         }
         if (commandLine.hasOption('w')) {
+            // CSFormatAutodetect REVIEW keep chronicleReader.withWireType here because this input or payload boundary in ChronicleReaderMain#configureReader still needs an explicit reviewed input-trust contract.
             chronicleReader.withWireType(WireType.valueOf(commandLine.getOptionValue('w')));
         }
         if (commandLine.hasOption('s')) {
@@ -201,6 +209,7 @@ public class ChronicleReaderMain {
         if (commandLine.hasOption("cbl")) {
             final String cbl = commandLine.getOptionValue("cbl");
             try {
+                // CSClassForNameInput REVIEW chronicleReader.withContentBasedLimiter((ContentBasedLimiter) Class.forName(cbl).getConstructor().newInstance()) because this reflective or runtime-loading boundary in ChronicleReaderMain#configureReader still needs either an allowlisted wrapper or an explicit reviewed runtime-loading contract.
                 chronicleReader.withContentBasedLimiter((ContentBasedLimiter) Class.forName(cbl).getConstructor().newInstance());
             } catch (ClassNotFoundException e) {
                 throw new IllegalArgumentException("Error creating content-based limiter, could not find class: " + cbl, e);

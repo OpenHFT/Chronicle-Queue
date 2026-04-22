@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.jetbrains.annotations.NotNull;
@@ -27,6 +28,8 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
      *
      * @param tableStore The TableStore to check.
      */
+    // CQNumericalConstraint REVIEW keep onFileCreated(final File file, final int cycle) here because this API boundary in TableDirectoryListingReadOnly#onFileCreated leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep onRoll(int cycle) here because this API boundary in TableDirectoryListingReadOnly#onRoll leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     protected void checkReadOnly(@NotNull TableStore<?> tableStore) {
         // no-op
@@ -41,13 +44,13 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
         throwExceptionIfClosedInSetter();
 
         // it is possible if r/o queue created at same time as r/w queue for longValues to be only half-written
-        final long timeoutMillis = System.currentTimeMillis() + 500;
+        final long timeoutMillis = SystemTimeProvider.CLOCK.currentTimeMillis() + 500;
         while (true) {
             try {
                 initLongValues();
                 break;
             } catch (Exception e) {
-                if (System.currentTimeMillis() > timeoutMillis)
+                if (SystemTimeProvider.CLOCK.currentTimeMillis() > timeoutMillis)
                     throw e;
                 Jvm.pause(1);
             }

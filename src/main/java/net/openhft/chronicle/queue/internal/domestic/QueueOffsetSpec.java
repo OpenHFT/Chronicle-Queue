@@ -20,6 +20,7 @@ import java.util.function.Function;
  */
 public final class QueueOffsetSpec {
 
+    // CSHardcodedSecretMaterial REVIEW keep this reviewed site here because this cryptographic choice still needs an explicit reviewed cryptographic contract.
     private static final String TOKEN_DELIMITER = ";";
     private final Type type;
     private final String[] spec;
@@ -96,6 +97,7 @@ public final class QueueOffsetSpec {
      * @param epochOffset the epoch offset value
      * @return the formatted string representing the epoch offset
      */
+    // CQNumericalConstraint REVIEW keep formatEpochOffset(final long epochOffset) here because this API boundary in QueueOffsetSpec#formatEpochOffset leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     public static String formatEpochOffset(final long epochOffset) {
         return String.format("%s;%s", Type.EPOCH.name(), epochOffset);
     }

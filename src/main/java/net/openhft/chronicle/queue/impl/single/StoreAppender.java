@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -98,7 +99,7 @@ class StoreAppender extends AbstractCloseable
         try {
             int lastExistingCycle = queue.lastCycle();
             int firstCycle = queue.firstCycle();
-            long start = System.nanoTime();
+            long start = SystemTimeProvider.CLOCK.currentTimeNanos();
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
@@ -123,7 +124,7 @@ class StoreAppender extends AbstractCloseable
                 }
             } finally {
                 writeLock.unlock();
-                long tookMillis = (System.nanoTime() - start) / 1_000_000;
+                long tookMillis = (SystemTimeProvider.CLOCK.currentTimeNanos() - start) / 1_000_000;
                 if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && cycle != lastExistingCycle))
                     Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + cycle);
             }
@@ -217,6 +218,7 @@ class StoreAppender extends AbstractCloseable
      *
      * @param marshallable The object to write into the excerpt.
      */
+    // CQNumericalConstraint REVIEW keep writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) here because this API boundary in StoreAppender#writeBytes leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public void writeBytes(@NotNull final WriteBytesMarshallable marshallable) {
         throwExceptionIfClosed();
@@ -273,6 +275,7 @@ class StoreAppender extends AbstractCloseable
 
         } catch (Throwable e) {
             Jvm.warn().on(getClass(), e);
+            // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(e) because this rethrow in StoreAppender#pretouch converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
             throw Jvm.rethrow(e);
         }
     }
@@ -377,6 +380,8 @@ class StoreAppender extends AbstractCloseable
 
         SingleChronicleQueueStore oldStore = this.store;
 
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap SingleChronicleQueueStore newStore in try-with-resources or document explicit close ownership.
         SingleChronicleQueueStore newStore = storePool.acquire(cycle, createStrategy, oldStore);
 
         // If the store has changed, update and close the old one
@@ -599,14 +604,14 @@ class StoreAppender extends AbstractCloseable
      * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
      */
     public void normaliseEOFs() {
-        long start = System.nanoTime();
+        long start = SystemTimeProvider.CLOCK.currentTimeNanos();
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
             normaliseEOFs0(cycle);
         } finally {
             writeLock.unlock();
-            long tookMillis = (System.nanoTime() - start) / 1_000_000;
+            long tookMillis = (SystemTimeProvider.CLOCK.currentTimeNanos() - start) / 1_000_000;
             if (tookMillis > WARN_SLOW_APPENDER_MS)
                 Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to normaliseEOFs");
         }
@@ -670,6 +675,7 @@ class StoreAppender extends AbstractCloseable
 
             try {
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+                // CSWarnAndContinue REVIEW catch (StreamCorruptedException ex) because the local fallback still begins with logging or printing a diagnostic and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
             } catch (StreamCorruptedException ex) {
                 Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
             }
@@ -724,7 +730,10 @@ class StoreAppender extends AbstractCloseable
             }
         } catch (Exception e) {
             // TODO FIX
+            // REVIEW TASK CQRuntimeTodoPlaceholder: replace this runtime placeholder with a concrete implementation decision or remove it.
+            // REVIEW TASK CQRuntimeTodoPlaceholder: replace runtime placeholder (Jvm.warn().on(getClass(), e);) with a concrete implementation decision or remove it.
             Jvm.warn().on(getClass(), e);
+            // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(e) because this rethrow in StoreAppender#checkWritePositionHeaderNumber converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
             throw Jvm.rethrow(e);
         }
         return true;
@@ -815,6 +824,7 @@ class StoreAppender extends AbstractCloseable
      * @param bytes The excerpt bytes
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
         checkAppendLock(true);
 
@@ -903,6 +913,7 @@ class StoreAppender extends AbstractCloseable
             lastIndex(index);
             return index;
         } catch (Exception e) {
+            // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(e) because this rethrow in StoreAppender#lastIndexAppended converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
             throw Jvm.rethrow(e);
         }
     }
@@ -1118,6 +1129,7 @@ class StoreAppender extends AbstractCloseable
      * back the context and closes the resources, logging a warning.
      */
     private class Finalizer {
+        // CSFinalizerOverride REVIEW keep SuppressWarnings here because this runtime execution boundary in Finalizer#finalize still needs an explicit reviewed runtime-admission contract.
         @SuppressWarnings({"deprecation", "removal"})
         @Override
         protected void finalize() throws Throwable {
@@ -1251,6 +1263,7 @@ class StoreAppender extends AbstractCloseable
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                // CSInterruptedRuntimeWrap REVIEW keep InterruptedRuntimeException here because this lifecycle or ownership exception in StoreAppenderContext#close still needs an explicit reviewed lifecycle contract.
                 throw new InterruptedRuntimeException(e);
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
@@ -1355,6 +1368,7 @@ class StoreAppender extends AbstractCloseable
             if (unlock) {
                 try {
                     writeLock.unlock();
+                    // CSCatchBroadException REVIEW catch (Exception ex) because the local fallback still begins with logging or printing a diagnostic and needs either narrower handling or an explicit reviewed recovery contract.
                 } catch (Exception ex) {
                     Jvm.warn().on(getClass(), "Exception while unlocking: ", ex);
                 }

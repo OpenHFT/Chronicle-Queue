@@ -24,6 +24,7 @@ public final class InternalRemovableRollFileCandidatesMain {
         if (args.length == 0) {
             dir = new File(".");
         } else {
+            // CSPathFromInput REVIEW keep File here because this filesystem boundary in InternalRemovableRollFileCandidatesMain#main still needs an explicit reviewed path-handling contract.
             dir = new File(args[0]);
         }
         FileUtil.removableRollFileCandidates(dir)

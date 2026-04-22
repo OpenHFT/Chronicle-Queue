@@ -313,6 +313,8 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     default <T> T methodWriter(@NotNull final Class<T> tClass, Class<?>... additional) {
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap VanillaMethodWriterBuilder<T> builder in try-with-resources or document explicit close ownership.
         VanillaMethodWriterBuilder<T> builder = methodWriterBuilder(tClass);
         Stream.of(additional).forEach(builder::addInterface);
         return builder.build();
@@ -367,6 +369,8 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return the Delta Checkpoint Interval for this ChronicleQueue
      */
+    // REVIEW TASK CQDeprecationJavadoc: add the missing Javadoc guidance this governance rule expects here.
+    // REVIEW TASK CQDeprecationJavadoc: add a @deprecated Javadoc tag to deltaCheckpointInterval explaining the replacement and removal plan.
     @Deprecated(/* to be removed in x.29 */)
     default int deltaCheckpointInterval() {
         return 64;

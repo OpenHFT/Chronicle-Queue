@@ -98,6 +98,9 @@ public enum RollCycles implements RollCycle {
         return maxMessagesPerCycle;
     }
 
+    // CQNumericalConstraint REVIEW keep toIndex(int cycle, long sequenceNumber) here because this API boundary in RollCycles#toIndex leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep toSequenceNumber(long index) here because this API boundary in RollCycles#toSequenceNumber leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep toCycle(long index) here because this API boundary in RollCycles#toCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public String format() {
         return this.format;

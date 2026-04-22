@@ -27,6 +27,7 @@ public class RollingResourcesCache {
     private static final int ONE_DAY_IN_MILLIS = 86400000;
     private static final int MAX_TIMESTAMP_CACHE_SIZE = 32;
 
+    // CQNumericalConstraint REVIEW keep resourceFor(long cycle) here because this API boundary in RollingResourcesCache#resourceFor leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @NotNull
     private final Function<String, File> fileFactory;
     @NotNull
@@ -65,6 +66,7 @@ public class RollingResourcesCache {
 
     }
 
+    // CQNumericalConstraint REVIEW keep resourceFor(long cycle) here because this API boundary in RollingResourcesCache#resourceFor leaves parameter cycle unconstrained and still needs an @NonNegative, @Positive, or @Range annotation, a validated range check, or an explicit reviewed caller contract.
     /**
      * Cache some resources for a rollCycle number.
      *
@@ -152,6 +154,7 @@ public class RollingResourcesCache {
         final String name;
         final int count;
 
+        // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
         public ParseCount(String name, int count) {
             this.name = name;
             this.count = count;

@@ -37,6 +37,7 @@ class RollCycleEncodeSequence implements Sequence {
      * @param sequence The sequence number to set.
      * @param position The position to set.
      */
+    // CQNumericalConstraint REVIEW keep setSequence(long sequence, long position) here because this API boundary in RollCycleEncodeSequence#setSequence leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public void setSequence(long sequence, long position) {
         if (writePositionAndSequence == null)
@@ -69,6 +70,7 @@ class RollCycleEncodeSequence implements Sequence {
      * @param forWritePosition The write position, expected to be the end of the queue.
      * @return The sequence number or {@link Sequence#NOT_FOUND_RETRY} if the sequence is not found.
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public long getSequence(long forWritePosition) {
 
         if (writePositionAndSequence == null)

@@ -51,6 +51,9 @@ public enum LegacyRollCycles implements RollCycle {
         return arithmetic.maxMessagesPerCycle();
     }
 
+    // CQNumericalConstraint REVIEW keep toIndex(int cycle, long sequenceNumber) here because this API boundary in LegacyRollCycles#toIndex leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep toSequenceNumber(long index) here because this API boundary in LegacyRollCycles#toSequenceNumber leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep toCycle(long index) here because this API boundary in LegacyRollCycles#toCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public String format() {
         return this.format;

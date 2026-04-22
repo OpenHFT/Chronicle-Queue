@@ -15,6 +15,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
@@ -125,6 +126,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
         this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in SCQIndexing#SCQIndexing still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 
@@ -148,6 +150,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         return ThreadLocalHelper.getTL(indexArray, longArraySupplier, arrayValuesSupplierCall);
     }
 
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public long toAddress0(long index) {
         throwExceptionIfClosed();
 
@@ -167,6 +170,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     /**
      * Closes this indexing instance, releasing resources.
      */
+    // CQNumericalConstraint REVIEW keep indexable(long index) here because this API boundary in SCQIndexing#indexable leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     protected void performClose() {
         closeQuietly(index2Index, nextEntryToBeIndexed);
@@ -254,6 +258,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             long readPos = w.bytes().readPosition();
             @NotNull final ValueIn valueIn = w.readEventName(sb);
             if (!expectedName.contentEquals(sb))
+                // CSRawHeaderOrPathMessage REVIEW emit IllegalStateException here because this operator-facing diagnostic in SCQIndexing#readIndexValue still needs an explicit reviewed operator-diagnostic contract.
                 throw new IllegalStateException("expecting " + expectedName + ", was " + sb + ", bytes: " + w.bytes().readPosition(readPos).toHexString());
             return valueIn;
         }
@@ -425,7 +430,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                   final long knownAddress) {
         if (toIndex == fromKnownIndex)
             return ScanResult.FOUND;
-        long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
+        long start = REPORT_LINEAR_SCAN ? SystemTimeProvider.CLOCK.currentTimeNanos() : 0;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
         if (REPORT_LINEAR_SCAN) {
             printLinearScanTime(lastScannedIndex, fromKnownIndex, start, "linearScan by index");
@@ -448,7 +453,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             return;
 
         // took too long to scan?
-        long end = System.nanoTime();
+        long end = SystemTimeProvider.CLOCK.currentTimeNanos();
         if (end < start + LINEAR_SCAN_WARN_THRESHOLD_NS)
             return;
 
@@ -519,6 +524,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                         lastScannedIndex = i;
                         return ScanResult.NOT_REACHED;
                     }
+                    // CSDynamicReadSkip REVIEW keep bytes.readSkip here because this input or payload boundary in SCQIndexing#linearScan0 still needs an explicit reviewed input-trust contract.
                     bytes.readSkip(Wires.lengthOf(header));
                     continue;
                 }
@@ -565,7 +571,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
-        long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
+        long start = REPORT_LINEAR_SCAN ? SystemTimeProvider.CLOCK.currentTimeNanos() : 0;
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
         if (REPORT_LINEAR_SCAN) {
             printLinearScanTime(index, startAddress, start, "linearScan by position");
@@ -645,6 +651,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             int header = bytes.readVolatileInt();
             int len = Wires.lengthOf(header);
             assert Wires.isReady(header);
+            // CSDynamicReadSkip REVIEW keep bytes.readSkip here because this input or payload boundary in SCQIndexing#linearScanByPosition0 still needs an explicit reviewed input-trust contract.
             bytes.readSkip(len);
         }
 
@@ -683,6 +690,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @param header       The header of the current entry.
      */
     private void throwIndexNotWritten(long toPosition, long startAddress, Bytes<?> bytes, int header) {
+        // CSRawHeaderOrPathMessage REVIEW emit IllegalArgumentException here because this operator-facing diagnostic in SCQIndexing#throwIndexNotWritten still needs an explicit reviewed operator-diagnostic contract.
         throw new IllegalArgumentException(
                 "You can't know the index for an entry which hasn't been written. " +
                         "start: " + startAddress +
@@ -755,6 +763,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 for (int index1 = used - 1; index1 >= 0; index1--) {
                     long pos = indexValues.getVolatileValueAt(index1);
                     // TODO pos shouldn't be 0, but holes in the index appear..
+                    // REVIEW TASK CQRuntimeTodoPlaceholder: replace this runtime placeholder with a concrete implementation decision or remove it.
+                    // REVIEW TASK CQRuntimeTodoPlaceholder: replace runtime placeholder (if (pos == 0 || pos > position)) with a concrete implementation decision or remove it.
                     if (pos == 0 || pos > position) {
                         continue;
                     }
@@ -767,6 +777,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     break Outer;
                 }
             }
+            // CSWarnAndContinue REVIEW catch (IllegalStateException e) because the local fallback still begins with entering a conditional fallback branch and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
         } catch (IllegalStateException e) {
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
@@ -1043,6 +1054,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     int len = Wires.lengthOf(header) + 4;
                     len += (int) BytesUtil.padOffset(len);
 
+                    // CSDynamicReadSkip REVIEW keep bytes.readSkip here because this input or payload boundary in SCQIndexing#moveToEnd still needs an explicit reviewed input-trust contract.
                     bytes.readSkip(len);
                     endAddress += len;
 
@@ -1111,6 +1123,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             return address;
         }
 
+        // CQNumericalConstraint REVIEW keep address(long address) here because this API boundary in LongArrayValuesHolder#address leaves parameter address unconstrained and still needs an @Address, @NonNegative, @Positive, or @Range annotation, a validated range check, or an explicit reviewed caller contract.
         /**
          * Sets a new address for the held values.
          *

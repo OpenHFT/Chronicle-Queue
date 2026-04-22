@@ -155,6 +155,7 @@ class SCQRoll implements Demarshallable, WriteMarshallable {
      *
      * @param length the new length to set
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public void length(int length) {
         this.length = length;
     }

@@ -51,6 +51,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         this.creator = creator;
         this.referenceChangeListener = new TriggerFlushOnLastReferenceRemoval();
 
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in ReferenceCountedCache#ReferenceCountedCache still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 
@@ -108,6 +109,7 @@ public class ReferenceCountedCache<K, T extends ReferenceCounted & Closeable, V,
         try {
             if (value != null)
                 value.release(this);
+                // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with executing Jvm.debug().on(getClass(), e) and needs either narrower handling or an explicit reviewed recovery contract.
         } catch (Exception e) {
             Jvm.debug().on(getClass(), e);
         }

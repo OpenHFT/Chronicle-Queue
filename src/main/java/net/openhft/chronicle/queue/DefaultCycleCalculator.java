@@ -26,6 +26,7 @@ public enum DefaultCycleCalculator implements CycleCalculator {
      * @param offsetMillis  The time offset in milliseconds, typically used for adjusting the cycle calculation
      * @return The current cycle as an integer, calculated according to the given roll cycle and time
      */
+    // CQNumericalConstraint REVIEW keep currentCycle(final RollCycle rollCycle, final TimeProvider timeProvider, final long offsetMillis) here because this API boundary in DefaultCycleCalculator#currentCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public int currentCycle(final RollCycle rollCycle, final TimeProvider timeProvider, final long offsetMillis) {
         return rollCycle.current(timeProvider, offsetMillis);

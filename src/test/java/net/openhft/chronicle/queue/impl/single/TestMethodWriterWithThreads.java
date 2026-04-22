@@ -23,10 +23,16 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.IntStream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static junit.framework.TestCase.fail;
 import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
@@ -71,17 +77,22 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
     }
 
     @Test(timeout = 30_000)
-    public void test() throws FileNotFoundException {
+    public void test() throws FileNotFoundException, ExecutionException, InterruptedException {
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue q = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).doubleBuffer(doubleBuffer).build()) {
 
             methodWriter = q.methodWriter(I.class);
 
-            IntStream.range(0, 1000)
-                    .parallel()
-                    .forEach(i -> {
-                        try (final ExcerptTailer tailer = q.createTailer()) {
+            int parallelism = Math.min(16, Math.max(4, Runtime.getRuntime().availableProcessors()));
+            ExecutorService executor = Executors.newFixedThreadPool(parallelism);
+            CountDownLatch start = new CountDownLatch(1);
+            try {
+                List<Future<Void>> futures = new ArrayList<>(1000);
+                for (int i = 0; i < 1000; i++) {
+                    futures.add(executor.submit(() -> {
+                        start.await();
+                        try (ExcerptTailer tailer = q.createTailer()) {
                             creates();
                             amends();
                             final MethodReader methodReader = tailer.methodReader(newReader());
@@ -94,7 +105,16 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
                         }
                         if (fail.get())
                             fail();
-                    });
+                        return null;
+                    }));
+                }
+                start.countDown();
+                for (Future<Void> future : futures)
+                    future.get();
+            } finally {
+                start.countDown();
+                executor.shutdownNow();
+            }
 
         } finally {
             if (fail.get()) {

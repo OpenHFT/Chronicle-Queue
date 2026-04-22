@@ -17,6 +17,8 @@ import java.io.File;
  */
 @FunctionalInterface
 public interface StoreFileListener {
+    // REVIEW TASK CQDeprecationJavadoc: add the missing Javadoc guidance this governance rule expects here.
+    // REVIEW TASK CQDeprecationJavadoc: add a @deprecated Javadoc tag to StoreFileListener explaining the replacement and removal plan.
     @Deprecated(/* use StoreFileListener.noOp() instead, to be removed in x.29 */)
     StoreFileListener NO_OP = StoreFileListeners.NO_OP;
 

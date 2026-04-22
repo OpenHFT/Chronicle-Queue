@@ -29,6 +29,7 @@ public final class RollCycleArithmetic {
      * @param indexSpacing The spacing between indexed entries
      * @return A new instance of {@link RollCycleArithmetic}
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public static RollCycleArithmetic of(int indexCount, int indexSpacing) {
         return new RollCycleArithmetic(indexCount, indexSpacing);
     }
@@ -64,6 +65,7 @@ public final class RollCycleArithmetic {
      * @param sequenceNumber The sequence number within the cycle
      * @return The calculated index
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public long toIndex(int cycle, long sequenceNumber) {
         return ((long) cycle << cycleShift) + (sequenceNumber & sequenceMask);
     }
@@ -84,6 +86,7 @@ public final class RollCycleArithmetic {
      * @param index The index to extract from
      * @return The cycle number
      */
+    // CQNumericalConstraint REVIEW keep toCycle(long index) here because this API boundary in RollCycleArithmetic#toCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     public int toCycle(long index) {
         return Maths.toUInt31(index >> cycleShift);
     }

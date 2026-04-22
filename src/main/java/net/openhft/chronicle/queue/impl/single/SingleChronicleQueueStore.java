@@ -37,6 +37,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
     }
 
+    // CQNumericalConstraint REVIEW keep writePosition(long position) here because this API boundary in SingleChronicleQueueStore#writePosition leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep moveToIndexForRead(@NotNull ExcerptContext ec, long index) here because this API boundary in SingleChronicleQueueStore#moveToIndexForRead leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @NotNull
     final SCQIndexing indexing;
     // retains the MappedBytes used by the MappedFile
@@ -59,6 +61,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @param wire the wire input to read from
      */
     @UsedViaReflection
+    // CQNumericalConstraint REVIEW keep SingleChronicleQueueStore(@NotNull RollCycle rollCycle, here because this API boundary in SingleChronicleQueueStore constructor leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @SuppressWarnings("this-escape")
     private SingleChronicleQueueStore(@NotNull WireIn wire) {
         boolean failed = true;
@@ -82,6 +85,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 Jvm.warn().on(getClass(), "Unexpected field " + fieldName);
             this.dataVersion = version > 1 ? 0 : version;
 
+            // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in SingleChronicleQueueStore#SingleChronicleQueueStore still needs an explicit reviewed lifecycle contract.
             singleThreadedCheckDisabled(true);
             failed = false;
         } finally {
@@ -90,6 +94,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         }
     }
 
+    // CQNumericalConstraint REVIEW keep SingleChronicleQueueStore(@NotNull RollCycle rollCycle, @NotNull final WireType wireType, @NotNull MappedBytes mapped... here because this API boundary in SingleChronicleQueueStore constructor leaves parameters indexCount and indexSpacing unconstrained and still needs @NonNegative, @Positive, or @Range annotations, validated range checks, or an explicit reviewed caller contract.
     /**
      * Constructs a new SingleChronicleQueueStore instance.
      * This constructor is used for creating a new queue store from scratch.
@@ -119,6 +124,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                 rollCycle.defaultIndexSpacing());
         this.dataVersion = 1;
 
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled(true); here because this lifecycle or ownership exception in SingleChronicleQueueStore constructor still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 
@@ -189,6 +195,11 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @return the file used by the queue store
      */
     @NotNull
+    // CQNumericalConstraint REVIEW keep sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws StreamCorruptedE... here because this API boundary in SingleChronicleQueueStore#sequenceForPosition leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep indexable(long index) here because this API boundary in SingleChronicleQueueStore#indexable leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep setPositionForSequenceNumber(@NotNull final ExcerptContext ec, here because this API boundary in SingleChronicleQueueStore#setPositionForSequenceNumber leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep linearScanTo(final long index, final long knownIndex, final ExcerptContext ec, final long knownAddress) here because this API boundary in SingleChronicleQueueStore#linearScanTo leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep writeEOF(@NotNull Wire wire, long timeoutMS) here because this API boundary in SingleChronicleQueueStore#writeEOF leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public File file() {
         return mappedFile.file();
@@ -342,6 +353,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             mappedBytes.release(INIT);
             try {
                 mappedFile.release(this);
+                // CSWarnAndContinue REVIEW catch (IllegalStateException e) because the local fallback still begins with logging or printing a diagnostic and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
             } catch (IllegalStateException e) {
                 Jvm.warn().on(getClass(), "trouble releasing " + mappedFile, e);
             }
@@ -360,6 +372,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         throwExceptionIfClosed();
 
         final MappedBytes mbytes = MappedBytes.mappedBytes(mappedFile);
+        // CSOwnershipCheckDisable REVIEW keep mbytes.singleThreadedCheckDisabled here because this lifecycle or ownership exception in SingleChronicleQueueStore#bytes still needs an explicit reviewed lifecycle contract.
         mbytes.singleThreadedCheckDisabled(true);
         return mbytes;
     }
@@ -436,6 +449,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
         try {
             indexing.initIndex(wire);
+            // REVIEW TASK CQIORuntimeExceptionWrapping: address this concern manually; baseline-assist cannot derive a truthful local repair here.
+            // REVIEW TASK CQIORuntimeExceptionWrapping: narrow catch to a specific declared exception or document the runtime-wrap contract.
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
@@ -517,9 +532,11 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
         // If unable to reserve bytes, create a new instance of MappedBytes and try again
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
+            // CSFormatAutodetect REVIEW keep WireType.valueOf here because this input or payload boundary in SingleChronicleQueueStore#writeEOF still needs an explicit reviewed input-trust contract.
             Wire wire0 = WireType.valueOf(wire).apply(bytes);
             return writeEOFAndShrink(wire0, timeoutMS);
 
+            // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with logging or printing a diagnostic and needs either narrower handling or an explicit reviewed recovery contract.
         } catch (Exception e) {
             Jvm.warn().on(getClass(), "unable to write the EOF file=" + fileName, e);
             return false;
@@ -553,6 +570,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @param cycle the cycle to set
      * @return the updated {@link SingleChronicleQueueStore}
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public SingleChronicleQueueStore cycle(int cycle) {
         throwExceptionIfClosedInSetter();
 

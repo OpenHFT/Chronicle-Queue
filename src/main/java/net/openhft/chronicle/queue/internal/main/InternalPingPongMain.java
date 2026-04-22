@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -64,13 +65,14 @@ public final class InternalPingPongMain {
         Histogram readDelay2 = new Histogram();
         try (ChronicleQueue queue = createQueue(path)) {
 
+            // CSStdoutStderrOutput REVIEW Thread because this direct console output in InternalPingPongMain#pingPong still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
             Thread reader = new Thread(() -> {
                 ExcerptTailer tailer = queue.createTailer();
                 while (running.get()) {
                     //noinspection StatementWithEmptyBody
                     while (readCount.get() == writeCount.get()) ;
 
-                    long wakeTime = System.nanoTime();
+                    long wakeTime = SystemTimeProvider.CLOCK.currentTimeNanos();
                     while (running.get()) {
                         try (DocumentContext dc = tailer.readingDocument(true)) {
                             if (!dc.isPresent())
@@ -79,7 +81,7 @@ public final class InternalPingPongMain {
                         break;
                     }
                     final long delay = wakeTime - writeTime.get();
-                    final long time = System.nanoTime() - wakeTime;
+                    final long time = SystemTimeProvider.CLOCK.currentTimeNanos() - wakeTime;
                     readDelay2.sample(time);
                     readDelay.sample(delay);
                     if (time + delay > 20_000)
@@ -96,9 +98,9 @@ public final class InternalPingPongMain {
             reader.start();
             Jvm.pause(100);
 
-            final long finish = System.currentTimeMillis() + runtime * 1000L;
+            final long finish = SystemTimeProvider.CLOCK.currentTimeMillis() + runtime * 1000L;
             final ExcerptAppender appender = queue.createAppender(); // NOSONAR
-            while (System.currentTimeMillis() < finish) {
+            while (SystemTimeProvider.CLOCK.currentTimeMillis() < finish) {
                 if (readCount.get() < writeCount.get()) {
                     Thread.yield();
                     continue;
@@ -107,12 +109,15 @@ public final class InternalPingPongMain {
                     dc.wire().bytes().writeSkip(size);
                 }
                 writeCount.incrementAndGet();
-                writeTime.set(System.nanoTime());
+                writeTime.set(SystemTimeProvider.CLOCK.currentTimeNanos());
             }
             running.set(false);
         }
+        // CSStdoutStderrOutput REVIEW System.out.println because this direct console output in InternalPingPongMain#pingPong still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
         System.out.println("read delay: " + readDelay.toMicrosFormat());
+        // CSStdoutStderrOutput REVIEW System.out.println because this direct console output in InternalPingPongMain#pingPong still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
         System.out.println("read delay2: " + readDelay2.toMicrosFormat());
+        // CSIOToolsInputPath REVIEW keep IOTools.deleteDirWithFiles here because this filesystem boundary in InternalPingPongMain#pingPong still needs an explicit reviewed path-handling contract.
         IOTools.deleteDirWithFiles(path, 2);
     }
 

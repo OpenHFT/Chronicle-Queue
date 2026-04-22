@@ -30,6 +30,7 @@ public final class DumpMain {
      * @throws FileNotFoundException if the specified file is not found
      */
     public static void main(String[] args) throws FileNotFoundException {
+        // CSPrivilegedOperatorTool REVIEW emit InternalDumpMain.main here because this operator-facing diagnostic in DumpMain#main still needs an explicit reviewed operator-diagnostic contract.
         InternalDumpMain.main(args);
     }
 

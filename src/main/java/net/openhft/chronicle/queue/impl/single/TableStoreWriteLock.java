@@ -46,6 +46,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
      * @param timeoutMs The timeout in milliseconds to wait before giving up on acquiring the lock.
      * @param lockKey The key used for identifying the lock.
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs, final String lockKey) {
         super(lockKey, tableStore, pauser);
         timeout = timeoutMs;
@@ -58,6 +59,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
      * @param pauser A {@link Supplier} providing the {@link TimingPauser} instance for pausing between lock retries.
      * @param timeoutMs The timeout in milliseconds to wait before giving up on acquiring the lock.
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public TableStoreWriteLock(final TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
         this(tableStore, pauser, timeoutMs, LOCK_KEY);
     }
@@ -119,12 +121,14 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         if (forceUnlockOnTimeoutWhen == UnlockMode.NEVER)
             throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         else if (forceUnlockOnTimeoutWhen == UnlockMode.LOCKING_PROCESS_DEAD) {
+            // CSForceUnlock REVIEW keep forceUnlockIfProcessIsDead() here because this recovery override in TableStoreWriteLock#handleTimeoutEx still needs an explicit reviewed recovery contract.
             if (forceUnlockIfProcessIsDead())
                 lock();
             else
                 throw new UnrecoverableTimeoutException(new IllegalStateException(warningMsg + UNLOCK_MAIN_MSG));
         } else {
             warn().on(getClass(), warningMsg + UNLOCKING_FORCIBLY_MSG);
+            // CSForceUnlock REVIEW keep forceUnlock here because this recovery override in TableStoreWriteLock#handleTimeoutEx still needs an explicit reviewed recovery contract.
             forceUnlock(currentLockValue);
             lock();
         }
@@ -207,6 +211,7 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         throwExceptionIfClosed();
 
         if (locked())
+            // CSForceUnlock REVIEW keep forceUnlock here because this recovery override in TableStoreWriteLock#forceUnlock still needs an explicit reviewed recovery contract.
             forceUnlock(lockedBy());
     }
 }

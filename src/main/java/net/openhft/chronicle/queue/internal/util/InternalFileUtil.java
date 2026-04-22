@@ -75,6 +75,7 @@ public final class InternalFileUtil {
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
         assertOsSupported();
+        // CSDirectoryEnumerationControl REVIEW keep baseDir.listFiles here because this filesystem boundary in InternalFileUtil#removableRollFileCandidates still needs an explicit reviewed path-handling contract.
         final File[] files = baseDir.listFiles(InternalFileUtil::hasQueueSuffix);
         if (files == null)
             return Stream.empty();
@@ -194,6 +195,7 @@ public final class InternalFileUtil {
      * @return true if getting all open files is supported, false otherwise
      */
     public static boolean getAllOpenFilesIsSupportedOnOS() {
+        // CSProcfsOrRealPathInference REVIEW keep Files.exists here because this filesystem boundary in InternalFileUtil#getAllOpenFilesIsSupportedOnOS still needs an explicit reviewed path-handling contract.
         return Files.exists(Paths.get("/proc/self/fd"));
     }
 
@@ -207,6 +209,7 @@ public final class InternalFileUtil {
     public static Map<String, String> getAllOpenFiles() throws IOException {
         assertOsSupported();
         final ProcFdWalker visitor = new ProcFdWalker();
+        // CSProcfsOrRealPathInference REVIEW keep Files.walkFileTree here because this filesystem boundary in InternalFileUtil#getAllOpenFiles still needs an explicit reviewed path-handling contract.
         Files.walkFileTree(Paths.get("/proc/"), Collections.emptySet(), 3, visitor);
         return visitor.openFiles;
     }
@@ -223,11 +226,13 @@ public final class InternalFileUtil {
         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
             if (file.toAbsolutePath().toString().matches("/proc/\\d+/fd/\\d+")) {
                 try {
+                    // CSProcfsOrRealPathInference REVIEW keep file.toRealPath here because this filesystem boundary in ProcFdWalker#visitFile still needs an explicit reviewed path-handling contract.
                     final String e = file.toRealPath().toAbsolutePath().toString();
                     final String pid = file.getName(PID_PATH_INDEX).toString(); // pid holding file open
                     openFiles.put(e, pid);
                 } catch (NoSuchFileException | AccessDeniedException e) {
                     // Ignore, sometimes they disappear & we can't access all the files
+                // CSWarnAndContinue REVIEW catch (IOException e) because the local fallback still begins with logging or printing a diagnostic and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
                 } catch (IOException e) {
                     Jvm.warn().on(ProcFdWalker.class, "Error resolving " + file, e);
                 }

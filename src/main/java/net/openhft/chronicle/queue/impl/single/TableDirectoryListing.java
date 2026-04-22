@@ -58,6 +58,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         this.time = time;
 
         checkReadOnly(tableStore);
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in TableDirectoryListing#TableDirectoryListing still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 
@@ -75,6 +76,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     /**
      * Initializes the directory listing by acquiring values from the table store.
      */
+    // CQNumericalConstraint REVIEW keep onFileCreated(final File file, final int cycle) here because this API boundary in TableDirectoryListing#onFileCreated leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep onRoll(int cycle) here because this API boundary in TableDirectoryListing#onRoll leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public void init() {
         throwExceptionIfClosedInSetter();

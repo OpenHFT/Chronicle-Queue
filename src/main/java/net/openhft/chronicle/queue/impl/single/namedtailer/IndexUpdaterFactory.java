@@ -73,6 +73,8 @@ public class IndexUpdaterFactory {
          *
          * @throws IOException if an I/O error occurs
          */
+        // CQNumericalConstraint REVIEW keep update(long index) here because this API boundary in StandardIndexUpdater#update leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+        // CQNumericalConstraint REVIEW keep update(long index) here because this API boundary in VersionedIndexUpdater#update leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
         @Override
         public void close() throws IOException {
             closeQuietly(indexValue);
@@ -122,6 +124,7 @@ public class IndexUpdaterFactory {
                                      @NotNull LongValue indexValue,
                                      @NotNull LongValue indexVersionValue) {
             this.versionIndexLock = queue.versionIndexLockForId(tailerName);
+            // CSForceUnlock REVIEW keep this.versionIndexLock.forceUnlockIfProcessIsDead here because this recovery override in VersionedIndexUpdater#VersionedIndexUpdater still needs an explicit reviewed recovery contract.
             this.versionIndexLock.forceUnlockIfProcessIsDead();
             this.indexValue = indexValue;
             this.indexVersionValue = indexVersionValue;

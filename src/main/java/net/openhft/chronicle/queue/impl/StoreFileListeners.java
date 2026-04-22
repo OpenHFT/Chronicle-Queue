@@ -23,6 +23,7 @@ public enum StoreFileListeners implements StoreFileListener {
      * A no-operation listener that performs no actions and is inactive.
      */
     NO_OP {
+        // CQNumericalConstraint REVIEW keep onReleased(int cycle, File file) here because this API boundary in StoreFileListeners#onReleased leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
         @Override
         public void onReleased(int cycle, File file) {
         }

@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -85,6 +86,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedWire = wireType.apply(mappedBytes);
         mappedWire.usePadding(true);
 
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in SingleTableStore#SingleTableStore still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 
@@ -105,6 +107,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedWire = wireType.apply(mappedBytes);
         mappedWire.usePadding(true);
 
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in SingleTableStore#SingleTableStore still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 
@@ -158,19 +161,20 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
-        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
-        final long startMs = System.currentTimeMillis();
+        final long timeoutAt = SystemTimeProvider.CLOCK.currentTimeMillis() + timeoutMS;
+        final long startMs = SystemTimeProvider.CLOCK.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-            for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
+            for (int count = 1; SystemTimeProvider.CLOCK.currentTimeMillis() < timeoutAt; count++) {
                 try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
                     }
+                    // CSWarnAndContinue REVIEW catch (IOException | OverlappingFileLockException e) because the local fallback still begins with entering a conditional fallback branch and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
                     if (count > 9) {
                         if (Jvm.isDebugEnabled(SingleTableStore.class)) {
-                            final long elapsedMs = System.currentTimeMillis() - startMs;
+                            final long elapsedMs = SystemTimeProvider.CLOCK.currentTimeMillis() - startMs;
                             final String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath() + ", count=" + count + ", elapsed=" + elapsedMs + " ms";
                             Jvm.debug().on(SingleTableStore.class, "", new StackTrace(message));
                         }
@@ -179,6 +183,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 int delay = Math.min(250, count * count);
                 Jvm.pause(delay);
             }
+            // REVIEW TASK CQIORuntimeExceptionWrapping: address this concern manually; baseline-assist cannot derive a truthful local repair here.
+            // REVIEW TASK CQIORuntimeExceptionWrapping: narrow catch to a specific declared exception or document the runtime-wrap contract.
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
         }

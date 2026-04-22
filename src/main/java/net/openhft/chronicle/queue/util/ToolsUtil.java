@@ -23,6 +23,7 @@ public final class ToolsUtil {
     public static void warnIfResourceTracing() {
         // System.err (*not* logger as slf4j may not be set up e.g. when running queue_reader.sh)
         if (Jvm.isResourceTracing())
+            // CSStdoutStderrOutput REVIEW System.err.println because this direct console output in ToolsUtil#warnIfResourceTracing still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
             System.err.println("Resource tracing is turned on - this will eventually die with OOME");
     }
 }

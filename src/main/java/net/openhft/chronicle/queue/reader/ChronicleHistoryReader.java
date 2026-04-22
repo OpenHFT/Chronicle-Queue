@@ -63,6 +63,8 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
      * @param messageSink The consumer to handle processed messages
      * @return The current instance of {@link ChronicleHistoryReader}
      */
+    // CQNumericalConstraint REVIEW keep withSummaryOutput(int offset) here because this API boundary in ChronicleHistoryReader#withSummaryOutput leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep withStartIndex(long startIndex) here because this API boundary in ChronicleHistoryReader#withStartIndex leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public ChronicleHistoryReader withMessageSink(final Consumer<String> messageSink) {
         this.messageSink = messageSink;
@@ -175,12 +177,15 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
             throw new IllegalArgumentException(String.format("Path %s does not exist", basePath));
         }
         // TODO: allow builder to be overridden
+        // REVIEW TASK CQRuntimeTodoPlaceholder: replace this runtime placeholder with a concrete implementation decision or remove it.
+        // REVIEW TASK CQRuntimeTodoPlaceholder: replace runtime placeholder (SingleChronicleQueue queue = SingleChronicleQueueBuilder) with a concrete implementation decision or remove it.
         SingleChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(basePath.toFile())
                 .readOnly(true)
                 .build();
         tailer = queue.createTailer();
         if (startIndex != null && !tailer.moveToIndex(startIndex))
+            // CSRawHeaderOrPathMessage REVIEW emit IllegalArgumentException here because this operator-facing diagnostic in ChronicleHistoryReader#createQueue still needs an explicit reviewed operator-diagnostic contract.
             throw new IllegalArgumentException("Could not move to startIndex " + Long.toHexString(startIndex));
         return queue;
     }

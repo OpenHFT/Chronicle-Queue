@@ -37,6 +37,7 @@ public class ChronicleWriter {
              final ExcerptAppender appender = queue.createAppender()) {
 
             for (final String file : files) {
+                // CSGenericMarshallableLoad REVIEW keep Marshallable.fromFile here because this type-materialization path in ChronicleWriter#execute still needs an explicit reviewed type-resolution contract.
                 final Object payload = Marshallable.fromFile(Object.class, file);
                 try (final DocumentContext dc = appender.writingDocument()) {
                     if (writeTo != null)
@@ -70,8 +71,10 @@ public class ChronicleWriter {
      */
     public ChronicleWriter asMethodWriter(String interfaceName) {
         try {
+            // CSClassForNameInput REVIEW this.writeTo = Class.forName(interfaceName) because this reflective or runtime-loading boundary in ChronicleWriter#asMethodWriter still needs either an allowlisted wrapper or an explicit reviewed runtime-loading contract.
             this.writeTo = Class.forName(interfaceName);
         } catch (ClassNotFoundException e) {
+            // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(e) because this rethrow in ChronicleWriter#asMethodWriter converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
             throw Jvm.rethrow(e);
         }
         return this;

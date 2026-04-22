@@ -54,6 +54,7 @@ public class MicroToucher {
                 final BytesStore<?, ?> bs = bytes.bytesStore();
                 if (bs.inside(nextPage, 8))
                     touchPage(nextPage, bs);
+                    // CSCatchThrowable REVIEW catch (Throwable ignored) because the local fallback still begins with returning true and needs either a narrower terminal boundary or an explicit reviewed last-resort contract.
             } catch (Throwable ignored) {
             }
             return true;

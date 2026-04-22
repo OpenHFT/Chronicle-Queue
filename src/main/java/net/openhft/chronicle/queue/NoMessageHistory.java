@@ -9,6 +9,7 @@ import net.openhft.chronicle.wire.*;
 public enum NoMessageHistory implements MessageHistory {
     INSTANCE;
 
+    // CQNumericalConstraint REVIEW keep reset(int sourceId, long sourceIndex) here because this API boundary in NoMessageHistory#reset leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public int timings() {
         return 0;

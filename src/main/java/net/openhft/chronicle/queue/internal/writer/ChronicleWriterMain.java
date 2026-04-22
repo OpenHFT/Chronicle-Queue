@@ -29,6 +29,8 @@ public class ChronicleWriterMain {
         final Options options = options();
         final CommandLine commandLine = parseCommandLine(args, options);
 
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap ChronicleWriter writer in try-with-resources or document explicit close ownership.
         final ChronicleWriter writer = new ChronicleWriter();
 
         configure(writer, commandLine);
@@ -72,6 +74,8 @@ public class ChronicleWriterMain {
      * @param message Optional message to display before the help
      */
     private void printHelpAndExit(final Options options, int status, String message) {
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap PrintWriter writer in try-with-resources or document explicit close ownership.
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
@@ -85,6 +89,7 @@ public class ChronicleWriterMain {
                 true
         );
         writer.flush();
+        // CSSystemExitInLibrary REVIEW keep System.exit here because this runtime execution boundary in ChronicleWriterMain#printHelpAndExit still needs an explicit reviewed runtime-admission contract.
         System.exit(status);
     }
 
@@ -95,6 +100,7 @@ public class ChronicleWriterMain {
      * @param commandLine  The parsed command-line options
      */
     private void configure(final ChronicleWriter writer, final CommandLine commandLine) {
+        // CSPathFromInput REVIEW keep writer.withBasePath here because this filesystem boundary in ChronicleWriterMain#configure still needs an explicit reviewed path-handling contract.
         writer.withBasePath(Paths.get(commandLine.getOptionValue('d')));
         writer.withMethodName(commandLine.getOptionValue('m'));
 

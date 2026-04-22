@@ -24,6 +24,7 @@ public class AppendLock extends TableStoreWriteLock {
      * @param pauser     The {@link TimingPauser} supplier used to manage lock acquisition retries.
      * @param timeoutMs  The maximum time, in milliseconds, to attempt acquiring the lock before timing out.
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public AppendLock(TableStore<?> tableStore, Supplier<TimingPauser> pauser, Long timeoutMs) {
         super(tableStore, pauser, timeoutMs, TableStoreWriteLock.APPEND_LOCK_KEY);
     }
@@ -36,6 +37,7 @@ public class AppendLock extends TableStoreWriteLock {
      */
     @Override
     public boolean forceUnlockIfProcessIsDead() {
+        // CSForceUnlock REVIEW keep super.forceUnlockIfProcessIsDead here because this recovery override in AppendLock#forceUnlockIfProcessIsDead still needs an explicit reviewed recovery contract.
         return super.forceUnlockIfProcessIsDead(false);
     }
 }

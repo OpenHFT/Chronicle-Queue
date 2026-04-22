@@ -49,6 +49,8 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
      * @param file  The newly created file.
      * @param cycle The cycle number associated with the file.
      */
+    // CQNumericalConstraint REVIEW keep onFileCreated(final File file, final int cycle) here because this API boundary in FileSystemDirectoryListing#onFileCreated leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep onRoll(int cycle) here because this API boundary in FileSystemDirectoryListing#onRoll leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public void onFileCreated(final File file, final int cycle) {
         onRoll(cycle);
@@ -65,6 +67,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     public void refresh(boolean force) {
         lastRefreshTimeMS = time.currentTimeMillis();
 
+        // CSDirectoryEnumerationControl REVIEW keep queueDir.list here because this filesystem boundary in FileSystemDirectoryListing#refresh still needs an explicit reviewed path-handling contract.
         final String[] fileNamesList = queueDir.list();
         String minFilename = INITIAL_MIN_FILENAME;
         String maxFilename = INITIAL_MAX_FILENAME;

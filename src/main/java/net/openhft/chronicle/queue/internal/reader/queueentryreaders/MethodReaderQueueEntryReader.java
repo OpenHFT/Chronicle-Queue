@@ -43,6 +43,8 @@ public final class MethodReaderQueueEntryReader implements QueueEntryReader {
         Wire wire = wireType.apply(bytes);
         if (wire instanceof TextWire)
             ((TextWire) wire).useTextDocuments();
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap MethodWriterBuilder<?> mwb in try-with-resources or document explicit close ownership.
         MethodWriterBuilder<?> mwb = wire.methodWriterBuilder(methodReaderInterface);
         if (showMessageHistory)
             mwb.updateInterceptor((methodName, t) -> {

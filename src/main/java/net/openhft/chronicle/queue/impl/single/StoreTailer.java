@@ -109,6 +109,9 @@ class StoreTailer extends AbstractCloseable
         queue.addCloseListener(this);
     }
 
+    // CQNumericalConstraint REVIEW keep moveToIndex(final long index) here because this API boundary in StoreTailer#moveToIndex leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep moveToCycle(final int cycle) here because this API boundary in StoreTailer#moveToCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep excerptsInCycle(int cycle) here because this API boundary in StoreTailer#excerptsInCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public void singleThreadedCheckDisabled(boolean singleThreadedCheckDisabled) {
         final Wire privateWire = privateWire();
@@ -639,6 +642,7 @@ class StoreTailer extends AbstractCloseable
                 if (!moveToIndexInternal(index() - 1)) {
                     return false;
                 }
+                // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with returning false and needs either narrower handling or an explicit reviewed recovery contract.
             } catch (Exception e) {
                 // can happen if index goes negative
                 return false;
@@ -1084,6 +1088,7 @@ class StoreTailer extends AbstractCloseable
                         "  !=  actual=" + actual));
 
                 return false;
+                // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with logging or printing a diagnostic and needs either narrower handling or an explicit reviewed recovery contract.
             } catch (Exception e) {
                 Jvm.warn().on(getClass(), "", e);
                 return false;
@@ -1104,6 +1109,7 @@ class StoreTailer extends AbstractCloseable
         if (s == null) return;
 
         final MappedBytes bytes = s.bytes();
+        // CSOwnershipCheckDisable REVIEW keep bytes.singleThreadedCheckDisabled here because this lifecycle or ownership exception in StoreTailer#resetWires still needs an explicit reviewed lifecycle contract.
         bytes.singleThreadedCheckDisabled(singleThreadedCheckDisabled());
 
         final Wire wire2 = wireType.apply(bytes);
@@ -1196,6 +1202,7 @@ class StoreTailer extends AbstractCloseable
             // hence are just going to retry.
             try {
                 return originalToEnd();
+                // CSCatchBroadException REVIEW catch (Exception ex) because the local fallback still begins with logging or printing a diagnostic and needs either narrower handling or an explicit reviewed recovery contract.
             } catch (Exception ex) {
                 Jvm.warn().on(getClass(), "Unable to find toEnd() so winding to the start " + ex);
                 return toStart();
@@ -1246,6 +1253,7 @@ class StoreTailer extends AbstractCloseable
             final SingleChronicleQueueStore wireStore = queue.storeForCycle(
                     lastCycle, queue.epoch(), false, this.store);
             if (wireStore == null)
+                // CSRawHeaderOrPathMessage REVIEW emit MissingStoreFileException here because this operator-facing diagnostic in StoreTailer#optimizedToEnd still needs an explicit reviewed operator-diagnostic contract.
                 throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
             this.setCycle(lastCycle);
 
@@ -1329,6 +1337,7 @@ class StoreTailer extends AbstractCloseable
 
                 break;
             case NOT_REACHED:
+                // CSRawHeaderOrPathMessage REVIEW emit NotReachedException here because this operator-facing diagnostic in StoreTailer#originalToEnd still needs an explicit reviewed operator-diagnostic contract.
                 throw new NotReachedException("NOT_REACHED index: " + Long.toHexString(index));
             case END_OF_FILE:
                 state = END_OF_CYCLE;
@@ -1623,6 +1632,7 @@ class StoreTailer extends AbstractCloseable
         return state;
     }
 
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public void setCycle(final int cycle) {
         this.cycle = cycle;
     }
@@ -1777,6 +1787,7 @@ class StoreTailer extends AbstractCloseable
      * This helps in detecting resource leaks by generating warnings when the object is garbage collected.
      */
     private class Finalizer {
+        // CSFinalizerOverride REVIEW keep SuppressWarnings here because this runtime execution boundary in Finalizer#finalize still needs an explicit reviewed runtime-admission contract.
         @SuppressWarnings({"deprecation", "removal"})
         @Override
         protected void finalize() throws Throwable {

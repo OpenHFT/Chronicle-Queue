@@ -69,6 +69,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
 
     @NotNull
     public static <T extends Metadata> SingleTableBuilder<T> binary(@NotNull String file, @NotNull T metadata) {
+        // CSPathFromInput REVIEW keep binary here because this filesystem boundary in SingleTableBuilder#binary still needs an explicit reviewed path-handling contract.
         return binary(new File(file), metadata);
     }
 
@@ -96,12 +97,16 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
 
         MappedBytes bytes = null;
         try {
+            // CSFileCreatePermissions REVIEW keep !readOnly && file.createNewFile() && !file.canWrite() here because this filesystem boundary in SingleTableBuilder#build still needs an explicit reviewed path-handling contract.
             if (!readOnly && file.createNewFile() && !file.canWrite()) {
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
             }
             // TODO Change this to a single chunk file in x.28
+            // REVIEW TASK CQRuntimeTodoPlaceholder: replace this runtime placeholder with a concrete implementation decision or remove it.
+            // REVIEW TASK CQRuntimeTodoPlaceholder: replace runtime placeholder (bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);) with a concrete implementation decision or remove it.
             bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, readOnly);
             // these MappedBytes are shared, but the assumption is they shouldn't grow. Supports 2K entries.
+            // CSOwnershipCheckDisable REVIEW keep bytes.singleThreadedCheckDisabled here because this lifecycle or ownership exception in SingleTableBuilder#build still needs an explicit reviewed lifecycle contract.
             bytes.singleThreadedCheckDisabled(true);
 
             // eagerly initialize backing MappedFile page - otherwise wire.writeFirstHeader() will try to lock the file
@@ -109,6 +114,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
             if (readOnly) {
+                // CSCheckedSwallowThroughRethrow REVIEW return SingleTableStore.doWithSharedLock(file, v -> { because this rethrow in SingleTableBuilder#build converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
                 return SingleTableStore.doWithSharedLock(file, v -> {
                     try {
                         return readTableStore(wire);
@@ -118,6 +124,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                 }, () -> null);
             } else {
                 MappedBytes finalBytes = bytes;
+                // CSCheckedSwallowThroughRethrow REVIEW return SingleTableStore.doWithExclusiveLock(file, v -> { because this rethrow in SingleTableBuilder#build converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
                 return SingleTableStore.doWithExclusiveLock(file, v -> {
                     try {
                         if (wire.writeFirstHeader()) {
@@ -131,6 +138,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                 }, () -> null);
             }
         } catch (IOException e) {
+            // CSRawHeaderOrPathMessage REVIEW emit IORuntimeException here because this operator-facing diagnostic in SingleTableBuilder#build still needs an explicit reviewed operator-diagnostic contract.
             throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
         } finally {
             if (bytes != null)

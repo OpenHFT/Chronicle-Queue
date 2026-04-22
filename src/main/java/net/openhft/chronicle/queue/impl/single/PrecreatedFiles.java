@@ -27,6 +27,7 @@ public enum PrecreatedFiles {
     public static void renamePreCreatedFileToRequiredFile(final File requiredQueueFile) {
         final File preCreatedFile = preCreatedFile(requiredQueueFile);
         if (preCreatedFile.exists()) {
+            // CSDirectFileDeleteOrRename REVIEW keep !preCreatedFile.renameTo(requiredQueueFile) here because this filesystem boundary in PrecreatedFiles#renamePreCreatedFileToRequiredFile still needs an explicit reviewed path-handling contract.
             if (!preCreatedFile.renameTo(requiredQueueFile)) {
                 Jvm.warn().on(PrecreatedFiles.class, "Failed to rename pre-created queue file");
             }

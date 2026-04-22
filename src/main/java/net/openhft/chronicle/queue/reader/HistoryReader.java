@@ -139,6 +139,8 @@ public interface HistoryReader {
      *         the provided {@code queueSupplier } to provide the queue.
      */
     static HistoryReader create(@NotNull final Supplier<? extends ChronicleQueue> queueSupplier) {
+        // REVIEW TASK CQRuntimeTodoPlaceholder: replace this runtime placeholder with a concrete implementation decision or remove it.
+        // REVIEW TASK CQRuntimeTodoPlaceholder: replace runtime placeholder (throw new UnsupportedOperationException("TODO");) with a concrete implementation decision or remove it.
         throw new UnsupportedOperationException("TODO");
     }
 }

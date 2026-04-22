@@ -136,6 +136,7 @@ public enum BinarySearch {
      * high bit in the index ( used for the sign ) may be used, this implementation is unsafe as it relies on this
      * bit not being set ( in other words set to zero ).
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public static long findWithinCycle(@NotNull Wire key,
                                        @NotNull Comparator<Wire> c,
                                        int cycle,

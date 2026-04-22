@@ -25,8 +25,10 @@ public final class PretouchUtil {
         PretoucherFactory instance;
         try {
             final Class<?> clazz = Class.forName("software.chronicle.enterprise.queue.pretoucher.EnterprisePretouchUtil");
+            // CSResolvedTypeInstantiation REVIEW keep ObjectUtils.newInstance here because this type-materialization path still needs an explicit reviewed type-resolution contract.
             instance = (PretoucherFactory) ObjectUtils.newInstance(clazz);
             assert SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable();
+            // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with updating local state for the fallback path and needs either narrower handling or an explicit reviewed recovery contract.
         } catch (Exception e) {
             instance = new PretouchFactoryEmpty();
             SingleChronicleQueueBuilder.onlyAvailableInEnterprise("Pretoucher");

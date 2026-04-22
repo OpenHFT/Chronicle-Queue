@@ -62,6 +62,7 @@ public class ChronicleHistoryReaderMain {
                 withMessageSink(System.out::println).
                 withProgress(commandLine.hasOption('p')).
                 withHistosByMethod(commandLine.hasOption('m')).
+                // CSPathFromInput REVIEW keep withBasePath here because this filesystem boundary in ChronicleHistoryReaderMain#setup still needs an explicit reviewed path-handling contract.
                 withBasePath(Paths.get(commandLine.getOptionValue('d')));
         if (commandLine.hasOption('t'))
             chronicleHistoryReader.withTimeUnit(TimeUnit.valueOf(commandLine.getOptionValue('t')));
@@ -127,6 +128,8 @@ public class ChronicleHistoryReaderMain {
      * @param message Optional message to print before help
      */
     protected void printHelpAndExit(final Options options, int status, String message) {
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap PrintWriter writer in try-with-resources or document explicit close ownership.
         final PrintWriter writer = new PrintWriter(System.out);
         new HelpFormatter().printHelp(
                 writer,
@@ -140,6 +143,7 @@ public class ChronicleHistoryReaderMain {
                 true
         );
         writer.flush();
+        // CSSystemExitInLibrary REVIEW keep System.exit here because this runtime execution boundary in ChronicleHistoryReaderMain#printHelpAndExit still needs an explicit reviewed runtime-admission contract.
         System.exit(status);
     }
 

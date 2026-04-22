@@ -80,7 +80,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         Constructor<?> co;
         try {
             co = ((Class<?>) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
+            // CSSetAccessibleEscalation REVIEW Jvm.setAccessible(co) because this access override still needs either encapsulation-preserving access or an explicit reviewed runtime-access contract.
             Jvm.setAccessible(co);
+            // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with updating local state for the fallback path and needs either narrower handling or an explicit reviewed recovery contract.
         } catch (Exception e) {
             co = null;
         }
@@ -169,6 +171,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param wireType the wire type for serialization
      * @return a new instance of SingleChronicleQueueBuilder
      */
+    // CQNumericalConstraint REVIEW keep bufferCapacity(long bufferCapacity) here because this API boundary in SingleChronicleQueueBuilder#bufferCapacity leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @NotNull
     public static SingleChronicleQueueBuilder builder(@NotNull Path path, @NotNull WireType wireType) {
         return builder(path.toFile(), wireType);
@@ -253,6 +256,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return a {@link SingleChronicleQueueBuilder} instance
      */
     public static SingleChronicleQueueBuilder binary(@NotNull String basePath) {
+        // CSPathFromInput REVIEW keep binary here because this filesystem boundary in SingleChronicleQueueBuilder#binary still needs an explicit reviewed path-handling contract.
         return binary(new File(basePath));
     }
 
@@ -313,6 +317,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         String[] rollCyclePropertyParts = rollCycleProperty.split(":");
         if (rollCyclePropertyParts.length > 0) {
             try {
+                // CSClassForNameInput REVIEW Class<?> rollCycleClass = Class.forName(rollCyclePropertyParts[0]) because this reflective or runtime-loading boundary in SingleChronicleQueueBuilder#loadDefaultRollCycle still needs either an allowlisted wrapper or an explicit reviewed runtime-loading contract.
                 Class<?> rollCycleClass = Class.forName(rollCyclePropertyParts[0]);
                 if (Enum.class.isAssignableFrom(rollCycleClass)) {
                     // Handle roll cycle as an enum
@@ -322,6 +327,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                     } else {
                         @SuppressWarnings({"unchecked", "rawtypes"})
                         Class<Enum> eClass = (Class<Enum>) rollCycleClass;
+                    // CSResolvedTypeInstantiation REVIEW keep ObjectUtils.newInstance(rollCycleClass) here because this unchecked type materialisation in SingleChronicleQueueBuilder#loadDefaultRollCycle still needs either a closed type map or an explicit reviewed instantiation contract.
                         @SuppressWarnings("unchecked")
                         Object instance = ObjectUtils.valueOfIgnoreCase(eClass, rollCyclePropertyParts[1]);
                         if (instance instanceof RollCycle) {
@@ -333,6 +339,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                     }
                 } else {
                     // Handle roll cycle as a class instance
+                    // CSResolvedTypeInstantiation REVIEW keep ObjectUtils.newInstance(rollCycleClass) here because this unchecked type materialisation in SingleChronicleQueueBuilder#loadDefaultRollCycle still needs either a closed type map or an explicit reviewed instantiation contract.
                     @SuppressWarnings("unchecked")
                     Object instance = ObjectUtils.newInstance(rollCycleClass);
                     if (instance instanceof RollCycle) {
@@ -342,6 +349,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                                 "Configured default rollcycle is not a subclass of RollCycle");
                     }
                 }
+                // CSWarnAndContinue REVIEW catch (ClassNotFoundException ignored) because the local fallback still begins with logging or printing a diagnostic and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
             } catch (ClassNotFoundException ignored) {
                 Jvm.warn().on(SingleChronicleQueueBuilder.class,
                         "Default roll cycle class: " + rollCyclePropertyParts[0] + " was not found");
@@ -455,6 +463,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             throw new IllegalStateException("Enterprise features requested but Chronicle Queue Enterprise is not in the class path!");
 
         try {
+            // CSReflectiveConstructorInvoke REVIEW (SingleChronicleQueue) ENTERPRISE_QUEUE_CONSTRUCTOR.newInstance(this) because this reflective or runtime-loading boundary in SingleChronicleQueueBuilder#buildEnterprise still needs either an allowlisted wrapper or an explicit reviewed runtime-loading contract.
             return (SingleChronicleQueue) ENTERPRISE_QUEUE_CONSTRUCTOR.newInstance(this);
         } catch (Exception e) {
             throw new IllegalStateException("Couldn't create an instance of Enterprise queue", e);
@@ -583,6 +592,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             rollTime = newMeta.roll().rollTime();
             rollTimeZone = newMeta.roll().rollTimeZone();
             epoch = newMeta.roll().epoch();
+            // CSWarnAndContinue REVIEW catch (IORuntimeException ex) because the local fallback still begins with entering a conditional fallback branch and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
         } catch (IORuntimeException ex) {
             // readonly=true and file doesn't exist
             if (OS.isWindows())
@@ -614,6 +624,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             // the code is slightly brutal and crude but should work for most cases. It will NOT work if files were created with
             // the following cycles: LARGE_HOURLY_SPARSE LARGE_HOURLY_XSPARSE LARGE_DAILY XLARGE_DAILY HUGE_DAILY HUGE_DAILY_XSPARSE
             // for such cases user MUST use correct roll cycle when creating the queue
+            // CSDirectoryEnumerationControl REVIEW keep path.list here because this filesystem boundary in SingleChronicleQueueBuilder#validateRollCycle still needs an explicit reviewed path-handling contract.
             String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
             if (list != null && list.length > 0) {
                 // Try to match the roll cycle by parsing the filename against known roll cycles
@@ -625,6 +636,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                                 .parse(filename.substring(0, filename.length() - 4));
                         overrideRollCycle(cycle);
                         break;
+                        // CSCatchBroadException REVIEW catch (Exception expected) because this broad catch still needs either narrower handling or an explicit reviewed recovery contract.
                     } catch (Exception expected) {
                         // Ignore the exception and continue checking other cycles
                     }
@@ -669,9 +681,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private File metapath() {
         final File storeFilePath;
         if ("".equals(path.getPath())) {
+            // CSPathFromInput REVIEW keep File here because this filesystem boundary in SingleChronicleQueueBuilder#metapath still needs an explicit reviewed path-handling contract.
             storeFilePath = new File(QUEUE_METADATA_FILE);
         } else {
+            // CSPathFromInput REVIEW keep File here because this filesystem boundary in SingleChronicleQueueBuilder#metapath still needs an explicit reviewed path-handling contract.
             storeFilePath = new File(path, QUEUE_METADATA_FILE);
+            // CSFileCreatePermissions REVIEW keep path.mkdirs here because this filesystem boundary in SingleChronicleQueueBuilder#metapath still needs an explicit reviewed path-handling contract.
             path.mkdirs();
         }
         return storeFilePath;
@@ -830,6 +845,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder path(String path) {
+        // CSPathFromInput REVIEW keep path here because this filesystem boundary in SingleChronicleQueueBuilder#path still needs an explicit reviewed path-handling contract.
         return path(new File(path));
     }
 
@@ -893,6 +909,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param blockSize the block size in bytes
      * @return the current builder instance for method chaining
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public SingleChronicleQueueBuilder blockSize(long blockSize) {
         this.blockSize = Math.max(SMALL_BLOCK_SIZE, blockSize);
         return this;
@@ -904,6 +921,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param blockSize the block size in bytes
      * @return the current builder instance for method chaining
      */
+    // CQNumericalConstraint REVIEW keep blockSize(int blockSize) here because this API boundary in SingleChronicleQueueBuilder#blockSize leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     public SingleChronicleQueueBuilder blockSize(int blockSize) {
         return blockSize((long) blockSize);
     }
@@ -978,6 +996,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         return Math.min(blockSize() / 4, bufferCapacity == null ? 2 << 20 : bufferCapacity);
     }
 
+    // CQNumericalConstraint REVIEW keep bufferCapacity(long bufferCapacity) here because this API boundary in SingleChronicleQueueBuilder#bufferCapacity leaves parameter bufferCapacity unconstrained and still needs an @NonNegative, @Positive, or @Range annotation, a validated range check, or an explicit reviewed caller contract.
     /**
      * @param bufferCapacity sets the ring buffer capacity in bytes
      * @return this
@@ -1226,6 +1245,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param indexCount the number of indices to set
      * @return the current builder instance for method chaining
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public SingleChronicleQueueBuilder indexCount(int indexCount) {
         this.indexCount = Maths.nextPower2(indexCount, 8);
         return this;
@@ -1247,6 +1267,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param indexSpacing the index spacing to set
      * @return the current builder instance for method chaining
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public SingleChronicleQueueBuilder indexSpacing(int indexSpacing) {
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
         return this;
@@ -1265,12 +1286,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Returns the {@link TimeProvider} for the queue. If not explicitly set, it defaults to the
-     * {@link SystemTimeProvider#INSTANCE}.
+     * {@link SystemTimeProvider#CLOCK}.
      *
      * @return the time provider used by the queue
      */
     public TimeProvider timeProvider() {
-        return timeProvider == null ? SystemTimeProvider.INSTANCE : timeProvider;
+        return timeProvider == null ? SystemTimeProvider.CLOCK : timeProvider;
     }
 
     /**
@@ -1311,6 +1332,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param timeoutMS the timeout in milliseconds
      * @return the current builder instance for method chaining
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public SingleChronicleQueueBuilder timeoutMS(long timeoutMS) {
         this.timeoutMS = timeoutMS;
         return this;

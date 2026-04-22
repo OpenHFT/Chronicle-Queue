@@ -41,6 +41,7 @@ public class InternalDumpMain {
      * @throws FileNotFoundException if the provided file path is invalid
      */
     public static void main(String[] args) throws FileNotFoundException {
+        // CSPrivilegedOperatorTool REVIEW emit dump here because this operator-facing diagnostic in InternalDumpMain#main still needs an explicit reviewed operator-diagnostic contract.
         dump(args[0]);
     }
 
@@ -52,7 +53,10 @@ public class InternalDumpMain {
      * @throws FileNotFoundException if the specified file or directory is not found
      */
     public static void dump(@NotNull String path) throws FileNotFoundException {
+        // CSPathFromInput REVIEW keep File here because this filesystem boundary in InternalDumpMain#dump still needs an explicit reviewed path-handling contract.
         File path2 = new File(path);
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap PrintStream out in try-with-resources or document explicit close ownership.
         PrintStream out = FILE == null ? System.out : new PrintStream(FILE);
         long upperLimit = Long.MAX_VALUE;
         dump(path2, out, upperLimit);
@@ -72,14 +76,17 @@ public class InternalDumpMain {
                     SKIP_TABLE_STORE
                             ? (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)
                             : (d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX) || n.endsWith(SingleTableStore.SUFFIX);
+            // CSDirectoryEnumerationControl REVIEW keep path.listFiles here because this filesystem boundary in InternalDumpMain#dump still needs an explicit reviewed path-handling contract.
             File[] files = path.listFiles(filter);
             if (files == null) {
                 err.println("Directory not found " + path);
+                // CSSystemExitInLibrary REVIEW keep System.exit here because this runtime execution boundary in InternalDumpMain#dump still needs an explicit reviewed runtime-admission contract.
                 System.exit(1);
             }
 
             Arrays.sort(files);
             for (File file : files) {
+                // CSStdoutStderrOutput REVIEW out.println because this direct console output in InternalDumpMain#dump still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
                 out.println("## " + file);
                 dumpFile(file, out, upperLimit);
             }
@@ -116,15 +123,18 @@ public class InternalDumpMain {
                     }
                 }
 
+                // CSStdoutStderrOutput REVIEW out.println because this direct console output in InternalDumpMain#dumpFile still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
                 out.println(sb);
 
                 if (last)
                     break;
                 if (bytes.readPosition() > upperLimit) {
+                    // CSStdoutStderrOutput REVIEW out.println because this direct console output in InternalDumpMain#dumpFile still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
                     out.println("# limit reached.");
                     return;
                 }
             }
+            // CSWarnAndContinue REVIEW catch (IOException ioe) because the local fallback still begins with executing err.println("Failed to read " + file + " " + ioe) and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
         } catch (IOException ioe) {
             err.println("Failed to read " + file + " " + ioe);
         } finally {

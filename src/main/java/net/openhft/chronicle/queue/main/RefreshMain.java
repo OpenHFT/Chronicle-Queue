@@ -16,6 +16,7 @@ public final class RefreshMain {
      * @param args the directory
      */
     public static void main(String[] args) {
+        // CSPathFromInput REVIEW keep File here because this filesystem boundary in RefreshMain#main still needs an explicit reviewed path-handling contract.
         final File path = new File(args[0]);
         if (!path.isDirectory()) {
             System.err.println("Path argument must be a queue directory");

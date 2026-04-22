@@ -99,6 +99,8 @@ public class ChronicleReader implements Reader {
                 MessageHistory.emptyHistory();
 
                 MessageCountingMessageConsumer messageConsumer = new MessageCountingMessageConsumer(matchLimit, createMessageConsumers());
+                // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+                // REVIEW TASK CQTryWithResourcesMissing: wrap QueueEntryReader queueEntryReader in try-with-resources or document explicit close ownership.
                 QueueEntryReader queueEntryReader = createQueueEntryReader(tailer, messageConsumer);
 
                 do {
@@ -322,6 +324,7 @@ public class ChronicleReader implements Reader {
      * @return The current instance of {@link ChronicleReader}
      */
     public ChronicleReader withInclusionRegex(final @NotNull String regex) {
+        // CSRegexCompileInput REVIEW keep this.inclusionRegex.add here because this input or payload boundary in ChronicleReader#withInclusionRegex still needs an explicit reviewed input-trust contract.
         this.inclusionRegex.add(Pattern.compile(regex));
         return this;
     }
@@ -333,6 +336,7 @@ public class ChronicleReader implements Reader {
      * @return The current instance of {@link ChronicleReader}
      */
     public ChronicleReader withExclusionRegex(final @NotNull String regex) {
+        // CSRegexCompileInput REVIEW keep this.exclusionRegex.add here because this input or payload boundary in ChronicleReader#withExclusionRegex still needs an explicit reviewed input-trust contract.
         this.exclusionRegex.add(Pattern.compile(regex));
         return this;
     }
@@ -354,6 +358,7 @@ public class ChronicleReader implements Reader {
      * @param index The start index to begin reading from
      * @return The current instance of {@link ChronicleReader}
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public ChronicleReader withStartIndex(final long index) {
         this.startIndex = index;
         return this;
@@ -391,8 +396,10 @@ public class ChronicleReader implements Reader {
         if (methodReaderInterface.isEmpty()) {
             entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType);
         } else try {
+            // CSClassForNameInput REVIEW this.methodReaderInterface = Class.forName(methodReaderInterface) because this reflective or runtime-loading boundary in ChronicleReader#asMethodReader still needs either an allowlisted wrapper or an explicit reviewed runtime-loading contract.
             this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {
+            // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(e) because this rethrow in ChronicleReader#asMethodReader converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
             throw Jvm.rethrow(e);
         }
         return this;
@@ -420,11 +427,14 @@ public class ChronicleReader implements Reader {
     @Override
     public ChronicleReader withBinarySearch(@NotNull String binarySearchClass) {
         try {
+            // CSClassForNameInput REVIEW Class<?> clazz = Class.forName(binarySearchClass) because this reflective or runtime-loading boundary in ChronicleReader#withBinarySearch still needs either an allowlisted wrapper or an explicit reviewed runtime-loading contract.
             Class<?> clazz = Class.forName(binarySearchClass);
+            // CSReflectiveConstructorLookup REVIEW this.binarySearch = (BinarySearchComparator) clazz.getDeclaredConstructor().newInstance() because this reflective or runtime-loading boundary in ChronicleReader#withBinarySearch still needs either an allowlisted wrapper or an explicit reviewed runtime-loading contract.
             this.binarySearch = (BinarySearchComparator) clazz.getDeclaredConstructor().newInstance();
             // allow binary search to configure itself
             this.binarySearch.accept(this);
         } catch (Exception e) {
+            // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(e) because this rethrow in ChronicleReader#withBinarySearch converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
             throw Jvm.rethrow(e);
         }
         return this;

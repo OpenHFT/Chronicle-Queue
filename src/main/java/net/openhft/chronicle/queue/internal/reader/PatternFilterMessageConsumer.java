@@ -44,6 +44,7 @@ public final class PatternFilterMessageConsumer implements MessageConsumer {
      * @param message The message content
      * @return {@code true} if the message was consumed by the next consumer, {@code false} otherwise
      */
+    // CQNumericalConstraint REVIEW keep consume(long index, String message) here because this API boundary in PatternFilterMessageConsumer#consume leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public boolean consume(long index, String message) {
         for (Pattern pattern : patterns) {

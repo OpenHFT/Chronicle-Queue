@@ -50,6 +50,7 @@ public class WireStorePool extends SimpleCloseable {
      * @param oldStore       the previous store, if available for reuse
      * @return the acquired store, or null if acquisition fails
      */
+    // CQNumericalConstraint REVIEW keep acquire( here because this API boundary in WireStorePool#acquire leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Nullable
     public SingleChronicleQueueStore acquire(
             final int cycle,
@@ -61,6 +62,8 @@ public class WireStorePool extends SimpleCloseable {
         if (oldStore != null && oldStore.cycle() == cycle && !oldStore.isClosed())
             return oldStore;
 
+        // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+        // REVIEW TASK CQTryWithResourcesMissing: wrap SingleChronicleQueueStore store in try-with-resources or document explicit close ownership.
         SingleChronicleQueueStore store = this.supplier.acquire(cycle, createStrategy);
         if (store != null) {
             store.cycle(cycle);
@@ -78,6 +81,7 @@ public class WireStorePool extends SimpleCloseable {
      * @return the next cycle number
      * @throws ParseException if parsing the cycle fails
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public int nextCycle(final int currentCycle, @NotNull TailerDirection direction) throws ParseException {
         throwExceptionIfClosed();
         return supplier.nextCycle(currentCycle, direction);
@@ -101,6 +105,7 @@ public class WireStorePool extends SimpleCloseable {
      * @param upperCycle the upper cycle number
      * @return a {@link NavigableSet} of cycle numbers between the given range
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) {
         throwExceptionIfClosed();
 

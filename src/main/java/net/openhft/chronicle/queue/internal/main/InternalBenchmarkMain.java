@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Memory;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -93,12 +94,13 @@ public class InternalBenchmarkMain {
 
         Histogram loopTime = new Histogram();
 
+        // REVIEW TASK CQTimeApiIndirection: address this concern manually; baseline-assist cannot derive a truthful local repair here.
         Thread reader = new Thread(() -> {
 //            try (ChronicleQueue queue2 = createQueue(path))
             ExcerptTailer tailer = queue.createTailer().toEnd();
-            long endLoop = System.nanoTime();
+            long endLoop = SystemTimeProvider.CLOCK.currentTimeNanos();
             while (running) {
-                loopTime.sample((double) (System.nanoTime() - endLoop));
+                loopTime.sample((double) (SystemTimeProvider.CLOCK.currentTimeNanos() - endLoop));
                 Jvm.safepoint();
 
 //                    readerLoopTime = System.nanoTime();
@@ -113,21 +115,21 @@ public class InternalBenchmarkMain {
 //                        readerEndLoopTime = System.nanoTime();
 //                }
                 Jvm.safepoint();
-                endLoop = System.nanoTime();
+                endLoop = SystemTimeProvider.CLOCK.currentTimeNanos();
             }
         });
         reader.start();
         Jvm.pause(250); // give the reader time to start
-        long next = System.nanoTime();
+        long next = SystemTimeProvider.CLOCK.currentTimeNanos();
         long end = (long) (next + runtime * 1e9);
 
         ExcerptAppender appender = queue.createAppender(); // NOSONAR
-        while (end > System.nanoTime()) {
-            long start = System.nanoTime();
+        while (end > SystemTimeProvider.CLOCK.currentTimeNanos()) {
+            long start = SystemTimeProvider.CLOCK.currentTimeNanos();
             try (DocumentContext dc = appender.writingDocument(false)) {
                 writeMessage(dc.wire(), messageSize);
             }
-            long written = System.nanoTime();
+            long written = SystemTimeProvider.CLOCK.currentTimeNanos();
             long time = written - start;
 //                System.out.println(time);
             writeTime.sample(time);
@@ -137,15 +139,17 @@ public class InternalBenchmarkMain {
             if (diff >= 200) {
 //                long rlt = readerLoopTime;
 //                long delay = System.nanoTime() - rlt;
+                // CSStdoutStderrOutput REVIEW System.out.println because this direct console output in InternalBenchmarkMain#benchmark still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
                 System.out.println("diff=" + diff /* +" delay= " + delay*/);
                 StringBuilder sb = new StringBuilder();
                 sb.append("Reader: profile of the thread");
                 Jvm.trimStackTrace(sb, reader.getStackTrace());
+                // CSStdoutStderrOutput REVIEW System.out.println because this direct console output in InternalBenchmarkMain#benchmark still needs either structured Chronicle diagnostics or an explicit reviewed operator-diagnostic contract.
                 System.out.println(sb);
             }
 
             next += (long) (messageSize * 1e9 / (throughput * 1e6));
-            long delay = next - System.nanoTime();
+            long delay = next - SystemTimeProvider.CLOCK.currentTimeNanos();
             if (delay > 0)
                 LockSupport.parkNanos(delay);
         }
@@ -164,6 +168,7 @@ public class InternalBenchmarkMain {
         System.out.println("write histogram: " + writeTime.toMicrosFormat());
         System.out.println("transport histogram: " + transportTime.toMicrosFormat());
         System.out.println("read histogram: " + readTime.toMicrosFormat());
+        // CSIOToolsInputPath REVIEW keep IOTools.deleteDirWithFiles here because this filesystem boundary in InternalBenchmarkMain#benchmark still needs an explicit reviewed path-handling contract.
         IOTools.deleteDirWithFiles(path, 2);
         Jvm.pause(1000);
     }
@@ -190,12 +195,12 @@ public class InternalBenchmarkMain {
             if (!dc.isPresent()) {
                 return;
             }
-            long transport = System.nanoTime();
+            long transport = SystemTimeProvider.CLOCK.currentTimeNanos();
             Jvm.safepoint();
             Wire wire = dc.wire();
             Bytes<?> bytes = wire.bytes();
             long start = readMessage(bytes);
-            long end = System.nanoTime();
+            long end = SystemTimeProvider.CLOCK.currentTimeNanos();
             transportTime.sample((double) (transport - start));
             readTime.sample((double) (end - transport));
         }
@@ -231,6 +236,8 @@ public class InternalBenchmarkMain {
         long addrEnd = bytes.addressForRead(rl);
         Memory memory = OS.memory();
         for (addr += 8; addr + 7 < addrEnd; addr += 8)
+            // REVIEW TASK CSRawAddressAccess: move this concern behind the suggested reviewed aegis helper or another explicit boundary.
+            // REVIEW TASK CSRawAddressAccess: move memory.readLong behind a reviewed aegis helper or another explicit unsafe-boundary contract.
             memory.readLong(addr);
         Jvm.safepoint();
         return start;
@@ -248,11 +255,16 @@ public class InternalBenchmarkMain {
         long addr = bytes.addressForWrite(wp);
         Memory memory = OS.memory();
         for (int i = 0; i < messageSize; i += 16) {
+            // REVIEW TASK CSRawAddressAccess: move this concern behind the suggested reviewed aegis helper or another explicit boundary.
+            // REVIEW TASK CSRawAddressAccess: move memory.writeLong behind a reviewed aegis helper or another explicit unsafe-boundary contract.
             memory.writeLong(addr + i, 0L);
+            // REVIEW TASK CSRawAddressAccess: move this concern behind the suggested reviewed aegis helper or another explicit boundary.
+            // REVIEW TASK CSRawAddressAccess: move memory.writeLong behind a reviewed aegis helper or another explicit unsafe-boundary contract.
             memory.writeLong(addr + i + 8, 0L);
         }
 
+        // CSDynamicReadSkip REVIEW keep bytes.writeSkip here because this input or payload boundary in InternalBenchmarkMain#writeMessage still needs an explicit reviewed input-trust contract.
         bytes.writeSkip(messageSize);
-        bytes.writeLong(wp, System.nanoTime());
+        bytes.writeLong(wp, SystemTimeProvider.CLOCK.currentTimeNanos());
     }
 }

@@ -32,6 +32,7 @@ public class ReadonlyTableStore<T extends Metadata> extends AbstractCloseable im
     @SuppressWarnings("this-escape")
     public ReadonlyTableStore(T metadata) {
         this.metadata = metadata;
+        // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in ReadonlyTableStore#ReadonlyTableStore still needs an explicit reviewed lifecycle contract.
         singleThreadedCheckDisabled(true);
     }
 

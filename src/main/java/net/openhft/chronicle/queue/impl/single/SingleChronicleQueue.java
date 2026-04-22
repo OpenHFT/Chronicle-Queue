@@ -4,6 +4,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
+// REVIEW TASK CQInternalPackageExposure: address this concern manually; baseline-assist cannot derive a truthful local repair here.
+// REVIEW TASK CQInternalPackageExposure: import from internal package net.openhft.chronicle.bytes.internal -- expose a public wrapper, move the caller, or declare an explicit internal-reuse contract.
 import net.openhft.chronicle.bytes.internal.HeapBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -17,6 +19,7 @@ import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.core.threads.OnDemandEventLoop;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
@@ -109,6 +112,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final boolean readOnly;
     @NotNull
     private final CycleCalculator cycleCalculator;
+    // CQNumericalConstraint REVIEW keep storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore) here because this API boundary in SingleChronicleQueue#storeForCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Nullable
     private final LongValue lastAcknowledgedIndexReplicated;
     @Nullable
@@ -158,6 +162,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             path = builder.path();
             if (!builder.readOnly())
                 //noinspection ResultOfMethodCallIgnored
+                // CSFileCreatePermissions REVIEW keep path.mkdirs here because this filesystem boundary in SingleChronicleQueue#SingleChronicleQueue still needs an explicit reviewed path-handling contract.
                 path.mkdirs();
             fileAbsolutePath = path.getAbsolutePath();
             wireType = builder.wireType();
@@ -200,6 +205,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             // release the write lock if the process is dead
             if (writeLock instanceof TableStoreWriteLock) {
+                // CSForceUnlock REVIEW keep writeLock.forceUnlockIfProcessIsDead here because this recovery override in SingleChronicleQueue#SingleChronicleQueue still needs an explicit reviewed recovery contract.
                 writeLock.forceUnlockIfProcessIsDead();
             }
 
@@ -234,9 +240,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             AnalyticsHolder.instance().sendEvent("started", additionalEventParameters);
 
+            // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in SingleChronicleQueue#SingleChronicleQueue still needs an explicit reviewed lifecycle contract.
             singleThreadedCheckDisabled(true);
         } catch (Throwable t) {
             close();
+            // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(t) because this rethrow in SingleChronicleQueue#SingleChronicleQueue converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
             throw Jvm.rethrow(t);
         }
     }
@@ -310,6 +318,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @return the source ID as an integer
      */
+    // CQNumericalConstraint REVIEW keep lastIndexReplicated(long indexReplicated) here because this API boundary in SingleChronicleQueue#lastIndexReplicated leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep lastIndexMSynced(long lastIndexMSynced) here because this API boundary in SingleChronicleQueue#lastIndexMSynced leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep dump(@NotNull Writer writer, long fromIndex, long toIndex) here because this API boundary in SingleChronicleQueue#dump leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep nextCycle(int cycle, @NotNull TailerDirection direction) throws ParseException here because this API boundary in SingleChronicleQueue#nextCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+    // CQNumericalConstraint REVIEW keep countExcerpts(long fromIndex, long toIndex) here because this API boundary in SingleChronicleQueue#countExcerpts leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+        // CQNumericalConstraint REVIEW keep acquire(int cycle, CreateStrategy createStrategy) here because this API boundary in StoreSupplier#acquire leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+        // CQNumericalConstraint REVIEW keep nextCycle(int currentCycle, @NotNull TailerDirection direction) here because this API boundary in StoreSupplier#nextCycle leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
+        // CQNumericalConstraint REVIEW keep cycles(int lowerCycle, int upperCycle) here because this API boundary in StoreSupplier#cycles leaves numeric inputs unconstrained and still needs either validated range checks or an explicit reviewed caller contract.
     @Override
     public int sourceId() {
         return sourceId;
@@ -499,6 +515,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                                 wire.copyTo(text);
                                 writer.append(bytes.toString());
 
+                                // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with executing wire.bytes().readPosition(start) and needs either narrower handling or an explicit reviewed recovery contract.
                             } catch (Exception e) {
                                 wire.bytes().readPosition(start);
                                 writer.append(wire.bytes()).append("\n");
@@ -507,12 +524,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     }
                 }
             }
+            // CSCatchBroadException REVIEW catch (Exception e) because the local fallback still begins with printing the stack trace and needs either narrower handling or an explicit reviewed recovery contract.
         } catch (Exception e) {
+            // CSPrintStackTrace REVIEW e.printStackTrace(new PrintWriter(writer)) because this direct stack-trace emission in SingleChronicleQueue#dump still needs either structured exception logging or an explicit reviewed operator-diagnostic contract.
             e.printStackTrace(new PrintWriter(writer));
 
         } finally {
             try {
                 writer.flush();
+                // CSWarnAndContinue REVIEW catch (IOException e) because the local fallback still begins with executing Jvm.debug().on(SingleChronicleQueue.class, e) and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
             } catch (IOException e) {
                 Jvm.debug().on(SingleChronicleQueue.class, e);
             }
@@ -601,6 +621,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             createAppenderCondition.await();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            // CSInterruptedRuntimeWrap REVIEW keep InterruptedRuntimeException here because this lifecycle or ownership exception in SingleChronicleQueue#createNewAppenderOnceConditionIsMet still needs an explicit reviewed lifecycle contract.
             throw new InterruptedRuntimeException("Interrupted waiting for condition to create appender", e);
         }
         return constructAppender();
@@ -906,12 +927,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 long l = tailer.excerptsInCycle(lowerCycle);
                 result += (l - lowerSeqNum);
             } else {
+                // CSRawHeaderOrPathMessage REVIEW emit IllegalStateException here because this operator-facing diagnostic in SingleChronicleQueue#countExcerpts still needs an explicit reviewed operator-diagnostic contract.
                 throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
             }
 
             if (cycles.last() == upperCycle) {
                 result += upperSeqNum;
             } else {
+                // CSRawHeaderOrPathMessage REVIEW emit IllegalStateException here because this operator-facing diagnostic in SingleChronicleQueue#countExcerpts still needs an explicit reviewed operator-diagnostic contract.
                 throw new IllegalStateException("Cycle not found,  upper-cycle=" + Long.toHexString(upperCycle));
             }
 
@@ -935,6 +958,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @param upperCycle the ending cycle
      * @return a NavigableSet of Long values representing the cycles between the lower and upper cycle
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) {
         throwExceptionIfClosed();
 
@@ -990,6 +1014,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @throws Throwable if there is an error during finalization
      */
+    // CSFinalizerOverride REVIEW keep SuppressWarnings here because this runtime execution boundary in SingleChronicleQueue#finalize still needs an explicit reviewed runtime-admission contract.
     @SuppressWarnings({"deprecation", "removal"})
     @Override
     protected void finalize() throws Throwable {
@@ -1087,6 +1112,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Nullable
     String[] getList() {
+        // CSDirectoryEnumerationControl REVIEW keep path.list here because this filesystem boundary in SingleChronicleQueue#getList still needs an explicit reviewed path-handling contract.
         return path.list();
     }
 
@@ -1272,6 +1298,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @param key   the key for the entry in the table store
      * @param index the index value to set
      */
+    // CQNumericalConstraint REVIEW keep this API parameter unconstrained because the numeric contract still needs explicit review.
     public void tableStorePut(CharSequence key, long index) {
         LongValue longValue = tableStoreAcquire(key, index);
         if (longValue == null) return;
@@ -1383,6 +1410,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             mappedFileCache = new ReferenceCountedCache<>(
                     MappedBytes::mappedBytes,
                     SingleChronicleQueue.this::mappedFile);
+            // CSOwnershipCheckDisable REVIEW keep singleThreadedCheckDisabled here because this lifecycle or ownership exception in StoreSupplier#StoreSupplier still needs an explicit reviewed lifecycle contract.
             singleThreadedCheckDisabled(true);
         }
 
@@ -1412,6 +1440,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         (cycle > directoryListing.getMaxCreatedCycle()
                                 || cycle < directoryListing.getMinCreatedCycle()
                                 || !path.exists())) {
+                    // REVIEW TASK CQNullabilityReturns: add the explicit annotation or return contract this rule expects here.
+                    // REVIEW TASK CQNullabilityReturns: annotate the return value of acquire(...) with @Nullable or @NotNull.
                     return null;
                 }
 
@@ -1427,6 +1457,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     createFile(path);
                     mappedBytes = mappedFileCache.get(path);
                 }
+                // CSOwnershipCheckDisable REVIEW keep mappedBytes.singleThreadedCheckDisabled here because this lifecycle or ownership exception in StoreSupplier#acquire still needs an explicit reviewed lifecycle contract.
                 mappedBytes.singleThreadedCheckDisabled(true);
                 mappedBytes.chunkCount(chunkCount);
 
@@ -1457,6 +1488,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             mappedFileCache.remove(path);
 
                             if (!readOnly && createStrategy != CreateStrategy.READ_ONLY && cycleFileRenamed != cycle) {
+                                // REVIEW TASK CQTryWithResourcesMissing: rework this resource lifecycle manually; baseline-assist will not guess close order or control flow here.
+                                // REVIEW TASK CQTryWithResourcesMissing: wrap SingleChronicleQueueStore acquired in try-with-resources or document explicit close ownership.
                                 SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycle, cycleFile));
 
                                 if (acquired == null)
@@ -1468,6 +1501,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             if (Jvm.debug().isEnabled(SingleChronicleQueue.class)) {
                                 Jvm.debug().on(SingleChronicleQueue.class, "Cycle file not ready: " + cycleFile.getAbsolutePath());
                             }
+                            // CSWarnReturnNull REVIEW keep final ValueIn valueIn = readWireStoreValue(wire) here because this fallback in StoreSupplier#acquire still needs an explicit reviewed degraded-outcome contract.
                             return null;
                         }
 
@@ -1482,10 +1516,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 } catch (InternalError e) {
                     long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
                     String s = Long.toHexString(pos);
+                    // CQJvmLogOverSystemErr REVIEW System.err.println because this direct system-console diagnostic in StoreSupplier#acquire still needs either Jvm logging indirection or an explicit reviewed operator-diagnostic contract.
                     System.err.println("pos=" + s);
                     try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
                         for (String line; (line = br.readLine()) != null; )
                             if (line.contains(".cq4"))
+                                // CQJvmLogOverSystemErr REVIEW System.err.println because this direct system-console diagnostic in StoreSupplier#acquire still needs either Jvm logging indirection or an explicit reviewed operator-diagnostic contract.
                                 System.err.println(line);
                     }
                     throw e;
@@ -1494,6 +1530,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
             } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
+                // CSCheckedSwallowThroughRethrow REVIEW throw Jvm.rethrow(e) because this rethrow in StoreSupplier#acquire converts a checked cause into an unchecked wrapper and still needs either a declared `throws` at the enclosing method or an explicit reviewed note on why no local cleanup is performed.
                 throw Jvm.rethrow(e);
             }
         }
@@ -1526,8 +1563,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          * @return the strategy to either create a new file or use it as read-only
          */
         private CreateStrategy backupCycleFile(int cycle, File cycleFile) {
+            // REVIEW TASK CQTimeApiIndirection: address this concern manually; baseline-assist cannot derive a truthful local repair here.
             File cycleFileDiscard = new File(cycleFile.getParentFile(),
-                    String.format("%s-%d%s", cycleFile.getName(), System.currentTimeMillis(), DISCARD_FILE_SUFFIX));
+                    String.format("%s-%d%s", cycleFile.getName(), SystemTimeProvider.CLOCK.currentTimeMillis(), DISCARD_FILE_SUFFIX));
+            // CSDirectFileDeleteOrRename REVIEW keep cycleFile.renameTo here because this filesystem boundary in StoreSupplier#backupCycleFile still needs an explicit reviewed path-handling contract.
             boolean success = cycleFile.renameTo(cycleFileDiscard);
 
             // Back-pressure against renaming same cycle multiple times from single queue
@@ -1580,11 +1619,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             try {
                 File dir = path.getParentFile();
                 if (!dir.exists())
+                    // CSFileCreatePermissions REVIEW keep dir.mkdirs here because this filesystem boundary in StoreSupplier#createFile still needs an explicit reviewed path-handling contract.
                     dir.mkdirs();
 
+                // CSFileCreatePermissions REVIEW keep !path.createNewFile() here because this filesystem boundary in StoreSupplier#createFile still needs an explicit reviewed path-handling contract.
                 if (!path.createNewFile()) {
                     Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath());
                 }
+                // CSWarnAndContinue REVIEW catch (IOException ex) because the local fallback still begins with logging or printing a diagnostic and then continues execution, and needs either fail-closed handling or an explicit reviewed degraded-mode contract.
             } catch (IOException ex) {
                 Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath(), ex);
             }
@@ -1613,6 +1655,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
                 final NavigableMap<Long, File> tree = new TreeMap<>();
 
+                // CSDirectoryEnumerationControl REVIEW keep parentFile.listFiles here because this filesystem boundary in StoreSupplier#cycleTree still needs an explicit reviewed path-handling contract.
                 final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
                 if (files != null)
                     for (File file : files)
