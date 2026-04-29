@@ -200,14 +200,7 @@ Chronicle Queue stores its data in binary format, with a file extension of `cq4`
 
 [source,text]
 ----
-\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
-ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
-���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-�����������������������������������������������������������������
+[binary cq4 bytes omitted]
 ----
 
 This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.

@@ -13,8 +13,8 @@ import java.util.function.BiFunction;
  * {@link SingleChronicleQueueStore}. It functions as a factory to produce queue stores,
  * utilizing a rolling chronicle queue and a wire to initialize each store.
  *
- * This interface extends {@link BiFunction}, meaning it takes two arguments — a
- * {@link RollingChronicleQueue} and a {@link Wire} — and returns a {@link SingleChronicleQueueStore}.
+ * This interface extends {@link BiFunction}, taking a {@link RollingChronicleQueue}
+ * and a {@link Wire} and returning a {@link SingleChronicleQueueStore}.
  */
 @FunctionalInterface
 public interface WireStoreFactory extends BiFunction<RollingChronicleQueue, Wire, SingleChronicleQueueStore> {
