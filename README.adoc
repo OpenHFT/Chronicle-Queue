@@ -239,6 +239,23 @@ See the respective `package-info.java` files for details.
 
 == Chronicle Queue Versions and Remarkable Changes
 
+=== `sequenceForPosition(MAX_VALUE)` now starts from `writePosition`
+
+`ExcerptTailer.lastIndex()` (via `SCQIndexing.sequenceForPosition(Long.MAX_VALUE, ...)`)
+previously always performed an indexed lookup first and then walked forward from the latest
+indexed slot -- up to `indexSpacing` entries before `writePosition`. The new fast path consults
+the in-memory `Sequence` tracker directly: when the tracker reports a consistent
+`(writePosition, sequence)` pair the call walks forward from `writePosition` only.
+
+This is functionally equivalent: the recovery walk past `writePosition` (used to detect orphan
+or in-progress writes -- see `PartialUpdateTest`) is preserved, so partial-write recovery is
+unchanged. The win is that we no longer scan the up-to-`indexSpacing` entries between the
+latest indexed slot and `writePosition`, which were known-published and therefore redundant.
+
+The tracker is read with up to 128 retries on `NOT_FOUND_RETRY` (writer mid-update) before
+falling through to the original indexed-lookup path; `Jvm.perf()` logs whenever any retry was
+needed, so the rare race is observable.
+
 === Changes from Version 4 to Version 5
 
 In Chronicle Queue v5 tailers are now read-only, in Chronicle Queue v4 we had the concept of lazy indexing, where appenders would not write indexes but instead the indexing could be done by the tailer.
