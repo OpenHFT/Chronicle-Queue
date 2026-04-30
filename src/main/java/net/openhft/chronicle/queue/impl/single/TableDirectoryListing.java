@@ -118,7 +118,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         while (true) {
             throwExceptionIfClosed();
             tableStore.throwExceptionIfClosed();
-            Jvm.safepoint();
             final long currentMax = maxCycleValue.getVolatileValue();
 
             final String[] fileNamesList = queuePath.toFile().list();
