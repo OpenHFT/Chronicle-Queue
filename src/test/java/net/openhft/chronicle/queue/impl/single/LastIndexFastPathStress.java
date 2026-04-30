@@ -9,12 +9,12 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionHandler;
-import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 
 import javax.management.NotificationEmitter;
@@ -101,16 +101,13 @@ public final class LastIndexFastPathStress {
         final long writerDelayNs = Long.getLong("scq.fastpath.stress.delay.ns", 0L);
         final long readerDelayNs = writerDelayNs;
 
-        // Use CleaningThread so per-thread CleaningThreadLocal cleanup hooks fire deterministically
-        // when each worker thread dies at the end of the run. SCQIndexing's holder maps register a
-        // close lambda; without CleaningThread that lambda would never run, leaving per-thread
-        // off-heap holders to leak until the SCQIndexing itself is GC'd.
-        final java.util.concurrent.atomic.AtomicInteger threadId = new java.util.concurrent.atomic.AtomicInteger();
-        ExecutorService exec = Executors.newFixedThreadPool(writerCount + readerCount, r -> {
-            CleaningThread t = new CleaningThread(r, "scq-fastpath-" + threadId.getAndIncrement());
-            t.setDaemon(true);
-            return t;
-        });
+        // NamedThreadFactory creates CleaningThread instances, so per-thread CleaningThreadLocal
+        // cleanup hooks fire deterministically when each worker exits at the end of the run --
+        // closing every SCQIndexing holder it touched. A plain Executors.defaultThreadFactory
+        // would skip that cleanup and leak per-thread off-heap holders until the SCQIndexing
+        // itself is GC'd.
+        ExecutorService exec = Executors.newFixedThreadPool(writerCount + readerCount,
+                new NamedThreadFactory("scq-fastpath", true));
 
         // Keep the warm appender alive for the lifetime of the run so the cycle's store (and
         // therefore its single SCQIndexing instance) stays cached. If we let it go, captured
