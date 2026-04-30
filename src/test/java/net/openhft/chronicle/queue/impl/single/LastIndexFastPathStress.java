@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
-import jdk.jfr.Recording;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
@@ -62,8 +61,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * GC summary, and slow-scan kind breakdown. Optional {@code -Dscq.fastpath.stress.delay.ns=N}
  * inserts a symmetric busy-wait in both writer and reader loops to widen race windows.
  *
- * <p>Each run dumps a JFR allocation profile to {@code /tmp/LastIndexFastPathStress-*.jfr}
- * -- inspect with {@code jfr print --events 'ObjectAllocation*' <file>}.
+ * <p>When JFR is available, each run dumps an allocation profile to
+ * {@code /tmp/LastIndexFastPathStress-*.jfr} -- inspect with
+ * {@code jfr print --events 'ObjectAllocation*' <file>}. JFR is loaded reflectively so this
+ * diagnostic harness still compiles on build agents whose JDK image omits {@code jdk.jfr}.
  */
 public final class LastIndexFastPathStress {
 
@@ -142,12 +143,9 @@ public final class LastIndexFastPathStress {
             for (GarbageCollectorMXBean bean : gcBeans)
                 ((NotificationEmitter) bean).addNotificationListener(gcListener, null, null);
 
-            // JFR allocation profile: capture both TLAB events to attribute hot-path allocations.
-            final Recording allocRecording = new Recording();
-            allocRecording.setName("LastIndexFastPath-allocations");
-            allocRecording.enable("jdk.ObjectAllocationInNewTLAB").withStackTrace();
-            allocRecording.enable("jdk.ObjectAllocationOutsideTLAB").withStackTrace();
-            allocRecording.start();
+            // JFR allocation profile, when the runtime has jdk.jfr available. Some CI JDK
+            // images omit it, so keep this diagnostic optional and avoid a compile-time link.
+            final AllocationRecording allocRecording = startAllocationRecording();
 
             // Recording perf handler: silently aggregate "Took X us to linearScan ..." lines so
             // the breakdown by scan kind (efficient fast-path / tail-check / brute-force fall-
@@ -280,9 +278,7 @@ public final class LastIndexFastPathStress {
             }
             for (Future<?> f : futures) f.get(15, TimeUnit.SECONDS);
 
-            allocRecording.stop();
-            Path jfrPath = Files.createTempFile("LastIndexFastPathStress-", ".jfr");
-            allocRecording.dump(jfrPath);
+            Path jfrPath = allocRecording.stopAndDump();
             allocRecording.close();
             Jvm.resetExceptionHandlers();
 
@@ -314,8 +310,11 @@ public final class LastIndexFastPathStress {
                     totalGcEvents.get(), totalGcMillis.get(), maxGcMillis.get());
             System.out.printf("LastIndexFastPathStress slow-scan breakdown: bruteForceFallThroughs=%d efficientFastPath=%d efficientTailCheck=%d bruteForceScans=%d%n",
                     bruteForceFallThroughs, efficientFastPathScans, efficientTailChecks, bruteForceScans);
-            System.out.println("LastIndexFastPathStress allocation profile: " + jfrPath +
-                    "  (try: jfr print --events 'ObjectAllocation*' " + jfrPath + " | head -200)");
+            if (jfrPath != null)
+                System.out.println("LastIndexFastPathStress allocation profile: " + jfrPath +
+                        "  (try: jfr print --events 'ObjectAllocation*' " + jfrPath + " | head -200)");
+            else
+                System.out.println("LastIndexFastPathStress allocation profile: unavailable (jdk.jfr not present)");
         } finally {
             Jvm.resetExceptionHandlers();
             exec.shutdownNow();
@@ -336,6 +335,76 @@ public final class LastIndexFastPathStress {
         long deadline = System.nanoTime() + nanos;
         while (System.nanoTime() < deadline) {
             // spin
+        }
+    }
+
+    private static AllocationRecording startAllocationRecording() {
+        try {
+            Class<?> recordingClass = Class.forName("jdk.jfr.Recording");
+            Object recording = recordingClass.getConstructor().newInstance();
+            recordingClass.getMethod("setName", String.class).invoke(recording, "LastIndexFastPath-allocations");
+            enableAllocationEvent(recordingClass, recording, "jdk.ObjectAllocationInNewTLAB");
+            enableAllocationEvent(recordingClass, recording, "jdk.ObjectAllocationOutsideTLAB");
+            recordingClass.getMethod("start").invoke(recording);
+            return new JfrAllocationRecording(recordingClass, recording);
+        } catch (Exception | LinkageError e) {
+            return NoopAllocationRecording.INSTANCE;
+        }
+    }
+
+    private static void enableAllocationEvent(Class<?> recordingClass, Object recording, String eventName) throws Exception {
+        Object eventSettings = recordingClass.getMethod("enable", String.class).invoke(recording, eventName);
+        eventSettings.getClass().getMethod("withStackTrace").invoke(eventSettings);
+    }
+
+    private interface AllocationRecording {
+        Path stopAndDump();
+
+        void close();
+    }
+
+    private enum NoopAllocationRecording implements AllocationRecording {
+        INSTANCE;
+
+        @Override
+        public Path stopAndDump() {
+            return null;
+        }
+
+        @Override
+        public void close() {
+            // no-op
+        }
+    }
+
+    private static final class JfrAllocationRecording implements AllocationRecording {
+        private final Class<?> recordingClass;
+        private final Object recording;
+
+        private JfrAllocationRecording(Class<?> recordingClass, Object recording) {
+            this.recordingClass = recordingClass;
+            this.recording = recording;
+        }
+
+        @Override
+        public Path stopAndDump() {
+            try {
+                recordingClass.getMethod("stop").invoke(recording);
+                Path jfrPath = Files.createTempFile("LastIndexFastPathStress-", ".jfr");
+                recordingClass.getMethod("dump", Path.class).invoke(recording, jfrPath);
+                return jfrPath;
+            } catch (Exception | LinkageError e) {
+                return null;
+            }
+        }
+
+        @Override
+        public void close() {
+            try {
+                recordingClass.getMethod("close").invoke(recording);
+            } catch (Exception | LinkageError ignored) {
+                // best-effort
+            }
         }
     }
 }
