@@ -43,7 +43,8 @@ public class ChronicleHistoryReaderMainTest {
 
     @After
     public void tearDown() {
-        System.setSecurityManager(null);
+        if (Jvm.majorVersion() < 17)
+            System.setSecurityManager(null);
     }
 
     @Test
