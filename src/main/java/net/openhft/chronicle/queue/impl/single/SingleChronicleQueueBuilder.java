@@ -69,6 +69,16 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
     private static final WireStoreFactory storeFactory = SingleChronicleQueueBuilder::createStore;
     private static final Supplier<TimingPauser> TIMING_PAUSER_SUPPLIER = DefaultPauserSupplier.INSTANCE;
+    /**
+     * Maximum park duration (ms) for the writeLock/appendLock pauser.
+     */
+    private static final int WRITE_LOCK_PAUSER_MAX_MS = Jvm.getInteger("chronicle.queue.writeLockPauserMaxMs", 5);
+    /**
+     * Pauser supplier used by {@link #writeLock()} / {@link #appendLock()}. Uses
+     * {@link Pauser#balancedUpToMillis(int)}
+     */
+    private static final Supplier<TimingPauser> WRITE_LOCK_PAUSER_SUPPLIER =
+            () -> Pauser.balancedUpToMillis(WRITE_LOCK_PAUSER_MAX_MS);
 
     static {
         CLASS_ALIASES.addAlias(WireType.class);
@@ -711,7 +721,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     WriteLock writeLock() {
-        return readOnly() ? new ReadOnlyWriteLock() : new TableStoreWriteLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2);
+        // Use a balanced pauser (busy -> yield -> parkNanos, capped at ~5ms)
+        return readOnly() ? new ReadOnlyWriteLock()
+                : new TableStoreWriteLock(metaStore, WRITE_LOCK_PAUSER_SUPPLIER, timeoutMS() * 3 / 2);
     }
 
     /**
@@ -1594,7 +1606,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @return the append lock for the queue
      */
     public WriteLock appendLock() {
-        return readOnly() ? WriteLock.NO_OP : new AppendLock(metaStore, pauserSupplier(), timeoutMS() * 3 / 2);
+        // Same balanced-pauser rationale as writeLock(): the lock holder is in another thread,
+        // tight spinning is pure CPU burn under contention.
+        return readOnly() ? WriteLock.NO_OP
+                : new AppendLock(metaStore, WRITE_LOCK_PAUSER_SUPPLIER, timeoutMS() * 3 / 2);
     }
 
     /**
