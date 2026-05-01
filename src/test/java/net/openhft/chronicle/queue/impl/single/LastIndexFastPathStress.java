@@ -123,9 +123,6 @@ public final class LastIndexFastPathStress {
                 }
             }
 
-            final long retriesBefore = SCQIndexing.SEQ4POS_FAST_PATH_RETRIES.get();
-            final long bruteForceBefore = SCQIndexing.SEQ4POS_BRUTE_FORCE_FALLTHROUGHS.get();
-
             final AtomicLong totalGcEvents = new AtomicLong();
             final AtomicLong totalGcMillis = new AtomicLong();
             final AtomicLong maxGcMillis = new AtomicLong();
@@ -152,13 +149,23 @@ public final class LastIndexFastPathStress {
             // images omit it, so keep this diagnostic optional and avoid a compile-time link.
             final AllocationRecording allocRecording = startAllocationRecording();
 
-            // Recording perf handler: silently aggregate "Took X us to linearScan ..." lines so
-            // the breakdown by scan kind (efficient fast-path / tail-check / brute-force fall-
-            // through) is available without flooding stdout.
+            // Recording perf handler: silently aggregate "Took X us to linearScan ..." lines and
+            // the fast-path retry/exhaustion log markers so the test reports retry counts and
+            // brute-force fall-through counts WITHOUT SCQIndexing carrying observability-only
+            // counter fields. Each retry log line carries the retry count -- parse and sum it
+            // so we get the same total via observation rather than instrumentation.
             final ConcurrentMap<String, AtomicLong> perfCounts = new ConcurrentHashMap<>();
+            final AtomicLong retryAttemptsTotal = new AtomicLong();
+            final AtomicLong bruteForceFallThroughs = new AtomicLong();
             final ExceptionHandler recorder = (logger, message, throwable) -> {
-                if (message != null)
-                    perfCounts.computeIfAbsent(message, k -> new AtomicLong()).incrementAndGet();
+                if (message == null)
+                    return;
+                perfCounts.computeIfAbsent(message, k -> new AtomicLong()).incrementAndGet();
+                if (message.startsWith(SCQIndexing.LOG_TRACKER_RETRY_PREFIX)) {
+                    retryAttemptsTotal.addAndGet(parseTrailingRetryCount(message));
+                } else if (message.startsWith(SCQIndexing.LOG_TRACKER_BRUTE_FORCE_FALLTHROUGH)) {
+                    bruteForceFallThroughs.incrementAndGet();
+                }
             };
             Jvm.setPerfExceptionHandler(recorder);
 
@@ -294,8 +301,8 @@ public final class LastIndexFastPathStress {
             }
 
             long calls = totalLastIndexCalls.get();
-            long retries = SCQIndexing.SEQ4POS_FAST_PATH_RETRIES.get() - retriesBefore;
-            long bruteForceFallThroughs = SCQIndexing.SEQ4POS_BRUTE_FORCE_FALLTHROUGHS.get() - bruteForceBefore;
+            long retries = retryAttemptsTotal.get();
+            long bruteForceFallThroughCount = bruteForceFallThroughs.get();
             long avgLatencyNs = calls == 0 ? 0 : sumLatencyNanos.get() / calls;
             long maxLatencyNs = maxLatencyNanos.get();
             double retryPerCall = calls == 0 ? 0 : (double) retries / calls;
@@ -314,7 +321,7 @@ public final class LastIndexFastPathStress {
             System.out.printf("LastIndexFastPathStress gc: events=%d totalMs=%d maxPauseMs=%d%n",
                     totalGcEvents.get(), totalGcMillis.get(), maxGcMillis.get());
             System.out.printf("LastIndexFastPathStress slow-scan breakdown: bruteForceFallThroughs=%d efficientFastPath=%d efficientTailCheck=%d bruteForceScans=%d%n",
-                    bruteForceFallThroughs, efficientFastPathScans, efficientTailChecks, bruteForceScans);
+                    bruteForceFallThroughCount, efficientFastPathScans, efficientTailChecks, bruteForceScans);
             if (jfrPath != null)
                 System.out.println("LastIndexFastPathStress allocation profile: " + jfrPath +
                         "  (try: jfr print --events 'ObjectAllocation*' " + jfrPath + " | head -200)");
@@ -332,6 +339,22 @@ public final class LastIndexFastPathStress {
                 .filter(e -> e.getKey().contains(fragment))
                 .mapToLong(e -> e.getValue().get())
                 .sum();
+    }
+
+    /** Extract the retry count from a "{prefix} N times" log line. The prefix is fixed
+     *  ({@link SCQIndexing#LOG_TRACKER_RETRY_PREFIX}); the trailing ' times' is dropped and
+     *  the remainder parsed as an int. Returns 0 if the format is unexpected so a single
+     *  malformed line can't poison the totals. */
+    private static long parseTrailingRetryCount(String message) {
+        int prefixLen = SCQIndexing.LOG_TRACKER_RETRY_PREFIX.length();
+        int end = message.lastIndexOf(" times");
+        if (end <= prefixLen + 1)
+            return 0;
+        try {
+            return Long.parseLong(message.substring(prefixLen + 1, end));
+        } catch (NumberFormatException nfe) {
+            return 0;
+        }
     }
 
     /** Tight nanosecond busy-wait. Used for the optional symmetric writer/reader delay knob;

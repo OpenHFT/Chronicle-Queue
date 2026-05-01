@@ -28,7 +28,6 @@ import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -81,14 +80,15 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     /** Spin this many iterations before {@link Thread#yield()}-ing in the retry loop; the
      *  writer race window is sub-microsecond so the first few retries should not yield. */
     private static final int SEQUENCE_TRACKER_RETRY_YIELD_AFTER = 2;
-    // Process-wide telemetry for the lastIndex() fast path. Tests use these to assert that:
-    //   (1) retries on Sequence-tracker NOT_FOUND_RETRY are rare under contention, and
-    //   (2) the fast path never falls through to the brute-force indexed-anchor scan during a
-    //       healthy run (the whole point of the optimisation).
-    // Process-wide rather than per-instance: the indexing instance an observer holds may
-    // differ from the one a worker hit when stores are released and re-acquired through the pool.
-    static final AtomicLong SEQ4POS_FAST_PATH_RETRIES = new AtomicLong();
-    static final AtomicLong SEQ4POS_BRUTE_FORCE_FALLTHROUGHS = new AtomicLong();
+    // Public log markers emitted on the lastIndex() fast path. Tests / observers attach a perf
+    // exception handler (see Jvm.setPerfExceptionHandler) and count these messages to assert
+    // that retries are rare under contention and that the path never falls through to the
+    // brute-force indexed-anchor scan during a healthy run -- avoiding any per-instance counter
+    // fields whose only purpose is observability.
+    static final String LOG_TRACKER_RETRY_PREFIX =
+            "sequenceForPosition(MAX_VALUE) tracker-read retried";
+    static final String LOG_TRACKER_BRUTE_FORCE_FALLTHROUGH =
+            "sequenceForPosition(MAX_VALUE) tracker-read retry loop exhausted";
     // Description tags passed to printLinearScanTime so each call site is distinguishable in
     // perf logs (and so tests can match on a single source of truth rather than copying the
     // string). The whole point of the fast path is to take SCAN_LABEL_FAST_PATH (or
@@ -783,9 +783,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 long latestSeq = sequence.getSequence(lastWritePos);
                 if (latestSeq >= 0) {
                     if (retry > 0) {
-                        SEQ4POS_FAST_PATH_RETRIES.addAndGet(retry);
                         Jvm.perf().on(getClass(),
-                                "sequenceForPosition(MAX_VALUE) tracker-read retried " + retry + " times");
+                                LOG_TRACKER_RETRY_PREFIX + " " + retry + " times");
                     }
                     try {
                         return linearScanByPosition(ec.wireForIndex(), Long.MAX_VALUE, latestSeq, lastWritePos, inclusive,
@@ -806,12 +805,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             if (retry >= SEQUENCE_TRACKER_RETRY_BUDGET) {
                 // Retry budget exhausted in a row of NOT_FOUND_RETRY -- surface this clearly:
                 // it means we're about to do a brute-force indexed-anchor scan instead of the
-                // efficient writePos-anchored fast-path scan. Both the log and the counter are
-                // important so a regression is visible without grepping logs.
-                SEQ4POS_BRUTE_FORCE_FALLTHROUGHS.incrementAndGet();
+                // efficient writePos-anchored fast-path scan. The log makes a regression visible.
                 Jvm.perf().on(getClass(),
-                        "sequenceForPosition(MAX_VALUE) tracker-read retry loop exhausted after " +
-                                retry + " attempts; falling through to indexed lookup");
+                        LOG_TRACKER_BRUTE_FORCE_FALLTHROUGH + " after " + retry +
+                                " attempts; falling through to indexed lookup");
             }
         }
         long indexOfNext = 0;
