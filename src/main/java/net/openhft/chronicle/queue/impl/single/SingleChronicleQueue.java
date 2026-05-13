@@ -13,6 +13,7 @@ import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.scoped.ScopedResource;
+import net.openhft.chronicle.core.util.Bounds;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
@@ -1196,7 +1197,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @PackageLocal
     MappedFile mappedFile(File file) throws FileNotFoundException {
-        long chunkSize = OS.pageAlign(blockSize);
+        long chunkSize = Bounds.requireSize(OS.pageAlign(blockSize), "chunkSize");
         final MappedFile mappedFile = MappedFile.of(file, chunkSize, overlapSize, readOnly);
         mappedFile.syncMode(syncMode);
         return mappedFile;

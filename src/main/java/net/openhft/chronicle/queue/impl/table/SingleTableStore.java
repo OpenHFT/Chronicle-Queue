@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
+import net.openhft.chronicle.core.util.Bounds;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
@@ -294,7 +295,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             long start = mappedBytes.readPosition();
             mappedBytes.writePosition(start);
-            final long pos = mappedWire.enterHeader(256L);
+            final long pos = Bounds.requirePosition(mappedWire.enterHeader(256L), "pos");
             final LongValue longValue = wireType.newLongReference().get();
             mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
             mappedWire.writeAlignTo(Integer.BYTES, 0);

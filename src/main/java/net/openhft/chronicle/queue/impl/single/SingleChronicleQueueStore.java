@@ -230,10 +230,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public String dumpHeader() {
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
-            int size = bytes.readInt(0);
-            if (!Wires.isReady(size))
+            int header = bytes.readInt(0);
+            if (!Wires.isReady(header))
                 return "not ready";
-            bytes.readLimit(Wires.lengthOf(size) + 4L);
+            bytes.readLimit(Wires.lengthOf(header) + 4L);
             return Wires.fromSizePrefixedBlobs(bytes);
         }
     }

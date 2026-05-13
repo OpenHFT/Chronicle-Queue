@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.util.Bounds;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
@@ -59,11 +60,12 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.QUEUE
  * creation of {@link SingleChronicleQueue} instances.
  */
 public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable implements Cloneable, Builder<SingleChronicleQueue> {
-    public static final long SMALL_BLOCK_SIZE = OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(); // the smallest safe block size on Windows 8+
+    public static final long SMALL_BLOCK_SIZE = Bounds.requireSize(
+            OS.isWindows() ? OS.SAFE_PAGE_SIZE : OS.pageSize(), "SMALL_BLOCK_SIZE"); // the smallest safe block size on Windows 8+
     static final boolean DEBUG_FILE_RELEASED = Jvm.getBoolean("debug.file.released", false);
-    private static final long DEFAULT_BLOCK_SIZE = Math.min(
+    private static final long DEFAULT_BLOCK_SIZE = Bounds.requireSize(Math.min(
             Jvm.getSize("SingleChronicleQueueBuilder.blocksize", OS.is64Bit() ? 64L << 20 : SMALL_BLOCK_SIZE),
-            OS.is64Bit() && OS.isLinux() ? Long.MAX_VALUE : 256L << 20); // 256MB on 32-bit or non-Linux
+            OS.is64Bit() && OS.isLinux() ? Long.MAX_VALUE : 256L << 20), "DEFAULT_BLOCK_SIZE"); // 256MB on 32-bit or non-Linux
 
     public static final long DEFAULT_SPARSE_CAPACITY = 512L << 30;
     private static final Constructor<?> ENTERPRISE_QUEUE_CONSTRUCTOR;
