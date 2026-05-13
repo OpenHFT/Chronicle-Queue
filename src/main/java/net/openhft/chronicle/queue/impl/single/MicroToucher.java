@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.core.util.Bounds;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.posix.MSyncFlag;
 import net.openhft.posix.PosixAPI;
@@ -70,7 +71,7 @@ public class MicroToucher {
      */
     public void bgExecute() {
         final long lastPage = this.lastPageToSync;
-        final long start = this.lastPageSynced;
+        final long start = Bounds.requireOffset(this.lastPageSynced, "start");
         final long length = Math.min(8 << 20, lastPage - start);
 //        System.out.println("len "+length);
         if (length < 8 << 20)

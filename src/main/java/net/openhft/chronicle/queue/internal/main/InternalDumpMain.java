@@ -54,8 +54,7 @@ public class InternalDumpMain {
     public static void dump(@NotNull String path) throws FileNotFoundException {
         File path2 = new File(path);
         PrintStream out = FILE == null ? System.out : new PrintStream(FILE);
-        long upperLimit = Long.MAX_VALUE;
-        dump(path2, out, upperLimit);
+        dump(path2, out, Long.MAX_VALUE);
     }
 
     /**

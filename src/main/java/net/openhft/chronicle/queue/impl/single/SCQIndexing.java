@@ -15,6 +15,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
+import net.openhft.chronicle.core.util.Bounds;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
@@ -268,11 +269,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @return the addressForRead of the Excerpt containing the usable index, just after the header
      */
     long newIndex(@NotNull WireOut wire, boolean index2index) throws StreamCorruptedException {
-        long writePosition = this.writePosition.getVolatileValue();
+        long writePosition = Bounds.requirePosition(this.writePosition.getVolatileValue(), "writePosition");
         Bytes<?> bytes = wire.bytes();
         bytes.writePosition(writePosition);
 
-        long position = wire.enterHeader(indexCount * 8L + 128);
+        long position = Bounds.requirePosition(wire.enterHeader(indexCount * 8L + 128), "position");
 
         WriteMarshallable writer = index2index ? index2IndexTemplate : indexTemplate;
         writer.writeMarshallable(wire);
@@ -386,8 +387,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         long secondaryOffset = toAddress1(index);
 
         do {
-            long fromAddress = array1.getValueAt(secondaryOffset);
-            if (fromAddress == 0) {
+            long fromPosition = Bounds.requirePosition(array1.getValueAt(secondaryOffset), "fromPosition");
+            if (fromPosition == 0) {
                 secondaryOffset--;
                 startIndex -= indexSpacing;
                 continue;
@@ -397,10 +398,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             if (wire == null)
                 break;
             if (index == startIndex) {
-                wire.bytes().readPositionUnlimited(fromAddress);
+                wire.bytes().readPositionUnlimited(fromPosition);
                 return ScanResult.FOUND;
             } else {
-                return linearScan(wire, index, startIndex, fromAddress);
+                return linearScan(wire, index, startIndex, fromPosition);
             }
         } while (secondaryOffset >= 0);
 
@@ -425,10 +426,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                   final long knownAddress) {
         if (toIndex == fromKnownIndex)
             return ScanResult.FOUND;
-        long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
+        long startNs = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
         ScanResult scanResult = linearScan0(wire, toIndex, fromKnownIndex, knownAddress);
         if (REPORT_LINEAR_SCAN) {
-            printLinearScanTime(lastScannedIndex, fromKnownIndex, start, "linearScan by index");
+            printLinearScanTime(lastScannedIndex, fromKnownIndex, startNs, "linearScan by index");
         }
         return scanResult;
     }
@@ -497,11 +498,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         @NotNull final Bytes<?> bytes = wire.bytes();
 
         // optimized if the `toIndex` is the last sequence
-        long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        long lastPosition = Bounds.requirePosition(writePosition.getVolatileValue(), "lastPosition");
+        long lastIndex = this.sequence.getSequence(lastPosition);
         if (toIndex == lastIndex) {
-            assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
-            knownAddress = lastAddress;
+            assert (lastPosition >= knownAddress && lastIndex >= fromKnownIndex);
+            knownAddress = lastPosition;
             fromKnownIndex = lastIndex;
         }
 
@@ -565,10 +566,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
-        long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
+        long startNs = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
         if (REPORT_LINEAR_SCAN) {
-            printLinearScanTime(index, startAddress, start, "linearScan by position");
+            printLinearScanTime(index, startAddress, startNs, "linearScan by position");
         }
         return index;
     }
@@ -597,10 +598,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         long i;
 
         // Optimized path if the `toPosition` is the last written position.
-        long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        long lastPosition = Bounds.requirePosition(writePosition.getVolatileValue(), "lastPosition");
+        long lastIndex = this.sequence.getSequence(lastPosition);
 
-        i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
+        i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastPosition, lastIndex);
 
         // Scan through the entries until the target position is found or exceeded.
         while (bytes.readPosition() <= toPosition) {
@@ -746,14 +747,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     continue;
 
                 // Check if the first value in the index is appropriate.
-                long posN = indexValues.getVolatileValueAt(0);
-                assert posN >= 0;
+                long posN = Bounds.requirePosition(indexValues.getVolatileValueAt(0), "posN");
                 if (posN > position)
                     continue;
 
                 // Inner loop: Search within the secondary index.
                 for (int index1 = used - 1; index1 >= 0; index1--) {
-                    long pos = indexValues.getVolatileValueAt(index1);
+                    long pos = Bounds.requirePosition(indexValues.getVolatileValueAt(index1), "pos");
                     // TODO pos shouldn't be 0, but holes in the index appear..
                     if (pos == 0 || pos > position) {
                         continue;
@@ -848,15 +848,15 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
     // May throw UnrecoverableTimeoutException
     private long getSecondaryAddress(@NotNull Wire wire, @NotNull LongArrayValues index2indexArr, int index2) throws StreamCorruptedException {
-        long secondaryAddress = index2indexArr.getVolatileValueAt(index2);
-        if (secondaryAddress == 0) {
-            secondaryAddress = newIndex(wire, index2indexArr, index2);
+        long secondaryPosition = Bounds.requirePosition(index2indexArr.getVolatileValueAt(index2), "secondaryPosition");
+        if (secondaryPosition == 0) {
+            secondaryPosition = newIndex(wire, index2indexArr, index2);
             long sa = index2indexArr.getValueAt(index2);
-            if (sa != secondaryAddress)
+            if (sa != secondaryPosition)
                 throw new AssertionError();
         }
 
-        return secondaryAddress;
+        return secondaryPosition;
     }
 
     /**
@@ -904,7 +904,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         int index3 = (int) ((sequenceNumber >>> indexSpacingBits) & (indexCount - 1));
 
         // check the last one first.
-        long posN = indexValues.getValueAt(index3);
+        long posN = Bounds.requirePosition(indexValues.getValueAt(index3), "posN");
         if (posN == 0) {
             indexValues.setValueAt(index3, position);
             indexValues.setMaxUsed(index3 + 1L);
@@ -966,17 +966,17 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
-                long address = writePosition.getVolatileValue(0);
-                if (address == 0)
+                long position = Bounds.requirePosition(writePosition.getVolatileValue(0), "writePosition");
+                if (position == 0)
                     return -1;
-                long sequence = sequence1.getSequence(address);
+                long sequence = sequence1.getSequence(position);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
                     break;
                 try {
                     Wire wireForIndex = ec.wireForIndex();
-                    return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
+                    return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, position, true);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);
                 }
@@ -1019,10 +1019,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
-                long endAddress = writePosition.getVolatileValue(0);
-                if (endAddress == 0)
+                long endPosition = Bounds.requirePosition(writePosition.getVolatileValue(0), "endPosition");
+                if (endPosition == 0)
                     return -1;
-                long sequence = sequence1.getSequence(endAddress);
+                long sequence = sequence1.getSequence(endPosition);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
@@ -1030,13 +1030,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
                 Bytes<?> bytes = wire.bytes();
                 if (wire.usePadding())
-                    endAddress += BytesUtil.padOffset(endAddress);
+                    endPosition += BytesUtil.padOffset(endPosition);
 
-                bytes.readPosition(endAddress);
+                bytes.readPosition(endPosition);
 
                 // Iterate through the wire to find the last complete entry.
                 for (; ; ) {
-                    int header = bytes.readVolatileInt(endAddress);
+                    int header = bytes.readVolatileInt(endPosition);
                     if (header == 0 || Wires.isNotComplete(header))
                         return sequence;
 
@@ -1044,7 +1044,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     len += (int) BytesUtil.padOffset(len);
 
                     bytes.readSkip(len);
-                    endAddress += len;
+                    endPosition += len;
 
                     if (Wires.isData(header))
                         sequence += 1;

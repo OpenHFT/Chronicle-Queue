@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.util.Bounds;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -375,11 +376,12 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
         long lastTime = 0;
         // if the tailer has recordHistory (sourceId != 0) then the MessageHistory will be
         // written with a single timing and nothing else. This is then carried through
-        int firstWriteOffset = history.timings() - (history.sources() * 2);
-        if (!(firstWriteOffset == 0 || firstWriteOffset == 1)) {
+        final int extraTimings = history.timings() - (history.sources() * 2);
+        if (!(extraTimings == 0 || extraTimings == 1)) {
             Jvm.warn().on(getClass(), "firstWriteOffset is not 0 or 1 for " + history);
             return;
         }
+        final int firstWriteOffset = Bounds.requireOffset(extraTimings, "firstWriteOffset");
         for (int sourceIndex = 0; sourceIndex < history.sources(); sourceIndex++) {
             String histoId = Integer.toString(history.sourceId(sourceIndex)) + extraHistoId;
             Histogram histo = histos.computeIfAbsent(histoId, s -> histogram());

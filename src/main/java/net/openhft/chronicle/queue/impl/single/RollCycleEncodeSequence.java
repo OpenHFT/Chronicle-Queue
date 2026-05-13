@@ -85,8 +85,7 @@ class RollCycleEncodeSequence implements Sequence {
         if (sequenceValue == 0)
             return Sequence.NOT_FOUND;
 
-        long writePositionAsCycle = toLongValue(forWritePosition, 0);
-        long lowerBitsOfWp = toLowerBitsWritePosition(writePositionAsCycle);
+        long lowerBitsOfWp = toLowerBitsWritePosition(toLongValue(forWritePosition, 0));
         final long toLowerBitsWritePosition = toLowerBitsWritePosition(sequenceValue);
 
         if (lowerBitsOfWp == toLowerBitsWritePosition)

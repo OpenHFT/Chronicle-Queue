@@ -119,10 +119,10 @@ public class InternalBenchmarkMain {
         reader.start();
         Jvm.pause(250); // give the reader time to start
         long next = System.nanoTime();
-        long end = (long) (next + runtime * 1e9);
+        long endNs = (long) (next + runtime * 1e9);
 
         ExcerptAppender appender = queue.createAppender(); // NOSONAR
-        while (end > System.nanoTime()) {
+        while (endNs > System.nanoTime()) {
             long start = System.nanoTime();
             try (DocumentContext dc = appender.writingDocument(false)) {
                 writeMessage(dc.wire(), messageSize);
@@ -194,9 +194,9 @@ public class InternalBenchmarkMain {
             Jvm.safepoint();
             Wire wire = dc.wire();
             Bytes<?> bytes = wire.bytes();
-            long start = readMessage(bytes);
+            long startNs = readMessage(bytes);
             long end = System.nanoTime();
-            transportTime.sample((double) (transport - start));
+            transportTime.sample((double) (transport - startNs));
             readTime.sample((double) (end - transport));
         }
         Jvm.safepoint();
@@ -224,7 +224,7 @@ public class InternalBenchmarkMain {
      */
     private static long readMessage(Bytes<?> bytes) {
         Jvm.safepoint();
-        long start = bytes.readLong();
+        long startNs = bytes.readLong();
         long rp = bytes.readPosition();
         long rl = bytes.readLimit();
         long addr = bytes.addressForRead(rp);
@@ -233,7 +233,7 @@ public class InternalBenchmarkMain {
         for (addr += 8; addr + 7 < addrEnd; addr += 8)
             memory.readLong(addr);
         Jvm.safepoint();
-        return start;
+        return startNs;
     }
 
     /**

@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.util.Bounds;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -49,7 +50,7 @@ public enum BinarySearch {
             final long end = tailer.toEnd().index();
 
             final RollCycle rollCycle = tailer.queue().rollCycle();
-            final int startCycle = rollCycle.toCycle(start);
+            final int startCycle = Bounds.requireOffset(rollCycle.toCycle(start), "startCycle");
             final int endCycle = rollCycle.toCycle(end);
 
             if (startCycle == endCycle)
