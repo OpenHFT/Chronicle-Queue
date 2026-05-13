@@ -74,9 +74,10 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     private void attemptToMoveToTail(final ChronicleQueue queue) {
-        final StoreTailer tailer =
-                (StoreTailer) queue.createTailer();
-        try {
+        // try-with-resources: the tailer holds a ChunkedMappedFile reference
+        // that must be released. On a slower JVM (e.g. 32-bit) finalizer-
+        // based reclamation does not race the test-teardown leak check.
+        try (final StoreTailer tailer = (StoreTailer) queue.createTailer()) {
             tailer.toEnd();
         } catch (IllegalStateException e) {
             e.printStackTrace();

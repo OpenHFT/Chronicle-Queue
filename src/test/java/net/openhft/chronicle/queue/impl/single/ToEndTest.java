@@ -263,9 +263,9 @@ public class ToEndTest extends QueueTestCommon {
                 .testBlockSize()
                 .rollCycle(TEST4_SECONDLY)
                 .timeProvider(stp)
-                .build()) {
+                .build();
+             ExcerptTailer tailer = rqueue.createTailer()) {
 
-            ExcerptTailer tailer = rqueue.createTailer();
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
             //noinspection StatementWithEmptyBody
@@ -274,11 +274,11 @@ public class ToEndTest extends QueueTestCommon {
             assertNull(tailer.readText());
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
-            ExcerptTailer tailer1 = rqueue.createTailer();
-            ExcerptTailer excerptTailer = tailer1.toEnd();
-            assertNull(excerptTailer.readText());
+            try (ExcerptTailer tailer1 = rqueue.createTailer()) {
+                ExcerptTailer excerptTailer = tailer1.toEnd();
+                assertNull(excerptTailer.readText());
+            }
         }
-        System.gc();
     }
 
     @Test
