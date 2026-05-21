@@ -19,7 +19,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
 
     private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptCommonTest";
 
-    class ExcerptCommonImpl implements ExcerptCommon<ExcerptCommonImpl> {
+    static class ExcerptCommonImpl implements ExcerptCommon<ExcerptCommonImpl> {
         private final int sourceId;
         private final ChronicleQueue queue;
         private final File currentFile;
@@ -43,11 +43,6 @@ public class ExcerptCommonTest extends QueueTestCommon {
         @Override
         public File currentFile() {
             return currentFile;
-        }
-
-        @Override
-        public void sync() {
-            // Sync implementation
         }
 
         @Override

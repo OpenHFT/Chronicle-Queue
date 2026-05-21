@@ -43,8 +43,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();
-            final Thread reader = new Thread
-                    (() -> runReader(queue, startBarrier, lastIndex::set));
+            final Thread reader = new Thread(() -> runReader(queue, startBarrier, lastIndex::set));
 
             startWriter(queue, startBarrier);
             reader.start();
@@ -69,8 +68,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();
-            final Thread reader = new Thread
-                    (() -> runReader(queue, startBarrier, lastIndex::set));
+            final Thread reader = new Thread(() -> runReader(queue, startBarrier, lastIndex::set));
 
             startWriter(queue, startBarrier);
             reader.start();

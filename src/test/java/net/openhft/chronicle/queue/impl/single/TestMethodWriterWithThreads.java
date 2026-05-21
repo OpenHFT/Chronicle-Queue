@@ -44,11 +44,11 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
     private static final int CREATE = 2;
     @Rule
     public final TestName testName = new TestName();
-    private ThreadLocal<Amend> amendTL = ThreadLocal.withInitial(Amend::new);
-    private ThreadLocal<Create> createTL = ThreadLocal.withInitial(Create::new);
+    private final ThreadLocal<Amend> amendTL = ThreadLocal.withInitial(Amend::new);
+    private final ThreadLocal<Create> createTL = ThreadLocal.withInitial(Create::new);
     private I methodWriter;
-    private AtomicBoolean fail = new AtomicBoolean();
-    private boolean doubleBuffer;
+    private final AtomicBoolean fail = new AtomicBoolean();
+    private final boolean doubleBuffer;
 
     public TestMethodWriterWithThreads(boolean doubleBuffer) {
         this.doubleBuffer = doubleBuffer;

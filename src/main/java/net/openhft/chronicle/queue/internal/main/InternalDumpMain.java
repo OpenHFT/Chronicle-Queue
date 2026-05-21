@@ -53,7 +53,16 @@ public class InternalDumpMain {
      */
     public static void dump(@NotNull String path) throws FileNotFoundException {
         File path2 = new File(path);
-        PrintStream out = FILE == null ? System.out : new PrintStream(FILE);
+        PrintStream out;
+        if (FILE == null) {
+            out = System.out;
+        } else {
+            try {
+                out = new PrintStream(FILE, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException("UTF-8 encoding not supported", e);
+            }
+        }
         long upperLimit = Long.MAX_VALUE;
         dump(path2, out, upperLimit);
     }
@@ -101,7 +110,7 @@ public class InternalDumpMain {
         Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
         try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, OS.pageSize(), !OS.isWindows())) {
             bytes.readLimit(bytes.realCapacity());
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(256);
             WireDumper dumper = WireDumper.of(bytes, !UNALIGNED);
             while (bytes.readRemaining() >= 4) {
                 sb.setLength(0);

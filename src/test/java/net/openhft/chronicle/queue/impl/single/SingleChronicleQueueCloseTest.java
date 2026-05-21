@@ -19,12 +19,8 @@ public class SingleChronicleQueueCloseTest extends QueueTestCommon {
             final ExcerptAppender appender = queue.createAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(1));
             Closeable.closeQuietly(queue);
-            try {
-                appender.writeDocument(w -> w.write(TestKey.test).int32(2));
-                Assert.fail();
-            } catch (IllegalStateException e) {
-                // ok
-            }
+            Assert.assertThrows(IllegalStateException.class,
+                    () -> appender.writeDocument(w -> w.write(TestKey.test).int32(2)));
         }
     }
 

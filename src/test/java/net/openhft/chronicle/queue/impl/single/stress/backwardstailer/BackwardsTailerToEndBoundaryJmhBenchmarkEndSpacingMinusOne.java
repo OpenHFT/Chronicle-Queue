@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 class BackwardsTailerToEndBoundaryJmhBenchmarkEndSpacingMinusOne {
 
-    private BackwardsTailerJmhState state = new BackwardsTailerJmhState();
+    private final BackwardsTailerJmhState state = new BackwardsTailerJmhState();
 
     @Setup(Level.Trial)
     public void setup() {

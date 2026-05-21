@@ -38,7 +38,7 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
             time.set(0);
 
             appender.writeText("1. some  text");
-            long start = appender.lastIndexAppended();
+            final long start = appender.lastIndexAppended();
             appender.writeText("2. some more text");
             appender.writeText("3. some more text");
             time.set(TimeUnit.DAYS.toMillis(1));

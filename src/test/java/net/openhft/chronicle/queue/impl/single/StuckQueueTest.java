@@ -39,10 +39,10 @@ public class StuckQueueTest extends QueueTestCommon {
         expectException("Failback to readonly tablestore");
         ignoreException("reading control code as text");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
-//        expectException("Unable to copy TimedStoreRecovery safely will try anyway");
-//        expectException("Unable to copy SCQStore safely will try anyway");
-//        expectException("Unable to copy SCQSRoll safely");
-//        expectException("Unable to copy SCQSIndexing safely");
+        // expectException("Unable to copy TimedStoreRecovery safely will try anyway");
+        // expectException("Unable to copy SCQStore safely will try anyway");
+        // expectException("Unable to copy SCQSRoll safely");
+        // expectException("Unable to copy SCQSIndexing safely");
 
         tmpDir.toFile().mkdirs();
 
@@ -52,7 +52,7 @@ public class StuckQueueTest extends QueueTestCommon {
 
         try (RollingChronicleQueue q = ChronicleQueue.singleBuilder(tmpDir).rollCycle(MINUTELY).readOnly(true).build();
              ExcerptTailer tailer = q.createTailer()) {
-//            System.out.println(q.dump());
+            // System.out.println(q.dump());
 
             int cycle = q.rollCycle().toCycle(0x18406e100000000L);
 

@@ -72,7 +72,7 @@ public class IndexUpdaterFactory {
          * Closes this {@code StandardIndexUpdater}, releasing any resources held.
          */
         @Override
-        public void close() throws IOException {
+        public void close() {
             closeQuietly(indexValue);
         }
 
@@ -128,10 +128,9 @@ public class IndexUpdaterFactory {
         /**
          * Closes this {@code VersionedIndexUpdater}, releasing any resources held.
          *
-         * @throws IOException if an I/O error occurs
          */
         @Override
-        public void close() throws IOException {
+        public void close() {
             closeQuietly(versionIndexLock, indexValue, indexVersionValue);
         }
 

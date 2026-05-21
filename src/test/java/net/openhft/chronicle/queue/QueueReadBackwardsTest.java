@@ -18,7 +18,7 @@ import static junit.framework.TestCase.assertEquals;
 
 public class QueueReadBackwardsTest extends QueueTestCommon {
     @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     private File dataDir;
     private SetTimeProvider timeProvider;

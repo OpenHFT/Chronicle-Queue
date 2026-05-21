@@ -15,6 +15,8 @@ import net.openhft.chronicle.testframework.ExecutorServiceUtil;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
+
+import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -231,7 +233,7 @@ public class StoreTailerTest extends QueueTestCommon {
                     tailer.readText();
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
                 tailer.readText();
@@ -256,7 +258,7 @@ public class StoreTailerTest extends QueueTestCommon {
                     readMethodCall(tailer);
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
                 tailer.singleThreadedCheckDisabled(true);
                 assertEquals("Testing2", readMethodCall(tailer));
@@ -279,9 +281,9 @@ public class StoreTailerTest extends QueueTestCommon {
                     tailer.readText();
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
-                ((AbstractCloseable) tailer).singleThreadedCheckReset();
+                tailer.singleThreadedCheckReset();
                 tailer.readText();
             }
         }.run();
@@ -305,9 +307,9 @@ public class StoreTailerTest extends QueueTestCommon {
                     readMethodCall(tailer);
                     fail();
                 } catch (IllegalStateException expected) {
-//                    expected.printStackTrace();
+                    // expected.printStackTrace();
                 }
-                ((AbstractCloseable) tailer).singleThreadedCheckReset();
+                tailer.singleThreadedCheckReset();
                 assertEquals("Testing2", readMethodCall(tailer));
             }
         }.run();
@@ -434,24 +436,15 @@ public class StoreTailerTest extends QueueTestCommon {
 
     @Test(expected = IllegalStateException.class)
     public void cantMoveToStartDuringDocumentReading() {
-        File dir = getTmpDir();
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
-                .testBlockSize().build();
-             ExcerptTailer tailer = queue.createTailer();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeText("Hello World");
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isPresent());
-                assertTrue(dc.isMetaData());
-                assertEquals("header", dc.wire().readEvent(String.class));
-                assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toStart(); // forbidden
-            }
-        }
+        assertCannotMoveDuringDocumentReading(ExcerptTailer::toStart);
     }
 
     @Test(expected = IllegalStateException.class)
     public void cantMoveToEndDuringDocumentReading() {
+        assertCannotMoveDuringDocumentReading(ExcerptTailer::toEnd);
+    }
+
+    private void assertCannotMoveDuringDocumentReading(Consumer<ExcerptTailer> move) {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -463,7 +456,7 @@ public class StoreTailerTest extends QueueTestCommon {
                 assertTrue(dc.isMetaData());
                 assertEquals("header", dc.wire().readEvent(String.class));
                 assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toEnd(); // forbidden
+                move.accept(tailer); // forbidden
             }
         }
     }

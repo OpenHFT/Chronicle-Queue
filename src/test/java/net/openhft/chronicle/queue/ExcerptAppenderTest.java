@@ -25,10 +25,10 @@ public class ExcerptAppenderTest extends QueueTestCommon {
 
     private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptAppenderTest";
 
-    class ExcerptAppenderImpl implements ExcerptAppender {
+    static class ExcerptAppenderImpl implements ExcerptAppender {
 
         private long lastIndexAppended = 0;
-        private int currentCycle = 1;
+        private final int currentCycle = 1;
         private Wire wire;
 
         @Override

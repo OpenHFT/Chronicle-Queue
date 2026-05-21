@@ -79,13 +79,13 @@ public class PartialUpdateTest extends QueueTestCommon {
     @BeforeClass
     public static void disableCheckIndexAssertions() {
         // This turns off assertions, so we see what would happen in the real world
-        originalCheckIndexValue = QueueSystemProperties.CHECK_INDEX;
-        QueueSystemProperties.CHECK_INDEX = false;
+        originalCheckIndexValue = QueueSystemProperties.checkIndex();
+        QueueSystemProperties.setCheckIndex(false);
     }
 
     @AfterClass
     public static void restoreCheckIndexAssertions() {
-        QueueSystemProperties.CHECK_INDEX = originalCheckIndexValue;
+        QueueSystemProperties.setCheckIndex(originalCheckIndexValue);
     }
 
     @Test
@@ -147,10 +147,19 @@ public class PartialUpdateTest extends QueueTestCommon {
     }
 
     /**
-     * Create a queue where the excerpt was written, but the writePosition/sequence are still from the previous
-     * entry. This can happen in an abnormal termination.
+     * Helper interface for applying partial update simulation
      */
-    private static void createQueueWithConsistentButStaleWritePositionAndSequence(SetTimeProvider setTimeProvider, Path path) {
+    @FunctionalInterface
+    private interface PartialUpdateSimulator {
+        void simulatePartialUpdate(StoreTailer tailer, SingleChronicleQueueStore store, long previousWritePosition, long previousSequence);
+    }
+
+    /**
+     * Common logic for creating a queue with partial update simulation
+     */
+    private static void createQueueWithPartialUpdate(SetTimeProvider setTimeProvider, Path path,
+                                                     PartialUpdateSimulator updateSimulator,
+                                                     String updateDescription) {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, path);
              ExcerptAppender appender = queue.createAppender();
              StoreTailer tailer = (StoreTailer) queue.createTailer()) {
@@ -163,7 +172,7 @@ public class PartialUpdateTest extends QueueTestCommon {
             int currentCycle = RollCycles.FAST_DAILY.toCycle(appender.lastIndexAppended());
             try (SingleChronicleQueueStore secondRollCycle = queue.storeForCycle(currentCycle, 0, false, null)) {
                 assertNotNull(secondRollCycle);
-                long previousWritePosition = secondRollCycle.writePosition();
+                final long previousWritePosition = secondRollCycle.writePosition();
                 long previousSequence = secondRollCycle.lastSequenceNumber(tailer);
                 printLastWritePositionAndSequence("before append last excerpt", tailer, secondRollCycle);
                 assertEquals(1, previousSequence);
@@ -171,8 +180,8 @@ public class PartialUpdateTest extends QueueTestCommon {
                 printLastWritePositionAndSequence("after append last excerpt", tailer, secondRollCycle);
 
                 // simulate the last write being partial
-                forceUpdateWritePositionAndSequence(tailer, secondRollCycle, previousWritePosition, previousSequence);
-                printLastWritePositionAndSequence("after over-writing write position & seq", tailer, secondRollCycle);
+                updateSimulator.simulatePartialUpdate(tailer, secondRollCycle, previousWritePosition, previousSequence);
+                printLastWritePositionAndSequence(updateDescription, tailer, secondRollCycle);
             } catch (StreamCorruptedException e) {
                 throw new RuntimeException("Error reading last sequence number", e);
             }
@@ -180,36 +189,23 @@ public class PartialUpdateTest extends QueueTestCommon {
     }
 
     /**
+     * Create a queue where the excerpt was written, but the writePosition/sequence are still from the previous
+     * entry. This can happen in an abnormal termination.
+     */
+    private static void createQueueWithConsistentButStaleWritePositionAndSequence(SetTimeProvider setTimeProvider, Path path) {
+        createQueueWithPartialUpdate(setTimeProvider, path,
+                (tailer, store, prevWritePos, prevSeq) -> forceUpdateWritePositionAndSequence(tailer, store, prevWritePos, prevSeq),
+                "after over-writing write position & seq");
+    }
+
+    /**
      * Create a queue where the writePosition was updated, but the sequence was from the second-last entry.
      * This can happen in an abnormal termination.
      */
     private static void createQueueWithInconsistentWritePositionAndSequence(SetTimeProvider setTimeProvider, Path path) {
-        try (SingleChronicleQueue queue = createQueue(setTimeProvider, path);
-             ExcerptAppender appender = queue.createAppender();
-             StoreTailer tailer = (StoreTailer) queue.createTailer()) {
-            appender.writeText("One");
-            appender.writeText("Two");
-            appender.writeText("Three");
-            setTimeProvider.advanceMillis(TimeUnit.HOURS.toMillis(2));
-            appender.writeText("Four");
-            appender.writeText("Five");
-            int currentCycle = RollCycles.FAST_DAILY.toCycle(appender.lastIndexAppended());
-            try (SingleChronicleQueueStore secondRollCycle = queue.storeForCycle(currentCycle, 0, false, null)) {
-                assertNotNull(secondRollCycle);
-                long previousWritePosition = secondRollCycle.writePosition();
-                long previousSequence = secondRollCycle.lastSequenceNumber(tailer);
-                printLastWritePositionAndSequence("before append last excerpt", tailer, secondRollCycle);
-                assertEquals(1, previousSequence);
-                appender.writeText("Six");
-                printLastWritePositionAndSequence("after append last excerpt", tailer, secondRollCycle);
-
-                // simulate the last write being partial
-                forceUpdateWritePosition(secondRollCycle, previousWritePosition);
-                printLastWritePositionAndSequence("after over-writing write position", tailer, secondRollCycle);
-            } catch (StreamCorruptedException e) {
-                throw new RuntimeException("Error reading last sequence number", e);
-            }
-        }
+        createQueueWithPartialUpdate(setTimeProvider, path,
+                (tailer, store, prevWritePos, prevSeq) -> forceUpdateWritePosition(store, prevWritePos),
+                "after over-writing write position");
     }
 
     private static void printLastWritePositionAndSequence(String description, StoreTailer context, SingleChronicleQueueStore store) {

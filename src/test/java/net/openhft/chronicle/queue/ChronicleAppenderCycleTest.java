@@ -55,7 +55,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
             CountDownLatch done = new CountDownLatch(1);
             int n = 468;
 
-            AtomicReference<Throwable> thr1 = useAppender(path, appender -> {
+            final AtomicReference<Throwable> thr1 = useAppender(path, appender -> {
                 appender.cycle();
                 for (int i = 0; i < n; ++i)
                     appender.writeBytes(msg);
@@ -65,7 +65,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
                     appender.writeBytes(msg);
             }, done);
 
-            AtomicReference<Throwable> thr2 = useAppender(path, appender -> {
+            final AtomicReference<Throwable> thr2 = useAppender(path, appender -> {
                 steady.countDown();
                 await(go, "go");
                 int m = 2 * n;

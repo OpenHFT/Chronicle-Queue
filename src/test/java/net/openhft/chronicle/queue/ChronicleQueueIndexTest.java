@@ -81,7 +81,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
-//            assertFalse(hasEOFAtEndOfFile(file1));
+            // assertFalse(hasEOFAtEndOfFile(file1));
 
             writer2.accept(appender);
 
@@ -113,12 +113,12 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
-            Bytes<byte[]> hello_world = Bytes.from("Hello World 1");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 0L), hello_world);
-            hello_world.releaseLast();
-            hello_world = Bytes.from("Hello World 2");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 1L), hello_world);
-            hello_world.releaseLast();
+            Bytes<byte[]> helloWorld = Bytes.from("Hello World 1");
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 0L), helloWorld);
+            helloWorld.releaseLast();
+            helloWorld = Bytes.from("Hello World 2");
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 1L), helloWorld);
+            helloWorld.releaseLast();
 
             // Simulate the end of the day i.e the queue closes the day rolls
             // (note the change of index from 18264 to 18265)
@@ -130,9 +130,9 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             // add a message for the new day
-            Bytes<byte[]> hello_world = Bytes.from("Hello World 3");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18265, 0L), hello_world);
-            hello_world.releaseLast();
+            Bytes<byte[]> helloWorld = Bytes.from("Hello World 3");
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(18265, 0L), helloWorld);
+            helloWorld.releaseLast();
 
             final ExcerptTailer tailer = queue.createTailer();
 
@@ -251,7 +251,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 }
                 stp.advanceMillis(millis);
             }
-//            System.out.println(queue.dump());
+            // System.out.println(queue.dump());
 
             // read all (meta + data)
             List<String> allReads = readKeyed(queue, true);
@@ -295,7 +295,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void D() {
+    public void singleDataEntry() {
         driver(
                 new String[]{"data-1"},
                 new boolean[]{false}
@@ -303,7 +303,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void M() {
+    public void singleMetaEntry() {
         driver(
                 new String[]{"data-1"},
                 new boolean[]{true}
@@ -311,7 +311,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DDD() {
+    public void dataDataData() {
         driver(
                 new String[]{"data-1", "data-2", "data-3"},
                 new boolean[]{false, false, false}
@@ -319,7 +319,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DDM() {
+    public void dataDataMeta() {
         driver(
                 new String[]{"data-1", "data-2", "meta-1"},
                 new boolean[]{false, false, true}
@@ -327,7 +327,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DMD() {
+    public void dataMetaData() {
         driver(
                 new String[]{"data-1", "meta-1", "data-2"},
                 new boolean[]{false, true, false}
@@ -335,7 +335,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DMM() {
+    public void dataMetaMeta() {
         driver(
                 new String[]{"data-1", "meta-1", "meta-2"},
                 new boolean[]{false, true, true}
@@ -343,7 +343,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MMM() {
+    public void metaMetaMeta() {
         driver(
                 new String[]{"meta-1", "meta-2", "meta-3"},
                 new boolean[]{true, true, true}
@@ -351,7 +351,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MMD() {
+    public void metaMetaData() {
         driver(
                 new String[]{"meta-1", "meta-2", "data-1"},
                 new boolean[]{true, true, false}
@@ -359,7 +359,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MDM() {
+    public void metaDataMeta() {
         driver(
                 new String[]{"meta-1", "data-1", "meta-2"},
                 new boolean[]{true, false, true}
@@ -367,7 +367,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MDD() {
+    public void metaDataData() {
         driver(
                 new String[]{"meta-1", "data-1", "data-2"},
                 new boolean[]{true, false, false}

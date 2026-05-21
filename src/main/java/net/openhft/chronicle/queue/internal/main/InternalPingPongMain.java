@@ -26,12 +26,12 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class InternalPingPongMain {
     //    static int throughput = Integer.getInteger("throughput", 250); // MB/s
-    static int runtime = Integer.getInteger("runtime", 30); // seconds
-    static String basePath = System.getProperty("path", OS.TMP);
-    static AtomicLong writeTime = new AtomicLong();
-    static AtomicInteger writeCount = new AtomicInteger();
-    static AtomicInteger readCount = new AtomicInteger();
-    static AtomicBoolean running = new AtomicBoolean(true);
+    static final int runtime = Integer.getInteger("runtime", 30); // seconds
+    static final String basePath = System.getProperty("path", OS.TMP);
+    static final AtomicLong writeTime = new AtomicLong();
+    static final AtomicInteger writeCount = new AtomicInteger();
+    static final AtomicInteger readCount = new AtomicInteger();
+    static final AtomicBoolean running = new AtomicBoolean(true);
 
     static {
         System.setProperty("jvm.safepoint.enabled", "true");
@@ -68,7 +68,8 @@ public final class InternalPingPongMain {
                 ExcerptTailer tailer = queue.createTailer();
                 while (running.get()) {
                     //noinspection StatementWithEmptyBody
-                    while (readCount.get() == writeCount.get()) ;
+                    while (readCount.get() == writeCount.get())
+                        Jvm.nanoPause();
 
                     long wakeTime = System.nanoTime();
                     while (running.get()) {

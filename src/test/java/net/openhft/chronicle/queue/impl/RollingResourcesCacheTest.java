@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
@@ -19,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class RollingResourcesCacheTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;
 
@@ -86,7 +87,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
     private static final long ONE_DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1L);
     private static final boolean LOG_TEST_DEBUG =
-            Boolean.valueOf(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
+            Jvm.getBoolean(RollingResourcesCacheTest.class.getSimpleName() + ".debug");
 
     private static void assertCorrectConversion(final RollingResourcesCache cache, final int cycle,
                                                 final Instant instant, final DateTimeFormatter formatter) {
@@ -276,7 +277,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
 
                 final long daysBetweenEpochAndInstant = (instantAfterEpoch - epoch) / ONE_DAY_IN_MILLIS;
 
-                assertEquals(daysBetweenEpochAndInstant, (long) cycle);
+                assertEquals(daysBetweenEpochAndInstant, cycle);
 
                 assertEquals((long) cycle * DAILY.lengthInMillis(), ((long) cycle) * ONE_DAY_IN_MILLIS);
 

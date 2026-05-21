@@ -11,7 +11,9 @@ import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintWriter;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.function.Consumer;
@@ -132,7 +134,8 @@ public class ChronicleReaderMain {
      */
     @SuppressWarnings("deprecation")
     protected void printHelpAndExit(final Options options, int status, String message) {
-        final PrintWriter writer = new PrintWriter(System.out);
+        final PrintWriter writer = new PrintWriter(
+                new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
         new HelpFormatter().printHelp(
                 writer,
                 180,

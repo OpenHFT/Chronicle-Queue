@@ -6,7 +6,9 @@ package net.openhft.chronicle.queue.internal.writer;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
 import static net.openhft.chronicle.queue.ChronicleReaderMain.addOption;
@@ -16,8 +18,6 @@ import static net.openhft.chronicle.queue.ChronicleReaderMain.addOption;
  * from the command line. It processes command-line arguments to determine how data should be written to the Chronicle Queue.
  */
 public class ChronicleWriterMain {
-
-    private static final int HELP_OUTPUT_LINE_WIDTH = 180;
 
     /**
      * Runs the ChronicleWriter based on the provided command-line arguments.
@@ -73,7 +73,7 @@ public class ChronicleWriterMain {
      */
     @SuppressWarnings("deprecation")
     private void printHelpAndExit(final Options options, int status, String message) {
-        final PrintWriter writer = new PrintWriter(System.out);
+        final PrintWriter writer = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
         new HelpFormatter().printHelp(
                 writer,
                 180,
@@ -86,6 +86,8 @@ public class ChronicleWriterMain {
                 true
         );
         writer.flush();
+        String errorMessage = message == null ? "Usage requested" : message;
+        System.err.println(errorMessage);
         System.exit(status);
     }
 

@@ -142,16 +142,7 @@ public class ChronicleHistoryReaderMainTest {
         String[] args = {"-h"};
 
         // Manually setting the security manager to catch System.exit() if needed
-        try {
-            main.run(args);  // Should trigger the help message and exit with 0
-            fail("Expected ThreadDeath to be thrown");
-
-        } catch (ThreadDeath e) {
-            // Expected exception
-
-        } catch (SecurityException e) {
-            fail("System.exit was called unexpectedly.");
-        }
+        assertThrows(ThreadDeath.class, () -> main.run(args));  // Should trigger the help message and exit with 0
     }
 
     @Test

@@ -207,7 +207,8 @@ They can both be run from the command line in a number of ways described below.
 
 == DumpMain
 
-TIP: The canonical CLI reference for `DumpMain` lives at xref:command-line:command_line_tools.adoc#_dumpmain[]. Use it to double-check flags before scripting automation.
+TIP: The canonical CLI reference for `DumpMain` lives at xref:command-line:command_line_tools.adoc#dumpmain[].
+Use it to double-check flags before scripting automation.
 
 If you have a project pom file that includes the Chronicle-Queue artifact, you can read a `cq4` file with the following command:
 

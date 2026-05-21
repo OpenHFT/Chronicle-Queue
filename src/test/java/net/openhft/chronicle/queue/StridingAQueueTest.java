@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Mocker;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -47,7 +48,8 @@ public class StridingAQueueTest extends QueueTestCommon {
             StringWriter sw = new StringWriter();
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd().striding(true);
             MethodReader reader = tailer.methodReader(Mocker.logging(SAQMessage.class, "", sw));
-            while (reader.readOne()) ;
+            while (reader.readOne())
+                Jvm.nanoPause();
             assertEquals("hi[4, 9]\n" +
                             "hi[4, 8]\n" +
                             "hi[4, 4]\n" +

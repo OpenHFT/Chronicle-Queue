@@ -72,7 +72,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     // visible for testing
     int linearScanCount;
     int linearScanByPositionCount;
-    Collection<Closeable> closeables = new ArrayList<>();
+    final Collection<Closeable> closeables = new ArrayList<>();
     private long lastScannedIndex = -1;
 
     /**
@@ -92,8 +92,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     /**
      * Constructor to create an {@code SCQIndexing} instance using a specific wire type.
      *
-     * @param wireType    The wire type used for creating the index structure.
-     * @param indexCount  The count of indexes.
+     * @param wireType     The wire type used for creating the index structure.
+     * @param indexCount   The count of indexes.
      * @param indexSpacing The spacing between indexes.
      */
     SCQIndexing(@NotNull WireType wireType, int indexCount, int indexSpacing) {
@@ -107,11 +107,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     /**
      * Main constructor to initialize indexing with required parameters.
      *
-     * @param indexCount         The count of indexes to maintain.
-     * @param indexSpacing       The spacing between indexes.
-     * @param index2Index        Reference for storing index-to-index values.
+     * @param indexCount           The count of indexes to maintain.
+     * @param indexSpacing         The spacing between indexes.
+     * @param index2Index          Reference for storing index-to-index values.
      * @param nextEntryToBeIndexed Reference for tracking the next entry to be indexed.
-     * @param longArraySupplier  Supplier for creating long array values.
+     * @param longArraySupplier    Supplier for creating long array values.
      */
     private SCQIndexing(int indexCount, int indexSpacing, LongValue index2Index, LongValue nextEntryToBeIndexed, Supplier<LongArrayValues> longArraySupplier) {
         this.indexCount = indexCount;
@@ -211,7 +211,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * If the secondary address matches the previously used address, the cached array is returned.
      * Otherwise, the new array is read from the wire.
      *
-     * @param wire The wire containing the array data.
+     * @param wire             The wire containing the array data.
      * @param secondaryAddress The address to fetch the array from.
      * @return The {@link LongArrayValues} at the specified address.
      */
@@ -229,8 +229,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     /**
      * Reads an array of {@link LongArrayValues} from the wire and fills the specified {@code using} array.
      *
-     * @param w The wire to read the array from.
-     * @param using The {@link LongArrayValues} instance to populate.
+     * @param w           The wire to read the array from.
+     * @param using       The {@link LongArrayValues} instance to populate.
      * @param index2index Whether the array being read is the index2index array.
      * @return The populated {@link LongArrayValues} instance.
      */
@@ -246,7 +246,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * Reads a value from the wire and checks if the event name matches the expected name.
      * Throws an {@link IllegalStateException} if the names do not match.
      *
-     * @param w The wire to read the value from.
+     * @param w            The wire to read the value from.
      * @param expectedName The expected event name.
      * @return The {@link ValueIn} corresponding to the expected event.
      */
@@ -284,16 +284,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     long newIndex(@NotNull Wire wire, @NotNull LongArrayValues index2Index, long index2) throws StreamCorruptedException {
-        try {
-            long pos = newIndex(wire, false);
-            if (!index2Index.compareAndSet(index2, NOT_INITIALIZED, pos)) {
-                throw new IllegalStateException("Index " + index2 + " in index2index was altered while we hold the write lock!");
-            }
-            index2Index.setMaxUsed(index2 + 1);
-            return pos;
-        } catch (Exception e) {
-            throw e;
+        long pos = newIndex(wire, false);
+        if (!index2Index.compareAndSet(index2, NOT_INITIALIZED, pos)) {
+            throw new IllegalStateException("Index " + index2 + " in index2index was altered while we hold the write lock!");
         }
+        index2Index.setMaxUsed(index2 + 1);
+        return pos;
     }
 
     /**
@@ -318,7 +314,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     /**
      * Performs a linear scan from the start of the wire to find the specified {@code index}.
      *
-     * @param ec The excerpt context used for reading the index.
+     * @param ec    The excerpt context used for reading the index.
      * @param index The index to find.
      * @return A {@link ScanResult} indicating the result of the operation.
      */
@@ -356,10 +352,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         LongArrayValues index2index = getIndex2index(wireForIndex);
         long primaryOffset = toAddress0(index);
 
-        long secondaryAddress = 0;
         long startIndex = index & -indexSpacing;
         while (primaryOffset >= 0) {
-            secondaryAddress = index2index.getValueAt(primaryOffset);
+            long secondaryAddress = index2index.getValueAt(primaryOffset);
             if (secondaryAddress != 0) {
                 @NotNull final LongArrayValues array1 = arrayForAddress(wireForIndex, secondaryAddress);
                 ScanResult result = scanSecondaryIndexBackwards(ec, array1, startIndex, index);
@@ -553,11 +548,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * Performs a linear scan by position to locate the entry at the specified {@code toPosition}.
      * This method returns the index of the entry or an exception if the position is not valid.
      *
-     * @param wire        The wire object used to read the data.
-     * @param toPosition  The target position in the wire.
-     * @param indexOfNext The index of the next known entry.
+     * @param wire         The wire object used to read the data.
+     * @param toPosition   The target position in the wire.
+     * @param indexOfNext  The index of the next known entry.
      * @param startAddress The starting address to begin the scan from.
-     * @param inclusive   Whether the target position should be inclusive.
+     * @param inclusive    Whether the target position should be inclusive.
      * @return The index of the found entry.
      * @throws EOFException If the scan reaches the end of the file before finding the position.
      */

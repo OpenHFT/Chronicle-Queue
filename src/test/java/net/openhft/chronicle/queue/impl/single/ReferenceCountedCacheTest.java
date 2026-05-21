@@ -123,9 +123,9 @@ class ReferenceCountedCacheTest extends QueueTestCommon {
                     reservationCount++;
                 }
             }
-            for (int i = 0; i < reservations.length; i++) {
-                if (reservations[i] != null) {
-                    reservations[i].release();
+            for (Reservation reservation : reservations) {
+                if (reservation != null) {
+                    reservation.release();
                 }
             }
             Jvm.startup().on(ReferenceGetter.class, "Made " + reservationCount + " reservations");

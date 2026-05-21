@@ -43,6 +43,7 @@ public final class DumpMain {
      * @param path The path to the Chronicle Queue file
      * @throws FileNotFoundException if the specified file is not found
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public static void dump(@NotNull String path) throws FileNotFoundException {
         InternalDumpMain.dump(path);
     }
@@ -55,6 +56,7 @@ public final class DumpMain {
      * @param out        The {@link PrintStream} to which the dump will be written
      * @param upperLimit The upper limit for the dump, controlling how much of the file is dumped
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public static void dump(@NotNull File path, @NotNull PrintStream out, long upperLimit) {
         InternalDumpMain.dump(path, out, upperLimit);
     }

@@ -16,7 +16,7 @@ image:https://img.shields.io/gitter/room/OpenHFT/Lobby.svg?style=popout[link="ht
 image:https://img.shields.io/badge/release%20notes-subscribe-brightgreen[link="https://chronicle.software/release-notes/"]
 image:https://sonarcloud.io/api/project_badges/measure?project=OpenHFT_Chronicle-Queue&metric=alert_status[link="https://sonarcloud.io/dashboard?id=OpenHFT_Chronicle-Queue"]
 
-image::docs/images/Queue_line.png[width=20%]
+image::src/main/docs/images/Queue_line.png[width=20%]
 
 toc::[]
 
@@ -572,12 +572,12 @@ console output:
 [main] WARN SingleChronicleQueueBuilder - Overriding roll cycle from HOURLY to MINUTELY.
 ----
 The maximum number of messages that can be stored in a queue file depends on roll cycle.
-See  https://github.com/OpenHFT/Chronicle-Queue/tree/master/docs/FAQ.adoc[FAQ] for more information on this.
+See  https://github.com/OpenHFT/Chronicle-Queue/tree/master/src/main/docs/FAQ.adoc[FAQ] for more information on this.
 
 In Chronicle Queue, the rollover time is based on UTC. The Timezone Rollover Enterprise feature extends Chronicle Queue's ability to specify the time and periodicity of queue rollovers, rather than UTC. For more information see link:https://portal.chronicle.software/docs/queue/chronicle-queue/configuration/timezone_rollover.html[Timezone Queue Rollover].
 
 The Chronicle Queue `FileUtil` class provides useful methods for managing queue files.
-See link:docs/managing_roll_files_directly.adoc[Managing Roll Files Directly].
+See link:src/main/docs/managing_roll_files_directly.adoc[Managing Roll Files Directly].
 
 * _wireType_
 
@@ -732,7 +732,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
 The high-level methods below such as `writeText()` are convenience methods on calling `appender.writingDocument()`, but both approaches essentially do the same thing.
 The actual code of `writeText(CharSequence text)` looks like this:
 
-[source,java]
+[source,java,opts=novalidate]
 ----
 /**
  * @param text the message to write
@@ -1866,10 +1866,10 @@ For comparison see http://kafka.apache.org/documentation.html[Kafka Documentatio
 
 === Links
 
-* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some techniques utilised by Chronicle Queue
-* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/FAQ.adoc[FAQ] - questions asked by customers
-* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
-* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/src/main/docs/BigDataAndChronicleQueue.adoc[Big Data and Chronicle Queue] - a detailed description of some techniques utilised by Chronicle Queue
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/src/main/docs/FAQ.adoc[FAQ] - questions asked by customers
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/src/main/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/src/main/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
 
 ==== Online support
 

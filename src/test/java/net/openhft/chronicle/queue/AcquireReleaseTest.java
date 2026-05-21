@@ -45,7 +45,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
             }
         };
         AtomicLong time = new AtomicLong(1000L);
-        TimeProvider tp = () -> time.getAndAccumulate(1000, (x, y) -> x + y);
+        TimeProvider tp = () -> time.getAndAccumulate(1000, Long::sum);
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
@@ -56,11 +56,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
             int iter = 4;
             try (ExcerptAppender excerptAppender = queue.createAppender()) {
                 for (int i = 0; i < iter; i++) {
-                    excerptAppender.writeDocument(w -> {
-                        w.write("a").marshallable(m -> {
-                            m.write("b").text("c");
-                        });
-                    });
+                    excerptAppender.writeDocument(w -> w.write("a").marshallable(m -> m.write("b").text("c")));
                 }
             }
 

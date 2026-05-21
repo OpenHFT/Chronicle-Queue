@@ -8,7 +8,9 @@ import net.openhft.chronicle.wire.MessageHistory;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -135,7 +137,7 @@ public class ChronicleHistoryReaderMain {
      */
     @SuppressWarnings("deprecation")
     protected void printHelpAndExit(final Options options, int status, String message) {
-        final PrintWriter writer = new PrintWriter(System.out);
+        final PrintWriter writer = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
         new HelpFormatter().printHelp(
                 writer,
                 180,

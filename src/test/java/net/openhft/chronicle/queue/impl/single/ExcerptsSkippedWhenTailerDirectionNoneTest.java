@@ -11,7 +11,7 @@ import org.junit.Test;
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestCommon {
     @SuppressWarnings("try")
@@ -42,7 +42,7 @@ public final class ExcerptsSkippedWhenTailerDirectionNoneTest extends QueueTestC
             final RollCycle rollCycle = readQueue.rollCycle();
             assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()));
             try (final DocumentContext ctx = tailer.direction(TailerDirection.NONE).readingDocument()) {
-                // access the first document without incrementing sequence number
+                assertFalse("Document shouldn't be readable yet as direction is NONE", ctx.isPresent());
             }
             assertEquals(0L, rollCycle.toSequenceNumber(tailer.index()));
 

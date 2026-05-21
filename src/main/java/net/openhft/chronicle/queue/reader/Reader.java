@@ -52,6 +52,7 @@ public interface Reader {
      * @param regex The inclusion regex.
      * @return The current instance of {@link Reader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     Reader withInclusionRegex(@NotNull String regex);
 
     /**
@@ -61,6 +62,7 @@ public interface Reader {
      * @param regex The exclusion regex.
      * @return The current instance of {@link Reader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     Reader withExclusionRegex(@NotNull String regex);
 
     /**
@@ -77,6 +79,7 @@ public interface Reader {
      * @param index The start index.
      * @return The current instance of {@link Reader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     Reader withStartIndex(final long index);
 
     /**
@@ -116,6 +119,7 @@ public interface Reader {
      * @param maxHistoryRecords The maximum number of history records.
      * @return The current instance of {@link Reader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     Reader historyRecords(final long maxHistoryRecords);
 
     /**
@@ -133,6 +137,7 @@ public interface Reader {
      * @param wireType The wire type.
      * @return The current instance of {@link Reader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     Reader withWireType(@NotNull WireType wireType);
 
     /**
@@ -156,6 +161,7 @@ public interface Reader {
      * @param showMessageHistory {@code true} to show message history, {@code false} otherwise.
      * @return The current instance of {@link Reader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     Reader showMessageHistory(boolean showMessageHistory);
 
     /**
@@ -184,6 +190,7 @@ public interface Reader {
      *
      * @return A new Reader instance.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     static Reader create() {
         return new ChronicleReader();
     }

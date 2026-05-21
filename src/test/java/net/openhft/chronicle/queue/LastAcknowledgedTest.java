@@ -88,10 +88,10 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             // tolerateNumberOfUnAckedMessages
             {
                 appender.writeText("hello1");
-                Assert.assertEquals(null, tailer.readText());
+                assertNull(tailer.readText());
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
                 Assert.assertEquals("hello1", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertNull(tailer.readText());
             }
 
             // tolerateNumberOfUnAckedMessages = 1
@@ -103,7 +103,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 appender.writeText("hello3");
                 Assert.assertEquals("hello2", tailer.readText());
                 Assert.assertEquals("hello3", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertNull(tailer.readText());
             }
 
             // tolerateNumberOfUnAckedMessages = 2
@@ -117,7 +117,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
                 Assert.assertEquals("hello4", tailer.readText());
                 Assert.assertEquals("hello5", tailer.readText());
                 Assert.assertEquals("hello6", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertNull(tailer.readText());
             }
         }
     }
@@ -157,11 +157,11 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             {
                 appender.writeText("hello1");
                 appender.writeText("hello2");
-                Assert.assertEquals(null, tailer.readText());
+                assertNull(tailer.readText());
                 lastAcknowledgedIndexReplicatedLongValue.setVolatileValue(appender.lastIndexAppended());
                 Assert.assertEquals("hello1", tailer.readText());
                 Assert.assertEquals("hello2", tailer.readText());
-                Assert.assertEquals(null, tailer.readText());
+                assertNull(tailer.readText());
             }
 
             timeProvider.set(2);
@@ -173,7 +173,7 @@ public class LastAcknowledgedTest extends QueueTestCommon {
             timeProvider.set(1002);
 
             Assert.assertEquals("hello3", tailer.readText());
-            Assert.assertEquals(null, tailer.readText());
+            assertNull(tailer.readText());
         }
     }
 }

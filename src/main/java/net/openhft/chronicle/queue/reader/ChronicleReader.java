@@ -276,6 +276,7 @@ public class ChronicleReader implements Reader {
      * @param readOnly {@code true} to enable read-only mode, {@code false} otherwise
      * @return The current instance of {@link ChronicleReader}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public ChronicleReader withReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
         return this;
@@ -407,10 +408,12 @@ public class ChronicleReader implements Reader {
     public ChronicleReader asMethodReader(@NotNull String methodReaderInterface) {
         if (methodReaderInterface.isEmpty()) {
             entryHandlerFactory = () -> new InternalDummyMethodReaderQueueEntryHandler(wireType);
-        } else try {
+        } else {
+            try {
             this.methodReaderInterface = Class.forName(methodReaderInterface);
         } catch (ClassNotFoundException e) {
             throw Jvm.rethrow(e);
+        }
         }
         return this;
     }

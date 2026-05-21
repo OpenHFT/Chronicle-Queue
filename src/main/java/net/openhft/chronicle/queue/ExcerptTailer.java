@@ -232,6 +232,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *
      * @return the Read After Replica Acknowledged property of this Tailer
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default boolean readAfterReplicaAcknowledged() {
         return false;
     }
@@ -241,6 +242,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * <p>
      * Calling this method may move ExcerptTailer to the specified cycle and release its store.
      *
+     * @param cycle cycle to inspect
      * @return the exact number of excerpts in a cycle.
      */
     default long excerptsInCycle(int cycle) {

@@ -315,23 +315,22 @@ public class ChronicleHistoryReader implements HistoryReader, Closeable {
     private void printPercentilesSummary() {
         // we should also consider the case where >1 output messages are from 1 incoming
 
-        if (histos.size() == 0) {
+        if (histos.isEmpty()) {
             messageSink.accept("No data");
             return;
         }
-        int counter = 0;
         messageSink.accept("Timings below in " + timeUnit.name());
         final StringBuilder sb = new StringBuilder("sourceId        ");
         histos.forEach((id, histogram) -> sb.append(String.format("%12s ", id)));
         messageSink.accept(sb.toString());
         messageSink.accept("count:  " + count());
-        messageSink.accept("50:     " + percentiles(counter++));
-        messageSink.accept("90:     " + percentiles(counter++));
-        messageSink.accept("99:     " + percentiles(counter++));
-        messageSink.accept("99.9:   " + percentiles(counter++));
-        messageSink.accept("99.99:  " + percentiles(counter++));
-        messageSink.accept("99.999: " + percentiles(counter++));
-        messageSink.accept("99.9999:" + percentiles(counter++));
+        messageSink.accept("50:     " + percentiles(0));
+        messageSink.accept("90:     " + percentiles(1));
+        messageSink.accept("99:     " + percentiles(2));
+        messageSink.accept("99.9:   " + percentiles(3));
+        messageSink.accept("99.99:  " + percentiles(4));
+        messageSink.accept("99.999: " + percentiles(5));
+        messageSink.accept("99.9999:" + percentiles(6));
         messageSink.accept("worst:  " + percentiles(-1));
     }
 

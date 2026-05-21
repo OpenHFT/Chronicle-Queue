@@ -94,7 +94,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     private void assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
         try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
              final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
-//            System.out.println(destinationQueue.dump());
+            // System.out.println(destinationQueue.dump());
             /*
              * Normalise destination EOFs first
              *
@@ -137,7 +137,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         @Override
         public void run() {
-//            LOGGER.info("Starting copier...");
+            // LOGGER.info("Starting copier...");
             try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
                  final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
@@ -148,7 +148,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     long index;
                     while (true) {
                         buffer.clear();
-                        index = sourceTailer.index();
                         if (!sourceTailer.readBytes(buffer)) {
                             break;
                         }
@@ -175,7 +174,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     }
                 }
             }
-//            LOGGER.info("Copier finished");
+            // LOGGER.info("Copier finished");
         }
     }
 

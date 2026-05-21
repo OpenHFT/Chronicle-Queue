@@ -140,12 +140,12 @@ public class ReadWriteTest extends QueueTestCommon {
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(true)
-                .build()) {
+                .build();
+             ExcerptTailer tailer = out.createTailer()) {
 
             assertTrue("Should have waited for more than 200ms. Actual wait: " + (System.currentTimeMillis() - startTimeMillis.get()) + " ms",
                     System.currentTimeMillis() - startTimeMillis.get() >= 200);
 
-            ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
             long index = tailer.index();
             assertNotEquals(0, index);

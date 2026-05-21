@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -11,17 +10,20 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RequiredForClient
 public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
 
     @SuppressWarnings("PMD.UnusedAssignment") // written by appender thread, consumed by tailer thread
     private volatile long lastWrittenIndex = Long.MIN_VALUE;
+    private volatile boolean stop = false;
 
     @Override
     @Before
@@ -46,47 +48,41 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
                 try (ExcerptAppender excerptAppender = x.createAppender()) {
                     for (long i = 0; i < 1_000_000; i++) {
                         try (DocumentContext dc = excerptAppender.writingDocument()) {
-                            dc.wire().getValueOut().int64(i);
+                            dc.wire().write("data").int64(i);
                         }
-                        lastWrittenIndex = excerptAppender.lastIndexAppended();
+                        lastWrittenIndex = excerptAppender.lastIndexAppended(); // NOPMD.UnusedAssignment - polled by tailer thread
                         if (Thread.currentThread().isInterrupted())
                             return null;
                     }
+                    stop = true;
                 }
                 return null;
             });
 
-            ExecutorService e2 = newSingleThreadExecutor(new NamedThreadFactory("e2"));
-            Future<Void> f2 = e2.submit(() -> {
-                try (ExcerptTailer tailer = x.createTailer()) {
+            long start = System.currentTimeMillis();
+            try (ExcerptTailer tailer = x.createTailer()) {
 
-                    for (; ; ) {
-                        long i = lastWrittenIndex;
-                        if (i != Long.MIN_VALUE)
-                            if (!tailer.moveToIndex(i))
-                                throw new ExecutionException("non atomic, index=" + Long.toHexString(i), null);
-                        if (Thread.currentThread().isInterrupted())
-                            return null;
+                for (; ; ) {
+                    boolean stop = this.stop;
+                    long i = lastWrittenIndex;
+                    if (i != Long.MIN_VALUE) {
+                        if (!tailer.moveToIndex(i))
+                            throw new ExecutionException("non atomic, index=" + Long.toHexString(i), null);
+                        if (stop)
+                            break;
                     }
+                    if (Thread.currentThread().isInterrupted())
+                        break;
+                    if (System.currentTimeMillis() - start > 10_000)
+                        fail("Timeout waiting for tailer to see index " + Long.toHexString(i));
                 }
-            });
-
-            try {
-                f2.get(Jvm.isCodeCoverage() ? 20 : 5, TimeUnit.SECONDS);
-            } catch (TimeoutException ignore) {
-
             }
 
             e1.shutdown();
-            e2.shutdown();
 
             if (!e1.awaitTermination(1, TimeUnit.SECONDS)) {
                 e1.shutdownNow();
             }
-            if (!e2.awaitTermination(1, TimeUnit.SECONDS)) {
-                e2.shutdownNow();
-            }
         }
-        assertTrue(true); // if we got here without an exception, the test passes
     }
 }

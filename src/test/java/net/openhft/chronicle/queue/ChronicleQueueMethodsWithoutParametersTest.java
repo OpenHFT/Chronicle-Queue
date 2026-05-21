@@ -25,7 +25,7 @@ public class ChronicleQueueMethodsWithoutParametersTest extends QueueTestCommon 
             SomeListener someListener = queue.methodWriter(SomeListener.class);
 
             SomeManager someManager = new SomeManager();
-            MethodReader reader = queue.createTailer()
+            final MethodReader reader = queue.createTailer()
                     .methodReader(someManager);
 
             Jvm.debug().on(getClass(), "Writing to queue");

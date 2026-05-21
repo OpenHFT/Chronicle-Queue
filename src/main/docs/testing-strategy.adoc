@@ -1,0 +1,116 @@
+= Chronicle Queue Testing Strategy
+:toc:
+:sectnums:
+:lang: en-GB
+:toclevels: 2
+:doctype: book
+:source-highlighter: rouge
+
+This document describes the testing strategy for Chronicle Queue.
+It explains how unit, integration and performance tests validate the requirements in `project-requirements.adoc` and the decisions in `decision-log.adoc`, and how new tests should be designed to maintain those guarantees.
+
+== Objectives
+
+Testing for Chronicle Queue aims to:
+
+* verify the core functional requirements (`QUEUE-FN-*`) such as durable appends, ordered tailing, random access and builder configuration;
+* exercise non-functional requirements (`QUEUE-NF-*`) around performance, durability, operability and security boundaries;
+* detect regressions when internal structures (for example tiered indices or roll-cycle handling) evolve;
+* ensure that off-heap resources and memory-mapped files are released deterministically.
+
+Tests are organised by type, with increasing scope and cost.
+
+== Unit Tests
+
+Unit tests focus on individual classes and small collaborations within a single JVM.
+Typical responsibilities include:
+
+* basic append and tail behaviour for small queues;
+* roll-cycle transitions at boundaries (for example end of hour or day);
+* index creation, update and simple seeks within a roll file;
+* builder validation for configuration options and preconditions;
+* simple error cases such as invalid paths or unsupported combinations of settings.
+
+Patterns:
+
+* use temporary directories for queue data and ensure they are cleaned up after tests;
+* use small roll cycles in tests (for example minute-based) to exercise multiple roll events quickly;
+* check that exceptions are deterministic and messages are informative when configuration is invalid.
+
+== Integration Tests
+
+Integration tests validate behaviour across multiple classes and, where practical, across restarts and multiple threads.
+Areas covered include:
+
+* producer-consumer scenarios with one or more writer threads and multiple tailers;
+* crash-recovery simulations where a queue is written, the process is terminated and a new process reopens the directory;
+* concurrent access patterns that use separate appender and tailer instances in different threads;
+* compatibility across roll boundaries and across minor version changes where file formats remain stable.
+
+Recommended practices:
+
+* use Chronicle-Test-Framework support classes (for example `assertReferencesReleased`) to ensure off-heap resources and file handles are released once queues are closed;
+* structure tests so that they can be run repeatedly without manual clean-up;
+* where tests depend on timing or delays, allow generous margins and avoid relying on wall-clock timing alone.
+
+== Performance and Benchmark Tests
+
+Performance tests validate `QUEUE-NF-P-*` requirements and provide early warning when changes impact latency or throughput.
+These are typically implemented as:
+
+* micro-benchmarks using JMH or JLBH harnesses for append-plus-tail microbenchmarks;
+* macro-level tests that write and read larger volumes of data to evaluate sustained throughput and tail latency;
+* experiments documented in `performance.adoc`.
+
+Principles:
+
+* keep performance tests separate from fast unit tests; they may require dedicated hardware and are often run manually or in specialised CI jobs;
+* record benchmark configurations and results to allow comparison across versions;
+* avoid embedding hard latency numbers in assertions; instead, compare against baselines and investigate significant deviations.
+
+== Testing Specific Requirements
+
+=== Functional Requirements (QUEUE-FN-*)
+
+* `QUEUE-FN-001` (append-only durability):
+** tests should append messages, close the queue, reopen it and verify that all acknowledged messages are present in order;
+** crash-recovery tests may simulate abrupt termination between appends and reopen the queue to ensure no partial messages are exposed.
+* `QUEUE-FN-002` (tailers with independent positions):
+** tests should create multiple tailers over the same queue, advance them independently and confirm that each sees the expected sequence of messages.
+* `QUEUE-FN-003` (random access by index):
+** tests should store indices at which key messages were written, then seek back to them and verify that the right messages are returned.
+* `QUEUE-FN-004` and `QUEUE-FN-005` (builder configuration and Wire integration):
+** tests should exercise different builder configurations and use Chronicle-Wire marshalling over queues for end-to-end verification.
+
+=== Non-Functional Requirements (QUEUE-NF-*)
+
+* `QUEUE-NF-P-*` (performance):
+** benchmark tests should report median and tail latencies and throughput, and compare them against documented targets;
+** where possible, tests should be run under realistic load and hardware configurations.
+* `QUEUE-NF-S-*` (security-related behaviour):
+** tests should verify that corruption is not introduced by out-of-bounds writes and that queue structures can be opened and scanned safely, relying on Chronicle-Bytes safety guarantees;
+** additional tests should validate the documented encryption boundary by ensuring that applying external or application-level encryption does not break queue semantics.
+* `QUEUE-NF-O-*` (operability):
+** tests should confirm that system properties in `system-properties.adoc` have the documented effects (for example enabling warnings or consistency checks).
+
+== Resource Management and Leak Detection
+
+Chronicle Queue uses off-heap memory and memory-mapped files via Chronicle-Bytes.
+To avoid leaks:
+
+* tests should close queues, appenders and tailers via try-with-resources where possible;
+* Chronicle-Test-Framework utilities (for example `assertReferencesReleased`) should be used in modules that depend on it to confirm that all off-heap resources are released after tests;
+* tests that intentionally leave queues open (for example crash-recovery simulations) should document this and clean up files afterwards.
+
+== Adding New Tests
+
+When implementing new features or changing existing behaviour:
+
+* identify the affected requirements in `project-requirements.adoc` and, where appropriate, add or update requirement entries;
+* design tests that:
+** exercise normal behaviour and edge cases;
+** cover interactions with roll cycles and indexing;
+** validate behaviour across restart and under concurrent access where relevant;
+* keep unit tests fast and deterministic; move long-running scenarios into dedicated integration or performance tests.
+
+Tests should be kept as self-documenting as possible, with clear method names and minimal inline commentary that explains non-obvious invariants or requirements.

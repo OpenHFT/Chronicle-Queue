@@ -292,35 +292,36 @@ public class RollingCycleTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private static class TestBytesMarshallable implements WriteBytesMarshallable, ReadBytesMarshallable {
         @Nullable
-        String _name;
-        long _value1;
-        long _value2;
-        long _value3;
+        String name;
+        long value1;
+        long value2;
+        long value3;
 
         TestBytesMarshallable(int i) {
             final Random rand = new Random(i);
-            _name = "name_" + rand.nextInt();
-            _value1 = rand.nextLong();
-            _value2 = rand.nextLong();
-            _value3 = rand.nextLong();
+            name = "name_" + rand.nextInt();
+            value1 = rand.nextLong();
+            value2 = rand.nextLong();
+            value3 = rand.nextLong();
         }
 
         @Override
         public void writeMarshallable(@NotNull BytesOut<?> bytes) {
-            bytes.writeUtf8(_name);
-            bytes.writeLong(_value1);
-            bytes.writeLong(_value2);
-            bytes.writeLong(_value3);
+            bytes.writeUtf8(name);
+            bytes.writeLong(value1);
+            bytes.writeLong(value2);
+            bytes.writeLong(value3);
         }
 
         @Override
         public void readMarshallable(@NotNull BytesIn<?> bytes) throws IORuntimeException {
-            _name = bytes.readUtf8();
-            _value1 = bytes.readLong();
-            _value2 = bytes.readLong();
-            _value3 = bytes.readLong();
+            name = bytes.readUtf8();
+            value1 = bytes.readLong();
+            value2 = bytes.readLong();
+            value3 = bytes.readLong();
         }
     }
 }

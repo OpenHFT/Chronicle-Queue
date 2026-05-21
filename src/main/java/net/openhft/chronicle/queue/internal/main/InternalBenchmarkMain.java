@@ -32,13 +32,9 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class InternalBenchmarkMain {
     static volatile boolean running = true;
-    static int throughput = Integer.getInteger("throughput", 250); // MB/s
-    static int runtime = Integer.getInteger("runtime", 300); // seconds
-    static String basePath = System.getProperty("path", OS.TMP);
-    static volatile long readerLoopTime = 0;
-    static volatile long readerEndLoopTime = 0;
-    static int counter = 0;
-
+    static final int throughput = Integer.getInteger("throughput", 250); // MB/s
+    static final int runtime = Integer.getInteger("runtime", 300); // seconds
+    static final String basePath = System.getProperty("path", OS.TMP);
     static {
         System.setProperty("jvm.safepoint.enabled", "true");
     }
@@ -131,7 +127,7 @@ public class InternalBenchmarkMain {
 //                long rlt = readerLoopTime;
 //                long delay = System.nanoTime() - rlt;
                 System.out.println("diff=" + diff /* +" delay= " + delay*/);
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder(128);
                 sb.append("Reader: profile of the thread");
                 Jvm.trimStackTrace(sb, reader.getStackTrace());
                 System.out.println(sb);
@@ -170,8 +166,6 @@ public class InternalBenchmarkMain {
      */
     private static void runInner(Histogram transportTime, Histogram readTime, ExcerptTailer tailer) {
         Jvm.safepoint();
-        Jvm.safepoint();
-        counter = 0;
         try (DocumentContext dc = tailer.readingDocument(false)) {
             Jvm.safepoint();
             if (!dc.isPresent()) {

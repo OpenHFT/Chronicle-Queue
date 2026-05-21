@@ -26,6 +26,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @return this store
      */
     @NotNull
+    @Deprecated(/* to be removed in 2027 */)
     WireStore writePosition(long position);
 
     /**
@@ -43,6 +44,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @return {@link ScanResult} indicating the result of the move operation
      */
     @Nullable
+    @Deprecated(/* to be removed in 2027 */)
     ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index);
 
     /**
@@ -52,6 +54,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @return {@link ScanResult} indicating the result of the move operation
      */
     @Nullable
+    @Deprecated(/* to be removed in 2027 */)
     ScanResult moveToStartForRead(@NotNull ExcerptContext ec);
 
     /**
@@ -64,6 +67,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @throws UnrecoverableTimeoutException if the operation times out
      * @throws StreamCorruptedException      if the stream is corrupted
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws StreamCorruptedException;
 
     /**
@@ -75,6 +79,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @throws UnrecoverableTimeoutException if the operation times out
      * @throws StreamCorruptedException if the stream is corrupted
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws StreamCorruptedException;
 
     /**
@@ -84,6 +89,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @param timeoutMS the timeout for the write operation in milliseconds
      * @return {@code true} if the EOF was successfully written, {@code false} otherwise
      */
+    @Deprecated(/* to be removed in 2027 */)
     boolean writeEOF(Wire wire, long timeoutMS);
 
     /**
@@ -104,6 +110,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @param knownAddress the known address to start scanning from
      * @return {@link ScanResult} indicating the result of the scan
      */
+    @Deprecated(/* to be removed in 2027 */)
     ScanResult linearScanTo(long index, long knownIndex, ExcerptContext ec, long knownAddress);
 
     /**
@@ -112,6 +119,7 @@ public interface WireStore extends CommonStore, Closeable {
      * @param w the {@link Wire} to use for the operation
      * @return the position at the end of the store
      */
+    @Deprecated(/* to be removed in 2027 */)
     long moveToEndForRead(@NotNull Wire w);
 
     /**
@@ -119,6 +127,7 @@ public interface WireStore extends CommonStore, Closeable {
      *
      * @param wire the {@link Wire} to initialize the index for
      */
+    @Deprecated(/* to be removed in 2027 */)
     void initIndex(Wire wire);
 
     /**
@@ -126,6 +135,7 @@ public interface WireStore extends CommonStore, Closeable {
      *
      * @return a string representation of the store header
      */
+    @Deprecated(/* to be removed in 2027 */)
     String dumpHeader();
 
     /**
@@ -133,5 +143,6 @@ public interface WireStore extends CommonStore, Closeable {
      *
      * @return the data version
      */
+    @Deprecated(/* to be removed in 2027 */)
     int dataVersion();
 }

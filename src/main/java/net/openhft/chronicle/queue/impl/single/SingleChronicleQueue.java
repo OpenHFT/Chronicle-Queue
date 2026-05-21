@@ -33,9 +33,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.ZoneId;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +77,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
+    private static final SecureRandom TIMEOUT_RANDOM = new SecureRandom();
 
     @NotNull
     protected final EventLoop eventLoop;
@@ -157,9 +161,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
             isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
             path = builder.path();
-            if (!builder.readOnly())
-                //noinspection ResultOfMethodCallIgnored
-                path.mkdirs();
+            if (!builder.readOnly()) {
+                if (!path.exists() && !path.mkdirs() && !path.exists()) {
+                    Jvm.warn().on(getClass(), "Unable to create queue directory " + path.getAbsolutePath());
+                }
+            }
             fileAbsolutePath = path.getAbsolutePath();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
@@ -173,7 +179,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             time = builder.timeProvider();
             pauserSupplier = builder.pauserSupplier();
             // add a 20% random element to make it less likely threads will timeout at the same time.
-            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * new SecureRandom().nextFloat())); // Not time critical
+            timeoutMS = (long) (builder.timeoutMS() * (1 + 0.2 * TIMEOUT_RANDOM.nextFloat())); // Not time critical
             storeFactory = builder.storeFactory();
             checkInterrupts = builder.checkInterrupts();
             metaStore = builder.metaStore();
@@ -525,6 +531,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @return the chunk count
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public long chunkCount() {
         return chunkCount[0];
     }
@@ -626,11 +633,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @return the StoreFileListener
      */
+    @Deprecated(/* to be removed in 2027 */)
     protected StoreFileListener storeFileListener() {
         return storeFileListener;
     }
 
     // used by enterprise CQ
+    @Deprecated(/* to be removed in 2027 */)
     WireStoreSupplier storeSupplier() {
         return storeSupplier;
     }
@@ -643,6 +652,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @SuppressWarnings("deprecation")
     @NotNull
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public ExcerptAppender acquireAppender() {
         return ThreadLocalAppender.acquireThreadLocalAppender(this);
     }
@@ -1087,6 +1097,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return an array of file names in the directory, or null if an error occurs
      */
     @Nullable
+    @Deprecated(/* to be removed in 2027 */)
     String[] getList() {
         return path.list();
     }
@@ -1252,6 +1263,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param storeTailer the StoreTailer to remove
      */
+    @Deprecated(/* to be removed in 2027 */)
     void removeCloseListener(final StoreTailer storeTailer) {
         synchronized (closers) {
             closers.remove(storeTailer);
@@ -1320,6 +1332,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @param key the key for the entry in the table store
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public long tableStoreGet(CharSequence key) {
         LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
         if (longValue == null) return Long.MIN_VALUE;
@@ -1483,7 +1496,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
                     String s = Long.toHexString(pos);
                     System.err.println("pos=" + s);
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(Files.newInputStream(Paths.get("/proc/self/maps")), StandardCharsets.UTF_8))) {
                         for (String line; (line = br.readLine()) != null; )
                             if (line.contains(".cq4"))
                                 System.err.println(line);
@@ -1579,8 +1593,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         private void createFile(final File path) {
             try {
                 File dir = path.getParentFile();
-                if (!dir.exists())
-                    dir.mkdirs();
+                if (!dir.exists() && !dir.mkdirs() && !dir.exists()) {
+                    Jvm.warn().on(getClass(), "Unable to create directory " + dir.getAbsolutePath());
+                    return;
+                }
 
                 if (!path.createNewFile()) {
                     Jvm.warn().on(getClass(), "unable to create a file at " + path.getAbsolutePath());

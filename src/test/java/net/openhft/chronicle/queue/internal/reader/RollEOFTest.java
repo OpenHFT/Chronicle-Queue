@@ -36,6 +36,7 @@ import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
@@ -68,16 +69,14 @@ public class RollEOFTest extends QueueTestCommon {
     public void testRollWritesEOF() throws IOException {
         assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
 
-//        expectException("Overriding roll length from existing metadata");
-//        expectException("Overriding roll cycle from");
+        // expectException("Overriding roll length from existing metadata");
+        // expectException("Overriding roll cycle from");
 
         final File path = getTmpDir();
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DAY_OF_MONTH, -1);
-            timeProvider.currentTimeMillis(cal.getTimeInMillis());
+            timeProvider.currentTimeMillis(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1));
             createQueueAndWriteData(timeProvider, path);
             assertEquals(1, getNumberOfQueueFiles(path));
 
@@ -99,53 +98,23 @@ public class RollEOFTest extends QueueTestCommon {
     public void testRollWithoutEOFDoesntBlowup() throws IOException {
         assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
 
-//        expectException("Overriding roll length from existing metadata");
-//        expectException("Overriding roll cycle from");
-
-        final File path = getTmpDir();
-        try {
-            path.mkdirs();
-            final SetTimeProvider timeProvider = new SetTimeProvider();
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DAY_OF_MONTH, -1);
-            timeProvider.currentTimeMillis(cal.getTimeInMillis());
-            createQueueAndWriteData(timeProvider, path);
-            assertEquals(1, getNumberOfQueueFiles(path));
-
-            // adjust time
-            timeProvider.currentTimeMillis(System.currentTimeMillis());
-            createQueueAndWriteData(timeProvider, path);
-            assertEquals(2, getNumberOfQueueFiles(path));
-
-            Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
-
-            assertTrue(firstQueueFile.isPresent());
-
-            // remove EOF from first file
-            removeEOF(firstQueueFile.get());
-
-            List<String> l = new LinkedList<>();
-            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).execute();
-            // 2 entries per message
-            assertEquals(4, l.size());
-        } finally {
-
-            IOTools.deleteDirWithFiles(path, 20);
-        }
+        runRollWithoutEOF(-TimeUnit.DAYS.toMillis(1), true);
     }
 
     @Test(timeout = 5000L)
     public void testRollWithoutEOF() throws IOException {
-//        expectException("Overriding roll length from existing metadata");
-//        expectException("Overriding roll cycle from");
+        // expectException("Overriding roll length from existing metadata");
+        // expectException("Overriding roll cycle from");
 
+        runRollWithoutEOF(-TimeUnit.DAYS.toMillis(3), false);
+    }
+
+    private void runRollWithoutEOF(long initialOffsetMillis, boolean readOnly) throws IOException {
         final File path = getTmpDir();
         try {
             path.mkdirs();
             final SetTimeProvider timeProvider = new SetTimeProvider();
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DAY_OF_MONTH, -3);
-            timeProvider.currentTimeMillis(cal.getTimeInMillis());
+            timeProvider.currentTimeMillis(System.currentTimeMillis() + initialOffsetMillis);
             createQueueAndWriteData(timeProvider, path);
             assertEquals(1, getNumberOfQueueFiles(path));
 
@@ -162,11 +131,14 @@ public class RollEOFTest extends QueueTestCommon {
             removeEOF(firstQueueFile.get());
 
             List<String> l = new LinkedList<>();
-            new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath()).withReadOnly(false).execute();
+            ChronicleReader reader = new ChronicleReader().withMessageSink(l::add).withBasePath(path.toPath());
+            if (!readOnly) {
+                reader.withReadOnly(false);
+            }
+            reader.execute();
             // 2 entries per message
             assertEquals(4, l.size());
         } finally {
-
             IOTools.deleteDirWithFiles(path, 20);
         }
     }

@@ -20,6 +20,7 @@ public interface Indexing {
      *
      * @return the number of entries between each index.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     int indexCount();
 
     /**
@@ -28,6 +29,7 @@ public interface Indexing {
      *
      * @return the spacing between indexed entries.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     int indexSpacing();
 
     /**
@@ -35,6 +37,7 @@ public interface Indexing {
      *
      * @return the index of the next entry to be indexed.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     long nextEntryToBeIndexed();
 
     /**
@@ -43,6 +46,7 @@ public interface Indexing {
      * @param index The index to check.
      * @return {@code true} if the index is eligible for indexing, otherwise {@code false}.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     boolean indexable(long index);
 
     /**
@@ -56,6 +60,7 @@ public interface Indexing {
      * @return the sequence number of the last excerpt in the cycle.
      * @throws StreamCorruptedException if the index is corrupted.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     long lastSequenceNumber(ExcerptContext ex) throws StreamCorruptedException;
 
     /**
@@ -63,6 +68,7 @@ public interface Indexing {
      *
      * @return the number of linear scans performed.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     int linearScanCount();
 
     /**
@@ -70,5 +76,6 @@ public interface Indexing {
      *
      * @return the number of position-based linear scans.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     int linearScanByPositionCount();
 }

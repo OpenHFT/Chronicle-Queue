@@ -80,7 +80,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         Constructor<?> co;
         try {
-            co = ((Class<?>) Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue")).getDeclaredConstructors()[0];
+            co = Class.forName("software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue").getDeclaredConstructors()[0];
             Jvm.setAccessible(co);
         } catch (Exception e) {
             co = null;
@@ -197,6 +197,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
             result.path(file.getParentFile());
         } else {
+            if ("".equals(file.toString())) {
+                Jvm.warn().on(SingleChronicleQueueBuilder.class,
+                        "Using the current directory for the queue. It is recommended to specify a dedicated directory.");
+                file = new File(".");
+            }
             result.path(file);
         }
         return result;
@@ -513,6 +518,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param rollTime the roll time to set
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime) {
         rollTime(rollTime, rollTimeZone);
         return this;
@@ -666,11 +672,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     private File metapath() {
         final File storeFilePath;
-        if ("".equals(path.getPath())) {
+        if (path.getPath().isEmpty()) {
             storeFilePath = new File(QUEUE_METADATA_FILE);
         } else {
             storeFilePath = new File(path, QUEUE_METADATA_FILE);
-            path.mkdirs();
+            if (!path.exists() && !path.mkdirs() && !path.exists()) {
+                Jvm.warn().on(getClass(), "Unable to create queue directory " + path.getAbsolutePath());
+            }
         }
         return storeFilePath;
     }
@@ -727,6 +735,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param spec the offset specification to apply
      * @return this builder for chaining
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public SingleChronicleQueueBuilder queueOffsetSpec(@NotNull QueueOffsetSpec spec) {
         this.queueOffsetSpec = spec;
         spec.apply(this);
@@ -797,6 +806,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param pretouchIntervalMillis the interval in milliseconds between preload operations
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder enablePreloader(final long pretouchIntervalMillis) {
         this.pretouchIntervalMillis = pretouchIntervalMillis;
         return this;
@@ -1131,6 +1141,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param ringBufferForceCreateReader true to force reader creation, false otherwise
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder ringBufferForceCreateReader(boolean ringBufferForceCreateReader) {
         this.ringBufferForceCreateReader = ringBufferForceCreateReader;
         return this;
@@ -1150,6 +1161,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param ringBufferReopenReader true to reopen readers at the same position, false otherwise
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder ringBufferReopenReader(boolean ringBufferReopenReader) {
         this.ringBufferReopenReader = ringBufferReopenReader;
         return this;
@@ -1212,6 +1224,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param ringBufferPauserSupplier the supplier of {@link Pauser} for the ring buffer
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027 */)
     public SingleChronicleQueueBuilder ringBufferPauserSupplier(Supplier<Pauser> ringBufferPauserSupplier) {
         this.ringBufferPauserSupplier = ringBufferPauserSupplier;
         return this;
@@ -1533,6 +1546,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param forceDirectoryListingRefreshIntervalMs the interval to set
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public SingleChronicleQueueBuilder forceDirectoryListingRefreshIntervalMs(long forceDirectoryListingRefreshIntervalMs) {
         this.forceDirectoryListingRefreshIntervalMs = forceDirectoryListingRefreshIntervalMs;
         return this;
@@ -1603,6 +1617,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param appenderListener the listener to call when an excerpt is written
      * @return the current builder instance for method chaining
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public SingleChronicleQueueBuilder appenderListener(AppenderListener appenderListener) {
         this.appenderListener = appenderListener;
         return this;

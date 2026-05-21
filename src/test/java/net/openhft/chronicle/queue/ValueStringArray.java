@@ -22,7 +22,7 @@ public class ValueStringArray extends SelfDescribingMarshallable {
         CharSequence getCharSequence();
     }
 
-    private CharSequenceArray csArr = Values.newHeapInstance(CharSequenceArray.class);
+    private final CharSequenceArray csArr = Values.newHeapInstance(CharSequenceArray.class);
 
     public CharSequenceArray getCsArr() {
         return csArr;

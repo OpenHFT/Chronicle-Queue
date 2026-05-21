@@ -929,8 +929,7 @@ class StoreTailer extends AbstractCloseable
      * @return The {@link ScanResult} indicating whether the move was successful or not.
      */
     ScanResult moveToIndexResult(final long index) {
-        final ScanResult scanResult = moveToIndexResult0(index);
-        return scanResult;
+        return moveToIndexResult0(index);
     }
 
     /**
@@ -1110,13 +1109,13 @@ class StoreTailer extends AbstractCloseable
         final Wire wire2 = wireType.apply(bytes);
         wire2.usePadding(s.dataVersion() > 0);
         final Wire wire = readAnywhere(wire2);
-        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wire);
+        assert !QueueSystemProperties.checkIndex() || headerNumberCheck(wire);
         this.context.wire(wire);
         wire.parent(this);
 
         final Wire wireForIndexOld = wireForIndex;
         wireForIndex = readAnywhere(wireType.apply(s.bytes()));
-        assert !QueueSystemProperties.CHECK_INDEX || headerNumberCheck(wireForIndex);
+        assert !QueueSystemProperties.checkIndex() || headerNumberCheck(wireForIndex);
         assert wire != wireForIndexOld;
 
         if (wireForIndexOld != null) {
@@ -1447,6 +1446,8 @@ class StoreTailer extends AbstractCloseable
                     seq -= seq % rollCycle.defaultIndexSpacing();
                 }
                 break;
+            default:
+                throw new IllegalStateException("Unsupported direction " + direction);
         }
         index0(rollCycle.toIndex(cycle, seq));
 
@@ -1824,7 +1825,7 @@ class StoreTailer extends AbstractCloseable
             if (rollbackIfNeeded())
                 return;
 
-            if (isPresent() && !isMetaData())
+            if (isData())
                 incrementIndex();
 
             super.close();

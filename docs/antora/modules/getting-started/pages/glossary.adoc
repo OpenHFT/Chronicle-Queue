@@ -13,7 +13,7 @@ author: Julia Gustafsson
 [#d]
 == D
 
-* *Document:* Chronicle Queue reads and writes documents.Each document comprises a 4-byte header, followed by the data excerpt.
+* *Document:* Chronicle Queue reads and writes documents. Each document comprises a 4-byte header, followed by the data excerpt.
 
 [#e]
 == E

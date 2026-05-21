@@ -38,7 +38,7 @@ public class WriteBytesTest extends QueueTestCommon {
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
 
-            ExcerptTailer tailer = queue.createTailer();
+            final ExcerptTailer tailer = queue.createTailer();
 
             outgoingMsgBytes[0] = 'A';
             outgoingBytes.write(outgoingMsgBytes);

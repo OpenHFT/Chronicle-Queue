@@ -40,6 +40,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the {@code SingleChronicleQueueStore} for the given cycle, or {@code null} if the store doesn't exist and {@code createIfAbsent} is false.
      */
     @Nullable
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);
 
     /**
@@ -54,6 +55,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      *
      * @return the last cycle number, or {@code Integer.MIN_VALUE} if no cycles are found.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     int lastCycle();
 
     /**
@@ -72,6 +74,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the next available cycle, or {@code -1} if there is no next cycle.
      * @throws ParseException if there is an error parsing the cycle data.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
 
     /**
@@ -92,6 +95,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @throws java.lang.IllegalStateException if the cycle of {@code fromIndex} or {@code toIndex} can
      *                                         not be ascertained
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     long countExcerpts(long fromIndex, long toIndex);
 
     /**

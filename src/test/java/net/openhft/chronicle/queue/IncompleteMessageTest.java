@@ -18,7 +18,7 @@ import static org.junit.Assert.assertFalse;
 
 public class IncompleteMessageTest extends QueueTestCommon {
     @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
+    public final TemporaryFolder tmpDir = new TemporaryFolder();
 
     @Test
     public void incompleteMessageShouldBeSkipped() {
