@@ -44,7 +44,7 @@ To write to the queue you can call a proxy which implements this interface.
 ----
 SingleChronicleQueue queue1 = ChronicleQueue.singleBuilder(path).build();
 
-MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
+MessageListener writer1 = queue1.createAppender().methodWriter(MessageListener.class);
 
 // call method on the interface to send messages
 writer1.method1(new Message1("hello"));

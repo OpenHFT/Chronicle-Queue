@@ -461,7 +461,7 @@ ${java.io.tmpdir}/getting-started/{today}.cq4
 [source,java]
 ----
 // Obtains an ExcerptAppender
-ExcerptAppender appender = queue.acquireAppender();
+ExcerptAppender appender = queue.createAppender();
 
 // Writes: {msg: TestMessage}
 appender.writeDocument(w -> w.write("msg").text("TestMessage"));
@@ -505,7 +505,7 @@ queue.close();
 ----
 try (ChronicleQueue queue = SingleChronicleQueueBuilder.single("queue-dir").build()) {
     // Obtain an ExcerptAppender
-    ExcerptAppender appender = queue.acquireAppender();
+    ExcerptAppender appender = queue.createAppender();
 
     // Writes: {msg: TestMessage}
     appender.writeDocument(w -> w.write("msg").text("TestMessage"));
@@ -553,12 +553,12 @@ try (ChronicleQueue minuteRollCycleQueue = ChronicleQueue.singleBuilder(queueDir
     // Creates a queue with roll-cycle HOURLY
     try (ChronicleQueue hourlyRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(HOURLY).build()) {
 
-        try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
+        try (DocumentContext documentContext = hourlyRollCycleQueue.createAppender().writingDocument()) {
             documentContext.wire().write("somekey").text("somevalue");
         }
     }
     // Now try to append using the queue configured with roll-cycle MINUTELY
-    try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
+    try (DocumentContext documentContext2 = minuteRollCycleQueue.createAppender().writingDocument()) {
         documentContext2.wire().write("otherkey").text("othervalue");
     }
 }
@@ -702,7 +702,7 @@ To write data to a Chronicle Queue, you must first create an appender:
 [source,java]
 ----
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder(path + "/trades").build()) {
-   final ExcerptAppender appender = queue.acquireAppender();
+   final ExcerptAppender appender = queue.createAppender();
 }
 ----
 
@@ -1328,7 +1328,7 @@ To write to the queue you can call a proxy which implements this interface.
 ----
 SingleChronicleQueue queue1 = ChronicleQueue.singleBuilder(path).build();
 
-MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
+MessageListener writer1 = queue1.createAppender().methodWriter(MessageListener.class);
 
 // call method on the interface to send messages
 writer1.method1(new Message1("hello"));
@@ -1396,7 +1396,7 @@ ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
         .sourceId(1)
         .build();
 
-SidedMarketDataListener combiner = out.acquireAppender()
+SidedMarketDataListener combiner = out.createAppender()
         .methodWriterBuilder(SidedMarketDataListener.class)
         .get();
 
@@ -1445,10 +1445,10 @@ Chronicle Queue appenders are thread-local.
 In fact when you ask for:
 
 ----
-final ExcerptAppender appender = queue.acquireAppender();
+final ExcerptAppender appender = queue.createAppender();
 ----
 
-the `acquireAppender()` uses a thread-local pool to give you an appender which will be reused to reduce object creation.
+the `createAppender()` uses a thread-local pool to give you an appender which will be reused to reduce object creation.
 As such, the method call to:
 
 ----
@@ -1491,7 +1491,7 @@ The following example shows how to write 10 messages, then move to the 5th messa
 public void read5thMessageTest() {
     try (final ChronicleQueue queue = singleBuilder(getTmpDir()).build()) {
 
-        final ExcerptAppender appender = queue.acquireAppender();
+        final ExcerptAppender appender = queue.createAppender();
 
         int i = 0;
         for (int j = 0; j < 10; j++) {
