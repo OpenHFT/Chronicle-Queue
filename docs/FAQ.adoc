@@ -255,7 +255,7 @@ Chronicle has three types of excerpt, each optimised for different purposes.
 ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build();
 
 // For sequential writes
-ExcerptAppender appender = queue.acquireAppender(); // sequential writes.
+ExcerptAppender appender = queue.createAppender(); // sequential writes.
 
 // For sequential reads ideally, but random reads/write also possible
 ExcerptTailer tailer = queue.createTailer();

@@ -89,7 +89,7 @@ Here is how you can append a simple text message containing the text "Hello Worl
 
 [source,java]
 ----
-ExcerptAppender appender = queue.acquireAppender(); #<1>
+ExcerptAppender appender = queue.createAppender(); #<1>
 
 appender.writeText("Hello World!"); #<2>
 ----
@@ -143,7 +143,7 @@ Putting these instructions together, the application looks as follows:
 String basePath = OS.getTarget() + "/getting-started"
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build()) {
 
-    ExcerptAppender appender = queue.acquireAppender();
+    ExcerptAppender appender = queue.createAppender();
     appender.writeText("TestMessage");
 
     ExcerptTailer tailer = queue.createTailer();

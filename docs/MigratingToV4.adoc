@@ -31,7 +31,7 @@ NOTE: As Chronicle Queue v3 and v4 use different packages you can use both versi
 
 As Chronicle is the name of a family of products, the interface is now called ChronicleQueue to distinguish it from ChronicleMap for example.
 
-=== createAppender() has been replaced with acquireAppender()
+=== createAppender() has been replaced with createAppender()
 
 We use the term `acquire` to indicate an object will be created only as needed.
 In this case, the method will create a new `ExcerptAppender` for each thread once.
