@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -14,6 +15,7 @@ import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
+import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
@@ -213,6 +215,8 @@ public class QueueTestCommon {
                     .map(File::getName)
                     .collect(Collectors.toSet());
 
+            drainBackgroundCleanup();
+
             currentFilesInTarget.stream()
                     .filter(fileName -> !targetAllowList.contains(fileName))
                     .forEach(fileName -> {
@@ -246,7 +250,35 @@ public class QueueTestCommon {
     protected void preAfter() {
     }
 
+    protected static void drainBackgroundCleanup() {
+        BackgroundResourceReleaser.releasePendingResources();
+        try {
+            GcControls.waitForGcCycle();
+            BackgroundResourceReleaser.releasePendingResources();
+        } catch (IllegalStateException ignored) {
+            // Explicit GC can be disabled by the test JVM; cleanup should remain best-effort.
+        }
+    }
+
+    /**
+     * Delete a test directory after draining background cleanup. Tolerates failures on Windows,
+     * where mapped files can briefly hold handles open after release.
+     */
+    protected static void deleteDirAfterCleanup(File dir) {
+        drainBackgroundCleanup();
+        try {
+            IOTools.deleteDirWithFiles(dir, 2);
+        } catch (Exception e) {
+            if (OS.isWindows()) {
+                Jvm.debug().on(QueueTestCommon.class, "Ignoring cleanup failure on Windows for " + dir, e);
+                return;
+            }
+            throw e;
+        }
+    }
+
     protected void tearDown() {
+        drainBackgroundCleanup();
         // should be able to remove tmp dirs
         tmpDirs.forEach(file -> {
             if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
