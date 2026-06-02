@@ -241,6 +241,30 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
+    @Test(timeout = 30_000)
+    public void subprocessAcquiresLockBeforeTimeout() throws InterruptedException {
+        Process process = null;
+        try (TableStoreWriteLock lock = createTestLock(tableStore, 15_000)) {
+            process = runLockingProcess(true);
+            long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
+            while (!lock.locked()) {
+                if (System.nanoTime() >= deadlineNanos)
+                    fail("Locking subprocess did not acquire the lock within 15s");
+                Jvm.pause(25);
+                if (Thread.currentThread().isInterrupted())
+                    throw new InterruptedException("Interrupted while waiting for locking subprocess");
+            }
+        } finally {
+            if (process != null) {
+                process.destroy();
+                if (!process.waitFor(3, TimeUnit.SECONDS)) {
+                    process.destroyForcibly();
+                    process.waitFor(3, TimeUnit.SECONDS);
+                }
+            }
+        }
+    }
+
     private void waitForLockToBecomeLocked(TableStoreWriteLock lock) throws TimeoutException {
         Pauser p = Pauser.balanced();
         while (!lock.locked()) {
