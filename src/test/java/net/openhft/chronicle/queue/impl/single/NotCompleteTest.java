@@ -130,13 +130,8 @@ public class NotCompleteTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(tmpDir, 2);
-            } catch (Exception e) {
-                if (e instanceof AccessDeniedException && OS.isWindows())
-                    return;
-                throw e;
-            }
+            drainBackgroundCleanup();
+            IOTools.deleteDirWithFiles(tmpDir, 2);
         }
     }
 

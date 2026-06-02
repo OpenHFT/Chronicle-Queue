@@ -143,7 +143,8 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         final Path lastRollCycle = dataDirectory.resolve(EMPTY_ROLL_CYCLE_NAME);
         // This test was flaky some small percentage of time due to some lingering file handles.
         // Ensure everything is fully cleaned up before deleting the file.
-        BackgroundResourceReleaser.releasePendingResources();
+        drainBackgroundCleanup();
+
         Files.delete(lastRollCycle);
 
         // Replace it with an empty file

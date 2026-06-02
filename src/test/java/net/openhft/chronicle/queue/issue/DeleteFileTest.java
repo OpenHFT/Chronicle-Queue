@@ -4,11 +4,11 @@
 package net.openhft.chronicle.queue.issue;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
@@ -20,7 +20,7 @@ import java.io.File;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class DeleteFileTest {
+public class DeleteFileTest extends QueueTestCommon {
     @Test
     public void testMain() {
         final long[] clock = {1730366325_000L};
@@ -48,7 +48,8 @@ public class DeleteFileTest {
                 // can't delete while in use on windows, so have to close.
                 if (!OS.isLinux())
                     tailer0.close();
-                BackgroundResourceReleaser.releasePendingResources();
+                drainBackgroundCleanup();
+
                 assertTrue(firstCycleFile.delete());
 
                 // sanity after deletion: continue reading across roll cycle
@@ -82,7 +83,7 @@ public class DeleteFileTest {
                 assertEquals("2 2 2 2 2", twoA2 + " " + twoA + " " + two0 + " " + twoB + " " + twoC);
             }
         } finally {
-            BackgroundResourceReleaser.releasePendingResources();
+            drainBackgroundCleanup();
             IOTools.deleteDirWithFilesOrThrow("queue");
         }
     }

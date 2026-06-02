@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -64,7 +63,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
                 }
             }
 
-            BackgroundResourceReleaser.releasePendingResources();
+            drainBackgroundCleanup();
 
             Assert.assertEquals(iter, acount.get());
             Assert.assertEquals(iter, qcount.get());
@@ -122,7 +121,8 @@ public class AcquireReleaseTest extends QueueTestCommon {
              // new appender created
              final ExcerptAppender appender = queue.createAppender()) {
             appender.writeText("Main thread: Hello world");
-            BackgroundResourceReleaser.releasePendingResources();
+            drainBackgroundCleanup();
+
             assertEquals(1, acount.get());
 
             stp.advanceMillis(1000L); // advance 1 cycle, so that cleanupStoreFilesWithNoData() acquires store
@@ -134,7 +134,8 @@ public class AcquireReleaseTest extends QueueTestCommon {
                 // Do nothing with it
             }
         }
-        BackgroundResourceReleaser.releasePendingResources();
+
+        drainBackgroundCleanup();
 
         assertEquals(2, acount.get());
 

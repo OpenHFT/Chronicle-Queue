@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -118,7 +117,7 @@ public final class QueueEpochTest extends QueueTestCommon {
         }
 
         int numberOfRollEvents() {
-            BackgroundResourceReleaser.releasePendingResources();
+            drainBackgroundCleanup();
             return numberOfRollEvents;
         }
 

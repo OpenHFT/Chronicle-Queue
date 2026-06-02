@@ -35,7 +35,7 @@ class MetadataDeletionTests extends QueueTestCommon {
                 appender.writeText("hello world");
             } finally {
                 // Force release of resources to ensure that they are truly released by the time we clean up metadata
-                BackgroundResourceReleaser.releasePendingResources();
+                drainBackgroundCleanup();
             }
 
             // Imagine that system has shut down, delete metadata
@@ -76,7 +76,7 @@ class MetadataDeletionTests extends QueueTestCommon {
                 appender.writeText("4");
             } finally {
                 // Force release of resources to ensure that they are truly released by the time we clean up metadata
-                BackgroundResourceReleaser.releasePendingResources();
+                drainBackgroundCleanup();
             }
 
             // Imagine that system has shut down, delete metadata

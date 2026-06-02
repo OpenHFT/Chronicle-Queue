@@ -3,15 +3,13 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,11 +56,7 @@ public class QueueAppendAfterRollReplayedIssueTest extends QueueTestCommon {
             }
 
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(path, 2);
-            } catch (IORuntimeException e) {
-                Jvm.debug().on(QueueAppendAfterRollReplayedIssueTest.class, "Failed to delete test path", e);
-            }
+            deleteDirAfterCleanup(new File(path));
         }
     }
 }
