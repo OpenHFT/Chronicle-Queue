@@ -167,7 +167,8 @@ public class QueueTestCommon {
                 "File released ",
                 "Overriding roll length from existing metadata",
                 " was 3600000",
-                " overriding to 86400000   ")) {
+                " overriding to 86400000   ",
+                "does not free direct memory")) {
             ignoreException(msg);
         }
     }
