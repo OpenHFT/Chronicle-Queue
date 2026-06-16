@@ -10,18 +10,16 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.IllegalIndexException;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class CreateAtIndexTest extends QueueTestCommon {
+class CreateAtIndexTest extends QueueTestCommon {
 
     @Test
     public void
@@ -93,7 +91,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() {
+    void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() {
         File tmp = getTmpDir();
 
         long expected;
@@ -108,7 +106,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
                 dc.wire().write().text("some-data");
 
                 expected = dc.index();
-                Assert.assertTrue(expected > 0);
+                assertTrue(expected > 0);
 
             }
 
@@ -121,16 +119,16 @@ public class CreateAtIndexTest extends QueueTestCommon {
 
                 {
                     long actualIndex = dc.index();
-                    Assert.assertTrue(actualIndex > 0);
+                    assertTrue(actualIndex > 0);
 
-                    Assert.assertEquals(expected, actualIndex);
+                    assertEquals(expected, actualIndex);
                 }
 
                 {
                     long actualIndex = tailer.index();
-                    Assert.assertTrue(actualIndex > 0);
+                    assertTrue(actualIndex > 0);
 
-                    Assert.assertEquals(expected, actualIndex);
+                    assertEquals(expected, actualIndex);
                 }
             }
         }

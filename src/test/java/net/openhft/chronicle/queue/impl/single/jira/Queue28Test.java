@@ -7,27 +7,17 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
-public class Queue28Test extends QueueTestCommon {
+class Queue28Test extends QueueTestCommon {
 
-    private final WireType wireType;
-
-    public Queue28Test(WireType wireType) {
-        this.wireType = wireType;
-    }
-
-    @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 // {WireType.TEXT},
@@ -41,8 +31,9 @@ public class Queue28Test extends QueueTestCommon {
      * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-28
      */
 
-    @Test
-    public void test() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void test(WireType wireType) {
         File dir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(dir, wireType)
                 .testBlockSize()

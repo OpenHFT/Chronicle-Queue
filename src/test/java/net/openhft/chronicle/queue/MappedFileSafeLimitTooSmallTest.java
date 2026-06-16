@@ -6,19 +6,21 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * see https://github.com/OpenHFT/Chronicle-Queue/issues/535
  * Created by Rob Austin
  */
-public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
+class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
 
-    @org.junit.Test
-    public void testMappedFileSafeLimitTooSmall() {
+    @Test
+    void testMappedFileSafeLimitTooSmall() {
 
         final int arraySize = 40_000;
         final int blockSize = arraySize * 6;
@@ -43,7 +45,7 @@ public class MappedFileSafeLimitTooSmallTest extends QueueTestCommon {
 
             for (int i = 0; i < 5; i++) {
                 try (DocumentContext dc = queue.createTailer().readingDocument()) {
-                    Assert.assertArrayEquals(data, dc.wire().read("data").bytes());
+                    assertArrayEquals(data, dc.wire().read("data").bytes());
                 }
             }
         }

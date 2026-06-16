@@ -7,14 +7,14 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class AppenderListenerTest extends QueueTestCommon {
+class AppenderListenerTest extends QueueTestCommon {
 
     @Test
-    public void appenderListenerTest() {
+    void appenderListenerTest() {
         String path = OS.getTarget() + "/appenderListenerTest";
         StringBuilder results = new StringBuilder();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)

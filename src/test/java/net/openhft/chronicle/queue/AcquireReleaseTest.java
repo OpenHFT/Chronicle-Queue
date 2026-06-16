@@ -11,8 +11,7 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.ExecutionException;
@@ -20,13 +19,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class AcquireReleaseTest extends QueueTestCommon {
+class AcquireReleaseTest extends QueueTestCommon {
     @Test
-    public void testAcquireAndRelease() {
+    void testAcquireAndRelease() {
         File dir = IOTools.createTempDirectory("testAcquireAndRelease").toFile();
 
         AtomicInteger acount = new AtomicInteger();
@@ -66,14 +64,14 @@ public class AcquireReleaseTest extends QueueTestCommon {
 
             BackgroundResourceReleaser.releasePendingResources();
 
-            Assert.assertEquals(iter, acount.get());
-            Assert.assertEquals(iter, qcount.get());
+            assertEquals(iter, acount.get());
+            assertEquals(iter, qcount.get());
         }
         IOTools.deleteDirWithFiles(dir);
     }
 
     @Test
-    public void testReserveAndRelease() {
+    void testReserveAndRelease() {
         File dir = getTmpDir();
 
         SetTimeProvider stp = new SetTimeProvider();
@@ -98,7 +96,7 @@ public class AcquireReleaseTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithCleanupStoreFilesWithNoDataAcquireAndRelease() throws InterruptedException, ExecutionException {
+    void testWithCleanupStoreFilesWithNoDataAcquireAndRelease() throws InterruptedException, ExecutionException {
         final File dir = getTmpDir();
         final SetTimeProvider stp = new SetTimeProvider();
         final AtomicInteger acount = new AtomicInteger();

@@ -12,11 +12,9 @@ import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
 import net.openhft.chronicle.queue.rollcycles.LegacyRollCycles;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,25 +23,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
-public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
+class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerToEndPerfAcceptanceTest.class);
 
-    private final RollCycle rollCycle;
-
-    private final TailerIndexStartPosition tailerIndexStartPosition;
-
-    private long baseline;
-
-    public BackwardsTailerToEndPerfAcceptanceTest(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
-        this.rollCycle = rollCycle;
-        this.tailerIndexStartPosition = tailerIndexStartPosition;
-    }
-
-    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         final List<Object[]> data = new ArrayList<>();
         data.add(new Object[]{TestRollCycles.TEST_HOURLY, TailerIndexStartPosition.BEGINNING});
@@ -56,57 +41,64 @@ public class BackwardsTailerToEndPerfAcceptanceTest extends QueueTestCommon {
         return data;
     }
 
-    @Before
-    public void before() {
-        // Capture baseline performance of toEnd
+    private long captureBaseline(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
         log.info("rollCycle={}, tailerIndexStartPosition={}", rollCycle, tailerIndexStartPosition);
         log.info("Capturing baseline performance. rollCycle={}", rollCycle);
-        baseline = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() - 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
+        long baseline = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() - 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
         log.info("Baseline performance captured. rollCycle={}", rollCycle);
+        return baseline;
     }
 
-    @Ignore("Disabled as too flaky when run as part of the full test suite")
-    @Test
-    public void fromBeginning() {
+    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @ParameterizedTest
+    @MethodSource("data")
+    void fromBeginning(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+        long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
-        assertReasonablePerformance(duration);
+        assertReasonablePerformance(duration, baseline);
     }
 
-    @Ignore("Disabled as too flaky when run as part of the full test suite")
-    @Test
-    public void lessThanBoundary() {
+    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @ParameterizedTest
+    @MethodSource("data")
+    void lessThanBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+        long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() + 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
-        assertReasonablePerformance(duration);
+        assertReasonablePerformance(duration, baseline);
     }
 
-    @Ignore("Disabled as too flaky when run as part of the full test suite")
-    @Test
-    public void onBoundary() {
+    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @ParameterizedTest
+    @MethodSource("data")
+    void onBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+        long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing(), TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
-        assertReasonablePerformance(duration);
+        assertReasonablePerformance(duration, baseline);
     }
 
-    @Ignore("Disabled as too flaky when run as part of the full test suite")
-    @Test
-    public void greaterThanBoundary() {
+    @Disabled("Disabled as too flaky when run as part of the full test suite")
+    @ParameterizedTest
+    @MethodSource("data")
+    void greaterThanBoundary(RollCycle rollCycle, TailerIndexStartPosition tailerIndexStartPosition) {
+        long baseline = captureBaseline(rollCycle, tailerIndexStartPosition);
         long duration = runTest(rollCycle.defaultIndexCount() * rollCycle.defaultIndexSpacing() - 1, TailerDirection.BACKWARD, tailerIndexStartPosition, rollCycle);
-        assertReasonablePerformance(duration);
+        assertReasonablePerformance(duration, baseline);
     }
 
-    private void assertReasonablePerformance(long duration) {
+    private void assertReasonablePerformance(long duration, long baseline) {
         double factor = (double) duration / baseline;
         long baselineUs = baseline / 1000;
         long durationUs = duration / 1000;
         String message = "Performance of this test was " + factor + "x baseline. baseline=" + baselineUs + "us, duration=" + durationUs + "us.";
         log.info(message);
-        assertTrue(message, factor < 10);
+        assertTrue(factor < 10, message);
     }
 
     private void populateQueue(int entriesToWrite, ExcerptAppender appender) {
         for (int i = 0; i < entriesToWrite; i++) {
             appender.writeText("message_" + i);
 
-            if (rollCycle.equals(TestRollCycles.TEST2_DAILY)) {
+            if (appender.queue().rollCycle().equals(TestRollCycles.TEST2_DAILY)) {
                 log.info("lastIndexAppended={}", appender.lastIndexAppended());
             }
         }

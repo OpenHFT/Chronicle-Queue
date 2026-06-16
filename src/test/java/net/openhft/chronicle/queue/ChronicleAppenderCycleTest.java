@@ -8,8 +8,8 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,24 +18,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This test case replicates the assertion error in Chronicle StoreAppender's checkWritePositionHeaderNumber() method. see
  * https://github.com/OpenHFT/Chronicle-Queue/issues/611
  */
-public class ChronicleAppenderCycleTest extends QueueTestCommon {
+class ChronicleAppenderCycleTest extends QueueTestCommon {
 
     private static final long LATCH_TIMEOUT_MS = 5000;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void testAppenderCycle() throws IOException {
+    void testAppenderCycle() throws IOException {
         String id = "testAppenderCycle";
         Bytes<?> msg = Bytes.allocateDirect(64);
         try {

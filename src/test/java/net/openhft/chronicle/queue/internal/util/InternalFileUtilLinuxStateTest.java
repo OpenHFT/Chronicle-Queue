@@ -6,22 +6,21 @@ package net.openhft.chronicle.queue.internal.util;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.util.FileState;
-import org.junit.Test;
-import org.junit.Assume;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class InternalFileUtilLinuxStateTest extends QueueTestCommon {
+class InternalFileUtilLinuxStateTest extends QueueTestCommon {
 
     @Test
-    public void stateOpenAndClosedOnLinux() throws Exception {
-        Assume.assumeTrue("Linux-only test", OS.isLinux());
-        Assume.assumeTrue("/proc required", InternalFileUtil.getAllOpenFilesIsSupportedOnOS());
+    void stateOpenAndClosedOnLinux() throws Exception {
+        assumeTrue(OS.isLinux(), "Linux-only test");
+        assumeTrue(InternalFileUtil.getAllOpenFilesIsSupportedOnOS(), "/proc required");
 
         final File dir = getTmpDir();
         // Ensure parent directory exists

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext)}.

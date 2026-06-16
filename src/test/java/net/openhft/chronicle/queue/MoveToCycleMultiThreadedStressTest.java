@@ -9,10 +9,10 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.Threads;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
+import static org.junit.jupiter.api.Assertions.*;
+
+class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
     private ThreadLocal<ExcerptTailer> tailer;
     private final AtomicLong last = new AtomicLong();
@@ -32,13 +34,17 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
     private AtomicBoolean shutDown = new AtomicBoolean();
     private boolean resourceTracing;
 
+    @BeforeEach
+    void beforeEachMoveToCycleMultiThreadedStressTest() {
+        threadDump();
+        disableResourceTracing();
+    }
+
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
-    @Before
     public void disableResourceTracing() {
         // with this enabled, and a 32 GB heap this fails with flight recorder
         // with this disabled, and a 32 *MB* heap this passes with flight recorder on
@@ -46,13 +52,15 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
         Jvm.setResourceTracing(false);
     }
 
-    @After
-    public void resetResourceTracing() {
+    @AfterEach
+    void resetResourceTracing() {
         Jvm.setResourceTracing(resourceTracing);
     }
 
-    @Test(timeout = 60000)
-    public void test() throws ExecutionException, InterruptedException {
+    @Test
+
+    @Timeout(60)
+    void test() throws ExecutionException, InterruptedException {
         final String path = OS.getTarget() + "/stressMoveToCycle-" + Time.uniqueId();
         final ExecutorService es = Executors.newCachedThreadPool();
 
@@ -80,12 +88,7 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
             Thread.sleep(100);
 
             f.forEach(c -> {
-                try {
-                    c.get(1, TimeUnit.SECONDS);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Assert.fail();
-                }
+                assertDoesNotThrow(() -> c.get(1, TimeUnit.SECONDS));
             });
         }
 

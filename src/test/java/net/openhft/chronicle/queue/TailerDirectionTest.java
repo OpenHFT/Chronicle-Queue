@@ -12,7 +12,8 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -23,10 +24,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class TailerDirectionTest extends QueueTestCommon {
+class TailerDirectionTest extends QueueTestCommon {
 
     private static final String TEST_MESSAGE_PREFIX = "Test entry: ";
 
@@ -81,7 +82,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     // 3) Redo step 1)
     //
     @Test
-    public void testTailerForwardBackwardRead() {
+    void testTailerForwardBackwardRead() {
         String basePath = OS.getTarget() + "/tailerForwardBackward-" + Time.uniqueId();
 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
@@ -103,37 +104,37 @@ public class TailerDirectionTest extends QueueTestCommon {
                 msgIndexes.put(msg, idx);
             }
 
-            assertEquals("[Forward 1] Wrong message 0", testMessage(0), readNextEntry(tailer));
-            assertEquals("[Forward 1] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
-            assertEquals("[Forward 1] Wrong message 1", testMessage(1), readNextEntry(tailer));
-            assertEquals("[Forward 1] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
+            assertEquals(testMessage(0), readNextEntry(tailer), "[Forward 1] Wrong message 0");
+            assertEquals(msgIndexes.get(testMessage(1)).longValue(), tailer.index(), "[Forward 1] Wrong Tailer index after reading msg 0");
+            assertEquals(testMessage(1), readNextEntry(tailer), "[Forward 1] Wrong message 1");
+            assertEquals(msgIndexes.get(testMessage(2)).longValue(), tailer.index(), "[Forward 1] Wrong Tailer index after reading msg 1");
 
             tailer.direction(TailerDirection.BACKWARD);
 
-            assertEquals("[Backward] Wrong message 2", testMessage(2), readNextEntry(tailer));
-            assertEquals("[Backward] Wrong Tailer index after reading msg 2", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
-            assertEquals("[Backward] Wrong message 1", testMessage(1), readNextEntry(tailer));
-            assertEquals("[Backward] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(0)).longValue(), tailer.index());
-            assertEquals("[Backward] Wrong message 0", testMessage(0), readNextEntry(tailer));
+            assertEquals(testMessage(2), readNextEntry(tailer), "[Backward] Wrong message 2");
+            assertEquals(msgIndexes.get(testMessage(1)).longValue(), tailer.index(), "[Backward] Wrong Tailer index after reading msg 2");
+            assertEquals(testMessage(1), readNextEntry(tailer), "[Backward] Wrong message 1");
+            assertEquals(msgIndexes.get(testMessage(0)).longValue(), tailer.index(), "[Backward] Wrong Tailer index after reading msg 1");
+            assertEquals(testMessage(0), readNextEntry(tailer), "[Backward] Wrong message 0");
 
             String res = readNextEntry(tailer);
-            assertNull("Backward: res is" + res, res);
+            assertNull(res, "Backward: res is" + res);
 
             tailer.direction(TailerDirection.FORWARD);
 
             res = readNextEntry(tailer);
-            assertNull("Forward: res is" + res, res);
+            assertNull(res, "Forward: res is" + res);
 
-            assertEquals("[Forward 2] Wrong message 0", testMessage(0), readNextEntry(tailer));
-            assertEquals("[Forward 2] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
-            assertEquals("[Forward 2] Wrong message 1", testMessage(1), readNextEntry(tailer));
-            assertEquals("[Forward 2] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(2)).longValue(), tailer.index());
+            assertEquals(testMessage(0), readNextEntry(tailer), "[Forward 2] Wrong message 0");
+            assertEquals(msgIndexes.get(testMessage(1)).longValue(), tailer.index(), "[Forward 2] Wrong Tailer index after reading msg 0");
+            assertEquals(testMessage(1), readNextEntry(tailer), "[Forward 2] Wrong message 1");
+            assertEquals(msgIndexes.get(testMessage(2)).longValue(), tailer.index(), "[Forward 2] Wrong Tailer index after reading msg 1");
         }
         IOTools.deleteDirWithFiles(basePath);
     }
 
     @Test
-    public void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
+    void uninitialisedTailerCreatedBeforeFirstAppendWithDirectionNoneShouldNotFindDocument() {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(path).timeProvider(clock::get).testBlockSize()
@@ -156,7 +157,7 @@ public class TailerDirectionTest extends QueueTestCommon {
     }
 
     @Test
-    public void testTailerBackwardsReadBeyondCycle() {
+    void testTailerBackwardsReadBeyondCycle() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
@@ -190,16 +191,18 @@ public class TailerDirectionTest extends QueueTestCommon {
                     long index = indexes.get(i);
                     String msg = messages.get(i);
 
-                    assertEquals("[Backward] Wrong index " + i, index, tailer.index());
-                    assertEquals("[Backward] Wrong message " + i, msg, readNextEntry(tailer));
+                    assertEquals(index, tailer.index(), "[Backward] Wrong index " + i);
+                    assertEquals(msg, readNextEntry(tailer), "[Backward] Wrong message " + i);
                 }
             }
         }
         IOTools.deleteDirWithFiles(basePath);
     }
 
-    @Test(timeout = 10_000)
-    public void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
+    @Test
+
+    @Timeout(10)
+    void testTailerBackwardsReadBeyondStartWhenStartIsZero() {
         File basePath = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)

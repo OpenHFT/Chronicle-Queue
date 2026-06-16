@@ -15,17 +15,16 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class OnReleaseTest extends QueueTestCommon {
+class OnReleaseTest extends QueueTestCommon {
     @Test
-    public void onRelease() throws Throwable {
+    void onRelease() throws Throwable {
         FlakyTestRunner.builder(this::onRelease0).build().run();
     }
 

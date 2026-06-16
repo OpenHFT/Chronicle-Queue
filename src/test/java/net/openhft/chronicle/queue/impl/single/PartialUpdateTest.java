@@ -9,23 +9,24 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.StreamCorruptedException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
-public class PartialUpdateTest extends QueueTestCommon {
+class PartialUpdateTest extends QueueTestCommon {
 
     private static final long LAST_INDEX = RollCycles.FAST_DAILY.toIndex(2, 2);
-    private final PartialQueueCreator queueCreator;
     private Path queuePath;
     private SetTimeProvider setTimeProvider;
     private static boolean originalCheckIndexValue;
@@ -53,94 +54,119 @@ public class PartialUpdateTest extends QueueTestCommon {
         abstract void createQueue(SetTimeProvider timeProvider, Path path);
     }
 
-    public PartialUpdateTest(PartialQueueCreator queueCreator) {
-        this.queueCreator = queueCreator;
+    public static Iterable<Object[]> params() {
+        return Arrays.stream(PartialQueueCreator.values()).map(qc -> new Object[]{qc}).collect(Collectors.toList());
     }
 
-    @Parameterized.Parameters(name = "state={0}")
-    public static PartialQueueCreator[] params() {
-        return PartialQueueCreator.values();
-    }
-
-    @Before
-    public void setUp() {
+    private void setUp(PartialQueueCreator queueCreator) {
         queuePath = IOTools.createTempDirectory("partialUpdate");
         setTimeProvider = new SetTimeProvider();
         queueCreator.createQueue(setTimeProvider, queuePath);
     }
 
-    @After
-    public void tearDown() {
-        IOTools.deleteDirWithFiles(queuePath.toFile());
-    }
-
-    @BeforeClass
-    public static void disableCheckIndexAssertions() {
+    @BeforeAll
+    static void disableCheckIndexAssertions() {
         // This turns off assertions, so we see what would happen in the real world
         originalCheckIndexValue = QueueSystemProperties.CHECK_INDEX;
         QueueSystemProperties.CHECK_INDEX = false;
     }
 
-    @AfterClass
-    public static void restoreCheckIndexAssertions() {
+    @AfterAll
+    static void restoreCheckIndexAssertions() {
         QueueSystemProperties.CHECK_INDEX = originalCheckIndexValue;
     }
 
-    @Test
-    public void testBackwardsToEndArrivesAtCorrectPosition() {
-        try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
-             ExcerptTailer tailer = queue.createTailer()) {
-            tailer.direction(TailerDirection.BACKWARD).toEnd();
-            // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
-            assertEquals("Six", tailer.readText());
+    @ParameterizedTest
+    @MethodSource("params")
+    void testBackwardsToEndArrivesAtCorrectPosition(PartialQueueCreator queueCreator) {
+        setUp(queueCreator);
+        try {
+            try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
+                 ExcerptTailer tailer = queue.createTailer()) {
+                tailer.direction(TailerDirection.BACKWARD).toEnd();
+                // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
+                assertEquals("Six", tailer.readText());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath.toFile());
         }
     }
 
-    @Test
-    public void testBackwardsToEndReportsCorrectIndex() {
-        try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
-             ExcerptTailer tailer = queue.createTailer()) {
-            tailer.direction(TailerDirection.BACKWARD).toEnd();
-            // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
-            assertEquals(LAST_INDEX, tailer.index());
+    @ParameterizedTest
+    @MethodSource("params")
+    void testBackwardsToEndReportsCorrectIndex(PartialQueueCreator queueCreator) {
+        setUp(queueCreator);
+        try {
+            try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
+                 ExcerptTailer tailer = queue.createTailer()) {
+                tailer.direction(TailerDirection.BACKWARD).toEnd();
+                // toEnd in the backward direction positions the cursor at the last excerpt (ready to read it)
+                assertEquals(LAST_INDEX, tailer.index());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath.toFile());
         }
     }
 
-    @Test
-    public void testForwardsToEndArrivesAtCorrectPosition() {
-        try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
-             ExcerptTailer tailer = queue.createTailer()) {
-            tailer.toEnd();
-            // toEnd in the forward direction positions the cursor AFTER the last excerpt
-            assertNull(tailer.readText());
+    @ParameterizedTest
+    @MethodSource("params")
+    void testForwardsToEndArrivesAtCorrectPosition(PartialQueueCreator queueCreator) {
+        setUp(queueCreator);
+        try {
+            try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
+                 ExcerptTailer tailer = queue.createTailer()) {
+                tailer.toEnd();
+                // toEnd in the forward direction positions the cursor AFTER the last excerpt
+                assertNull(tailer.readText());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath.toFile());
         }
     }
 
-    @Test
-    public void testForwardsToEndReportsCorrectIndex() {
-        try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
-             ExcerptTailer tailer = queue.createTailer()) {
-            tailer.toEnd();
-            // toEnd in the forward direction positions the cursor AFTER the last excerpt
-            assertEquals(LAST_INDEX + 1, tailer.index());
+    @ParameterizedTest
+    @MethodSource("params")
+    void testForwardsToEndReportsCorrectIndex(PartialQueueCreator queueCreator) {
+        setUp(queueCreator);
+        try {
+            try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
+                 ExcerptTailer tailer = queue.createTailer()) {
+                tailer.toEnd();
+                // toEnd in the forward direction positions the cursor AFTER the last excerpt
+                assertEquals(LAST_INDEX + 1, tailer.index());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath.toFile());
         }
     }
 
-    @Test
-    public void testLastIndexIsCorrect() {
-        try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath)) {
-            // Should report last index correctly
-            assertEquals(LAST_INDEX, queue.lastIndex());
+    @ParameterizedTest
+    @MethodSource("params")
+    void testLastIndexIsCorrect(PartialQueueCreator queueCreator) {
+        setUp(queueCreator);
+        try {
+            try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath)) {
+                // Should report last index correctly
+                assertEquals(LAST_INDEX, queue.lastIndex());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath.toFile());
         }
     }
 
-    @Test
-    public void testAppendReturnsCorrectLastAppendedIndex() {
-        try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
-             ExcerptAppender appender = queue.createAppender()) {
-            // Should report last index correctly
-            appender.writeText("Seven");
-            assertEquals(LAST_INDEX + 1, appender.lastIndexAppended());
+    @ParameterizedTest
+    @MethodSource("params")
+    void testAppendReturnsCorrectLastAppendedIndex(PartialQueueCreator queueCreator) {
+        setUp(queueCreator);
+        try {
+            try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
+                 ExcerptAppender appender = queue.createAppender()) {
+                // Should report last index correctly
+                appender.writeText("Seven");
+                assertEquals(LAST_INDEX + 1, appender.lastIndexAppended());
+            }
+        } finally {
+            IOTools.deleteDirWithFiles(queuePath.toFile());
         }
     }
 

@@ -5,19 +5,17 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 // For use with C++ RawAccessJava. Called from C++
-public class RawAccessJavaTest extends QueueTestCommon {
+class RawAccessJavaTest extends QueueTestCommon {
 
     private final long QUEUE_HEADER_SIZE = 4;
     private final long RAW_SIZE_PREFIX = 4;
@@ -30,7 +28,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void Tailer() {
+    void Tailer() {
         if (!assert_from_cpp())
             return;
 
@@ -72,7 +70,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void Appender() {
+    void Appender() {
         if (!assert_from_cpp())
             return;
 
@@ -111,7 +109,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void testLengthPrefixValidationWithoutCppInterop() {
+    void testLengthPrefixValidationWithoutCppInterop() {
         File dir = getTmpDir();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
              ExcerptAppender appender = cq.createAppender();
@@ -126,8 +124,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
                 int header = bytes.readInt();
                 int totalLength = Wires.lengthOf(header);
                 int payloadLength = bytes.readInt();
-                assertEquals("Length prefix should match payload content",
-                        totalLength - RAW_SIZE_PREFIX, payloadLength);
+                assertEquals(totalLength - RAW_SIZE_PREFIX, payloadLength, "Length prefix should match payload content");
             }
         } finally {
             IOTools.deleteDirWithFiles(dir, 2);
@@ -153,7 +150,7 @@ public class RawAccessJavaTest extends QueueTestCommon {
     }
 
     @Test
-    public void testZeroLengthInteropPayloadIsReadable() {
+    void testZeroLengthInteropPayloadIsReadable() {
         File dir = getTmpDir();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(dir.getAbsolutePath()).build();
              ExcerptAppender appender = cq.createAppender();

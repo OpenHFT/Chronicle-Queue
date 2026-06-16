@@ -7,17 +7,16 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class MultipleNamedTailersTest extends QueueTestCommon {
+class MultipleNamedTailersTest extends QueueTestCommon {
     @Test
-    public void multipleTailers() {
+    void multipleTailers() {
         File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
 
         try (ChronicleQueue q1 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().rollCycle(TEST_SECONDLY).build();

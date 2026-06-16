@@ -15,10 +15,8 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,17 +24,11 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-@RunWith(Parameterized.class)
-public class RollingCycleTest extends QueueTestCommon {
-    private final boolean named;
+class RollingCycleTest extends QueueTestCommon {
 
-    public RollingCycleTest(boolean named) {
-        this.named = named;
-    }
-
-    @Parameterized.Parameters(name = "named={0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(
                 new Object[]{true},
@@ -44,14 +36,15 @@ public class RollingCycleTest extends QueueTestCommon {
         );
     }
 
-    @Test
-    public void testRollCycle() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testRollCycle(boolean named) {
         SetTimeProvider stp = new SetTimeProvider();
         long start = 19059 * 86_400_000L;
         stp.currentTimeMillis(start);
 
         String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
+        assumeFalse(PageUtil.isHugePage(basePath), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .timeoutMS(5)

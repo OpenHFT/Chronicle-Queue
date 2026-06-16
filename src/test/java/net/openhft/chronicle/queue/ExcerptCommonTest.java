@@ -4,17 +4,16 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for ExcerptCommon interface implementations.
  */
-public class ExcerptCommonTest extends QueueTestCommon {
+class ExcerptCommonTest extends QueueTestCommon {
 
     private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptCommonTest";
 
@@ -71,7 +70,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
     }
 
     @Test
-    public void testSourceId() {
+    void testSourceId() {
         try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
             assertEquals(123, excerpt.sourceId());
@@ -79,7 +78,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
     }
 
     @Test
-    public void testQueue() {
+    void testQueue() {
         try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
             assertEquals(queue, excerpt.queue());
@@ -87,7 +86,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCurrentFile() {
+    void testCurrentFile() {
         File file = new File("testfile.txt");
         try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, file);
@@ -99,7 +98,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
     }
 
     @Test
-    public void testSync() {
+    void testSync() {
         try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
             excerpt.sync(); // Would test actual sync if implemented

@@ -13,25 +13,25 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.wire.MessageHistory;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class OrderManagerTest extends QueueTestCommon {
+class OrderManagerTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void testOnOrderIdea() {
+    void testOnOrderIdea() {
         ignoreException("Cannot get access to vectorizedMismatch");
         // what we expect to happen
         OrderListener listener = createMock(OrderListener.class);
@@ -56,7 +56,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithQueue() {
+    void testWithQueue() {
         File queuePath = new File(OS.getTarget(), "testWithQueue-" + Time.uniqueId());
         try {
             try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
@@ -100,7 +100,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testWithQueueHistory() throws Throwable {
+    void testWithQueueHistory() throws Throwable {
         FlakyTestRunner.builder(this::testWithQueueHistory0).build().run();
     }
 
@@ -173,7 +173,7 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testRestartingAService() {
+    void testRestartingAService() {
         File queuePath = DirectoryUtils.tempDir("testRestartingAService");
         File queuePath2 = DirectoryUtils.tempDir("testRestartingAService-down");
         try {
@@ -215,13 +215,13 @@ public class OrderManagerTest extends QueueTestCommon {
 
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer("test");
-                    assertEquals("tailer.index()=" + Long.toHexString(tailer.index()), i, in.rollCycle().toSequenceNumber(tailer.index()));
+                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()), "tailer.index()=" + Long.toHexString(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 
                     // System.out.println("#### IN\n" + in.dump());
                     // System.out.println("#### OUT:\n" + out.dump());
-                    assertTrue("i: " + i, reader.readOne());
+                    assertTrue(reader.readOne(), "i: " + i);
                 }
             }
         } finally {

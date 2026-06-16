@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.*;
 
 /**
  * Tests to demonstrate recovery from metadata file deletion.
@@ -152,5 +152,4 @@ class MetadataDeletionTests extends QueueTestCommon {
             IOTools.deleteDirWithFiles(queuePath);
         }
     }
-
 }

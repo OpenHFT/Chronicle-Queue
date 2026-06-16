@@ -10,22 +10,22 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class TableStoreTest extends QueueTestCommon {
+class TableStoreTest extends QueueTestCommon {
     @Test
-    public void acquireValueFor() throws IOException {
+    void acquireValueFor() throws IOException {
 
         final File file = tempDir("table");
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(file.getAbsolutePath()));
+        assumeFalse(PageUtil.isHugePage(file.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
         file.mkdir();
 
         final File tempFile = Files.createTempFile(file.toPath(), "table", SingleTableStore.SUFFIX).toFile();
@@ -77,7 +77,7 @@ public class TableStoreTest extends QueueTestCommon {
     }
 
     @Test
-    public void acquireValueForReadOnly() throws IOException {
+    void acquireValueForReadOnly() throws IOException {
 
         final File file = tempDir("table");
         file.mkdir();

@@ -8,22 +8,20 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class InternalDumpMainTest extends QueueTestCommon {
+class InternalDumpMainTest extends QueueTestCommon {
 
     @Test
-    public void shouldDumpDirectoryAndIncludeMetadataAndQueueFiles() throws Exception {
+    void shouldDumpDirectoryAndIncludeMetadataAndQueueFiles() throws Exception {
         final File dir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build();
              ExcerptAppender appender = queue.createAppender()) {

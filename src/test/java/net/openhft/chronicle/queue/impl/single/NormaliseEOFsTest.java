@@ -16,9 +16,9 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -28,25 +28,29 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class NormaliseEOFsTest extends QueueTestCommon {
+class NormaliseEOFsTest extends QueueTestCommon {
 
     private static final String LOG_LEVEL_PROPERTY = "org.slf4j.simpleLogger.log." + StoreAppender.class.getName();
     private static final File QUEUE_PATH = Paths.get(OS.getTarget(), "normaliseEOFsTest").toFile();
     private Map<ExceptionKey, Integer> exceptionMap;
 
-    @Before
+    @BeforeEach
+    void beforeEachNormaliseEOFsTest() {
+        setLogLevelProperty();
+        clearDataFromPreviousRun();
+        recordExceptions();
+    }
+
     public void setLogLevelProperty() {
         System.setProperty(LOG_LEVEL_PROPERTY, "debug");
     }
 
-    @Before
     public void clearDataFromPreviousRun() {
         IOTools.deleteDirWithFilesOrThrow(QUEUE_PATH);
     }
 
-    @Before
     @Override
     public void recordExceptions() {
         super.recordExceptions();
@@ -57,19 +61,23 @@ public class NormaliseEOFsTest extends QueueTestCommon {
         ignoreException(ex -> true, "Ignore everything");
     }
 
-    @After
+    @AfterEach
+    void afterEachNormaliseEOFsTest() {
+        clearLogLevelProperty();
+        cleanupQueueData();
+    }
+
     public void clearLogLevelProperty() {
         System.clearProperty(LOG_LEVEL_PROPERTY);
     }
 
-    @After
     public void cleanupQueueData() {
         BackgroundResourceReleaser.releasePendingResources();
         IOTools.deleteDirWithFilesOrThrow(QUEUE_PATH);
     }
 
     @Test
-    public void normaliseShouldResumeFromPreviousNormalisation() {
+    void normaliseShouldResumeFromPreviousNormalisation() {
         SetTimeProvider setTimeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(setTimeProvider);
              final ExcerptAppender excerptAppender = queue.createAppender()) {

@@ -8,25 +8,25 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
-public final class MoveToIndexTest extends QueueTestCommon {
-    @Rule
-    public TemporaryFolder tmpFolder = new TemporaryFolder();
+final class MoveToIndexTest extends QueueTestCommon {
+    @TempDir
+    Path tmpFolder;
 
     @Test
-    public void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
-        File queuePath = tmpFolder.newFolder("cq");
+    void shouldMoveToPreviousIndexAfterDocumentIsConsumed() throws IOException {
+        File queuePath = Files.createDirectory(tmpFolder.resolve("cq")).toFile();
 
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).build();
              ExcerptAppender appender = queue.createAppender()) {
@@ -47,11 +47,11 @@ public final class MoveToIndexTest extends QueueTestCommon {
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/401
     @Test
-    public void testRandomMove() throws IOException {
+    void testRandomMove() throws IOException {
         final Map<Long, String> messageByIndex = new HashMap<>();
 
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.
-                binary(tmpFolder.newFolder()).build();
+                binary(Files.createTempDirectory(tmpFolder, "queue").toFile()).build();
              final ExcerptAppender appender = queue.createAppender()) {
             // create a queue and add some excerpts
             for (int i = 0; i < 10; i++) {
@@ -83,8 +83,8 @@ public final class MoveToIndexTest extends QueueTestCommon {
      * @throws Exception If failed.
      */
     @Test
-    public void testNotReachedInCycle() throws Exception {
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpFolder.newFolder()).build();
+    void testNotReachedInCycle() throws Exception {
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(Files.createTempDirectory(tmpFolder, "queue").toFile()).build();
              ExcerptAppender appender = q.createAppender()) {
             ExcerptTailer tailer = q.createTailer();
 

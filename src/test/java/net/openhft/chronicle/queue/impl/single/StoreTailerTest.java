@@ -16,9 +16,8 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -29,21 +28,24 @@ import java.util.function.Supplier;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+
+import org.junit.jupiter.api.Assertions;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 @SuppressWarnings("this-escape")
-public class StoreTailerTest extends QueueTestCommon {
+class StoreTailerTest extends QueueTestCommon {
     private final Path dataDirectory = getTmpDir().toPath();
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void testEntryCount() {
+    void testEntryCount() {
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory).build();
              final ExcerptAppender appender = queue.createAppender()) {
             assertEquals(0, queue.entryCount());
@@ -58,8 +60,8 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldHandleCycleRollWhenInReadOnlyMode() {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+    void shouldHandleCycleRollWhenInReadOnlyMode() {
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
         final MutableTimeProvider timeProvider = new MutableTimeProvider();
         try (ChronicleQueue queue = build(createQueue(dataDirectory, MINUTELY, 0, "cycleRoll", false).
@@ -95,7 +97,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldHandleCycleRoll() {
+    void shouldHandleCycleRoll() {
         File dir = getTmpDir();
         MutableTimeProvider timeProvider = new MutableTimeProvider();
         timeProvider.setTime(System.currentTimeMillis());
@@ -113,7 +115,7 @@ public class StoreTailerTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text"));
 
-            if (!tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals))) {
+            if (!tailer.readDocument(w -> w.read("test").text("text", Assertions::assertEquals))) {
                 // System.out.println("dump chronicle:\n" + chronicle.dump());
                 // System.out.println("dump chronicle2:\n" + chronicle2.dump());
                 fail("readDocument false");
@@ -122,7 +124,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldHaltAtPartiallyInitialisedRollCycle() throws ExecutionException, InterruptedException {
+    void shouldHaltAtPartiallyInitialisedRollCycle() throws ExecutionException, InterruptedException {
         // Windows doesn't support renaming a file that is open.
         assumeFalse(OS.isWindows());
         expectException("Renamed un-acquirable segment file to");
@@ -217,7 +219,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void disableThreadSafety() throws InterruptedException {
+    void disableThreadSafety() throws InterruptedException {
         new ThreadSafetyTestingTemplate() {
 
             @Override
@@ -240,7 +242,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void disableThreadSafetyWithMethodReader() throws InterruptedException {
+    void disableThreadSafetyWithMethodReader() throws InterruptedException {
         new ThreadSafetyTestingTemplate() {
 
             @Override
@@ -265,7 +267,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void clearUsedByThread() throws InterruptedException {
+    void clearUsedByThread() throws InterruptedException {
         new ThreadSafetyTestingTemplate() {
 
             @Override
@@ -288,7 +290,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void clearUsedByThreadWithMethodReader() throws InterruptedException {
+    void clearUsedByThreadWithMethodReader() throws InterruptedException {
         new ThreadSafetyTestingTemplate() {
 
             @Override
@@ -326,7 +328,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void readMetaData() {
+    void readMetaData() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).build();
              ExcerptTailer tailer = queue.createTailer();
@@ -341,7 +343,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void toEndWorksWhenLastCycleIsEmpty() {
+    void toEndWorksWhenLastCycleIsEmpty() {
         File dir = getTmpDir();
         SetTimeProvider stp = new SetTimeProvider();
 
@@ -432,44 +434,48 @@ public class StoreTailerTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void cantMoveToStartDuringDocumentReading() {
-        File dir = getTmpDir();
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
-                .testBlockSize().build();
-             ExcerptTailer tailer = queue.createTailer();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeText("Hello World");
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isPresent());
-                assertTrue(dc.isMetaData());
-                assertEquals("header", dc.wire().readEvent(String.class));
-                assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toStart(); // forbidden
+    @Test
+    void cantMoveToStartDuringDocumentReading() {
+        assertThrows(IllegalStateException.class, () -> {
+            File dir = getTmpDir();
+            try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                    .testBlockSize().build();
+                 ExcerptTailer tailer = queue.createTailer();
+                 ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("Hello World");
+                try (DocumentContext dc = tailer.readingDocument(true)) {
+                    assertTrue(dc.isPresent());
+                    assertTrue(dc.isMetaData());
+                    assertEquals("header", dc.wire().readEvent(String.class));
+                    assertTrue(tailer.toString().contains("StoreTailer{"));
+                    tailer.toStart(); // forbidden
+                }
             }
-        }
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void cantMoveToEndDuringDocumentReading() {
-        File dir = getTmpDir();
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
-                .testBlockSize().build();
-             ExcerptTailer tailer = queue.createTailer();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeText("Hello World");
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isPresent());
-                assertTrue(dc.isMetaData());
-                assertEquals("header", dc.wire().readEvent(String.class));
-                assertTrue(tailer.toString().contains("StoreTailer{"));
-                tailer.toEnd(); // forbidden
-            }
-        }
+        });
     }
 
     @Test
-    public void testStriding() {
+    void cantMoveToEndDuringDocumentReading() {
+        assertThrows(IllegalStateException.class, () -> {
+            File dir = getTmpDir();
+            try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
+                    .testBlockSize().build();
+                 ExcerptTailer tailer = queue.createTailer();
+                 ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("Hello World");
+                try (DocumentContext dc = tailer.readingDocument(true)) {
+                    assertTrue(dc.isPresent());
+                    assertTrue(dc.isMetaData());
+                    assertEquals("header", dc.wire().readEvent(String.class));
+                    assertTrue(tailer.toString().contains("StoreTailer{"));
+                    tailer.toEnd(); // forbidden
+                }
+            }
+        });
+    }
+
+    @Test
+    void testStriding() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -480,7 +486,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testStridingReadForward() {
+    void testStridingReadForward() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -503,7 +509,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testStridingReadBackward() {
+    void testStridingReadBackward() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -526,7 +532,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testMoveToIndex() {
+    void testMoveToIndex() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -541,7 +547,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testExcerptsInCycle() {
+    void testExcerptsInCycle() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -550,39 +556,39 @@ public class StoreTailerTest extends QueueTestCommon {
 
             int cycle = queue.cycle();
 
-            assertEquals("No excerpts should be present initially", -1, tailer.excerptsInCycle(cycle));
+            assertEquals(-1, tailer.excerptsInCycle(cycle), "No excerpts should be present initially");
 
             appender.writeText("Message 1");
             appender.writeText("Message 2");
 
-            assertEquals("Should have 2 excerpts in cycle", 2, tailer.excerptsInCycle(cycle));
+            assertEquals(2, tailer.excerptsInCycle(cycle), "Should have 2 excerpts in cycle");
 
             int nonExistentCycle = cycle + 1;
-            assertEquals("Excerpts in non-existent cycle should be -1", -1, tailer.excerptsInCycle(nonExistentCycle));
+            assertEquals(-1, tailer.excerptsInCycle(nonExistentCycle), "Excerpts in non-existent cycle should be -1");
         }
     }
 
     @Test
-    public void testMoveToInvalidIndex() {
+    void testMoveToInvalidIndex() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
             // Negative index
-            assertFalse("Should not move to a negative index", tailer.moveToIndex(-1));
+            assertFalse(tailer.moveToIndex(-1), "Should not move to a negative index");
 
             // Index beyond the last index
-            assertFalse("Should not move to an index beyond the last index", tailer.moveToIndex(100));
+            assertFalse(tailer.moveToIndex(100), "Should not move to an index beyond the last index");
 
             // Index in a non-existent cycle
             int nonExistentCycle = queue.rollCycle().toCycle(tailer.index()) + 10;
             long nonExistentIndex = queue.rollCycle().toIndex(nonExistentCycle, 0);
-            assertFalse("Should not move to an index in a non-existent cycle", tailer.moveToIndex(nonExistentIndex));
+            assertFalse(tailer.moveToIndex(nonExistentIndex), "Should not move to an index in a non-existent cycle");
         }
     }
 
     @Test
-    public void testDirectionChange() {
+    void testDirectionChange() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
@@ -598,10 +604,10 @@ public class StoreTailerTest extends QueueTestCommon {
             assertEquals("Message 3", tailer.readText());
             assertEquals("Message 2", tailer.readText());
             assertEquals("Message 1", tailer.readText());
-            assertNull("Should be null", tailer.readText());
+            assertNull(tailer.readText(), "Should be null");
 
             tailer.direction(TailerDirection.FORWARD);
-            assertNull("Should be null", tailer.readText());
+            assertNull(tailer.readText(), "Should be null");
             assertEquals("Message 1", tailer.readText());
             assertEquals("Message 2", tailer.readText());
             assertEquals("Message 3", tailer.readText());
@@ -609,23 +615,23 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testBehaviorOnEmptyQueue() {
+    void testBehaviorOnEmptyQueue() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir)
                 .testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
 
-            assertNull("Should return null when reading from an empty queue", tailer.readText());
+            assertNull(tailer.readText(), "Should return null when reading from an empty queue");
 
             tailer.toStart();
             tailer.toEnd();
 
-            assertNull("Should still return null after moving to end", tailer.readText());
+            assertNull(tailer.readText(), "Should still return null after moving to end");
         }
     }
 
     @Test
-    public void shouldHandleCycleRollBackward() {
+    void shouldHandleCycleRollBackward() {
         File dir = getTmpDir();
         MutableTimeProvider timeProvider = new MutableTimeProvider();
         timeProvider.setTime(System.currentTimeMillis());
@@ -664,7 +670,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void testOriginalToEndBeforeInitialised() {
+    void testOriginalToEndBeforeInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
@@ -674,7 +680,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void currentFileShouldReturnFileIfInitialised() {
+    void currentFileShouldReturnFileIfInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
              ExcerptAppender appender = queue.createAppender();
@@ -687,7 +693,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void currentFileShouldReturnNullWhenNotInitialised() {
+    void currentFileShouldReturnNullWhenNotInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
@@ -697,7 +703,7 @@ public class StoreTailerTest extends QueueTestCommon {
     }
 
     @Test
-    public void syncShouldReturnNullIfNotInitialised() {
+    void syncShouldReturnNullIfNotInitialised() {
         File dir = getTmpDir();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dir).testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer()) {
@@ -706,5 +712,4 @@ public class StoreTailerTest extends QueueTestCommon {
             assertNull(tailer.currentFile());
         }
     }
-
 }

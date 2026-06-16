@@ -9,17 +9,17 @@ import net.openhft.chronicle.core.util.Mocker;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.StringWriter;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class StridingAQueueTest extends QueueTestCommon {
+class StridingAQueueTest extends QueueTestCommon {
     @Test
-    public void testStriding() {
+    void testStriding() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(1_567_498_753_000L);
         File tmpDir = getTmpDir();
@@ -49,18 +49,17 @@ public class StridingAQueueTest extends QueueTestCommon {
             MethodReader reader = tailer.methodReader(Mocker.logging(SAQMessage.class, "", sw));
             while (reader.readOne()) ;
             assertEquals("hi[4, 9]\n" +
-                            "hi[4, 8]\n" +
-                            "hi[4, 4]\n" +
-                            "hi[4, 0]\n" +
-                            "hi[3, 8]\n" +
-                            "hi[3, 4]\n" +
-                            "hi[3, 0]\n" +
-                            "hi[2, 7]\n" +
-                            "hi[2, 5]\n" +
-                            "hi[2, 1]\n" +
-                            "hi[1, 4]\n" +
-                            "hi[1, 0]\n",
-                    sw.toString().replace("\r", ""));
+                    "hi[4, 8]\n" +
+                    "hi[4, 4]\n" +
+                    "hi[4, 0]\n" +
+                    "hi[3, 8]\n" +
+                    "hi[3, 4]\n" +
+                    "hi[3, 0]\n" +
+                    "hi[2, 7]\n" +
+                    "hi[2, 5]\n" +
+                    "hi[2, 1]\n" +
+                    "hi[1, 4]\n" +
+                    "hi[1, 0]\n", sw.toString().replace("\r", ""));
         }
     }
 

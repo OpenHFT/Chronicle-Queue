@@ -5,33 +5,33 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
+    @TempDir
+    Path temporaryFolder;
 
     private File dataDir;
     private SetTimeProvider timeProvider;
 
-    @Before
-    public void setup() throws IOException {
-        this.dataDir = temporaryFolder.newFolder();
+    @BeforeEach
+    void setup() throws IOException {
+        this.dataDir = Files.createTempDirectory(temporaryFolder, "queue").toFile();
         this.timeProvider = new SetTimeProvider();
     }
 
     @Test
-    public void testReadForwards() {
+    void testReadForwards() {
         RollCycle rollingCycle = WeeklyRollCycle.INSTANCE;
         // Write a message to the queue
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)

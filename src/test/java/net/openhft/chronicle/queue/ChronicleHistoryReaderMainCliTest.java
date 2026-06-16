@@ -6,7 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -14,12 +14,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
+class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
 
     @Test
-    public void runConfiguresReaderFromArguments() throws Exception {
+    void runConfiguresReaderFromArguments() throws Exception {
         final Path queueDir = Files.createTempDirectory("history-reader");
         final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
 
@@ -39,7 +39,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void parseCommandLineWithHelpOption() {
+    void parseCommandLineWithHelpOption() {
         final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
 
         try {
@@ -52,7 +52,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
     }
 
     @Test
-    public void parseCommandLineMissingDirectoryPrintsError() {
+    void parseCommandLineMissingDirectoryPrintsError() {
         final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
 
         try {

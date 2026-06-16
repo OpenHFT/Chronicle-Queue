@@ -7,9 +7,9 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.io.File;
@@ -18,35 +18,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class SingleTableStoreIntegrationTests extends QueueTestCommon {
+class SingleTableStoreIntegrationTests extends QueueTestCommon {
 
     private TestContext context;
 
-    @Before
-    public void beforeEach() {
+    @BeforeEach
+    void beforeEach() {
         context = new TestContext();
     }
 
-    @After
-    public void after() throws IOException {
+    @AfterEach
+    void after() throws IOException {
         context.close();
     }
 
     @Test
-    public void baseCasePutAndGet() {
+    void baseCasePutAndGet() {
         context.newQueueInstance().tableStorePut("a", 1);
         assertEquals(1, context.newQueueInstance().tableStoreGet("a"));
     }
 
     @Test
-    public void getMissingKeyWithoutDefault() {
+    void getMissingKeyWithoutDefault() {
         assertEquals(Long.MIN_VALUE, context.newQueueInstance().tableStoreGet("test"));
     }
 
     @Test
-    public void growNumberOfKeys() {
+    void growNumberOfKeys() {
         SingleChronicleQueue queue1 = context.newQueueInstance();
         queue1.tableStorePut("a", 1);
         queue1.tableStorePut("b", 2);
@@ -61,7 +61,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     }
 
     @Test
-    public void largeNumberOfKeyValuePairs() {
+    void largeNumberOfKeyValuePairs() {
         finishedNormally = false;
         SingleChronicleQueue queue1 = context.newQueueInstance();
         int count = 4_000;
@@ -75,7 +75,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
     }
 
     @Test
-    public void longKeyPutAndGet() {
+    void longKeyPutAndGet() {
         SingleChronicleQueue queue1 = context.newQueueInstance();
         StringBuilder keyBuffer = new StringBuilder("AAAA");
         Random random = new Random();

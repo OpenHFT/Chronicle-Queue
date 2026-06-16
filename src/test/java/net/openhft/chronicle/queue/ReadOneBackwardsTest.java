@@ -9,25 +9,25 @@ import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.VanillaMessageHistory;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * test reading the queue backwards using readOne
  */
-public class ReadOneBackwardsTest extends QueueTestCommon {
+class ReadOneBackwardsTest extends QueueTestCommon {
 
     @Test
-    public void test() {
+    void test() {
         doTest(false);
     }
 
     @Test
-    public void testScanning() {
+    void testScanning() {
         doTest(true);
     }
 

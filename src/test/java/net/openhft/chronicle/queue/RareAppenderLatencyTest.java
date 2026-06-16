@@ -10,8 +10,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.UUID;
@@ -20,8 +20,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static junit.framework.TestCase.assertFalse;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
+import static org.junit.jupiter.api.Assertions.*;
 
 /*
  * Created by skidder on 8/2/16.
@@ -32,19 +32,23 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
  * The rare appender will have very bad latency proportional to the number of messages written since
  * it last appended.
  */
-public class RareAppenderLatencyTest extends QueueTestCommon {
+class RareAppenderLatencyTest extends QueueTestCommon {
     private final static int HEAVY_MSGS = 1_000_000;
     private final static int RARE_MSGS = 50;
 
     private ExecutorService appenderES;
 
+    @BeforeEach
+    void beforeEachRareAppenderLatencyTest() {
+        threadDump();
+        before();
+    }
+
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
-    @Before
     public void before() {
         appenderES = Executors.newSingleThreadExecutor(
                 new NamedThreadFactory("Appender", false));
@@ -56,7 +60,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
     }
 
     @Test
-    public void testRareAppenderLatency() throws InterruptedException, ExecutionException {
+    void testRareAppenderLatency() throws InterruptedException, ExecutionException {
         System.setProperty("ignoreHeaderCountIfNumberOfExcerptsBehindExceeds", "" + (1 << 12));
 
         if (Jvm.isDebug())
@@ -127,7 +131,7 @@ public class RareAppenderLatencyTest extends QueueTestCommon {
             // System.out.println("Wrote first rare one in " + l + " ms");
             // System.out.println("Wrote another rare one in " + (System.currentTimeMillis() - now) + " ms");
 
-            assertFalse("Appending from rare thread latency too high!", l > 150);
+            assertFalse(l > 150, "Appending from rare thread latency too high!");
         }
     }
 

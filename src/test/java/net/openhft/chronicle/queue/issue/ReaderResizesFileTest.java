@@ -15,8 +15,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,16 +26,16 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ReaderResizesFileTest {
+class ReaderResizesFileTest {
     private static final File QUEUE_DIR = new File(OS.getTarget(), "ReaderResizesFileTest-" + System.nanoTime());
 
-    @After
-    public void cleanup() {
+    @AfterEach
+    void cleanup() {
         IOTools.deleteDirWithFiles(QUEUE_DIR);
     }
 
     @Test
-    public void testReaderResizesFile() throws IOException {
+    void testReaderResizesFile() throws IOException {
         // go for the smallest possible block size to ensure we can test resizing
         int blockSize = 1 << 10;
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR).rollCycle(TestRollCycles.TEST4_DAILY).blockSize(blockSize).build();
@@ -79,7 +79,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
-    public void testTailerRefCountStableDuringResize() throws IOException {
+    void testTailerRefCountStableDuringResize() throws IOException {
         int blockSize = 1 << 12;
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR)
                 .rollCycle(TestRollCycles.TEST4_DAILY)
@@ -121,7 +121,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
-    public void testTailerHoldingDocumentAcrossRollsDoesNotResizeOldCycle() throws IOException {
+    void testTailerHoldingDocumentAcrossRollsDoesNotResizeOldCycle() throws IOException {
         File queuePath = new File(QUEUE_DIR, "tailer-hold");
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(0L);
@@ -162,7 +162,7 @@ public class ReaderResizesFileTest {
     }
 
     @Test
-    public void testZeroLengthDocumentDoesNotBlockTailer() {
+    void testZeroLengthDocumentDoesNotBlockTailer() {
         File queuePath = new File(QUEUE_DIR, "zero-length");
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder(queuePath, net.openhft.chronicle.wire.WireType.BINARY)
                 .testBlockSize()

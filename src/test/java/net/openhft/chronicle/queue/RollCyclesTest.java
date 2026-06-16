@@ -5,10 +5,9 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.TimeProvider;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -21,30 +20,22 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
 @RequiredForClient
 public class RollCyclesTest extends QueueTestCommon {
     private static final long NO_EPOCH_OFFSET = 0L;
     private static final long SOME_EPOCH_OFFSET = 17L * 37L;
     private static List<Instant> incrementalTimes;
 
-    private final RollCycle cycle;
     private final AtomicLong clock = new AtomicLong();
     private final TimeProvider timeProvider = clock::get;
 
-    public RollCyclesTest(final String cycleName, final RollCycle cycle) {
-        this.cycle = cycle;
-    }
-
-    @BeforeClass
-    public static void generateTimes() {
+    @BeforeAll
+    static void generateTimes() {
         incrementalTimes = generateIncrementalTimes();
     }
 
-    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         final List<Object[]> data = new ArrayList<>();
         for (RollCycle testDatum : RollCycles.all()) {
@@ -65,26 +56,30 @@ public class RollCyclesTest extends QueueTestCommon {
         return () -> delegate.currentTimeMillis() - 1;
     }
 
-    @Test
-    public void shouldBe32bitShifted() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldBe32bitShifted(String cycleName, RollCycle cycle) {
         long factor = (long) cycle.defaultIndexCount() * cycle.defaultIndexCount() * cycle.defaultIndexSpacing();
         if (factor < 1L << 32)
             factor = 1L << 32;
         assertEquals(factor, cycle.toIndex(1, 0));
     }
 
-    @Test
-    public void shouldDetermineCurrentCycle() {
-        assertCycleRollTimes(NO_EPOCH_OFFSET, withDelta(timeProvider, NO_EPOCH_OFFSET));
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldDetermineCurrentCycle(String cycleName, RollCycle cycle) {
+        assertCycleRollTimes(cycle, NO_EPOCH_OFFSET, withDelta(timeProvider, NO_EPOCH_OFFSET));
     }
 
-    @Test
-    public void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle() {
-        assertCycleRollTimes(SOME_EPOCH_OFFSET, withDelta(timeProvider, SOME_EPOCH_OFFSET));
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldTakeEpochIntoAccoutWhenCalculatingCurrentCycle(String cycleName, RollCycle cycle) {
+        assertCycleRollTimes(cycle, SOME_EPOCH_OFFSET, withDelta(timeProvider, SOME_EPOCH_OFFSET));
     }
 
-    @Test
-    public void shouldHandleReasonableDateRange() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldHandleReasonableDateRange(String cycleName, RollCycle cycle) {
         final int currentCycle = DefaultCycleCalculator.INSTANCE.currentCycle(cycle, timeProvider, 0);
         // ~ 14 Jul 2017 to 18 May 2033
         for (long nowMillis = 1_500_000_000_000L; nowMillis < 2_000_000_000_000L; nowMillis += (long) 3e10) {
@@ -94,7 +89,7 @@ public class RollCyclesTest extends QueueTestCommon {
         }
     }
 
-    private void assertCycleRollTimes(final long epochOffset, final TimeProvider timeProvider) {
+    private void assertCycleRollTimes(final RollCycle cycle, final long epochOffset, final TimeProvider timeProvider) {
         final long currentTime = System.currentTimeMillis();
         final long currentTimeAtStartOfCycle = currentTime - (currentTime % cycle.lengthInMillis());
         clock.set(currentTimeAtStartOfCycle);
@@ -114,8 +109,9 @@ public class RollCyclesTest extends QueueTestCommon {
         assertEquals(startCycle + 1, cycle.current(minusOneMillisecond(timeProvider), epochOffset));
     }
 
-    @Test
-    public void lexicographicOrderShouldCorrelateToChronologicalOrder() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void lexicographicOrderShouldCorrelateToChronologicalOrder(String cycleName, RollCycle cycle) {
         String lastName = null;
         Instant lastDate = null;
         final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(cycle.format()).withZone(ZoneId.of("UTC"));

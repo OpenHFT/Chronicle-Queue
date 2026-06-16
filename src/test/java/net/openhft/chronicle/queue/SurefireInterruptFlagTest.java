@@ -5,8 +5,7 @@ package net.openhft.chronicle.queue;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SurefireInterruptFlagTest extends QueueTestCommon {
 

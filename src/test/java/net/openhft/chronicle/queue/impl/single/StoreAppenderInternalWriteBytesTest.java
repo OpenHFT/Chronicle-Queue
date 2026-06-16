@@ -13,8 +13,8 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -27,33 +27,35 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.String.format;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNotNull;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
+class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
     private static final int MESSAGES_TO_WRITE = 200;
 
-    @Before
+    @BeforeEach
+    void beforeEachStoreAppenderInternalWriteBytesTest() {
+        check64bit();
+        threadDump();
+    }
+
     public void check64bit() {
         assumeTrue(Jvm.is64bit());
     }
 
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
+    void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
         testInternalWriteBytes(5, true);
     }
 
     @Test
-    public void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
+    void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
         testInternalWriteBytes(5, false);
     }
 
@@ -122,8 +124,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     assert sourceTailer.readBytes(sourceBuffer) : "Source queue is shorter than expected";
                     assert destinationTailer.readBytes(destinationBuffer) : "Destination queue is shorter than expected";
                     final String s = destinationBuffer.toString();
-                    assertEquals(format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s),
-                            sourceBuffer.toString(), s.replaceAll(" - .*", ""));
+                    assertEquals(sourceBuffer.toString(), s.replaceAll(" - .*", ""), format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s));
                 }
             }
         }
@@ -176,8 +177,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 //                        if (false && index %17 == 0) {
                         try (final ChronicleQueue dq = createQueue(destinationDir, null);
                              final ExcerptAppender da = dq.createAppender()) {
-                            assumeNotNull(dq);
-                            assumeNotNull(da);
+                            assumeTrue(dq != null);
+                            assumeTrue(da != null);
                         }
                         //                      }
                     }

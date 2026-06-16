@@ -16,7 +16,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -31,19 +32,23 @@ import static java.util.stream.Collectors.toList;
 import static net.openhft.chronicle.queue.internal.util.InternalFileUtil.getAllOpenFilesIsSupportedOnOS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class FileUtilTest extends QueueTestCommon {
+class FileUtilTest extends QueueTestCommon {
 
-    @Test(timeout = 30_000)
-    public void stateNonExisting() {
+    @Test
+
+    @Timeout(30)
+    void stateNonExisting() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         assertEquals(FileState.NON_EXISTENT, FileUtil.state(new File("sjduq867q3jqq3t3q3r")));
     }
 
-    @Test(timeout = 30_000)
-    public void state() throws IOException {
+    @Test
+
+    @Timeout(30)
+    void state() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final Path dir = IOTools.createTempDirectory("openByAnyProcess");
         dir.toFile().mkdir();
@@ -73,30 +78,36 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
-    public void stateWindows() {
+    @Test
+    void stateWindows() {
         assumeTrue(OS.isWindows());
 
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
 
-        FileUtil.state(new File("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> FileUtil.state(new File("foo")));
     }
 
-    @Test(timeout = 30_000)
-    public void hasQueueSuffixFalse() {
+    @Test
+
+    @Timeout(30)
+    void hasQueueSuffixFalse() {
         final File file = new File("foo");
         assertFalse(FileUtil.hasQueueSuffix(file));
     }
 
-    @Test(timeout = 30_000)
-    public void hasQueueSuffixTrue() {
+    @Test
+
+    @Timeout(30)
+    void hasQueueSuffixTrue() {
         final File file = new File("a" + SingleChronicleQueue.SUFFIX);
         assertTrue(FileUtil.hasQueueSuffix(file));
     }
 
-    @Test(timeout = 30_000)
-    public void removableQueueFileCandidates() {
+    @Test
+
+    @Timeout(30)
+    void removableQueueFileCandidates() {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
         final int rolls = 4;
         final int intermediateRolls = rolls / 2;
@@ -157,12 +168,12 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
-    public void removableQueueFileCandidatesWindows() {
+    @Test
+    void removableQueueFileCandidatesWindows() {
         assumeTrue(OS.isWindows());
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
-        FileUtil.removableRollFileCandidates(new File("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> FileUtil.removableRollFileCandidates(new File("foo")));
     }
 
     private <T> void assertSorted(List<T> list, Comparator<T> comparator) {
@@ -175,7 +186,7 @@ public class FileUtilTest extends QueueTestCommon {
     }
 
     @Test
-    public void testOpenFilesWithPid() throws IOException {
+    void testOpenFilesWithPid() throws IOException {
         assumeTrue(getAllOpenFilesIsSupportedOnOS());
 
         // open file for writing, keeping file handle open

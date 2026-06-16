@@ -10,14 +10,13 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class RestartableTailerTest extends QueueTestCommon {
+class RestartableTailerTest extends QueueTestCommon {
     @Test
-    public void restartable() {
+    void restartable() {
         String tmp = OS.getTarget() + "/restartable-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build();
              final ExcerptAppender excerptAppender = cq.createAppender()) {

@@ -6,18 +6,17 @@ package net.openhft.chronicle.queue.util;
 import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class PretouchUtilTest extends QueueTestCommon {
+class PretouchUtilTest extends QueueTestCommon {
 
     @Test
-    public void createEventHandlerAndPretoucherFallback() {
+    void createEventHandlerAndPretoucherFallback() {
         ignoreException("Pretoucher is only supported");
         final File dir = getTmpDir();
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(dir).build()) {
@@ -36,7 +35,7 @@ public class PretouchUtilTest extends QueueTestCommon {
     }
 
     @Test
-    public void eventHandlerActionOnClosedQueueDoesNotThrow() {
+    void eventHandlerActionOnClosedQueueDoesNotThrow() {
         ignoreException("Pretoucher is only supported");
         final File dir = getTmpDir();
         EventHandler handler;

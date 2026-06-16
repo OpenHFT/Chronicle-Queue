@@ -26,7 +26,8 @@ import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,10 +41,10 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class RollEOFTest extends QueueTestCommon {
+class RollEOFTest extends QueueTestCommon {
 
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
@@ -63,9 +64,11 @@ public class RollEOFTest extends QueueTestCommon {
         return null;
     }
 
-    @Test(timeout = 5000L)
-    public void testRollWritesEOF() throws IOException {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+    @Test
+
+    @Timeout(5)
+    void testRollWritesEOF() throws IOException {
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
 //        expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
@@ -94,9 +97,11 @@ public class RollEOFTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5000L)
-    public void testRollWithoutEOFDoesntBlowup() throws IOException {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+    @Test
+
+    @Timeout(5)
+    void testRollWithoutEOFDoesntBlowup() throws IOException {
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
 
 //        expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
@@ -133,8 +138,10 @@ public class RollEOFTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5000L)
-    public void testRollWithoutEOF() throws IOException {
+    @Test
+
+    @Timeout(5)
+    void testRollWithoutEOF() throws IOException {
 //        expectException("Overriding roll length from existing metadata");
 //        expectException("Overriding roll cycle from");
 

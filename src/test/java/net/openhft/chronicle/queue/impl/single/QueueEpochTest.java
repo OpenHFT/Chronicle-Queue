@@ -10,7 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Instant;
@@ -19,9 +19,9 @@ import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public final class QueueEpochTest extends QueueTestCommon {
+final class QueueEpochTest extends QueueTestCommon {
     private static final boolean DEBUG = false;
     private static final long MIDNIGHT_UTC_BASE_TIME = 1504569600000L;
     // 17:15 EDT, 21:15 UTC
@@ -44,7 +44,7 @@ public final class QueueEpochTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldRollQueueFilesAccordingToUtcOffset() {
+    void shouldRollQueueFilesAccordingToUtcOffset() {
         logDebug("UTC offset is %dms%n", UTC_OFFSET);
         final File queueDir = getTmpDir();
         final CapturingStoreFileListener fileListener = new CapturingStoreFileListener();

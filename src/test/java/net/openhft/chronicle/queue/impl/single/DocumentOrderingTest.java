@@ -8,9 +8,8 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.*;
@@ -19,9 +18,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public final class DocumentOrderingTest extends QueueTestCommon {
+final class DocumentOrderingTest extends QueueTestCommon {
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private final ExecutorService executorService = Executors.newCachedThreadPool(
             new NamedThreadFactory("test"));
@@ -38,14 +38,19 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     private Thread thread;
 
+    @BeforeEach
+    void beforeEachDocumentOrderingTest() {
+        threadDump();
+        multiCPU();
+    }
+
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
+    void queuedWriteInPreviousCycleShouldRespectTotalOrdering() throws InterruptedException, TimeoutException, ExecutionException {
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 1_000L).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -83,7 +88,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
+    void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         final File dir = getTmpDir();
         // must be different instances of queue to work around synchronization on acquireStore()
@@ -133,7 +138,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
+    void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");
@@ -165,7 +170,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
+    void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 3_000L).build();
@@ -196,7 +201,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
     }
 
     @Test
-    public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
+    void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 3_000L).build();
@@ -258,7 +263,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             }
             return new RecordInfo(counterValue);
         });
-        assertTrue("Task did not start", startedLatch.await(1, TimeUnit.MINUTES));
+        assertTrue(startedLatch.await(1, TimeUnit.MINUTES), "Task did not start");
         return future;
     }
 
@@ -276,8 +281,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         }
     }
 
-    @Before
     public void multiCPU() {
-        Assume.assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
+        assumeTrue(Runtime.getRuntime().availableProcessors() > 1);
     }
 }

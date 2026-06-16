@@ -4,33 +4,34 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class QueueReadBackwardsTest extends QueueTestCommon {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+class QueueReadBackwardsTest extends QueueTestCommon {
+    @TempDir
+    Path temporaryFolder;
 
     private File dataDir;
     private SetTimeProvider timeProvider;
 
-    @Before
-    public void setup() throws IOException {
-        this.dataDir = temporaryFolder.newFolder();
+    @BeforeEach
+    void setup() throws IOException {
+        this.dataDir = Files.createTempDirectory(temporaryFolder, "queue").toFile();
         this.timeProvider = new SetTimeProvider(new Date().getTime());
     }
 
     @Test
-    public void testReadBackwardsAfterWriteJustOneMessage() {
+    void testReadBackwardsAfterWriteJustOneMessage() {
         RollCycles rollingCycle = RollCycles.DEFAULT;
         // Write a message to the queue
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(dataDir)

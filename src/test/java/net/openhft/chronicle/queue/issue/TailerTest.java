@@ -10,30 +10,30 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class TailerTest extends QueueTestCommon {
+class TailerTest extends QueueTestCommon {
 
     private static final Path QUEUE_PATH = Paths.get(OS.getTarget() + "/host-1/queue/broker_out");
     private static final int OFFSET = 3;
 
-    @Before
-    @After
-    public void cleanupFiles() {
+    @BeforeEach
+    @AfterEach
+    void cleanupFiles() {
         IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
     }
 
     @Test
-    public void reproduce() {
+    void reproduce() {
         IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
 
         long firstOutputIndex = Long.MAX_VALUE;

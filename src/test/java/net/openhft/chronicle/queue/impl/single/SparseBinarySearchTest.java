@@ -12,35 +12,22 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.text.ParseException;
 import java.util.*;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-@RunWith(Parameterized.class)
-public class SparseBinarySearchTest extends QueueTestCommon {
+class SparseBinarySearchTest extends QueueTestCommon {
 
     private static final GapTolerantComparator GAP_TOLERANT_COMPARATOR = new GapTolerantComparator();
 
-    private final int numberOfMessages;
-    private final float percentageWithValues;
-
-    public SparseBinarySearchTest(int numberOfMessages, float percentageWithValues) {
-        this.numberOfMessages = numberOfMessages;
-        this.percentageWithValues = percentageWithValues;
-    }
-
-    @Parameterized.Parameters(name = "items in queue: {0}, percentage with values: {1}")
-    public static Collection<Object[]> data() {
+    public static List<Object[]> data() {
         List<Object[]> parameters = new ArrayList<>();
         List<Integer> numbersOfMessages = Arrays.asList(0, 1, 2, 100);
         List<Float> percentagesWithValues = Arrays.asList(0.0f, 0.1f, 0.9f);
@@ -53,17 +40,19 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         return parameters;
     }
 
-    @Test
-    public void testBinarySearchWithManyGapsAndManyRollCycles() throws ParseException {
-        runWithTimeParameters(TEST_SECONDLY, 300);
+    @ParameterizedTest
+    @MethodSource("data")
+    void testBinarySearchWithManyGapsAndManyRollCycles(int numberOfMessages, float percentageWithValues) throws ParseException {
+        runWithTimeParameters(TEST_SECONDLY, 300, numberOfMessages, percentageWithValues);
     }
 
-    @Test
-    public void testBinarySearchWithManyGaps() throws ParseException {
-        runWithTimeParameters(DAILY, 1);
+    @ParameterizedTest
+    @MethodSource("data")
+    void testBinarySearchWithManyGaps(int numberOfMessages, float percentageWithValues) throws ParseException {
+        runWithTimeParameters(DAILY, 1, numberOfMessages, percentageWithValues);
     }
 
-    private void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis) throws ParseException {
+    private void runWithTimeParameters(RollCycle rollCycle, long incrementInMillis, int numberOfMessages, float percentageWithValues) throws ParseException {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
 
@@ -97,7 +86,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
                         Wire key = toWire(j);
                         long index = BinarySearch.search(binarySearchTailer, key, GAP_TOLERANT_COMPARATOR);
                         if (entriesWithValues.contains(j)) {
-                            Assert.assertEquals(tailer.index(), index);
+                            assertEquals(tailer.index(), index);
                         } else {
                             assertTrue(index < 0);
                         }
@@ -106,7 +95,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
                 }
 
                 Wire key = toWire(numberOfMessages);
-                assertTrue("Should not find non-existent", BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0);
+                assertTrue(BinarySearch.search(tailer, key, GAP_TOLERANT_COMPARATOR) < 0, "Should not find non-existent");
             }
         }
     }
@@ -156,7 +145,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         return wire;
     }
 
-    public static class MyData extends SelfDescribingMarshallable {
+    static class MyData extends SelfDescribingMarshallable {
         private int key;
         private String value;
 

@@ -13,10 +13,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -24,19 +21,19 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class RollCycleTest extends QueueTestCommon {
+class RollCycleTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void newRollCycleIgnored() throws InterruptedException {
+    void newRollCycleIgnored() throws InterruptedException {
         File path = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
@@ -73,10 +70,10 @@ public class RollCycleTest extends QueueTestCommon {
     }
 
     @Test
-    public void newRollCycleIgnored2() throws InterruptedException {
+    void newRollCycleIgnored2() throws InterruptedException {
         finishedNormally = false;
         File path = getTmpDir();
-        Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
+        assumeFalse(PageUtil.isHugePage(path.getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
 
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
@@ -102,179 +99,178 @@ public class RollCycleTest extends QueueTestCommon {
                     appender.writeText(Integer.toString(i));
                 }
                 assertEquals("" +
-                                "--- !!meta-data #binary\n" +
-                                "header: !STStore {\n" +
-                                "  wireType: !WireType BINARY_LIGHT,\n" +
-                                "  metadata: !SCQMeta {\n" +
-                                "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
-                                "    sourceId: 0\n" +
-                                "  }\n" +
-                                "}\n" +
-                                "# position: 152, header: 0\n" +
-                                "--- !!data #binary\n" +
-                                "listing.highestCycle: 6\n" +
-                                "# position: 192, header: 1\n" +
-                                "--- !!data #binary\n" +
-                                "listing.lowestCycle: 0\n" +
-                                "# position: 232, header: 2\n" +
-                                "--- !!data #binary\n" +
-                                "listing.modCount: 9\n" +
-                                "# position: 264, header: 3\n" +
-                                "--- !!data #binary\n" +
-                                "chronicle.write.lock: -9223372036854775808\n" +
-                                "# position: 304, header: 4\n" +
-                                "--- !!data #binary\n" +
-                                "chronicle.append.lock: -9223372036854775808\n" +
-                                "# position: 344, header: 5\n" +
-                                "--- !!data #binary\n" +
-                                "chronicle.lastIndexReplicated: -1\n" +
-                                "# position: 392, header: 6\n" +
-                                "--- !!data #binary\n" +
-                                "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                                "# position: 448, header: 7\n" +
-                                "--- !!data #binary\n" +
-                                "chronicle.lastIndexMSynced: -1\n" +
-                                "...\n" +
-                                "# 130572 bytes remaining\n" +
-                                "--- !!meta-data #binary\n" +
-                                "header: !SCQStore {\n" +
-                                "  writePosition: [\n" +
-                                "    400,\n" +
-                                "    1717986918400\n" +
-                                "  ],\n" +
-                                "  indexing: !SCQSIndexing {\n" +
-                                "    indexCount: 8,\n" +
-                                "    indexSpacing: 1,\n" +
-                                "    index2Index: 200,\n" +
-                                "    lastIndex: 1\n" +
-                                "  },\n" +
-                                "  dataFormat: 1\n" +
-                                "}\n" +
-                                "# position: 200, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index2index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  304,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 304, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  400,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 400, header: 0\n" +
-                                "--- !!data #binary\n" +
-                                "\"0\"\n" +
-                                "# position: 408, header: 0 EOF\n" +
-                                "--- !!not-ready-meta-data #binary\n" +
-                                "...\n" +
-                                "# 130660 bytes remaining\n" +
-                                "--- !!meta-data #binary\n" +
-                                "header: !SCQStore {\n" +
-                                "  writePosition: [\n" +
-                                "    400,\n" +
-                                "    1717986918400\n" +
-                                "  ],\n" +
-                                "  indexing: !SCQSIndexing {\n" +
-                                "    indexCount: 8,\n" +
-                                "    indexSpacing: 1,\n" +
-                                "    index2Index: 200,\n" +
-                                "    lastIndex: 1\n" +
-                                "  },\n" +
-                                "  dataFormat: 1\n" +
-                                "}\n" +
-                                "# position: 200, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index2index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  304,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 304, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  400,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 400, header: 0\n" +
-                                "--- !!data #binary\n" +
-                                "\"1\"\n" +
-                                "# position: 408, header: 0 EOF\n" +
-                                "--- !!not-ready-meta-data #binary\n" +
-                                "...\n" +
-                                "# 130660 bytes remaining\n" +
-                                "--- !!meta-data #binary\n" +
-                                "header: !SCQStore {\n" +
-                                "  writePosition: [\n" +
-                                "    400,\n" +
-                                "    1717986918400\n" +
-                                "  ],\n" +
-                                "  indexing: !SCQSIndexing {\n" +
-                                "    indexCount: 8,\n" +
-                                "    indexSpacing: 1,\n" +
-                                "    index2Index: 200,\n" +
-                                "    lastIndex: 1\n" +
-                                "  },\n" +
-                                "  dataFormat: 1\n" +
-                                "}\n" +
-                                "# position: 200, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index2index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  304,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 304, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  400,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 400, header: 0\n" +
-                                "--- !!data #binary\n" +
-                                "\"2\"\n" +
-                                "# position: 408, header: 0 EOF\n" +
-                                "--- !!not-ready-meta-data #binary\n" +
-                                "...\n" +
-                                "# 130660 bytes remaining\n" +
-                                "--- !!meta-data #binary\n" +
-                                "header: !SCQStore {\n" +
-                                "  writePosition: [\n" +
-                                "    400,\n" +
-                                "    1717986918400\n" +
-                                "  ],\n" +
-                                "  indexing: !SCQSIndexing {\n" +
-                                "    indexCount: 8,\n" +
-                                "    indexSpacing: 1,\n" +
-                                "    index2Index: 200,\n" +
-                                "    lastIndex: 1\n" +
-                                "  },\n" +
-                                "  dataFormat: 1\n" +
-                                "}\n" +
-                                "# position: 200, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index2index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  304,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 304, header: -1\n" +
-                                "--- !!meta-data #binary\n" +
-                                "index: [\n" +
-                                "  # length: 8, used: 1\n" +
-                                "  400,\n" +
-                                "  0, 0, 0, 0, 0, 0, 0\n" +
-                                "]\n" +
-                                "# position: 400, header: 0\n" +
-                                "--- !!data #binary\n" +
-                                "\"3\"\n" +
-                                "...\n" +
-                                "# 130660 bytes remaining\n",
-                        queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
+                        "--- !!meta-data #binary\n" +
+                        "header: !STStore {\n" +
+                        "  wireType: !WireType BINARY_LIGHT,\n" +
+                        "  metadata: !SCQMeta {\n" +
+                        "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T1', epoch: 0 },\n" +
+                        "    sourceId: 0\n" +
+                        "  }\n" +
+                        "}\n" +
+                        "# position: 152, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "listing.highestCycle: 6\n" +
+                        "# position: 192, header: 1\n" +
+                        "--- !!data #binary\n" +
+                        "listing.lowestCycle: 0\n" +
+                        "# position: 232, header: 2\n" +
+                        "--- !!data #binary\n" +
+                        "listing.modCount: 9\n" +
+                        "# position: 264, header: 3\n" +
+                        "--- !!data #binary\n" +
+                        "chronicle.write.lock: -9223372036854775808\n" +
+                        "# position: 304, header: 4\n" +
+                        "--- !!data #binary\n" +
+                        "chronicle.append.lock: -9223372036854775808\n" +
+                        "# position: 344, header: 5\n" +
+                        "--- !!data #binary\n" +
+                        "chronicle.lastIndexReplicated: -1\n" +
+                        "# position: 392, header: 6\n" +
+                        "--- !!data #binary\n" +
+                        "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
+                        "# position: 448, header: 7\n" +
+                        "--- !!data #binary\n" +
+                        "chronicle.lastIndexMSynced: -1\n" +
+                        "...\n" +
+                        "# 130572 bytes remaining\n" +
+                        "--- !!meta-data #binary\n" +
+                        "header: !SCQStore {\n" +
+                        "  writePosition: [\n" +
+                        "    400,\n" +
+                        "    1717986918400\n" +
+                        "  ],\n" +
+                        "  indexing: !SCQSIndexing {\n" +
+                        "    indexCount: 8,\n" +
+                        "    indexSpacing: 1,\n" +
+                        "    index2Index: 200,\n" +
+                        "    lastIndex: 1\n" +
+                        "  },\n" +
+                        "  dataFormat: 1\n" +
+                        "}\n" +
+                        "# position: 200, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index2index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  304,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 304, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  400,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 400, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "\"0\"\n" +
+                        "# position: 408, header: 0 EOF\n" +
+                        "--- !!not-ready-meta-data #binary\n" +
+                        "...\n" +
+                        "# 130660 bytes remaining\n" +
+                        "--- !!meta-data #binary\n" +
+                        "header: !SCQStore {\n" +
+                        "  writePosition: [\n" +
+                        "    400,\n" +
+                        "    1717986918400\n" +
+                        "  ],\n" +
+                        "  indexing: !SCQSIndexing {\n" +
+                        "    indexCount: 8,\n" +
+                        "    indexSpacing: 1,\n" +
+                        "    index2Index: 200,\n" +
+                        "    lastIndex: 1\n" +
+                        "  },\n" +
+                        "  dataFormat: 1\n" +
+                        "}\n" +
+                        "# position: 200, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index2index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  304,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 304, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  400,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 400, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "\"1\"\n" +
+                        "# position: 408, header: 0 EOF\n" +
+                        "--- !!not-ready-meta-data #binary\n" +
+                        "...\n" +
+                        "# 130660 bytes remaining\n" +
+                        "--- !!meta-data #binary\n" +
+                        "header: !SCQStore {\n" +
+                        "  writePosition: [\n" +
+                        "    400,\n" +
+                        "    1717986918400\n" +
+                        "  ],\n" +
+                        "  indexing: !SCQSIndexing {\n" +
+                        "    indexCount: 8,\n" +
+                        "    indexSpacing: 1,\n" +
+                        "    index2Index: 200,\n" +
+                        "    lastIndex: 1\n" +
+                        "  },\n" +
+                        "  dataFormat: 1\n" +
+                        "}\n" +
+                        "# position: 200, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index2index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  304,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 304, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  400,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 400, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "\"2\"\n" +
+                        "# position: 408, header: 0 EOF\n" +
+                        "--- !!not-ready-meta-data #binary\n" +
+                        "...\n" +
+                        "# 130660 bytes remaining\n" +
+                        "--- !!meta-data #binary\n" +
+                        "header: !SCQStore {\n" +
+                        "  writePosition: [\n" +
+                        "    400,\n" +
+                        "    1717986918400\n" +
+                        "  ],\n" +
+                        "  indexing: !SCQSIndexing {\n" +
+                        "    indexCount: 8,\n" +
+                        "    indexSpacing: 1,\n" +
+                        "    index2Index: 200,\n" +
+                        "    lastIndex: 1\n" +
+                        "  },\n" +
+                        "  dataFormat: 1\n" +
+                        "}\n" +
+                        "# position: 200, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index2index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  304,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 304, header: -1\n" +
+                        "--- !!meta-data #binary\n" +
+                        "index: [\n" +
+                        "  # length: 8, used: 1\n" +
+                        "  400,\n" +
+                        "  0, 0, 0, 0, 0, 0, 0\n" +
+                        "]\n" +
+                        "# position: 400, header: 0\n" +
+                        "--- !!data #binary\n" +
+                        "\"3\"\n" +
+                        "...\n" +
+                        "# 130660 bytes remaining\n", queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
 
                 // allow parallel tailer to finish iteration
                 for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
@@ -289,8 +285,8 @@ public class RollCycleTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    @After
-    public void clearInterrupt() {
+    @AfterEach
+    void clearInterrupt() {
         Thread.interrupted();
     }
 

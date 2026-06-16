@@ -4,17 +4,17 @@
 package net.openhft.chronicle.queue.internal.domestic;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.LocalTime;
 import java.time.ZoneId;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class QueueOffsetSpecTest {
+class QueueOffsetSpecTest {
 
     @Test
-    public void parseEpochAndApplySetsBuilderEpoch() {
+    void parseEpochAndApplySetsBuilderEpoch() {
         QueueOffsetSpec spec = QueueOffsetSpec.parse("EPOCH;12345");
         SingleChronicleQueueBuilder b = SingleChronicleQueueBuilder.single();
         spec.apply(b);
@@ -24,7 +24,7 @@ public class QueueOffsetSpecTest {
     }
 
     @Test
-    public void parseRollTimeAndApplySetsRollTimeAndZone() {
+    void parseRollTimeAndApplySetsRollTimeAndZone() {
         String def = "ROLL_TIME;12:34;Europe/London";
         QueueOffsetSpec spec = QueueOffsetSpec.parse(def);
         SingleChronicleQueueBuilder b = SingleChronicleQueueBuilder.single();
@@ -38,17 +38,19 @@ public class QueueOffsetSpecTest {
     }
 
     @Test
-    public void formatNoneReturnsBareType() {
+    void formatNoneReturnsBareType() {
         assertEquals("NONE", QueueOffsetSpec.formatNone());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void parseWithTooFewTokensThrows() {
-        QueueOffsetSpec.parse("ROLL_TIME;12:00");
+    @Test
+    void parseWithTooFewTokensThrows() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            QueueOffsetSpec.parse("ROLL_TIME;12:00");
+        });
     }
 
     @Test
-    public void formatAndParseEpochRoundTrip() {
+    void formatAndParseEpochRoundTrip() {
         long epoch = 42_000L;
         String formatted = QueueOffsetSpec.formatEpochOffset(epoch);
         QueueOffsetSpec parsed = QueueOffsetSpec.parse(formatted);
@@ -58,7 +60,7 @@ public class QueueOffsetSpecTest {
     }
 
     @Test
-    public void applyNoneDoesNotChangeBuilder() {
+    void applyNoneDoesNotChangeBuilder() {
         QueueOffsetSpec spec = QueueOffsetSpec.ofNone();
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single().queueOffsetSpec(spec);
         long originalEpoch = builder.epoch();
@@ -67,14 +69,16 @@ public class QueueOffsetSpecTest {
         assertEquals("NONE;", builder.queueOffsetSpec().format());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void parseUnknownTypeThrows() {
-        QueueOffsetSpec.parse("INVALID;foo");
+    @Test
+    void parseUnknownTypeThrows() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            QueueOffsetSpec.parse("INVALID;foo");
+        });
     }
 
-    @Test(expected = java.time.DateTimeException.class)
-    public void parseRollTimeWithInvalidZoneFailsValidation() {
+    @Test
+    void parseRollTimeWithInvalidZoneFailsValidation() {
         QueueOffsetSpec spec = QueueOffsetSpec.parse("ROLL_TIME;12:00;Invalid/Zone");
-        spec.validate();
+        assertThrows(java.time.DateTimeException.class, spec::validate);
     }
 }

@@ -11,31 +11,17 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
 import static net.openhft.chronicle.queue.impl.single.StoreTailer.INDEXING_LINEAR_SCAN_THRESHOLD;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
-public class IndexTest extends QueueTestCommon {
+class IndexTest extends QueueTestCommon {
 
-    @NotNull
-    private final WireType wireType;
-
-    /**
-     * @param wireType the type of the wire
-     */
-    public IndexTest(@NotNull WireType wireType) {
-        this.wireType = wireType;
-    }
-
-    @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 // {WireType.TEXT}, // TEXT mode not supported here due to missing CAS in LongArrayReference
@@ -43,12 +29,13 @@ public class IndexTest extends QueueTestCommon {
         });
     }
 
-    @Test
-    public void test() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void test(@NotNull WireType wireType) {
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
-                .wireType(this.wireType)
+                .wireType(wireType)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
 
@@ -64,12 +51,13 @@ public class IndexTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldShortCircuitIndexLookupWhenNewIndexIsCloseToPreviousIndex(@NotNull WireType wireType) {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(getTmpDir())
                 .testBlockSize()
-                .wireType(this.wireType)
+                .wireType(wireType)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
 
@@ -109,6 +97,6 @@ public class IndexTest extends QueueTestCommon {
     }
 
     private void accessHexEquals(long index0, long indexA) {
-        assertEquals(Long.toHexString(index0) + " != " + Long.toHexString(indexA), index0, indexA);
+        assertEquals(index0, indexA, Long.toHexString(index0) + " != " + Long.toHexString(indexA));
     }
 }

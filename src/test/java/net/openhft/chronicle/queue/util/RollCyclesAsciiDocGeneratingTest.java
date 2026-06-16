@@ -8,17 +8,17 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.RollCyclesTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
+class RollCyclesAsciiDocGeneratingTest extends QueueTestCommon {
     /**
      * This generates the asciidoc for the table in /docs/FAQ.adoc
      */
     @Test
-    public void dumpAllRollCycles() {
+    void dumpAllRollCycles() {
         StringBuilder stringBuilder = new StringBuilder().append("\n\n");
         for (RollCycle cycle : RollCycles.all()) {
             stringBuilder.append(format("| %s | %,d | `0x%x` | %,d%n",

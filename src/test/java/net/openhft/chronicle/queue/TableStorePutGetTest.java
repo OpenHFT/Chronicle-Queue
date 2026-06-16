@@ -7,17 +7,16 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class TableStorePutGetTest extends QueueTestCommon {
+class TableStorePutGetTest extends QueueTestCommon {
     @Test
-    public void indexEntry() {
+    void indexEntry() {
         SetTimeProvider stp = new SetTimeProvider("2020/10/15T01:01:01");
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("indexEntry"))
                 .rollCycle(TEST_DAILY)
@@ -102,7 +101,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
     }
 
     @Test
-    public void manyEntries() {
+    void manyEntries() {
         final File tempDir = DirectoryUtils.tempDir("manyEntries");
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(tempDir)
                 .rollCycle(TEST_DAILY)
@@ -126,7 +125,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
      * (see https://github.com/OpenHFT/Chronicle-Queue/issues/1025)
      */
     @Test
-    public void testCanGrowBeyondInitialSize() {
+    void testCanGrowBeyondInitialSize() {
         try (SingleChronicleQueue cq = ChronicleQueue.singleBuilder(DirectoryUtils.tempDir("canGrow"))
                 .rollCycle(TEST_DAILY)
                 .testBlockSize()

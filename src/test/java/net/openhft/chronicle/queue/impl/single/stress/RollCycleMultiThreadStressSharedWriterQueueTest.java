@@ -3,12 +3,11 @@
  */
 package net.openhft.chronicle.queue.impl.single.stress;
 
-import org.junit.Test;
-
 public class RollCycleMultiThreadStressSharedWriterQueueTest extends RollCycleMultiThreadStressTest {
 
-    public RollCycleMultiThreadStressSharedWriterQueueTest() {
-        super(StressTestType.SHAREDWRITEQ);
+    @Override
+    protected StressTestType stressTestType() {
+        return StressTestType.SHAREDWRITEQ;
     }
 
     public static void main(String[] args) throws Exception {

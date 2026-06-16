@@ -7,15 +7,15 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class Stackoveflow52274284Test extends QueueTestCommon {
+class Stackoveflow52274284Test extends QueueTestCommon {
     @Test
-    public void fails() throws IOException {
+    void fails() throws IOException {
         String basePath = OS.getTarget();
         String path = Files.createTempDirectory(Paths.get(basePath), "chronicle-")
                 .toAbsolutePath()

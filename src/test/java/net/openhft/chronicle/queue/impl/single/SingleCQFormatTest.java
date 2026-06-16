@@ -17,7 +17,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,16 +31,16 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.DAILY;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class SingleCQFormatTest extends QueueTestCommon {
+class SingleCQFormatTest extends QueueTestCommon {
     static {
         SingleChronicleQueueBuilder.addAliases();
     }
 
     @Test
-    public void testEmptyDirectory() {
+    void testEmptyDirectory() {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
         try (RollingChronicleQueue queue = binary(dir).testBlockSize().build()) {
@@ -53,7 +53,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testInvalidFile() throws FileNotFoundException {
+    void testInvalidFile() throws FileNotFoundException {
         // based on the file name
         expectException("Overriding roll cycle from TEST4_DAILY to DAILY");
 
@@ -74,8 +74,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                     tailer.toEnd();
                     fail();
                 } catch (Exception e) {
-                    assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
-                            e.toString());
+                    assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37", e.toString());
                 }
             }
         }
@@ -88,7 +87,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testNoHeader() throws IOException {
+    void testNoHeader() throws IOException {
         ignoreException("Channel closed while unlocking");
         final File dir = new File(OS.getTarget() + "/deleteme-" + Time.uniqueId());
         assumeFalse(PageUtil.isHugePage(dir.getAbsolutePath()));
@@ -118,7 +117,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testDeadHeader() throws IOException {
+    void testDeadHeader() throws IOException {
         ignoreException("Channel closed while unlocking");
         final File dir = getTmpDir();
 
@@ -142,7 +141,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testDeadHeaderAppend() throws IOException {
+    void testDeadHeaderAppend() throws IOException {
         ignoreException("Channel closed while unlocking");
         expectException("Renamed un-acquirable segment file to");
         final File dir = getTmpDir();
@@ -169,8 +168,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 }
             }
 
-            assertEquals(1,
-                    dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
+            assertEquals(1, dir.listFiles((d, name) -> name.startsWith(file.getName()) && name.endsWith("discard")).length);
         } finally {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
         }
@@ -185,7 +183,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
 
     // "see https://github.com/OpenHFT/Chronicle-Queue/issues/719")
     @Test
-    public void testCompleteHeader() throws FileNotFoundException {
+    void testCompleteHeader() throws FileNotFoundException {
         finishedNormally = false;
         ignoreException("reading control code as text");
         expectException("Unexpected field lastAcknowledgedIndexReplicated");
@@ -290,9 +288,8 @@ public class SingleCQFormatTest extends QueueTestCommon {
                 "64 49 6e 64 65 78 52 65 70 6c 69 63 61 74 65 64 # int64 for binding\n" +
                 "8e 02 00 00 00 00 00 a7 00 00 00 00 00 00 00 00 # 0\n";
         assertEquals(bytes instanceof HexDumpBytes
-                        ? expectedHexDump
-                        : expected,
-                bytes.toHexString());
+                ? expectedHexDump
+                : expected, bytes.toHexString());
 
         assertEquals("" +
                 "--- !!meta-data #binary\n" +
@@ -315,7 +312,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCompleteHeader2() throws FileNotFoundException {
+    void testCompleteHeader2() throws FileNotFoundException {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
 
@@ -360,7 +357,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
     }
 
     @Test
-    public void testIncompleteHeader() throws FileNotFoundException {
+    void testIncompleteHeader() throws FileNotFoundException {
         final File dir = new File(OS.getTarget(), getClass().getSimpleName() + "-" + Time.uniqueId());
         dir.mkdir();
 
@@ -382,8 +379,7 @@ public class SingleCQFormatTest extends QueueTestCommon {
             testQueue(queue);
             fail();
         } catch (Exception e) {
-            assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required",
-                    e.toString());
+            assertEquals("net.openhft.chronicle.core.io.IORuntimeException: net.openhft.chronicle.core.io.IORuntimeException: field writePosition required", e.toString());
         }
         System.gc();
         try {

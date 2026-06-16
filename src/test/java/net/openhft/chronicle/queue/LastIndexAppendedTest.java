@@ -9,19 +9,19 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class LastIndexAppendedTest extends QueueTestCommon {
+class LastIndexAppendedTest extends QueueTestCommon {
 
     @Test
-    public void testLastIndexAppendedAcrossRestarts() {
+    void testLastIndexAppendedAcrossRestarts() {
         String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
 
         try {
@@ -48,7 +48,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
     }
 
     @Test
-    public void testTwoAppenders() {
+    void testTwoAppenders() {
         File path = getTmpDir();
         long a_index;
 

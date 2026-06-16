@@ -10,19 +10,18 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class MessageReaderWriterTest extends QueueTestCommon {
+class MessageReaderWriterTest extends QueueTestCommon {
 
     @Test
-    public void testWriteWhileReading() {
+    void testWriteWhileReading() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class);
 

@@ -11,9 +11,8 @@ import net.openhft.chronicle.queue.impl.single.*;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
@@ -22,20 +21,19 @@ import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class InternalAppenderWriteBytesTest extends QueueTestCommon {
+class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
-    @Before
-    public void before() {
+    @BeforeEach
+    void before() {
         if (OS.isMacOSX())
             ignoreException(exceptionKey -> exceptionKey.clazz == DirectoryUtils.class, "Ignore DirectoryUtils");
         ignoreException(e -> e.level == LogLevel.PERF, "ignore all PERF");
     }
 
     @Test
-    public void canWriteAtEndOfLastExistingRollCycle() {
+    void canWriteAtEndOfLastExistingRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -63,7 +61,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void canWriteAtBeginningOfNextRollCycle() {
+    void canWriteAtBeginningOfNextRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -91,7 +89,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotOverwriteExistingEntries() {
+    void cannotOverwriteExistingEntries() {
         @NotNull Bytes<byte[]> originalBytes = Bytes.from("hello world");
         final Bytes<byte[]> overwriteBytes = Bytes.from("HELLO WORLD");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -110,7 +108,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotOverwriteExistingEntries_DifferentQueueInstance() {
+    void cannotOverwriteExistingEntries_DifferentQueueInstance() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -210,35 +208,39 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         return SingleChronicleQueueBuilder.binary(tmpDir).timeProvider(() -> 0).testBlockSize().rollCycle(TEST4_DAILY).build();
     }
 
-    @Test(expected = IllegalIndexException.class)
-    public void cannotAppendToExistingCycleIfNotNextIndex() {
-        @NotNull Bytes<byte[]> test = Bytes.from("hello world");
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build();
-             ExcerptAppender appender = q.createAppender()) {
-            // append to cycle 0, sequence 0
-            appender.writeBytes(test);
+    @Test
+    void cannotAppendToExistingCycleIfNotNextIndex() {
+        assertThrows(IllegalIndexException.class, () -> {
+            @NotNull Bytes<byte[]> test = Bytes.from("hello world");
+            try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(() -> 0).build();
+                 ExcerptAppender appender = q.createAppender()) {
+                // append to cycle 0, sequence 0
+                appender.writeBytes(test);
 
-            // this will throw because it is not in sequence (cycle 0, sequence 2)
-            ((InternalAppender) appender).writeBytes(2, test);
-        }
-    }
-
-    @Test(expected = IllegalIndexException.class)
-    public void cannotWriteToNonZeroIndexOfNewRollCycle() {
-        final RollCycle rollCycle = RollCycles.DEFAULT;
-        try (SingleChronicleQueue q = binary(tempDir("q"))
-                .rollCycle(rollCycle)
-                .timeProvider(() -> 0).build();
-             ExcerptAppender appender = q.createAppender()) {
-            appender.writeText("hello");    // cycle 0, sequence 0
-
-            // attempt to write to cycle 1, sequence 1
-            ((InternalAppender) appender).writeBytes(rollCycle.toIndex(1, 1), Bytes.from("text"));
-        }
+                // this will throw because it is not in sequence (cycle 0, sequence 2)
+                ((InternalAppender) appender).writeBytes(2, test);
+            }
+        });
     }
 
     @Test
-    public void cannotAppendToPreviousCycle() {
+    void cannotWriteToNonZeroIndexOfNewRollCycle() {
+        assertThrows(IllegalIndexException.class, () -> {
+            final RollCycle rollCycle = RollCycles.DEFAULT;
+            try (SingleChronicleQueue q = binary(tempDir("q"))
+                    .rollCycle(rollCycle)
+                    .timeProvider(() -> 0).build();
+                 ExcerptAppender appender = q.createAppender()) {
+                appender.writeText("hello");    // cycle 0, sequence 0
+
+                // attempt to write to cycle 1, sequence 1
+                ((InternalAppender) appender).writeBytes(rollCycle.toIndex(1, 1), Bytes.from("text"));
+            }
+        });
+    }
+
+    @Test
+    void cannotAppendToPreviousCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
@@ -252,7 +254,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
             appender.writeBytes(test2);
 
-            Assert.assertTrue(hasEOF(q, firstCycle));
+            assertTrue(hasEOF(q, firstCycle));
             // here we try and write to previous cycle file
             assertThrows(WriteAfterEOFException.class, () -> ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1));
         }

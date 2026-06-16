@@ -17,11 +17,10 @@ import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.*;
-import org.junit.runner.Description;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -33,8 +32,9 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.core.onoes.LogLevel.DEBUG;
 import static net.openhft.chronicle.core.onoes.LogLevel.PERF;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
+@Timeout(60)
 public class QueueTestCommon {
     private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
@@ -48,30 +48,28 @@ public class QueueTestCommon {
         System.setProperty("queue.check.index", "true");
     }
 
-    // JUNIT Rules
-    // catch-all timeout for when it has not been specified
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(60);
+    protected String testMethodName;
 
-    @Rule
-    public final TestName testName = new TestName();
+    @BeforeEach
+    void beforeEachQueueTestCommon(TestInfo testInfo) {
+        initTestInfo(testInfo);
+        recordTargetDirContents();
+        recordDiskSpace();
+        assumeFinishedNormally();
+        clearMessageHistory();
+        enableReferenceTracing();
+        recordExceptions();
+    }
 
-    @Rule
-    public final ErrorCollector errorCollector = new ErrorCollector();
-
-    @NotNull
-    @Rule
-    public TestRule watcher = new TestWatcher() {
-        @Override
-        protected void starting(@NotNull Description description) {
-            if (TRACE_TEST_EXECUTION) {
-                Jvm.debug().on(getClass(), "Starting test: "
-                        + description.getClassName() + "."
-                        + description.getMethodName()
-                );
-            }
+    public void initTestInfo(TestInfo testInfo) {
+        testMethodName = testInfo.getTestMethod().map(java.lang.reflect.Method::getName).orElse("unknown");
+        if (TRACE_TEST_EXECUTION) {
+            Jvm.debug().on(getClass(), "Starting test: "
+                    + testInfo.getTestClass().map(Class::getName).orElse("unknown") + "."
+                    + testMethodName
+            );
         }
-    };
+    }
 
     private static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
@@ -79,8 +77,7 @@ public class QueueTestCommon {
 
     @NotNull
     protected File getTmpDir() {
-        final String methodName = testName.getMethodName();
-        String name = methodName == null ? "unknown" : methodName;
+        String name = testMethodName == null ? "unknown" : testMethodName;
         final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
         tmpDirs.add(tmpDir);
         return tmpDir;
@@ -89,7 +86,6 @@ public class QueueTestCommon {
     /**
      * @see #deleteTargetDirTestArtifacts()
      */
-    @Before
     public void recordTargetDirContents() {
         String target = OS.getTarget();
         File[] files = new File(target).listFiles();
@@ -102,12 +98,17 @@ public class QueueTestCommon {
         }
     }
 
-    @Before
     public void recordDiskSpace() {
         freeSpace = new File(OS.getTarget()).getFreeSpace();
     }
 
-    @After
+    @AfterEach
+    void afterEachQueueTestCommon() {
+        checkSpaceUsed();
+        deleteTargetDirTestArtifacts();
+        afterChecks();
+    }
+
     public void checkSpaceUsed() {
         long spaceLeft = new File(OS.getTarget()).getFreeSpace();
         if (freeSpace - spaceLeft > 2L << 30) {
@@ -115,17 +116,14 @@ public class QueueTestCommon {
         }
     }
 
-    @Before
     public void assumeFinishedNormally() {
         finishedNormally = true;
     }
 
-    @Before
     public void clearMessageHistory() {
         MessageHistory.get().reset();
     }
 
-    @Before
     public void enableReferenceTracing() {
         AbstractReferenceCounted.enableReferenceTracing();
     }
@@ -134,7 +132,7 @@ public class QueueTestCommon {
         AbstractReferenceCounted.assertReferencesReleased();
     }
 
-    // add @Before to sub class where a thread might be added
+    // add @BeforeEach to sub class where a thread might be added
     public void threadDump() {
         threadDump = new ThreadDump();
     }
@@ -144,7 +142,6 @@ public class QueueTestCommon {
             threadDump.assertNoNewThreads();
     }
 
-    @Before
     public void recordExceptions() {
         Map<ExceptionKey, Integer> recordedExceptions = Jvm.recordExceptions(false);
         exceptionTracker = ExceptionTracker.create(
@@ -202,7 +199,6 @@ public class QueueTestCommon {
      *
      * @see #recordTargetDirContents() which tracks the original contents of target and avoids deleting unrelated files
      */
-    @After
     public void deleteTargetDirTestArtifacts() {
         if (HugetlbfsTestUtil.isHugetlbfsAvailable()) {
             String target = OS.getTarget();
@@ -226,7 +222,6 @@ public class QueueTestCommon {
         }
     }
 
-    @After
     public void afterChecks() {
         preAfter();
         SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;

@@ -7,17 +7,17 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Files;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class InternalAppenderTest extends QueueTestCommon {
+class InternalAppenderTest extends QueueTestCommon {
 
     @Test
-    public void replicationTest() throws Exception {
+    void replicationTest() throws Exception {
         final File file = Files.createTempDirectory("queue").toFile();
         try (final SingleChronicleQueue queue =
                      SingleChronicleQueueBuilder.single(file).build();

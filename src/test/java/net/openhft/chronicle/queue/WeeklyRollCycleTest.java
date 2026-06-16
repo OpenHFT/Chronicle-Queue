@@ -9,14 +9,14 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class WeeklyRollCycleTest extends QueueTestCommon {
+class WeeklyRollCycleTest extends QueueTestCommon {
 
     @Test
-    public void testWeekly() {
+    void testWeekly() {
         @NotNull String tmpDir = OS.getTarget() + "/testWeekly";
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir).rollCycle(RollCycles.WEEKLY).build()) {
             // 1970-02-01 is a Sunday

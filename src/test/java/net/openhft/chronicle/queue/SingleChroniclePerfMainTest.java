@@ -15,16 +15,15 @@ import net.openhft.chronicle.values.Array;
 import net.openhft.chronicle.values.MaxUtf8Length;
 import net.openhft.chronicle.values.Values;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
-public class SingleChroniclePerfMainTest extends QueueTestCommon {
+class SingleChroniclePerfMainTest extends QueueTestCommon {
     private static final int count = 1_000_000;
     private static final int size = 4 << 10;
     // blackholes to avoid code elimination.
@@ -110,7 +109,7 @@ public class SingleChroniclePerfMainTest extends QueueTestCommon {
     }
 
     @Test
-    public void testFacade() {
+    void testFacade() {
         IFacade f = Values.newNativeReference(IFacade.class);
         Byteable byteable = (Byteable) f;
         long capacity = byteable.maxSize();

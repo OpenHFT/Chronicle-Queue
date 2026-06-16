@@ -10,8 +10,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,12 +24,12 @@ import java.util.stream.IntStream;
 import static net.openhft.chronicle.core.time.SystemTimeProvider.CLOCK;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class ChronicleQueueIndexTest extends QueueTestCommon {
+class ChronicleQueueIndexTest extends QueueTestCommon {
 
     @Test
-    public void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
+    void checkTheEOFisWrittenToPreQueueFileWritingDocumentMetadata() {
 
         final Consumer<InternalAppender> writer = appender -> {
             try (DocumentContext wd = appender.writingDocument(true)) {
@@ -41,7 +40,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void checkTheEOFisWrittenToPreQueueFileWritingDocument() {
+    void checkTheEOFisWrittenToPreQueueFileWritingDocument() {
         final Consumer<InternalAppender> writer = appender -> {
             try (DocumentContext wd = appender.writingDocument()) {
                 wd.wire().write("key").writeDouble(1);
@@ -67,7 +66,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
             writer1.accept(appender);
 
-            Assert.assertFalse(hasEOFAtEndOfFile(file1));
+            assertFalse(hasEOFAtEndOfFile(file1));
         }
 
         tpConsumer.accept(tp, rollCycle);
@@ -102,7 +101,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void testIndexQueue() {
+    void testIndexQueue() {
 
         File file1 = getTmpDir();
         file1.deleteOnExit();
@@ -142,7 +141,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                     results.add(forRead.to8bitString());
                     forRead.clear();
                 }
-                assertTrue(results.toString(), results.contains("Hello World 1"));
+                assertTrue(results.contains("Hello World 1"), results.toString());
                 assertTrue(results.contains("Hello World 2"));
                 // The reader fails to read the third message. The reason for this is
                 // that there was no EOF marker placed at end of the 18264 indexed file
@@ -156,7 +155,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void read5thMessageTest() {
+    void read5thMessageTest() {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(CLOCK.currentTimeMillis());
         try (final ChronicleQueue queue = ChronicleQueue
@@ -213,7 +212,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
     // https://github.com/OpenHFT/Chronicle-Queue/issues/822
     @Test
-    public void writeReadMetadata() {
+    void writeReadMetadata() {
         try (final ChronicleQueue queue = ChronicleQueue
                 .singleBuilder(getTmpDir())
                 .rollCycle(TEST4_SECONDLY)
@@ -228,7 +227,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 dc.wire().write("a").text("hello");
             }
             try (DocumentContext dc = tailer.readingDocument(metadata)) {
-                Assert.assertTrue(dc.isPresent());
+                assertTrue(dc.isPresent());
             }
         }
     }
@@ -295,7 +294,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void D() {
+    void D() {
         driver(
                 new String[]{"data-1"},
                 new boolean[]{false}
@@ -303,7 +302,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void M() {
+    void M() {
         driver(
                 new String[]{"data-1"},
                 new boolean[]{true}
@@ -311,7 +310,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DDD() {
+    void DDD() {
         driver(
                 new String[]{"data-1", "data-2", "data-3"},
                 new boolean[]{false, false, false}
@@ -319,7 +318,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DDM() {
+    void DDM() {
         driver(
                 new String[]{"data-1", "data-2", "meta-1"},
                 new boolean[]{false, false, true}
@@ -327,7 +326,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DMD() {
+    void DMD() {
         driver(
                 new String[]{"data-1", "meta-1", "data-2"},
                 new boolean[]{false, true, false}
@@ -335,7 +334,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void DMM() {
+    void DMM() {
         driver(
                 new String[]{"data-1", "meta-1", "meta-2"},
                 new boolean[]{false, true, true}
@@ -343,7 +342,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MMM() {
+    void MMM() {
         driver(
                 new String[]{"meta-1", "meta-2", "meta-3"},
                 new boolean[]{true, true, true}
@@ -351,7 +350,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MMD() {
+    void MMD() {
         driver(
                 new String[]{"meta-1", "meta-2", "data-1"},
                 new boolean[]{true, true, false}
@@ -359,7 +358,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MDM() {
+    void MDM() {
         driver(
                 new String[]{"meta-1", "data-1", "meta-2"},
                 new boolean[]{true, false, true}
@@ -367,7 +366,7 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
     }
 
     @Test
-    public void MDD() {
+    void MDD() {
         driver(
                 new String[]{"meta-1", "data-1", "data-2"},
                 new boolean[]{true, false, false}

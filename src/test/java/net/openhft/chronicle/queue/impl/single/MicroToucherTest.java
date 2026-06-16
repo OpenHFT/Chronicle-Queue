@@ -10,23 +10,23 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class MicroToucherTest extends QueueTestCommon {
+class MicroToucherTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void touchPageTestBlockSize() {
+    void touchPageTestBlockSize() {
         touchPage(b -> b.blockSize(64 << 20), 66561);
     }
 
@@ -61,7 +61,7 @@ public class MicroToucherTest extends QueueTestCommon {
                 boolean touch = page != lastPage && appender.wire().bytes().bytesStore().inside(page, 8);
                 lastPage = page;
                 if (touch != appender.microTouch())
-                    assertEquals("i: " + i, touch, appender.microTouch());
+                    assertEquals(touch, appender.microTouch(), "i: " + i);
                 if (touch)
                     pages++;
             }

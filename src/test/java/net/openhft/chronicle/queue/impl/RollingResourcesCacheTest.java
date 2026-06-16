@@ -7,7 +7,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Instant;
@@ -18,10 +18,9 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class RollingResourcesCacheTest extends QueueTestCommon {
+class RollingResourcesCacheTest extends QueueTestCommon {
     private static final long SEED = 2983472039423847L;
 
     private static final long AM_EPOCH = 1523498933145L; //2018-04-12 02:08:53.145 UTC
@@ -96,7 +95,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void resourceLookupIsCached() {
+    void resourceLookupIsCached() {
         final File dir = getTmpDir();
         final RollingResourcesCache cache = newCache(dir);
 
@@ -104,8 +103,8 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         final RollingResourcesCache.Resource repeat = cache.resourceFor(0);
         final RollingResourcesCache.Resource next = cache.resourceFor(1);
 
-        assertSame("Expected identical instance for cached cycle", first, repeat);
-        assertNotSame("Different cycle should produce a new resource", first, next);
+        assertSame(first, repeat, "Expected identical instance for cached cycle");
+        assertNotSame(first, next, "Different cycle should produce a new resource");
 
         final int firstCount = cache.parseCount(first.text);
         final int cachedCount = cache.parseCount(first.text);
@@ -113,7 +112,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void toLongCachesAndClearsWhenFull() {
+    void toLongCachesAndClearsWhenFull() {
         final File dir = getTmpDir();
         final RollingResourcesCache cache = newCache(dir);
 
@@ -134,7 +133,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void parseWeeklyFormatValid() {
+    void parseWeeklyFormatValid() {
         // round-trip property: resourceFor(cycle).text parses back to the same cycle
         final RollingResourcesCache weeklyCache = new RollingResourcesCache(
                 WeeklyRollCycle.INSTANCE, 0, File::new, File::getName);
@@ -148,7 +147,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldConvertCyclesToResourceNamesWithNoEpoch() {
+    void shouldConvertCyclesToResourceNamesWithNoEpoch() {
         final int epoch = 0;
         final RollingResourcesCache cache =
                 new RollingResourcesCache(DAILY, epoch, File::new, File::getName);
@@ -166,7 +165,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() {
+    void shouldCorrectlyConvertCyclesToResourceNamesWithEpoch() {
         // AM_EPOCH is 2018-04-12 02:08:53.145 UTC
         // cycle 24 should be formatted as:
         // 2018-04-12 00:00:00 UTC (1523491200000) +
@@ -246,15 +245,16 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976287");
     }
 
-    @Test(expected = RuntimeException.class)
-    public void parseIncorrectlyFormattedName() {
+    @Test
+    void parseIncorrectlyFormattedName() {
         final RollingResourcesCache cache =
                 new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
-        cache.parseCount("foobar-qux");
+
+        assertThrows(RuntimeException.class, () -> cache.parseCount("foobar-qux"));
     }
 
     @Test
-    public void fuzzyConversionTest() {
+    void fuzzyConversionTest() {
         final int maxAddition = (int) ChronoUnit.DECADES.getDuration().toMillis();
         final Random random = new Random(SEED);
 
@@ -306,7 +306,7 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
     }
 
     @Test
-    public void testToLong() {
+    void testToLong() {
         doTestToLong(DAILY, AM_EPOCH, 0, Long.valueOf("17633"));
         doTestToLong(HOURLY, AM_EPOCH, 0, Long.valueOf("423192"));
         doTestToLong(MINUTELY, AM_EPOCH, 0, Long.valueOf("25391520"));

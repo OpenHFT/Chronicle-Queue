@@ -3,17 +3,17 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class NoOpConditionTest {
+class NoOpConditionTest {
 
     @Test
-    public void noOpMethodsReturnImmediately() throws Exception {
+    void noOpMethodsReturnImmediately() throws Exception {
         NoOpCondition c = NoOpCondition.INSTANCE;
         c.await();
         c.awaitUninterruptibly();

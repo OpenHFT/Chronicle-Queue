@@ -8,22 +8,22 @@ import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.*;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.MINUTELY;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
+class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTestCommon {
 
     private volatile long lastWrittenIndex = Long.MIN_VALUE;
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -32,7 +32,7 @@ public class VisibilityOfMessagesBetweenTailorsAndAppenderTest extends QueueTest
      * check if a message is written with an appender its visible to the tailor, without locks etc.
      */
     @Test
-    public void test() throws InterruptedException, ExecutionException {
+    void test() throws InterruptedException, ExecutionException {
 
         try (ChronicleQueue x = SingleChronicleQueueBuilder
                 .binary(getTmpDir())

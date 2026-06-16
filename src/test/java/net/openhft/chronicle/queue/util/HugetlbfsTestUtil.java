@@ -5,7 +5,6 @@ package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
-import org.junit.rules.TestName;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -48,15 +47,15 @@ public final class HugetlbfsTestUtil {
     /**
      * Get a path to a queue directory on hugetlbfs.
      *
-     * @param testName Junit {@link TestName} rule that contains the unit test method name.
+     * @param testMethodName the unit test method name.
      * @return a unique path on hugetlbfs scoped for this test method name.
      */
-    public static String getHugetlbfsQueueDirectory(TestName testName) {
+    public static String getHugetlbfsQueueDirectory(String testMethodName) {
         String hugetlbfsPath = hugetlbfsPath();
         if (hugetlbfsPath == null || !isHugetlbfsAvailable()) {
             throw new IllegalStateException("hugetlbfs is not available");
         }
 
-        return Paths.get(hugetlbfsPath, testName.getMethodName()).toString();
+        return Paths.get(hugetlbfsPath, testMethodName).toString();
     }
 }

@@ -14,9 +14,9 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.AccessDeniedException;
@@ -27,23 +27,23 @@ import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * test for exceptions during serialisation out of messages, or for thread interrupts.
  * We want to ensure that messages are completely written or not written - no half measures.
  */
 @RequiredForClient
-public class NotCompleteTest extends QueueTestCommon {
+class NotCompleteTest extends QueueTestCommon {
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
+    void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
 
         final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
         try {
@@ -82,7 +82,7 @@ public class NotCompleteTest extends QueueTestCommon {
 
                 try (final ChronicleQueue queue = createQueue(tmpDir)) {
                     String dump = cleanQueueDump(queue.dump());
-                    assertEquals("queue should be unchanged by the interrupted write", cleanedQueueDump, dump);
+                    assertEquals(cleanedQueueDump, dump, "queue should be unchanged by the interrupted write");
                 }
 
                 // check only 1 written
@@ -102,7 +102,7 @@ public class NotCompleteTest extends QueueTestCommon {
 
                 try (final ChronicleQueue queue = createQueue(tmpDir)) {
                     String dump = cleanQueueDump(queue.dump());
-                    assertEquals("queue should be unchanged by the failed (exception) write", cleanedQueueDump, dump);
+                    assertEquals(cleanedQueueDump, dump, "queue should be unchanged by the failed (exception) write");
 //                    System.err.println(queue.dump());
                 }
 
@@ -117,7 +117,7 @@ public class NotCompleteTest extends QueueTestCommon {
                 }
                 // check queue unchanged
                 String dump = cleanQueueDump(queueWriter.dump());
-                assertEquals("queue should be unchanged by the failed (rollback) write", cleanedQueueDump, dump);
+                assertEquals(cleanedQueueDump, dump, "queue should be unchanged by the failed (rollback) write");
                 // check nothing else written
                 assertFalse(reader.readOne());
 
@@ -160,8 +160,8 @@ public class NotCompleteTest extends QueueTestCommon {
         action.accept(personListener, queue);
     }
 
-    @After
-    public void clearInterrupt() {
+    @AfterEach
+    void clearInterrupt() {
         Thread.interrupted();
     }
 

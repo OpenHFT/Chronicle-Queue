@@ -8,35 +8,35 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
 import java.nio.file.Path;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class ToEndInvalidIndexTest extends QueueTestCommon {
+class ToEndInvalidIndexTest extends QueueTestCommon {
 
     private static final long LAST_INDEX = RollCycles.FAST_DAILY.toIndex(2, 2);
     private Path queuePath;
     private SetTimeProvider setTimeProvider;
 
-    @Before
-    public void setUp() throws StreamCorruptedException {
+    @BeforeEach
+    void setUp() throws StreamCorruptedException {
         queuePath = IOTools.createTempDirectory("partialIndex");
         setTimeProvider = new SetTimeProvider();
         createQueueWithZeroFirstSubIndexValue(setTimeProvider, queuePath);
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    protected void tearDown() {
         IOTools.deleteDirWithFiles(queuePath.toFile());
     }
 
     @Test
-    public void testBackwardsToEndReportsCorrectIndex() {
+    void testBackwardsToEndReportsCorrectIndex() {
         try (SingleChronicleQueue queue = createQueue(setTimeProvider, queuePath);
              ExcerptTailer tailer = queue.createTailer()) {
 

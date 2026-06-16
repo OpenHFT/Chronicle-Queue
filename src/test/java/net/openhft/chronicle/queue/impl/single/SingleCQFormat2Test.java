@@ -15,8 +15,8 @@ import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -25,9 +25,9 @@ import java.util.TreeMap;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class SingleCQFormat2Test extends QueueTestCommon {
+class SingleCQFormat2Test extends QueueTestCommon {
 
     static {
         // init class
@@ -38,11 +38,11 @@ public class SingleCQFormat2Test extends QueueTestCommon {
 
     private static void assertHexEquals(long a, long b) {
         if (a != b)
-            assertEquals(Long.toHexString(a) + " != " + Long.toHexString(b), a, b);
+            assertEquals(a, b, Long.toHexString(a) + " != " + Long.toHexString(b));
     }
 
     @Test
-    public void testMyData() {
+    void testMyData() {
         @NotNull File dir = getTmpDir();
         ClassAliasPool.CLASS_ALIASES.addAlias(MyData.class);
 
@@ -61,17 +61,17 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 name2.writeMarshallable(dc.wire());
             }
             String dump = queue.dump();
-            assertTrue(dump, dump.contains("--- !!meta-data #binary\n" +
+            assertTrue(dump.contains("--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  400,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]"));
+                    "]"), dump);
         }
     }
 
     @Test
-    public void testWritingThreeMessages() throws FileNotFoundException {
+    void testWritingThreeMessages() throws FileNotFoundException {
         for (int m = 0; m <= 2; m++) {
             appendMode = m;
 
@@ -279,7 +279,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
-    public void testWritingTwentyMessagesTinyIndex1() throws FileNotFoundException {
+    void testWritingTwentyMessagesTinyIndex1() throws FileNotFoundException {
         doTestWritingTwentyMessagesTinyIndex(1, "" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -380,7 +380,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
-    public void testWritingTwentyMessagesTinyIndex2() throws FileNotFoundException {
+    void testWritingTwentyMessagesTinyIndex2() throws FileNotFoundException {
         doTestWritingTwentyMessagesTinyIndex(2, "" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
@@ -466,7 +466,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
-    public void testWritingTwentyMessagesTinyIndex4() throws FileNotFoundException {
+    void testWritingTwentyMessagesTinyIndex4() throws FileNotFoundException {
         doTestWritingTwentyMessagesTinyIndex(4, "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  writePosition: [\n" +
@@ -540,8 +540,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 "...\n");
     }
 
-    @Before
-    public void resetAppendMode() {
+    @BeforeEach
+    void resetAppendMode() {
         appendMode = 0;
     }
 
@@ -572,7 +572,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
-    public void writeMap() {
+    void writeMap() {
         @NotNull Map<String, Object> map = new TreeMap<>();
         map.put("abc", "def");
         map.put("hello", "world");
@@ -666,7 +666,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
-    public void writeMarshallable() {
+    void writeMarshallable() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Order.class);
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = binary(dir)
@@ -748,7 +748,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
     }
 
     @Test
-    public void testWritingIndex() {
+    void testWritingIndex() {
         finishedNormally = false;
         @NotNull File dir = getTmpDir();
         try (@NotNull ChronicleQueue queue = SingleChronicleQueueBuilder.single(dir)
@@ -818,31 +818,30 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                 final Bytes<?> bytes = dc.wire().bytes();
                 final String s = bytes.toHexString(0, bytes.writePosition());
                 assertEquals("" +
-                                "00000000 c1 00 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 ···@··he ader··SC\n" +
-                                "00000010 51 53 74 6f 72 65 82 aa  00 00 00 cd 77 72 69 74 QStore·· ····writ\n" +
-                                "00000020 65 50 6f 73 69 74 69 6f  6e 8e 01 00 00 00 00 8d ePositio n·······\n" +
-                                "00000030 02 00 00 00 00 00 00 00  02 00 00 00 00 00 00 00 ········ ········\n" +
-                                "00000040 90 01 00 00 00 00 00 00  00 00 00 00 90 01 00 00 ········ ········\n" +
-                                "00000050 c8 69 6e 64 65 78 69 6e  67 b6 0c 53 43 51 53 49 ·indexin g··SCQSI\n" +
-                                "00000060 6e 64 65 78 69 6e 67 82  4c 00 00 00 ca 69 6e 64 ndexing· L····ind\n" +
-                                "00000070 65 78 43 6f 75 6e 74 a1  08 cc 69 6e 64 65 78 53 exCount· ··indexS\n" +
-                                "00000080 70 61 63 69 6e 67 a1 01  cb 69 6e 64 65 78 32 49 pacing·· ·index2I\n" +
-                                "00000090 6e 64 65 78 8f 8f 8f a7  c8 00 00 00 00 00 00 00 ndex···· ········\n" +
-                                "000000a0 c9 6c 61 73 74 49 6e 64  65 78 8e 00 00 00 00 a7 ·lastInd ex······\n" +
-                                "000000b0 01 00 00 00 00 00 00 00  ca 64 61 74 61 46 6f 72 ········ ·dataFor\n" +
-                                "000000c0 6d 61 74 a1 01 00 00 00  64 00 00 40 b9 0b 69 6e mat····· d··@··in\n" +
-                                "000000d0 64 65 78 32 69 6e 64 65  78 8e 01 00 00 00 00 8d dex2inde x·······\n" +
-                                "000000e0 08 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00 ········ ········\n" +
-                                "000000f0 30 01 00 00 00 00 00 00  00 00 00 00 00 00 00 00 0······· ········\n" +
-                                "00000100 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
-                                "........\n" +
-                                "00000130 5c 00 00 40 b9 05 69 6e  64 65 78 8f 8f 8f 8f 8d \\··@··in dex·····\n" +
-                                "00000140 08 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00 ········ ········\n" +
-                                "00000150 90 01 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
-                                "00000160 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
-                                "........\n" +
-                                "00000190 06 00 00 00 e5 6d 73 67  2d 31 00 00 00 00 00 00 ·····msg -1······\n",
-                        s);
+                        "00000000 c1 00 00 40 b9 06 68 65  61 64 65 72 b6 08 53 43 ···@··he ader··SC\n" +
+                        "00000010 51 53 74 6f 72 65 82 aa  00 00 00 cd 77 72 69 74 QStore·· ····writ\n" +
+                        "00000020 65 50 6f 73 69 74 69 6f  6e 8e 01 00 00 00 00 8d ePositio n·······\n" +
+                        "00000030 02 00 00 00 00 00 00 00  02 00 00 00 00 00 00 00 ········ ········\n" +
+                        "00000040 90 01 00 00 00 00 00 00  00 00 00 00 90 01 00 00 ········ ········\n" +
+                        "00000050 c8 69 6e 64 65 78 69 6e  67 b6 0c 53 43 51 53 49 ·indexin g··SCQSI\n" +
+                        "00000060 6e 64 65 78 69 6e 67 82  4c 00 00 00 ca 69 6e 64 ndexing· L····ind\n" +
+                        "00000070 65 78 43 6f 75 6e 74 a1  08 cc 69 6e 64 65 78 53 exCount· ··indexS\n" +
+                        "00000080 70 61 63 69 6e 67 a1 01  cb 69 6e 64 65 78 32 49 pacing·· ·index2I\n" +
+                        "00000090 6e 64 65 78 8f 8f 8f a7  c8 00 00 00 00 00 00 00 ndex···· ········\n" +
+                        "000000a0 c9 6c 61 73 74 49 6e 64  65 78 8e 00 00 00 00 a7 ·lastInd ex······\n" +
+                        "000000b0 01 00 00 00 00 00 00 00  ca 64 61 74 61 46 6f 72 ········ ·dataFor\n" +
+                        "000000c0 6d 61 74 a1 01 00 00 00  64 00 00 40 b9 0b 69 6e mat····· d··@··in\n" +
+                        "000000d0 64 65 78 32 69 6e 64 65  78 8e 01 00 00 00 00 8d dex2inde x·······\n" +
+                        "000000e0 08 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00 ········ ········\n" +
+                        "000000f0 30 01 00 00 00 00 00 00  00 00 00 00 00 00 00 00 0······· ········\n" +
+                        "00000100 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
+                        "........\n" +
+                        "00000130 5c 00 00 40 b9 05 69 6e  64 65 78 8f 8f 8f 8f 8d \\··@··in dex·····\n" +
+                        "00000140 08 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00 ········ ········\n" +
+                        "00000150 90 01 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
+                        "00000160 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 ········ ········\n" +
+                        "........\n" +
+                        "00000190 06 00 00 00 e5 6d 73 67  2d 31 00 00 00 00 00 00 ·····msg -1······\n", s);
                 dc.rollbackOnClose();
             }
             assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));

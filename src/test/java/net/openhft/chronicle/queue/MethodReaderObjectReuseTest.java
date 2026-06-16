@@ -12,27 +12,26 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredForClient
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class MethodReaderObjectReuseTest extends QueueTestCommon {
-    @Before
-    public void resetCounters() {
+@TestMethodOrder(MethodOrderer.MethodName.class)
+class MethodReaderObjectReuseTest extends QueueTestCommon {
+    @BeforeEach
+    void resetCounters() {
         PingDTO.constructionCounter = 0;
         PingDTO.constructionExpected = 0;
     }
 
     @Test
-    public void testOneOne() {
+    void testOneOne() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
@@ -76,7 +75,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     }
 
     @Test
-    public void testPayloadSnapshotWhenSourceMutates() {
+    void testPayloadSnapshotWhenSourceMutates() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-snapshot-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
@@ -101,7 +100,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     }
 
     @Test
-    public void testZZDirectBytesSnapshotWhenSourceMutates() {
+    void testZZDirectBytesSnapshotWhenSourceMutates() {
         ClassAliasPool.CLASS_ALIASES.addAlias(DirectPingDTO.class);
         String path = OS.getTarget() + "/MethodReaderObjectReuseTest-direct-" + Time.uniqueId();
         try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {

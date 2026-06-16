@@ -11,19 +11,18 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Index runs away on double close - AM
  */
 @RequiredForClient
-public class OvertakeTest extends QueueTestCommon {
+class OvertakeTest extends QueueTestCommon {
 
     private String path;
 
@@ -54,7 +53,12 @@ public class OvertakeTest extends QueueTestCommon {
         return t_index;
     }
 
-    @Before
+    @BeforeEach
+    void beforeEachOvertakeTest() {
+        before();
+        threadDump();
+    }
+
     public void before() {
         path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
         try (ChronicleQueue appender_queue = ChronicleQueue.singleBuilder(path)
@@ -75,13 +79,12 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Override
-    @Before
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void appendAndTail() {
+    void appendAndTail() {
         try (ChronicleQueue tailer_queue = ChronicleQueue.singleBuilder(path)
                 .testBlockSize()
                 .writeBufferMode(BufferMode.None)
@@ -99,7 +102,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Override
-    public void tearDown() {
+    protected void tearDown() {
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception ignored) {
@@ -107,7 +110,7 @@ public class OvertakeTest extends QueueTestCommon {
     }
 
     @Test
-    public void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
+    void threadingTest() throws InterruptedException, ExecutionException, TimeoutException {
         // System.out.println("Continue appending");
         ExecutorService execService = Executors.newFixedThreadPool(2,
                 new NamedThreadFactory("test"));

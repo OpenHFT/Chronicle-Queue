@@ -21,10 +21,10 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.YieldingPauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.io.File;
@@ -53,26 +53,22 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFI
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.*;
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.*;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 @SuppressWarnings({"try", "serial"})
-public class SingleChronicleQueueTest extends QueueTestCommon {
+class SingleChronicleQueueTest extends QueueTestCommon {
 
     private static final long TIMES = (4L << 20L);
     @NotNull
-    protected final WireType wireType;
-    protected final boolean named;
+    protected WireType wireType;
+    protected boolean named;
     private final Bytes<?> appenderListenerDump = Bytes.allocateElasticOnHeap(256);
 
-    public SingleChronicleQueueTest(@NotNull WireType wireType, boolean named) {
-        this.wireType = wireType;
-        this.named = named;
-    }
-
-    @Parameters(name = "wireType={0}, named={1}")
     public static Collection<Object[]> data() {
         return Arrays.asList(
                 new Object[]{WireType.BINARY_LIGHT, true},
@@ -82,7 +78,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
@@ -121,8 +117,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         fail(message);
     }
 
-    @Test
-    public void testAppend() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testAppend(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue =
                      builderWithAppendListener(getTmpDir(), wireType)
                              .build();
@@ -140,8 +139,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 appenderListenerDump.toString());
     }
 
-    @Test
-    public void createAppenderWillReturnANewAppenderEachTime() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void createAppenderWillReturnANewAppenderEachTime(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType).build();
              final ExcerptAppender appender1 = queue.createAppender();
              final ExcerptAppender appender2 = queue.createAppender()) {
@@ -153,8 +155,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
      * readOnly=true is not supported on Windows so this test does not run on Windows targets, please see
      * {@link SingleChronicleQueueBuilder#readOnly(boolean)}.
      */
-    @Test
-    public void createAppenderWillThrowWhenQueueIsReadOnly() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void createAppenderWillThrowWhenQueueIsReadOnly(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         assumeFalse(OS.isWindows());
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = builder(queueDir, wireType).build();
@@ -221,8 +226,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 "\n";
     }
 
-    @Test
-    public void testTextReadWrite() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testTextReadWrite(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue =
                      builderWithAppendListener(tmpDir, wireType)
@@ -244,8 +252,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 "\n";
     }
 
-    @Test
-    public void testCleanupDir() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCleanupDir(@NotNull WireType wireType, boolean named) throws Throwable {
+        this.wireType = wireType;
+        this.named = named;
         if (OS.isWindows())
             FlakyTestRunner.builder(this::testCleanupDir0).build().run();
         else
@@ -269,8 +280,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         IOTools.deleteDirWithFilesOrThrow(tmpDir);
     }
 
-    @Test
-    public void testRollbackOnAppend() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testRollbackOnAppend(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), wireType)
                              .build();
@@ -301,8 +315,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testWriteWithDocumentReadBytesDifferentThreads() throws InterruptedException, TimeoutException, ExecutionException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testWriteWithDocumentReadBytesDifferentThreads(@NotNull WireType wireType, boolean named) throws InterruptedException, TimeoutException, ExecutionException {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
                 .build()) {
 
@@ -357,29 +374,37 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle() {
-        expectException("Overriding roll length from existing metadata");
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldBlowUpIfTryingToCreateQueueWithUnparseableRollCycle(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
+        assertThrows(IllegalStateException.class, () -> {
+            expectException("Overriding roll length from existing metadata");
 
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
-             final ExcerptAppender excerptAppender = queue.createAppender()) {
-            try (DocumentContext documentContext = excerptAppender.writingDocument()) {
-                documentContext.wire().write("somekey").text("somevalue");
+            File tmpDir = getTmpDir();
+            try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
+                 final ExcerptAppender excerptAppender = queue.createAppender()) {
+                try (DocumentContext documentContext = excerptAppender.writingDocument()) {
+                    documentContext.wire().write("somekey").text("somevalue");
+                }
             }
-        }
 
-        try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
-        }
+            try (final ChronicleQueue ignored = builder(tmpDir, wireType).rollCycle(HOURLY).build()) {
+            }
+        });
     }
 
-    @Test
-    public void testCanAppendMetadataIfAppendLockIsSet() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCanAppendMetadataIfAppendLockIsSet(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
             try (final ExcerptAppender appender = queue.createAppender()) {
-                Assume.assumeTrue("Failing in CQE", appender instanceof StoreAppender);
+                assumeTrue(appender instanceof StoreAppender, "Failing in CQE");
                 try (DocumentContext dc = appender.writingDocument(true)) {
                     dc.wire().write("Hello World");
                 }
@@ -387,41 +412,54 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testCantAppendIfAppendLockIsSet() {
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
-            ((SingleChronicleQueue) queue).appendLock().lock();
-            try (final ExcerptAppender appender = queue.createAppender()) {
-                appender.writeText("Hello World");
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCantAppendIfAppendLockIsSet(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
+        assertThrows(IllegalStateException.class, () -> {
+            File tmpDir = getTmpDir();
+            try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
+                ((SingleChronicleQueue) queue).appendLock().lock();
+                try (final ExcerptAppender appender = queue.createAppender()) {
+                    appender.writeText("Hello World");
+                }
             }
-        }
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testCantAppendIfAppendLockIsSetInDifferentQueue() {
-        expectException("Overriding roll length from existing metadata");
-        expectException("Overriding roll cycle from");
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCantAppendIfAppendLockIsSetInDifferentQueue(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
+        assertThrows(IllegalStateException.class, () -> {
+            expectException("Overriding roll length from existing metadata");
+            expectException("Overriding roll cycle from");
 
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
-            ((SingleChronicleQueue) queue).appendLock().lock();
-        }
+            File tmpDir = getTmpDir();
+            try (final ChronicleQueue queue = builder(tmpDir, wireType).build()) {
+                ((SingleChronicleQueue) queue).appendLock().lock();
+            }
 
-        try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
-             final ExcerptAppender excerptAppender = queue.createAppender()) {
-            excerptAppender.writeText("hello");
-        }
+            try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
+                 final ExcerptAppender excerptAppender = queue.createAppender()) {
+                excerptAppender.writeText("hello");
+            }
+        });
     }
 
-    @Test
-    public void testCanAppendWriteBytesInternalIfAppendLockIsSet() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCanAppendWriteBytesInternalIfAppendLockIsSet(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = builderWithAppendListener(tmpDir, wireType).build()) {
             ((SingleChronicleQueue) queue).appendLock().lock();
             try (final ExcerptAppender appender = queue.createAppender()) {
-                Assume.assumeTrue(appender instanceof StoreAppender);
+                assumeTrue(appender instanceof StoreAppender);
                 assumeTrue(appender instanceof StoreAppender);
                 StoreAppender storeAppender = (StoreAppender) appender;
                 ((SingleChronicleQueue) queue).writeLock().lock();
@@ -441,8 +479,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 "\n";
     }
 
-    @Test
-    public void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldNotBlowUpIfTryingToCreateQueueWithIncorrectRollCycle(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         expectException("Overriding roll length from existing metadata");
         expectException("Overriding roll cycle from");
         File tmpDir = getTmpDir();
@@ -461,8 +502,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldOverrideDifferentEpoch() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldOverrideDifferentEpoch(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         expectException("Overriding roll epoch from existing metadata, was 10, overriding to 100");
         File tmpDir = getTmpDir();
         final int shouldBeEpoch = 100;
@@ -478,8 +522,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadWriteHourly() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadWriteHourly(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue qAppender = builder(tmpDir, wireType).rollCycle(HOURLY).build();
@@ -502,8 +549,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return q.rollCycle().toSequenceNumber(index);
     }
 
-    @Test
-    public void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed() throws IOException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldAllowDirectoryToBeDeletedWhenQueueIsClosed(@NotNull WireType wireType, boolean named) throws IOException {
+        this.wireType = wireType;
+        this.named = named;
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test deleting after close on windows");
             return;
@@ -527,13 +577,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     .filter(p -> !Files.isDirectory(p))
                     .filter(p -> !p.toFile().delete())
                     .collect(Collectors.toList());
-            assertTrue("Unable to delete " + unDeletable, unDeletable.isEmpty());
+            assertTrue(unDeletable.isEmpty(), "Unable to delete " + unDeletable);
         }
         assertTrue(dir.delete());
     }
 
-    @Test
-    public void testReadingLessBytesThanWritten() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingLessBytesThanWritten(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -560,8 +613,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testAppendAndRead() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testAppendAndRead(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -585,15 +641,18 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             // Random read
             for (int i = 0; i < 10; i++) {
                 final int n = i;
-                assertTrue("n: " + n, tailer.moveToIndex(queue.rollCycle().toIndex(cycle, n)));
-                assertTrue("n: " + n, tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, n)), "n: " + n);
+                assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())), "n: " + n);
                 assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()));
             }
         }
     }
 
-    @Test
-    public void testReadAndAppend() throws InterruptedException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadAndAppend(@NotNull WireType wireType, boolean named) throws InterruptedException {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
 
@@ -638,8 +697,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testCheckIndexWithWritingDocument() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCheckIndexWithWritingDocument(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         doTestCheckIndex(
                 (appender, n) -> {
                     try (final DocumentContext dc = appender.writingDocument()) {
@@ -648,8 +710,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 });
     }
 
-    @Test
-    public void testCheckIndexWithWritingDocument2() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCheckIndexWithWritingDocument2(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         doTestCheckIndex(
                 (appender, n) -> {
                     try (final DocumentContext dc = appender.writingDocument()) {
@@ -661,20 +726,29 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 });
     }
 
-    @Test
-    public void testCheckIndexWithWriteBytes() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCheckIndexWithWriteBytes(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         doTestCheckIndex(
                 (appender, n) -> appender.writeBytes(Bytes.from("Message-" + n)));
     }
 
-    @Test
-    public void testCheckIndexWithWriteBytes2() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCheckIndexWithWriteBytes2(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         doTestCheckIndex(
                 (appender, n) -> appender.writeBytes(b -> b.append8bit("Message-").append(n)));
     }
 
-    @Test
-    public void testCheckIndexWithWriteBytes3() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCheckIndexWithWriteBytes3(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         doTestCheckIndex(
                 (appender, n) -> appender.writeBytes(b ->
                         b.writeUtf8("Hello")
@@ -683,16 +757,22 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                                 .writeInt(1)));
     }
 
-    @Test
-    public void testCheckIndexWithWriteMap() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCheckIndexWithWriteMap(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         doTestCheckIndex(
                 (appender, n) -> appender.writeMap(new HashMap<String, String>() {{
                     put("key", "Message-" + n);
                 }}));
     }
 
-    @Test
-    public void testCheckIndexWithWriteText() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCheckIndexWithWriteText(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         doTestCheckIndex(
                 (appender, n) -> appender.writeText("Message-" + n)
         );
@@ -725,8 +805,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testAppendAndReadWithRollingB() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testAppendAndReadWithRollingB(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
 
@@ -758,19 +841,22 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 final int n = i;
                 boolean condition = tailer.readDocument(r -> assertEquals(n,
                         r.read(TestKey.test).int32()));
-                assertTrue("i : " + i, condition);
+                assertTrue(condition, "i : " + i);
                 assertEquals(cycle + i, tailer.cycle());
 
                 boolean condition2 = tailer.readDocument(r -> assertEquals(n + 1000,
                         r.read(TestKey.test2).int32()));
-                assertTrue("i2 : " + i, condition2);
+                assertTrue(condition2, "i2 : " + i);
                 assertEquals(cycle + i, tailer.cycle());
             }
         }
     }
 
-    @Test
-    public void testAppendAndReadAtIndex() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testAppendAndReadAtIndex(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
                 .build();
@@ -798,8 +884,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testSimpleWire() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testSimpleWire(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
@@ -818,8 +907,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testIndexWritingDocument() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testIndexWritingDocument(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
@@ -838,8 +930,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadingWritingMarshallableDocument() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingWritingMarshallableDocument(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
@@ -859,8 +954,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testMetaData() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testMetaData(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         assumeFalse(named);
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
@@ -889,7 +987,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
 
-                    in.text("Quartilla", Assert::assertEquals);
+                    in.text("Quartilla", Assertions::assertEquals);
                     break;
                 }
             }
@@ -898,7 +996,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             try (DocumentContext dc = tailer.readingDocument(true)) {
                 assertTrue(dc.isData());
                 robIndex = dc.index();
-                dc.wire().read("FirstName").text("Rob", Assert::assertEquals);
+                dc.wire().read("FirstName").text("Rob", Assertions::assertEquals);
             }
 
             while (true) {
@@ -908,7 +1006,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
 
-                    in.text("Steve", Assert::assertEquals);
+                    in.text("Steve", Assertions::assertEquals);
                     break;
                 }
             }
@@ -916,13 +1014,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             assertTrue(tailer.moveToIndex(robIndex));
             try (DocumentContext dc = tailer.readingDocument(false)) {
                 assertTrue(dc.isData());
-                dc.wire().read("FirstName").text("Rob", Assert::assertEquals);
+                dc.wire().read("FirstName").text("Rob", Assertions::assertEquals);
             }
         }
     }
 
-    @Test
-    public void testReadingSecondDocumentNotExist() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingSecondDocumentNotExist(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
@@ -945,8 +1046,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testDocumentIndexTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testDocumentIndexTest(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
@@ -987,8 +1091,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadingSecondDocumentNotExistIncludingMeta() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingSecondDocumentNotExistIncludingMeta(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
@@ -1007,7 +1114,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
 
-                    in.text("Quartilla", Assert::assertEquals);
+                    in.text("Quartilla", Assertions::assertEquals);
                     break;
                 }
             }
@@ -1018,8 +1125,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testSimpleByteTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testSimpleByteTest(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
                 .build();
@@ -1046,8 +1156,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadAtIndex() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadAtIndex(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final RollingChronicleQueue queue = builder(getTmpDir(), wireType)
                 .indexCount(8)
                 .indexSpacing(8)
@@ -1072,9 +1185,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             for (int i : new int[]{0, 8, 7, 9, 64, 65, 66}) {
                 final long index = queue.rollCycle().toIndex(cycle, i);
-                assertTrue("i: " + i,
-                        tailer.moveToIndex(
-                                index));
+                assertTrue(tailer.moveToIndex(
+                        index), "i: " + i);
                 try (final DocumentContext context = tailer.readingDocument()) {
                     assertEquals(index, context.index());
                     context.wire().read("key").text(sb);
@@ -1084,9 +1196,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Ignore("long running test")
-    @Test
-    public void testReadAtIndex4MB() {
+    @Disabled("long running test")
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadAtIndex4MB(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(getTmpDir(), this.wireType).rollCycle(SMALL_DAILY)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -1111,8 +1226,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testMetaIndexTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testMetaIndexTest(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue q = builderWithAppendListener(tmpDir, wireType).rollCycle(HOURLY).build();
@@ -1235,8 +1353,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 appenderListenerDump.toString());
     }
 
-    @Test
-    public void testLastWrittenIndexPerAppender() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testLastWrittenIndexPerAppender(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -1246,28 +1367,33 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testLastWrittenIndexPerAppenderNoData() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testLastWrittenIndexPerAppenderNoData(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
-            appender.lastIndexAppended();
-            fail();
-        }
-    }
-
-    @Test(expected = IllegalStateException.class) //: no messages written
-    public void testNoMessagesWritten() {
-        try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .build();
-             final ExcerptAppender appender = chronicle.createAppender()) {
-
-            appender.lastIndexAppended();
+            assertThrows(IllegalStateException.class, appender::lastIndexAppended);
         }
     }
 
     @Test
-    public void testHeaderIndexReadAtIndex() {
+        //: no messages written
+    void testNoMessagesWritten() {
+        try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
+                .build();
+             final ExcerptAppender appender = chronicle.createAppender()) {
+            assertThrows(IllegalStateException.class, appender::lastIndexAppended);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("data")
+    void testHeaderIndexReadAtIndex(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
@@ -1292,8 +1418,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     /**
      * test that if we make EPOC the current time, then the cycle is == 0
      */
-    @Test
-    public void testEPOC() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testEPOC(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
                 .rollCycle(HOURLY)
@@ -1305,8 +1434,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldBeAbleToReadFromQueueWithNonZeroEpoch() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldBeAbleToReadFromQueueWithNonZeroEpoch(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
                 .rollCycle(DEFAULT)
@@ -1321,8 +1453,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldHandleLargeEpoch() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldHandleLargeEpoch(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .epoch(System.currentTimeMillis())
                 .epoch(1284739200000L)
@@ -1337,8 +1472,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testNegativeEPOC() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testNegativeEPOC(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         for (int h = -14; h <= 14; h++) {
             try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                     .epoch(TimeUnit.HOURS.toMillis(h))
@@ -1354,8 +1492,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testIndex() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testIndex(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(HOURLY)
                 .build();
@@ -1388,8 +1529,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadingDocument() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingDocument(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(HOURLY)
                 .build();
@@ -1454,8 +1598,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadingDocumentWithFirstAMove() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingDocumentWithFirstAMove(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(HOURLY)
@@ -1508,8 +1655,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadingDocumentWithFirstAMoveWithEpoch() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingDocumentWithFirstAMoveWithEpoch(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         Instant hourly = Instant.parse("2018-02-12T00:59:59.999Z");
         Instant minutely = Instant.parse("2018-02-12T00:00:59.999Z");
 
@@ -1588,8 +1738,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testAppendedBeforeToEnd() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testAppendedBeforeToEnd(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, this.wireType)
                 .rollCycle(TEST_SECONDLY)
@@ -1606,7 +1759,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 tailer.toEnd();
 
             try (DocumentContext dc = tailer.readingDocument()) {
-                assertFalse(tailer.index() + " " + tailer.state(), dc.isPresent());
+                assertFalse(dc.isPresent(), tailer.index() + " " + tailer.state());
             }
 
             append.writeDocument(w -> w.write("test").text("text2"));
@@ -1618,8 +1771,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReentrant() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReentrant(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = binary(tmpDir)
@@ -1701,8 +1857,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return "";
     }
 
-    @Test
-    public void testToEnd() throws InterruptedException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testToEnd(@NotNull WireType wireType, boolean named) throws InterruptedException {
+        this.wireType = wireType;
+        this.named = named;
         File dir = getTmpDir();
         try (ChronicleQueue queue = builder(dir, wireType)
                 .rollCycle(HOURLY)
@@ -1726,15 +1885,18 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             try (DocumentContext dc = tailer.readingDocument()) {
                 try (final SingleChronicleQueue build = builder(dir, wireType).rollCycle(HOURLY).build()) {
                     String message = "dump: " + build.dump();
-                    assertTrue(message, dc.isPresent());
-                    assertEquals(message, "text", dc.wire().read("test").text());
+                    assertTrue(dc.isPresent(), message);
+                    assertEquals("text", dc.wire().read("test").text(), message);
                 }
             }
         }
     }
 
-    @Test
-    public void testToEnd2() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testToEnd2(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
                 .build();
@@ -1751,12 +1913,15 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text"));
 
-            assertTrue(tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals)));
+            assertTrue(tailer.readDocument(w -> w.read("test").text("text", Assertions::assertEquals)));
         }
     }
 
-    @Test
-    public void testToEndOnDeletedQueueFiles() throws IOException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testToEndOnDeletedQueueFiles(@NotNull WireType wireType, boolean named) throws IOException {
+        this.wireType = wireType;
+        this.named = named;
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
@@ -1774,12 +1939,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
             append.writeDocument(w -> w.write("test").text("text"));
 
-            assertTrue(tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals)));
+            assertTrue(tailer.readDocument(w -> w.read("test").text("text", Assertions::assertEquals)));
 
             try (Stream<Path> cq4Files = Files.find(dir.toPath(), 1, (p, basicFileAttributes) -> p.toString().endsWith("cq4"), FileVisitOption.FOLLOW_LINKS)) {
                 final List<Path> unDeletable = cq4Files.filter(path -> !path.toFile().delete())
                         .collect(Collectors.toList());
-                assertTrue("Unable to delete" + unDeletable, unDeletable.isEmpty());
+                assertTrue(unDeletable.isEmpty(), "Unable to delete" + unDeletable);
             }
 
             try (ChronicleQueue q2 = builder(dir, wireType).build();
@@ -1789,13 +1954,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assertEquals(TailerState.UNINITIALISED, tailer.state());
                 q2Appender.writeDocument(w -> w.write("test").text("before text"));
 
-                assertTrue(tailer.readDocument(w -> w.read("test").text("before text", Assert::assertEquals)));
+                assertTrue(tailer.readDocument(w -> w.read("test").text("before text", Assertions::assertEquals)));
             }
         }
     }
 
-    @Test
-    public void testReadWrite() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadWrite(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
                 .rollCycle(HOURLY)
@@ -1821,18 +1989,21 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 if (i % 10000 == 0)
                     System.gc();
                 if (i % 2 == 0)
-                    assertTrue(tailer2.readDocument(w -> w.read("test - message").text("text", Assert::assertEquals)));
+                    assertTrue(tailer2.readDocument(w -> w.read("test - message").text("text", Assertions::assertEquals)));
                 if (i % 3 == 0)
-                    assertTrue(tailer3.readDocument(w -> w.read("test - message").text("text", Assert::assertEquals)));
+                    assertTrue(tailer3.readDocument(w -> w.read("test - message").text("text", Assertions::assertEquals)));
                 if (i % 4 == 0)
-                    assertTrue(tailer4.readDocument(w -> w.read("test - message").text("text", Assert::assertEquals)));
-                assertTrue(tailer.readDocument(w -> w.read("test - message").text("text", Assert::assertEquals)));
+                    assertTrue(tailer4.readDocument(w -> w.read("test - message").text("text", Assertions::assertEquals)));
+                assertTrue(tailer.readDocument(w -> w.read("test - message").text("text", Assertions::assertEquals)));
             }
         }
     }
 
-    @Test
-    public void testReadingDocumentForEmptyQueue() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingDocumentForEmptyQueue(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, this.wireType)
                 .rollCycle(HOURLY)
@@ -1855,14 +2026,17 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 // DocumentContext should not be empty as we know what the wire type will be.
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
-                    dc.wire().read("test - message").text("text", Assert::assertEquals);
+                    dc.wire().read("test - message").text("text", Assertions::assertEquals);
                 }
             }
         }
     }
 
-    @Test
-    public void testMetaData6() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testMetaData6(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         assumeFalse(named);
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
@@ -1892,7 +2066,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
 
-                    in.text("Quartilla", Assert::assertEquals);
+                    in.text("Quartilla", Assertions::assertEquals);
                     break;
                 }
             }
@@ -1900,7 +2074,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             try (DocumentContext dc = tailer.readingDocument(true)) {
                 assertTrue(dc.isData());
                 assertTrue(dc.isPresent());
-                dc.wire().read("FirstName").text("Helen", Assert::assertEquals);
+                dc.wire().read("FirstName").text("Helen", Assertions::assertEquals);
             }
 
             while (true) {
@@ -1910,7 +2084,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     if (!StringUtils.isEqual(event, "FirstName"))
                         continue;
 
-                    in.text("Steve", Assert::assertEquals);
+                    in.text("Steve", Assertions::assertEquals);
                     break;
                 }
             }
@@ -1984,8 +2158,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         throw new IllegalStateException("unknown type " + wireType);
     }
 
-    @Test
-    public void testToEndBeforeWrite() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testToEndBeforeWrite(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
                 .build();
@@ -1998,13 +2175,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 tailer.toEnd();
                 int finalI = i;
                 appender.writeDocument(w -> w.writeEventName("hello").text("world" + finalI));
-                tailer.readDocument(w -> w.read().text("world" + finalI, Assert::assertEquals));
+                tailer.readDocument(w -> w.read().text("world" + finalI, Assertions::assertEquals));
             }
         }
     }
 
-    @Test
-    public void testForwardFollowedBackBackwardTailer() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testForwardFollowedBackBackwardTailer(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
                 .build();
@@ -2023,8 +2203,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldReadBackwardFromEndOfQueueWhenDirectionIsSetAfterMoveToEnd() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldReadBackwardFromEndOfQueueWhenDirectionIsSetAfterMoveToEnd(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue queue = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST2_DAILY)
                 .build();
@@ -2073,7 +2256,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             try (DocumentContext documentContext = backwardTailer.readingDocument()) {
                 assertTrue(documentContext.isPresent());
                 final long index = documentContext.index();
-                assertEquals("index: " + index, i, (int) index);
+                assertEquals(i, (int) index, "index: " + index);
                 assertEquals(i, DEFAULT.toSequenceNumber(index));
                 assertTrue(documentContext.isPresent());
                 sb.setLength(0);
@@ -2088,8 +2271,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testOverreadForwardFromFutureCycleThenReadBackwardTailer() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testOverreadForwardFromFutureCycleThenReadBackwardTailer(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         RollCycle cycle = TEST2_DAILY;
         // when "forwardToFuture" flag is set, go one cycle to the future
         AtomicBoolean forwardToFuture = new AtomicBoolean(false);
@@ -2129,8 +2315,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testSomeMessages() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testSomeMessages(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST2_DAILY)
                 .build();
@@ -2151,8 +2340,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testZeroLengthMessage() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testZeroLengthMessage(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
                 .rollCycle(TEST_DAILY)
                 .build();
@@ -2168,8 +2360,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testMoveToWithAppender() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testMoveToWithAppender(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .build();
              InternalAppender sync = (InternalAppender) syncQ.createAppender()) {
@@ -2196,8 +2391,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testMapWrapper() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testMapWrapper(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .build()) {
 
@@ -2221,8 +2419,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testLastIndexAppended() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testLastIndexAppended(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              ExcerptAppender appender = chronicle.createAppender()) {
@@ -2236,8 +2437,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testAppendedSkipToEndMultiThreaded() throws InterruptedException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testAppendedSkipToEndMultiThreaded(@NotNull WireType wireType, boolean named) throws InterruptedException {
+        this.wireType = wireType;
+        this.named = named;
         // some text to simulate load.
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
@@ -2287,8 +2491,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
      * if one appender if much further ahead than the other, then the new append should jump straight to the end rather than attempting to write a
      * positions that are already occupied
      */
-    @Test
-    public void testAppendedSkipToEnd() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testAppendedSkipToEnd(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
                 .build();
@@ -2311,8 +2518,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testToEndPrevCycleEOF() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testToEndPrevCycleEOF(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType)
@@ -2377,10 +2587,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     }
 
-    @Ignore("Long Running Test")
-    @Test
-    public void testRandomConcurrentReadWrite() throws
+    @Disabled("Long Running Test")
+    @ParameterizedTest
+    @MethodSource("data")
+    void testRandomConcurrentReadWrite(@NotNull WireType wireType, boolean named) throws
             InterruptedException {
+        this.wireType = wireType;
+        this.named = named;
 
         // some text to simulate load.
         StringBuilder sb = new StringBuilder();
@@ -2413,8 +2626,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testTailerWhenCyclesWhereSkippedOnWrite() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testTailerWhenCyclesWhereSkippedOnWrite(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         try (final ChronicleQueue queue = binary(getTmpDir())
@@ -2485,8 +2701,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testMultipleAppenders() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testMultipleAppenders(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"))
@@ -2600,8 +2819,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         throw new IllegalStateException("unknown wiretype=" + wireType);
     }
 
-    @Test
-    public void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldNotGenerateGarbageReadingDocumentAfterEndOfFile(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType)
@@ -2631,14 +2853,17 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             final long endCollectionCount = GcControls.getGcCount();
             final long actualGcCycles = endCollectionCount - startCollectionCount;
 
-            assertTrue(String.format("Too many GC cycles. Expected <= %d, but was %d",
-                            maxAllowedGcCycles, actualGcCycles),
-                    actualGcCycles <= maxAllowedGcCycles);
+            assertTrue(actualGcCycles <= maxAllowedGcCycles,
+                    String.format("Too many GC cycles. Expected <= %d, but was %d",
+                            maxAllowedGcCycles, actualGcCycles));
         }
     }
 
-    @Test
-    public void testReadingWritingWhenNextCycleIsInSequence() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingWritingWhenNextCycleIsInSequence(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         final File dir = getTmpDir();
@@ -2669,8 +2894,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadingWritingWhenCycleIsSkipped() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingWritingWhenCycleIsSkipped(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -2703,8 +2931,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadingWritingWhenCycleIsSkippedBackwards() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadingWritingWhenCycleIsSkippedBackwards(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         final SetTimeProvider timeProvider = new SetTimeProvider();
         long time = System.currentTimeMillis();
         timeProvider.currentTimeMillis(time);
@@ -2735,8 +2966,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testReadWritingWithTimeProvider() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadWritingWithTimeProvider(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         final File dir = getTmpDir();
 
         long time = System.currentTimeMillis();
@@ -2779,8 +3013,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testCountExceptsBetweenCycles() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCountExceptsBetweenCycles(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         try (final RollingChronicleQueue queue = binary(getTmpDir())
@@ -2827,8 +3064,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testLongLivingTailerAppenderReAcquiredEachSecond() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testLongLivingTailerAppenderReAcquiredEachSecond(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         SetTimeProvider timeProvider = new SetTimeProvider();
         final File dir = getTmpDir();
         final RollCycle rollCycle = TEST4_SECONDLY;
@@ -2872,20 +3112,27 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testCountExceptsWithRubbishData() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCountExceptsWithRubbishData(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
+        assertThrows(IllegalStateException.class, () -> {
+            try (final RollingChronicleQueue queue = binary(getTmpDir())
+                    .rollCycle(TEST_SECONDLY)
+                    .build()) {
 
-        try (final RollingChronicleQueue queue = binary(getTmpDir())
-                .rollCycle(TEST_SECONDLY)
-                .build()) {
-
-            // rubbish data
-            queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
-        }
+                // rubbish data
+                queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
+            }
+        });
     }
 
-    @Test
-    public void testFromSizePrefixedBlobs() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testFromSizePrefixedBlobs(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         try (final ChronicleQueue queue = binary(getTmpDir())
                 .build();
@@ -2909,8 +3156,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void tailerRollBackTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void tailerRollBackTest(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         final File source = getTmpDir();
         try (final ChronicleQueue q = binary(source).build();
              final ExcerptAppender appender = q.createAppender()) {
@@ -2925,8 +3175,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testCopyQueue() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testCopyQueue(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         final File source = getTmpDir();
         final File target = getTmpDir();
         {
@@ -2966,8 +3219,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     /**
      * see https://github.com/OpenHFT/Chronicle-Queue/issues/299
      */
-    @Test
-    public void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         try (final ChronicleQueue queue = binary(getTmpDir())
                 .rollCycle(DAILY).build();
@@ -3016,8 +3272,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void testExistingRollCycleIsMaintained() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testExistingRollCycleIsMaintained(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         expectException("Overriding roll cycle from ");
         expectException("Overriding roll length from ");
 
@@ -3047,8 +3306,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void checkReferenceCountingAndCheckFileDeletion() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void checkReferenceCountingAndCheckFileDeletion(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         MappedFile mappedFile;
 
@@ -3079,8 +3341,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     }
 
-    @Test
-    public void checkReferenceCountingWhenRollingAndCheckFileDeletion() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void checkReferenceCountingWhenRollingAndCheckFileDeletion(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         @SuppressWarnings("unused")
@@ -3129,8 +3394,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         assertTrue(mappedFile2.file().delete());
     }
 
-    @Test(timeout = 10_000)
-    public void testWritingDocumentIsAtomic() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testWritingDocumentIsAtomic(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         final int threadCount = 8;
         final ExecutorService executorService = Executors.newFixedThreadPool(threadCount,
@@ -3188,8 +3456,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldBeAbleToLoadQueueFromReadOnlyFiles() throws IOException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldBeAbleToLoadQueueFromReadOnlyFiles(@NotNull WireType wireType, boolean named) throws IOException {
+        this.wireType = wireType;
+        this.named = named;
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test read only mode on windows");
             return;
@@ -3216,8 +3487,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldCreateQueueInCurrentDirectory() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldCreateQueueInCurrentDirectory(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
@@ -3237,8 +3511,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return SingleChronicleQueueBuilder.builder(file, wireType).rollCycle(TEST4_DAILY).testBlockSize();
     }
 
-    @Test
-    public void testTailerSnappingRollWithNewAppender() throws InterruptedException, ExecutionException, TimeoutException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testTailerSnappingRollWithNewAppender(@NotNull WireType wireType, boolean named) throws InterruptedException, ExecutionException, TimeoutException {
+        this.wireType = wireType;
+        this.named = named;
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(System.currentTimeMillis() - 2_000);
         final File dir = getTmpDir();
@@ -3319,8 +3596,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return mappedFile;
     }
 
-    @Test
-    public void writeBytesAndIndexFiveTimesWithOverwriteTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void writeBytesAndIndexFiveTimesWithOverwriteTest(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue sourceQueue =
                      builder(getTmpDir(), wireType).
                              testBlockSize().build();
@@ -3371,7 +3651,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
 
                 String dump = tidyDump(queue);
-                assertTrue(dump, dump.contains(
+                assertTrue(dump.contains(
                         "--- !!data #binary\n" +
                                 "hello: world0\n" +
                                 "--- !!data #binary\n" +
@@ -3383,14 +3663,17 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "hello: world4\n" +
                                 "--- !!data #binary\n" +
-                                "goodbye\n"));
+                                "goodbye\n"), dump);
 
             }
         }
     }
 
-    @Test
-    public void writeBytesAndIndexFiveTimesTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void writeBytesAndIndexFiveTimesTest(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         try (final ChronicleQueue sourceQueue =
                      builder(getTmpDir(), wireType).
                              testBlockSize().build();
@@ -3419,7 +3702,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
                 String dump = tidyDump(queue);
                 assertEquals(before, dump);
-                assertTrue(dump, dump.contains(
+                assertTrue(dump.contains(
                         "--- !!data #binary\n" +
                                 "hello: world0\n" +
                                 "--- !!data #binary\n" +
@@ -3429,13 +3712,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                                 "--- !!data #binary\n" +
                                 "hello: world3\n" +
                                 "--- !!data #binary\n" +
-                                "hello: world4"));
+                                "hello: world4"), dump);
             }
         }
     }
 
-    @Test
-    public void rollbackTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void rollbackTest(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
 
         File file = getTmpDir();
         try (final ChronicleQueue sourceQueue =
@@ -3527,10 +3813,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void mappedSegmentsShouldBeUnmappedAsCycleRolls() throws IOException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void mappedSegmentsShouldBeUnmappedAsCycleRolls(@NotNull WireType wireType, boolean named) throws IOException, InterruptedException {
+        this.wireType = wireType;
+        this.named = named;
 
-        Assume.assumeTrue("this test is slow and does not depend on wire type", wireType == WireType.BINARY);
+        assumeTrue(wireType == WireType.BINARY, "this test is slow and does not depend on wire type");
 
         long now = System.currentTimeMillis();
         long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000;
@@ -3609,9 +3898,12 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     /**
      * relates to https://github.com/OpenHFT/Chronicle-Queue/issues/699
      */
-    @Test
-    public void testReadUsingReadOnly() {
-        assumeFalse("Read-only mode is not supported on Windows", OS.isWindows());
+    @ParameterizedTest
+    @MethodSource("data")
+    void testReadUsingReadOnly(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
+        assumeFalse(OS.isWindows(), "Read-only mode is not supported on Windows");
         assumeFalse(named);
 
         File tmpDir = getTmpDir();
@@ -3634,12 +3926,15 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 dc.wire().getValueIn().text(sb);
             }
 
-            Assert.assertEquals(expected, sb.toString());
+            assertEquals(expected, sb.toString());
         }
     }
 
-    @Test
-    public void lastIndexShouldReturnLastIndexForPopulatedQueue() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void lastIndexShouldReturnLastIndexForPopulatedQueue(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
             assertEquals(-1, queue.lastIndex());
@@ -3653,16 +3948,22 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void lastIndexShouldReturnNegativeOneForEmptyQueue() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void lastIndexShouldReturnNegativeOneForEmptyQueue(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
             assertEquals(-1, queue.lastIndex());
         }
     }
 
-    @Test
-    public void lastIndexShouldReturnNegativeOneForMetadataOnlyQueue() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void lastIndexShouldReturnNegativeOneForMetadataOnlyQueue(@NotNull WireType wireType, boolean named) {
+        this.wireType = wireType;
+        this.named = named;
         File tmpDir = getTmpDir();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir).wireType(wireType).build()) {
             try (ExcerptAppender appender = queue.createAppender()) {
@@ -3674,8 +3975,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void shouldWaitForConditionWhenCreatingAppender() throws TimeoutException {
+    @ParameterizedTest
+    @MethodSource("data")
+    void shouldWaitForConditionWhenCreatingAppender(@NotNull WireType wireType, boolean named) throws TimeoutException {
+        this.wireType = wireType;
+        this.named = named;
         File tmpDir = getTmpDir();
         AtomicBoolean gotAppender = new AtomicBoolean(false);
         ReentrantLock createAppenderLock = new ReentrantLock();

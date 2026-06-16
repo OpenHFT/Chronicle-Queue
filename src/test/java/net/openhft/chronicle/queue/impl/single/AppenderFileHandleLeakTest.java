@@ -19,9 +19,8 @@ import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -38,10 +37,10 @@ import java.util.stream.IntStream;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static net.openhft.chronicle.testframework.GcControls.requestGcCycle;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public final class AppenderFileHandleLeakTest extends QueueTestCommon {
+final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
@@ -82,15 +81,15 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
      * These only run on Linux because {@link MappedFileUtil#getAllMappedFiles()} only works
      * on Linux
      */
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         assumeTrue(OS.isLinux());
         System.gc();
         queuePath = getTmpDir();
     }
 
     @Test
-    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
+    void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
 
@@ -121,12 +120,12 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        assertTrue(queueFilesAreAllClosed());
         finishedNormally = true;
     }
 
     @Test
-    public void tailerResourcesCanBeReleasedManually() throws Exception {
+    void tailerResourcesCanBeReleasedManually() throws Exception {
         FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
     }
 
@@ -156,12 +155,12 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             assertFalse(gcGuard.isEmpty());
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        assertTrue(queueFilesAreAllClosed());
 
     }
 
     @Test
-    public void tailerShouldReleaseFileHandlesAsQueueRolls() throws InterruptedException {
+    void tailerShouldReleaseFileHandlesAsQueueRolls() throws InterruptedException {
 
         System.gc();
         Thread.sleep(100);
@@ -205,11 +204,11 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        assertTrue(queueFilesAreAllClosed());
     }
 
     @Test
-    public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+    void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
         FlakyTestRunner.<RuntimeException>builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
@@ -230,7 +229,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+    void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
         FlakyTestRunner.<RuntimeException>builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()

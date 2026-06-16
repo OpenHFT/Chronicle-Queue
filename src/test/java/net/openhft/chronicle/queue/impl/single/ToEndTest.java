@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -13,9 +12,7 @@ import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -26,16 +23,17 @@ import java.util.List;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
-public class ToEndTest extends QueueTestCommon {
+class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
     private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
     private long lastCycle;
 
     @Test
-    public void missingCyclesToEndTest() {
+    void missingCyclesToEndTest() {
         String path = OS.getTarget() + "/missingCyclesToEndTest-" + Time.uniqueId();
         try {
             IOTools.shallowDeleteDirWithFiles(path);
@@ -71,9 +69,9 @@ public class ToEndTest extends QueueTestCommon {
                 appender.writeDocument(wire -> wire.write("msg").int32(4));
 
                 try (DocumentContext dc = tailer.readingDocument()) {
-                    assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
+                    assertTrue(dc.isPresent(), "Should be able to read entry in this cycle. Got NoDocumentContext.");
                     int i = dc.wire().read("msg").int32();
-                    assertEquals("Should've read 4, instead we read: " + i, 4, i);
+                    assertEquals(4, i, "Should've read 4, instead we read: " + i);
                 }
 
                 // read from the beginning
@@ -113,7 +111,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
+    void tailerToEndIncreasesRefCount() throws NoSuchFieldException, IllegalAccessException {
         String path = OS.getTarget() + "/toEndIncRefCount-" + Time.uniqueId();
         IOTools.shallowDeleteDirWithFiles(path);
 
@@ -152,7 +150,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void toEndTest() {
+    void toEndTest() {
         File baseDir = getTmpDir();
 
         try {
@@ -196,7 +194,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void toEndBeforeWriteTest() {
+    void toEndBeforeWriteTest() {
         File baseDir = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
@@ -234,7 +232,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void toEndAfterWriteTest() {
+    void toEndAfterWriteTest() {
         File file = getTmpDir();
         IOTools.shallowDeleteDirWithFiles(file);
         final SetTimeProvider stp = new SetTimeProvider();
@@ -282,7 +280,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForEmptyQueue() {
+    void shouldReturnExpectedValuesForEmptyQueue() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             assertEquals(ZERO_AS_HEX_STRING, tailerToEndIndex(queue));
@@ -291,11 +289,11 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
+    void shouldReturnExpectedValuesForQueueWithOnlyMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
-            Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(queue.file().getAbsolutePath()));
+            assumeFalse(PageUtil.isHugePage(queue.file().getAbsolutePath()), "Ignored on hugetlbfs as byte offsets will be different due to page size");
             writeMetadataToQueue(queue);
             assertEquals("" +
                     "--- !!meta-data #binary\n" +
@@ -373,7 +371,7 @@ public class ToEndTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
+    void shouldReturnExpectedValuesForNonEmptyQueueRolledByMetadata() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.advanceMicros(FIVE_SECONDS);
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
@@ -432,7 +430,7 @@ public class ToEndTest extends QueueTestCommon {
             return;
 
         if (files.length == 1)
-            assertTrue(files[0], files[0].startsWith("2"));
+            assertTrue(files[0].startsWith("2"), files[0]);
         else
             fail("Too many files " + Arrays.toString(files));
     }

@@ -12,89 +12,89 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-@Ignore("long running")
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Disabled("long running")
+@TestMethodOrder(MethodOrderer.MethodName.class)
 @RequiredForClient
-public class ContendedWriterTest extends QueueTestCommon {
+class ContendedWriterTest extends QueueTestCommon {
     private static final long NUMBER_OF_LONGS = 3;
     private final AtomicBoolean running = new AtomicBoolean(true);
 
     @Override
-    @Before
+    @BeforeEach
     public void threadDump() {
         super.threadDump();
     }
 
     @Test
-    public void oneThread() {
+    void oneThread() {
         test("oneThread", new Config(false, 1, 0));
     }
 
     @Test
-    public void oneThreadDeferred() {
+    void oneThreadDeferred() {
         test("oneThreadDeferred", new Config(true, 1, 0));
     }
 
     @Test
-    public void sixThreads() {
+    void sixThreads() {
         Config config15 = new Config(false, 1, 5);
         test("sixThreads", config15, config15, config15, config15, config15, config15);
     }
 
     @Test
-    public void sixThreadsDeferred() {
+    void sixThreadsDeferred() {
         Config config15 = new Config(true, 1, 5);
         test("sixThreadsDeferred", config15, config15, config15, config15, config15, config15);
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesAtSameSlowRate() {
+    void twoThreadsWritingLargeMessagesAtSameSlowRate() {
         test("twoThreadsWritingLargeMessagesAtSameSlowRate",
                 new Config(false, 1, 5),
                 new Config(false, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred() {
+    void twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred() {
         test("twoThreadsWritingLargeMessagesAtSameSlowRateBothDeferred",
                 new Config(true, 1, 5),
                 new Config(true, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesOneFastOneSlow() {
+    void twoThreadsWritingLargeMessagesOneFastOneSlow() {
         test("twoThreadsWritingLargeMessagesOneFastOneSlow",
                 new Config(false, 1, 0),
                 new Config(false, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred() {
+    void twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred() {
         test("twoThreadsWritingLargeMessagesOneFastOneSlowAndDeferred",
                 new Config(false, 1, 0),
                 new Config(true, 1, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow() {
+    void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow() {
         test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlow",
                 new Config(false, 1, 0),
                 new Config(false, 0, 5));
     }
 
     @Test
-    public void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred() {
+    void twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred() {
         test("twoThreadsWritingLargeMessagesFastAndSmallMessagesSlowAndDeferred",
                 new Config(false, 1, 0),
                 new Config(true, 0, 5));
