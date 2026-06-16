@@ -377,7 +377,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws StreamCorruptedException {
         throwExceptionIfClosed();
 
-        return indexing.sequenceForPosition(ec, position, inclusive);
+        return position == Long.MAX_VALUE
+                ? indexing.sequenceForMaxPosition(ec, inclusive)
+                : indexing.sequenceForPosition(ec, position, inclusive);
     }
 
     /**
