@@ -16,7 +16,7 @@ import java.nio.file.Paths;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 
-class BackwardsTailerJmhState {
+class BackwardsTailerJmhState extends QueueTestCommon {
 
     private static final Logger log = LoggerFactory.getLogger(BackwardsTailerToEndPerfAcceptanceTest.class);
 

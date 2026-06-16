@@ -528,7 +528,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                         long firstIndexInCycle = writeTextAndReturnFirstIndex(appender, "test" + (i + 1));
                         long lastIndexInCycle = appender.lastIndexAppended();
                         timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
-                        BackgroundResourceReleaser.releasePendingResources();
+                        drainBackgroundCleanup();
+
                         return new RollCycleDetails(
                                 queue.rollCycle().toCycle(firstIndexInCycle),
                                 firstIndexInCycle,

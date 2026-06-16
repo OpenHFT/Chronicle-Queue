@@ -931,7 +931,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
             }
         }
         // Just make sure Windows has closed all the files before we try to delete
-        BackgroundResourceReleaser.releasePendingResources();
+        drainBackgroundCleanup();
 
         // delete the 4th roll cycle
         assertTrue("Couldn't delete cycle, test is broken", queueDir.toPath().resolve("19700101-000009T.cq4").toFile().delete());

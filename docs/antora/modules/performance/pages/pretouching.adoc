@@ -18,7 +18,7 @@ There are two ways to perform pre-touching, outlined below:
 
 Triggering pre-touches manually ::
 Perform pre-touching once for the current appender using `ExcerptAppender.pretouch()`
-Automatically pre-touching using Chronicle's preloader ★ ::
+Automatically pre-touching using Chronicle's preloader (Enterprise) ::
 The preloader automatically pre-touches segments at a given time interval _(Enterprise feature)_.
 
 == Pre-Touching Once
@@ -50,7 +50,7 @@ newSingleThreadScheduledExecutor().scheduleAtFixedRate(
 <3> The period between successive executions
 <4> The time unit of the `initialDelay` and period parameters
 
-== Automatic Pre-Touching ★
+== Automatic Pre-Touching (Enterprise)
 
 The easiest way to configure periodical pre-touching is by using Chronicle's out-of-process preloader.
 It can be activated in the Chronicle Queue Builder as follows:

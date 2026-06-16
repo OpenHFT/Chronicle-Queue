@@ -64,7 +64,7 @@ public class NormaliseEOFsTest extends QueueTestCommon {
 
     @After
     public void cleanupQueueData() {
-        BackgroundResourceReleaser.releasePendingResources();
+        drainBackgroundCleanup();
         IOTools.deleteDirWithFilesOrThrow(QUEUE_PATH);
     }
 

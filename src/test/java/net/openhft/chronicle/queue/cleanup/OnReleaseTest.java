@@ -5,7 +5,6 @@ package net.openhft.chronicle.queue.cleanup;
 
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
@@ -62,12 +61,14 @@ public class OnReleaseTest extends QueueTestCommon {
             for (int i = 0; i < messageCount; i++) {
                 appender.writeText("hello-" + i);
                 assertNotNull(tailer.readText());
-                BackgroundResourceReleaser.releasePendingResources();
+                drainBackgroundCleanup();
+
                 assertEquals(i, writeRoll.get());
                 assertEquals(i, readRoll.get());
                 stp.advanceMillis(66_000);
             }
         } finally {
+            drainBackgroundCleanup();
             IOTools.deleteDirWithFiles(path);
         }
     }

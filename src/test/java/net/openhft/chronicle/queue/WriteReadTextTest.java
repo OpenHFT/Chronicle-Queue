@@ -187,6 +187,7 @@ public class WriteReadTextTest extends QueueTestCommon {
                 }
             }
         }
+        drainBackgroundCleanup();
         IOTools.deleteDirWithFiles(myPath);
     }
 }

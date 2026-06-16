@@ -248,6 +248,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 assertEquals(expected, tailer.readText());
             }
         } finally {
+            drainBackgroundCleanup();
             IOTools.deleteDirWithFiles(tmpDir);
         }
     }

@@ -33,7 +33,7 @@ Chronicle Queue uses the following low-level interface to write the data:
 [source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
-      dc.wire().write().text(“your text data“);
+      dc.wire().write().text("your text data");
 }
 ----
 
@@ -45,7 +45,7 @@ Each Chronicle Queue excerpt has a unique index.
 [source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
-    dc.wire().write().text(“your text data“);
+    dc.wire().write().text("your text data");
     System.out.println("your data was store to index="+ dc.index());
 }
 ----

@@ -12,7 +12,7 @@ The following command line tools can be used to interact with Chronicle Queue.
 [cols="1,1"]
 |===
 
-| ★ <<_archiverollfiles,*ArchiveRollFiles*>>
+| <<_archiverollfiles,*ArchiveRollFiles*>> (Enterprise)
 | Assists in management of roll cycle files
 
 | <<_chroniclehistoryreadermain,*ChronicleHistoryReaderMain*>>
@@ -47,7 +47,7 @@ $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.main.DumpMain" -De
 
 In the above command invoking *DumpMain*,  _myqueue_ is the directory containing your .cq4 files.
 
-== ★ ArchiveRollFiles
+== ArchiveRollFiles (Enterprise)
 
 To facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the `ArchiveRollFiles` utility.
 

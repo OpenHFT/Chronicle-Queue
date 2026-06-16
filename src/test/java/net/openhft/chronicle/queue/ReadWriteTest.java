@@ -6,7 +6,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -50,7 +49,7 @@ public class ReadWriteTest extends QueueTestCommon {
      */
     @After
     public void forceCleanupToDeFlakeTests() {
-        BackgroundResourceReleaser.releasePendingResources();
+        drainBackgroundCleanup();
     }
 
     @Override

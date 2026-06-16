@@ -5,10 +5,7 @@ package net.openhft.chronicle.queue.issue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -20,7 +17,7 @@ import static org.junit.Assert.assertFalse;
  * It checks the compatibility and visibility of data written with one Roll Cycle
  * and accessed with another.
  */
-public class ChangeRollCycleTest {
+public class ChangeRollCycleTest extends QueueTestCommon {
 
     @Test
     public void changeRollCycleWithReadOnlyTailer() {
@@ -38,6 +35,14 @@ public class ChangeRollCycleTest {
      * @param readOnly whether the tailer should be in read-only mode
      */
     private void testChangeRollCycle(boolean readOnly) {
+        if (readOnly) {
+            expectException("Failback to readonly tablestore");
+            expectException("Overriding roll cycle from FAST_HOURLY to WEEKLY");
+        } else {
+            expectException("Overriding roll cycle from WEEKLY to FAST_DAILY");
+            expectException("Overriding roll cycle from FAST_HOURLY to FAST_DAILY");
+        }
+
         // Define the queue path
         String queuePath = OS.getTarget() + "/changeRollCycle-" + System.nanoTime();
 

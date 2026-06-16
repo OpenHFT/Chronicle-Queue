@@ -6,7 +6,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -20,6 +19,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
@@ -284,11 +284,7 @@ public class RollingCycleTest extends QueueTestCommon {
                 expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
             assertEquals(expected, dump);
 
-            try {
-                IOTools.deleteDirWithFiles(basePath, 2);
-            } catch (IORuntimeException e) {
-                e.printStackTrace();
-            }
+            deleteDirAfterCleanup(new File(basePath));
         }
     }
 
