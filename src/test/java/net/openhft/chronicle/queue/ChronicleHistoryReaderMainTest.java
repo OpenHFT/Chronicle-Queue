@@ -19,8 +19,8 @@ public class ChronicleHistoryReaderMainTest {
     /**
      * Thrown by an overridden {@link ChronicleHistoryReaderMain#exit(int)} so that tests can
      * observe an attempted JVM exit (and the status it was called with) without terminating the
-     * test runner. This replaces the old SecurityManager-based interception, which is disabled
-     * from JDK 17 and unavailable from JDK 24 (JEP 486).
+     * test runner. This replaces the old SecurityManager-based interception, which is deprecated
+     * for removal since JDK 17 (JEP 411) and unavailable from JDK 24 (JEP 486).
      */
     private static final class ExitInvoked extends RuntimeException {
         private static final long serialVersionUID = 1L;
