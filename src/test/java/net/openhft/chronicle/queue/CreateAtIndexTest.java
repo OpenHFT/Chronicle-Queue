@@ -43,7 +43,12 @@ public class CreateAtIndexTest extends QueueTestCommon {
             String before = queue.dump();
             appender.writeBytes(0x421d00000000L, HELLO_WORLD);
             String after = queue.dump();
-            assertEquals(before, after);
+            // The duplicate-index write appends no data. With queue.appender.releaseParkedStoreOnConstruction
+            // (QUEUE-130) the fresh appender first re-acquires the current cycle's store and re-runs EOF
+            // normalisation. That leaves only non-semantic metadata deltas - a modCount tick, the
+            // normalisedEOFsTo watermark record, and store free-space counts - none of which are the data
+            // this test guards, so normalise them out before asserting the contents are unchanged.
+            assertEquals(cleanDump(before), cleanDump(after));
         }
 
 /*
@@ -90,6 +95,13 @@ public class CreateAtIndexTest extends QueueTestCommon {
             IOTools.deleteDirWithFiles(tmp, 2);
         } catch (IORuntimeException ignored) {
         }
+    }
+
+    private static String cleanDump(String dump) {
+        return dump
+                .replaceAll("# \\d+ bytes remaining", "# NN bytes remaining")
+                .replaceAll("modCount: (\\d+)", "modCount: 00")
+                .replaceAll("# position: \\d+, header: \\d+\\R--- !!data #binary\\RnormalisedEOFsTo: \\d+\\R", "");
     }
 
     @Test

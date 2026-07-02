@@ -152,7 +152,13 @@ public class NotCompleteTest extends QueueTestCommon {
 
     // the last line of the dump changes - haven't spent the time to get to the bottom of this
     private String cleanQueueDump(String from) {
-        return from.replaceAll("# [0-9]+ bytes remaining$", "").replaceAll("modCount: (\\d+)", "modCount: 00");
+        return from.replaceAll("# [0-9]+ bytes remaining", "# NN bytes remaining")
+                .replaceAll("modCount: (\\d+)", "modCount: 00")
+                // With queue.appender.releaseParkedStoreOnConstruction (QUEUE-130) a fresh appender's
+                // first write re-runs EOF normalisation, which records the normalisedEOFsTo watermark
+                // (and shifts store free-space counts). That is EOF bookkeeping (covered by the dedicated
+                // EOF tests), not the interrupted-write data this test guards, so strip it before comparing.
+                .replaceAll("# position: \\d+, header: \\d+\\R--- !!data #binary\\RnormalisedEOFsTo: \\d+\\R", "");
     }
 
     private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
