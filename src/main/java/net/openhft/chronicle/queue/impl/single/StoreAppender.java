@@ -48,6 +48,16 @@ class StoreAppender extends AbstractCloseable
      * This is the key in the table-store where we store that information
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
+
+    /**
+     * When set, a freshly-constructed appender releases the store its EOF back-scan parked on, so it
+     * holds no roll-cycle file open until its first write re-acquires the current cycle. This prevents
+     * an appender on a thread that then goes idle (or, in async/BUFFERED mode, never writes to the file
+     * directly at all) from pinning an old {@code .cq4} open for the life of the queue - which defeats
+     * {@code FileUtil.removableRollFileCandidates()}. See QUEUE-130.
+     */
+    private static final boolean RELEASE_PARKED_STORE_ON_CONSTRUCTION =
+            Jvm.getBoolean("queue.appender.releaseParkedStoreOnConstruction");
     @NotNull
     private final SingleChronicleQueue queue;
     @NotNull
@@ -120,6 +130,14 @@ class StoreAppender extends AbstractCloseable
                     }
                     if (wire != null)
                         resetPosition();
+
+                    // The back-scan above parks this appender on a store (the newest EOF-ed cycle, or
+                    // the first non-EOF cycle after it). If we hold on to that store and this thread
+                    // then never writes, its file stays mapped/open forever. Release it so we start in
+                    // the same state as an appender created on an empty queue (null store, no FD); the
+                    // first write re-acquires the current cycle via setWireIfNull/rollCycleTo.
+                    if (RELEASE_PARKED_STORE_ON_CONSTRUCTION)
+                        releaseParkedStore();
                 }
             } finally {
                 writeLock.unlock();
@@ -397,6 +415,26 @@ class StoreAppender extends AbstractCloseable
         wire.pauser(queue.pauserSupplier.get());
         resetPosition();
         queue.onRoll(cycle);
+    }
+
+    /**
+     * Releases the store (and its wires) that the construction-time EOF back-scan left this appender
+     * parked on, returning the appender to the same "never written" state as one created on an empty
+     * queue. The next write re-acquires the current cycle. Only the mapped-file reservation and open
+     * FD are dropped; nothing on disk changes.
+     */
+    private void releaseParkedStore() {
+        if (store == null)
+            return;
+
+        releaseBytesFor(wireForIndex);
+        releaseBytesFor(wire);
+        wireForIndex = null;
+        wire = null;
+
+        storePool.closeStore(store);
+        store = null;
+        cycle = Integer.MIN_VALUE;
     }
 
     /**
