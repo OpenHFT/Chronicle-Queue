@@ -49,15 +49,6 @@ class StoreAppender extends AbstractCloseable
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
 
-    /**
-     * When set, a freshly-constructed appender releases the store its EOF back-scan parked on, so it
-     * holds no roll-cycle file open until its first write re-acquires the current cycle. This prevents
-     * an appender on a thread that then goes idle (or, in async/BUFFERED mode, never writes to the file
-     * directly at all) from pinning an old {@code .cq4} open for the life of the queue - which defeats
-     * {@code FileUtil.removableRollFileCandidates()}. See QUEUE-130.
-     */
-    private static final boolean RELEASE_PARKED_STORE_ON_CONSTRUCTION =
-            Jvm.getBoolean("queue.appender.releaseParkedStoreOnConstruction");
     @NotNull
     private final SingleChronicleQueue queue;
     @NotNull
@@ -109,6 +100,7 @@ class StoreAppender extends AbstractCloseable
             int lastExistingCycle = queue.lastCycle();
             int firstCycle = queue.firstCycle();
             long start = System.nanoTime();
+            int scannedCycle = Integer.MIN_VALUE;
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
@@ -130,20 +122,16 @@ class StoreAppender extends AbstractCloseable
                     }
                     if (wire != null)
                         resetPosition();
+                    scannedCycle = cycle;
 
-                    // The back-scan above parks this appender on a store (the newest EOF-ed cycle, or
-                    // the first non-EOF cycle after it). If we hold on to that store and this thread
-                    // then never writes, its file stays mapped/open forever. Release it so we start in
-                    // the same state as an appender created on an empty queue (null store, no FD); the
-                    // first write re-acquires the current cycle via setWireIfNull/rollCycleTo.
-                    if (RELEASE_PARKED_STORE_ON_CONSTRUCTION)
-                        releaseParkedStore();
+                    // Don't hold the back-scan's store open; the first write re-acquires it
+                    releaseParkedStore();
                 }
             } finally {
                 writeLock.unlock();
                 long tookMillis = (System.nanoTime() - start) / 1_000_000;
-                if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && cycle != lastExistingCycle))
-                    Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + cycle);
+                if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && scannedCycle != lastExistingCycle))
+                    Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + scannedCycle);
             }
         } catch (RuntimeException ex) {
             // Perhaps initialization code needs to be moved away from constructor
