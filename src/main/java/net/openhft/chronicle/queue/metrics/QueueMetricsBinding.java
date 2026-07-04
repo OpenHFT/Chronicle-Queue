@@ -3,8 +3,10 @@
  */
 package net.openhft.chronicle.queue.metrics;
 
+import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -40,6 +42,9 @@ import java.util.concurrent.atomic.LongAdder;
  * On creation, if the queue is empty, a {@link MetricsFormat} header event ({@code
  * metricsFormat}, magic {@value MetricsFormat#MAGIC}, version {@value MetricsFormat#FORMAT_VERSION})
  * is written as the first excerpt so consumers can refuse an incompatible producer loudly.
+ * If the queue is not empty, the existing first excerpt is validated as a compatible
+ * {@code metricsFormat} header before any metrics are written, so a metrics stream is never
+ * silently mixed into an unrelated queue.
  * <p>
  * <b>Failure policy</b> - never block, never throw into product code: a write failure (disk
  * full, queue closed during shutdown) is caught, counted in {@link #droppedCount()} and logged
@@ -202,11 +207,17 @@ public final class QueueMetricsBinding implements MetricsBinding, Closeable {
     /**
      * Installs this binding process-wide via {@link Metrics#install(MetricsBinding)},
      * retaining the {@link Metrics.Installation} handle so {@link #close()} uninstalls it
-     * again (restoring whatever binding was installed before).
+     * again (restoring whatever binding was installed before). A binding may only be
+     * installed once at a time; repeated install calls are rejected to avoid losing the
+     * original installation handle.
      *
      * @return this instance for chaining
+     * @throws IllegalStateException if this binding is already installed
      */
-    public QueueMetricsBinding install() {
+    public synchronized QueueMetricsBinding install() {
+        if (installation != null)
+            throw new IllegalStateException("QueueMetricsBinding is already installed for "
+                    + queue.fileAbsolutePath());
         this.installation = Metrics.install(this);
         return this;
     }
@@ -245,7 +256,7 @@ public final class QueueMetricsBinding implements MetricsBinding, Closeable {
      * binding; then closes the queue if this binding owns it.
      */
     @Override
-    public void close() {
+    public synchronized void close() {
         Metrics.Installation installation = this.installation;
         this.installation = null;
         if (installation != null)
@@ -256,19 +267,87 @@ public final class QueueMetricsBinding implements MetricsBinding, Closeable {
 
     /**
      * Writes the {@code metricsFormat} header event if the queue has no excerpts yet, per the
-     * P3 format discipline: the queue's first excerpt identifies the schema. Fails
-     * construction if the header cannot be written; a metrics queue without its first-excerpt
-     * header is not a valid producer queue for the gateway.
+     * P3 format discipline: the queue's first excerpt identifies the schema. For an existing
+     * queue, validates that first excerpt before any further writes. Fails construction if
+     * the header is missing, incompatible, or cannot be written.
      */
     private void writeFormatHeader() {
+        if (queue.firstIndex() != Long.MAX_VALUE) {
+            validateFormatHeader();
+            return;
+        }
         try {
-            if (queue.firstIndex() != Long.MAX_VALUE)
-                return; // not empty: the header is already the first excerpt
             queue.methodWriter(MetricsFormatListener.class).metricsFormat(new MetricsFormat());
         } catch (Throwable t) {
             onWriteFailure(t);
             throw new IllegalStateException("Unable to write metricsFormat header to "
                     + queue.fileAbsolutePath(), t);
+        }
+    }
+
+    private void validateFormatHeader() {
+        HeaderCapture capture = new HeaderCapture();
+        try (ExcerptTailer tailer = queue.createTailer()) {
+            long firstIndex = queue.firstIndex();
+            if (firstIndex == Long.MAX_VALUE)
+                return;
+            if (!tailer.moveToIndex(firstIndex))
+                throw new IllegalStateException("Unable to read first excerpt " + firstIndex
+                        + " while validating metricsFormat header in " + queue.fileAbsolutePath());
+            MethodReader reader = tailer.methodReader(capture);
+            if (!reader.readOne())
+                throw new IllegalStateException("Unable to dispatch first excerpt " + firstIndex
+                        + " while validating metricsFormat header in " + queue.fileAbsolutePath());
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new IllegalStateException("Unable to validate metricsFormat header in "
+                    + queue.fileAbsolutePath(), t);
+        }
+        if (!capture.seenFormat)
+            throw new IllegalStateException("Existing queue " + queue.fileAbsolutePath()
+                    + " is not a metrics queue: first excerpt was " + capture.firstMethod
+                    + ", expected metricsFormat");
+        if (capture.format == null || !capture.format.compatible())
+            throw new IllegalStateException("Existing metrics queue " + queue.fileAbsolutePath()
+                    + " has incompatible metricsFormat " + capture.format);
+    }
+
+    private static final class HeaderCapture implements MetricsFormatListener, MetricsOut {
+        private boolean seenFormat;
+        private String firstMethod = "<unknown>";
+        private MetricsFormat format;
+
+        @Override
+        public void metricsFormat(MetricsFormat metricsFormat) {
+            firstMethod = "metricsFormat";
+            seenFormat = true;
+            format = metricsFormat == null ? null : metricsFormat.deepCopy();
+        }
+
+        @Override
+        public void counterMetric(CounterMetric metric) {
+            firstMethod = "counterMetric";
+        }
+
+        @Override
+        public void gaugeMetric(GaugeMetric metric) {
+            firstMethod = "gaugeMetric";
+        }
+
+        @Override
+        public void histogramMetric(HistogramMetric metric) {
+            firstMethod = "histogramMetric";
+        }
+
+        @Override
+        public void rateMetric(RateMetric metric) {
+            firstMethod = "rateMetric";
+        }
+
+        @Override
+        public void pointEvent(PointEvent metric) {
+            firstMethod = "pointEvent";
         }
     }
 
@@ -318,12 +397,13 @@ public final class QueueMetricsBinding implements MetricsBinding, Closeable {
         final long total = dropped.sum();
         if (total == reported)
             return;
-        if (ThreadLocalisedMetricsOut.unwrap(selfOut) instanceof IgnoresEverything)
+        MetricsOut selfSink = ThreadLocalisedMetricsOut.unwrap(selfOut);
+        if (selfSink instanceof IgnoresEverything)
             return;
         if (!reportedDropped.compareAndSet(reported, REPORTING_DROPPED))
             return;
         try {
-            selfOut.counterMetric(droppedMetric.get()
+            selfSink.counterMetric(droppedMetric.get()
                     .count(total)
                     .delta(total - reported)
                     .eventTime(ServicesTimestampLongConverter.currentTime())

@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.metrics;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.IgnoresEverything;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
@@ -28,6 +29,7 @@ import java.io.File;
 import java.lang.reflect.Proxy;
 import java.util.Collections;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -159,6 +161,41 @@ public class QueueMetricsBindingTest extends QueueTestCommon {
     }
 
     @Test
+    public void rejectsExistingQueueWithoutMetricsFormatHeader() {
+        File dir = getTmpDir();
+        try (ChronicleQueue queue = single(dir).testBlockSize().rollCycle(RollCycles.FAST_HOURLY).build()) {
+            queue.methodWriter(MetricsOut.class).pointEvent(new PointEvent()
+                    .source("not.metrics").name("not_metrics_total").value(1).eventTime(EVENT_TIME));
+        }
+
+        try {
+            QueueMetricsBinding binding = QueueMetricsBinding.at(dir);
+            binding.close();
+            fail("expected an existing non-metrics queue to be rejected");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage(), expected.getMessage().contains("expected metricsFormat"));
+            assertTrue(expected.getMessage(), expected.getMessage().contains("pointEvent"));
+        }
+    }
+
+    @Test
+    public void rejectsExistingQueueWithIncompatibleMetricsFormatHeader() {
+        File dir = getTmpDir();
+        try (ChronicleQueue queue = single(dir).testBlockSize().rollCycle(RollCycles.FAST_HOURLY).build()) {
+            queue.methodWriter(MetricsFormatListener.class).metricsFormat(
+                    new MetricsFormat().formatVersion(MetricsFormat.FORMAT_VERSION + 1));
+        }
+
+        try {
+            QueueMetricsBinding binding = QueueMetricsBinding.at(dir);
+            binding.close();
+            fail("expected an incompatible metrics queue to be rejected");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage(), expected.getMessage().contains("incompatible metricsFormat"));
+        }
+    }
+
+    @Test
     public void writeFailuresAreCountedAndNeverThrown() {
         expectException("Failed to write metric event");
         try (QueueMetricsBinding binding = QueueMetricsBinding.at(getTmpDir())) {
@@ -197,6 +234,7 @@ public class QueueMetricsBindingTest extends QueueTestCommon {
      */
     @Test
     public void closeUninstallsABindingInstalledViaInstall() {
+        expectStaticAppenderResolveOnceWarning();
         QueueMetricsBinding binding = QueueMetricsBinding.at(getTmpDir()).install();
         MetricsOut facade = Metrics.forSource("chronicle.queue.test");
         assertFalse("installed: the facade must route to the binding",
@@ -209,6 +247,19 @@ public class QueueMetricsBindingTest extends QueueTestCommon {
         // and emitting through a cached facade after close is a safe no-op
         facade.pointEvent(new PointEvent()
                 .source("chronicle.queue.test").name("after_close_total").value(1).eventTime(EVENT_TIME));
+    }
+
+    @Test
+    public void installRejectsRepeatedInstallOnTheSameBinding() {
+        expectStaticAppenderResolveOnceWarning();
+        try (QueueMetricsBinding binding = QueueMetricsBinding.at(getTmpDir()).install()) {
+            try {
+                binding.install();
+                fail("expected repeated install() to be rejected");
+            } catch (IllegalStateException expected) {
+                assertTrue(expected.getMessage(), expected.getMessage().contains("already installed"));
+            }
+        }
     }
 
     /**
@@ -291,6 +342,7 @@ public class QueueMetricsBindingTest extends QueueTestCommon {
     @Test
     public void droppedCountIsEmittedAsASelfMetricOnTheNextSuccessfulWrite() {
         expectException("Failed to write metric event");
+        expectStaticAppenderResolveOnceWarning();
         try (QueueMetricsBinding binding = QueueMetricsBinding.at(getTmpDir()).install()) {
             MetricsOut out = binding.outFor("chronicle.queue.test");
             PointEvent point = new PointEvent().source("chronicle.queue.test").name("a_total");
@@ -328,6 +380,7 @@ public class QueueMetricsBindingTest extends QueueTestCommon {
     @Test
     public void failedSelfMetricEmissionIsRetriedAfterTheNextSuccessfulWrite() {
         expectException("Failed to write metric event");
+        expectStaticAppenderResolveOnceWarning();
         try (QueueMetricsBinding binding = QueueMetricsBinding.at(getTmpDir())) {
             final MetricsOut out = binding.outFor("chronicle.queue.test");
             final FailingOnceMetricsOut selfSink = new FailingOnceMetricsOut();
@@ -362,6 +415,10 @@ public class QueueMetricsBindingTest extends QueueTestCommon {
         try (QueueMetricsBinding binding = QueueMetricsBinding.at(getTmpDir())) {
             assertEquals(RollCycles.FAST_HOURLY, binding.queue().rollCycle());
         }
+    }
+
+    private void expectStaticAppenderResolveOnceWarning() {
+        expectException("Metrics.install() was called after");
     }
 
     private static final class FailingOnceMetricsOut implements MetricsOut {

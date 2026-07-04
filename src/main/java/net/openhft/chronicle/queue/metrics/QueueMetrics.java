@@ -17,8 +17,7 @@ import net.openhft.chronicle.wire.metrics.Metrics;
  * is the queue's directory basename. They are registered in the process-global
  * {@code Metrics.registry(QueueMetrics.APPENDER_SOURCE)} at queue/appender construction;
  * registration dedups on (kind, name, labels), so two appenders on the same queue share the
- * same instruments. The instruments accumulate into plain fields; flushing them to the
- * installed binding is the host's job - e.g.
+ * same thread-safe instruments. Flushing them to the installed binding is the host's job - e.g.
  * {@code Metrics.registry(QueueMetrics.APPENDER_SOURCE).flush(out, eventTime, intervalNs)}
  * on its monitor thread.
  * <p>
