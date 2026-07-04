@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
+import net.openhft.chronicle.queue.metrics.MetricsStoreFileListener;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
 import net.openhft.chronicle.wire.*;
@@ -151,7 +152,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             epoch = epoch0 == 0 ? rollCycle.defaultEpoch() : epoch0;
             dateCache = new RollingResourcesCache(rollCycle, epoch, textToFile(builder), fileToText());
 
-            storeFileListener = builder.storeFileListener();
+            // metrics touch point on the existing listener seam; a no-op unless a
+            // MetricsBinding is installed (and chronicle.queue.appender enabled) at
+            // construction time - the resolve-once policy, see QueueMetrics
+            storeFileListener = MetricsStoreFileListener.wrap(builder.storeFileListener(), builder.path().getName());
             storeSupplier = new StoreSupplier();
             pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
             isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();

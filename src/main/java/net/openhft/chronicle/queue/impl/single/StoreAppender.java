@@ -19,8 +19,11 @@ import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
+import net.openhft.chronicle.queue.metrics.QueueMetrics;
 import net.openhft.chronicle.queue.util.MicroTouched;
 import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.metrics.CounterInstrument;
+import net.openhft.chronicle.wire.metrics.LatencyInstrument;
 import net.openhft.chronicle.wire.domestic.InternalWire;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,6 +42,16 @@ import static net.openhft.chronicle.wire.Wires.*;
  * This class represents an appender for a single chronicle queue, allowing for appending
  * excerpts to the queue. It manages the cycle of the queue, lock handling, and the state
  * of the wire and store.
+ * <p>
+ * <b>Metrics.</b> When a {@code MetricsBinding} is installed (and the
+ * {@code chronicle.queue.appender} source enabled) at appender construction time - the
+ * resolve-once policy, see {@link QueueMetrics} - each committed non-metadata excerpt
+ * increments the queue's {@code chronicle_queue_appends_total} counter. Write latency
+ * ({@code chronicle_queue_write_latency_ns}) is <em>appends-only latency</em>: it is sampled
+ * open-to-commit for the outermost {@link #writingDocument()} only (nested/chained contexts
+ * count once, at the outermost commit); the raw {@link #writeBytes(BytesStore)} and
+ * {@link #writeBytes(long, BytesStore)} paths count appends but are not latency-sampled.
+ * Metadata writes count neither. Rolled-back or abandoned contexts record nothing.
  */
 class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
@@ -75,6 +88,13 @@ class StoreAppender extends AbstractCloseable
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
     private int count = 0;
+    // Metrics touch points (chronicle.queue.appender), resolved once at construction;
+    // when the source is ignored, the hot path pays one cached-boolean check.
+    private final boolean metricsEnabled;
+    private final CounterInstrument appendsCounter;
+    private final LatencyInstrument writeLatency;
+    // nanoTime at the outermost writingDocument() open; 0 when no timed write is in flight.
+    private long writeStartNs;
 
     /**
      * Constructor for StoreAppender. Initializes the appender by finding the first open cycle
@@ -94,6 +114,10 @@ class StoreAppender extends AbstractCloseable
         this.appendLock = queue.appendLock();
         this.context = new StoreAppenderContext();
         this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
+        this.metricsEnabled = QueueMetrics.appenderEnabled();
+        final String queueName = metricsEnabled ? queue.file().getName() : null;
+        this.appendsCounter = metricsEnabled ? QueueMetrics.appends(queueName) : null;
+        this.writeLatency = metricsEnabled ? QueueMetrics.writeLatency(queueName) : null;
 
         try {
             int lastExistingCycle = queue.lastCycle();
@@ -507,10 +531,14 @@ class StoreAppender extends AbstractCloseable
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
         count++;
+        if (metricsEnabled && count == 1 && !metaData)
+            writeStartNs = System.nanoTime();
         try {
             return prepareAndReturnWriteContext(metaData);
         } catch (RuntimeException e) {
             count--;
+            if (count == 0)
+                writeStartNs = 0; // no timed write in flight; do not mis-time the next commit
             throw e;
         }
     }
@@ -770,6 +798,8 @@ class StoreAppender extends AbstractCloseable
             lastPosition = positionOfHeader;
             store.writePosition(positionOfHeader);
             writeIndexForPosition(lastIndex, positionOfHeader);
+            if (metricsEnabled)
+                onExcerptCommitted();
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         } finally {
@@ -941,6 +971,20 @@ class StoreAppender extends AbstractCloseable
      */
     @SuppressWarnings("unused")
     void beforeAppend(final Wire wire, final long index) {
+    }
+
+    /**
+     * Records the appender metrics for one committed (non-metadata) excerpt: increments the
+     * appends counter and, when the write was opened through {@link #writingDocument()},
+     * samples the open-to-commit latency. Only called when {@link #metricsEnabled}.
+     */
+    void onExcerptCommitted() {
+        appendsCounter.inc();
+        final long startNs = this.writeStartNs;
+        if (startNs != 0) {
+            this.writeStartNs = 0;
+            writeLatency.record(System.nanoTime() - startNs);
+        }
     }
 
     /**
@@ -1338,6 +1382,8 @@ class StoreAppender extends AbstractCloseable
                         callAppenderListener();
                     }
                 }
+                if (metricsEnabled)
+                    onExcerptCommitted();
             }
         }
 
@@ -1348,6 +1394,10 @@ class StoreAppender extends AbstractCloseable
          * @param unlock true if the {@link StoreAppender#writeLock} should be unlocked.
          */
         private void closeCleanup(boolean unlock) {
+            // The outermost context is now finished - committed, rolled back or closed
+            // exceptionally. Clear the latency start so a rollback or a failed close can
+            // never leak a stale timestamp into a later commit's latency sample.
+            writeStartNs = 0;
             if (wire == null) throw new NullPointerException("Wire must not be null");
             Bytes<?> bytes = wire.bytes();
             bytes.writePositionForHeader(true);

@@ -65,6 +65,8 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
+            <!-- TODO-METRICS-BOM: temporary local-dev pin for wire.metrics work; remove when chronicle-bom manages this version -->
+            <version>2026.8-SNAPSHOT</version>
         </dependency>
 
         <dependency>

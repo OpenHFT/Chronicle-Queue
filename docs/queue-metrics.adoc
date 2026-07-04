@@ -1,0 +1,80 @@
+= Chronicle Queue metrics
+:toc:
+
+Chronicle Queue integrates with the `net.openhft.chronicle.wire.metrics` API in two roles:
+as a *producer* of its own metrics, and as the *production binding* that persists every
+component's metric events to a dedicated metrics queue.
+
+Portfolio-wide reference: the authoritative metric registry and cardinality rules are
+`Chronicle-Wire/docs/metrics-catalogue.adoc`, and the installation, toggling and topology
+guide is `Chronicle-Wire/docs/metrics-integration.adoc`.
+
+== The queue's own metrics (`chronicle.queue.appender`)
+
+Registered per queue, labelled `queue=<name>` where `<name>` is the queue's directory
+basename (structural characters `=` and `;` are replaced with `_`). Two appenders on the
+same queue share the same instruments (registration dedups on kind, name and labels).
+
+|===
+| Metric | Kind | Meaning
+
+| `chronicle_queue_appends_total` | counter | Committed non-metadata excerpts.
+| `chronicle_queue_write_latency_ns` | histogram | Open-to-commit latency of the outermost
+`writingDocument()`. *Appends-only latency*: the raw `writeBytes(BytesStore)` /
+`writeBytes(index, bytes)` paths count appends but are not latency-sampled; nested
+(chained) contexts are sampled once, at the outermost commit; metadata writes and rolled-back
+contexts record nothing.
+| `chronicle_queue_rolls_total` | counter | Store files acquired: the first open and every
+cycle roll (via the `StoreFileListener` seam).
+|===
+
+=== Startup-only (resolve-once) policy
+
+These are hot-path touch points, so they follow the `Metrics.forSourceStatic` policy:
+whether metrics are recorded is decided *once, at queue/appender construction*.
+
+* An appender (or queue roll listener) constructed *before* `Metrics.install(binding)`
+  records nothing - even after a later install.
+* An appender constructed *after* install records normally.
+* Source selection (`chronicle.queue.appender` disabled in the binding) is likewise applied
+  at construction time.
+
+Install the binding before constructing the queues you want measured. When nothing is
+installed at construction time, the appender hot path pays one cached-boolean check and the
+roll-listener seam adds nothing.
+
+Flushing is the host's job: schedule
+`Metrics.registry(QueueMetrics.APPENDER_SOURCE).flush(out, eventTime, intervalNs)` on a
+monitor thread at your chosen cadence.
+
+== Self-metrics (`chronicle.queue.metrics`)
+
+`QueueMetricsBinding` never throws into product code: a failed write is counted and warned
+once. The count is re-exposed as a real metric:
+
+|===
+| Metric | Kind | Meaning
+
+| `chronicle_queue_metrics_dropped_total` | counter | Metric events dropped by a
+`QueueMetricsBinding` because a write failed (labelled with the metrics queue's directory
+basename). Emitted on the binding's next successful write after a drop, through the global
+`Metrics` facade - so it observes late installs and source toggles at emission time.
+|===
+
+== Metrics-queue retention
+
+The metrics queue written by `QueueMetricsBinding` is an ordinary Chronicle Queue: it grows
+on disk until its cycle files are removed - nothing removes them automatically.
+
+* *Roll cycle:* the default is `RollCycles.FAST_HOURLY`, deliberately short so files age out
+  at a fine granularity. It is configurable via
+  `QueueMetricsBinding.at(path, selection, rollCycle)`.
+* *Disk growth:* apply the standard retention tooling to the metrics directory - configure a
+  `StoreFileListener` that archives or deletes cycle files on release, or run an external
+  tidy-up job (see `managing_roll_files_directly.adoc`). Size the retention window to how
+  far behind your metrics gateway (or any same-host tailer) may fall: a cycle file must not
+  be deleted before every consumer has read past it.
+* *Method writers:* the binding fails fast at construction if only an allocating
+  `java.lang.reflect.Proxy` method writer can be created; set
+  `-Dchronicle.queue.metrics.allowProxyWriter=true` to accept the allocating fallback
+  instead.
