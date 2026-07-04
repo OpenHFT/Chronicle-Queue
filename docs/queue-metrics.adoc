@@ -24,8 +24,10 @@ same queue share the same instruments (registration dedups on kind, name and lab
 `writeBytes(index, bytes)` paths count appends but are not latency-sampled; nested
 (chained) contexts are sampled once, at the outermost commit; metadata writes and rolled-back
 contexts record nothing.
-| `chronicle_queue_rolls_total` | counter | Store files acquired: the first open and every
-cycle roll (via the `StoreFileListener` seam).
+| `chronicle_queue_rolls_total` | counter | Forward cycle transitions: the first open and
+every acquisition of a cycle newer than any seen before (via the `StoreFileListener` seam).
+Tailer replays, metadata queries and same-cycle re-acquisitions are not counted; an idle
+gap across several cycles counts as one transition.
 |===
 
 === Startup-only (resolve-once) policy

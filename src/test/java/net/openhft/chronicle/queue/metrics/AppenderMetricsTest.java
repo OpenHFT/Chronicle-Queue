@@ -20,7 +20,15 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static org.junit.Assert.assertEquals;
@@ -278,6 +286,64 @@ public class AppenderMetricsTest extends QueueTestCommon {
     }
 
     @Test
+    public void sharedPerQueueInstrumentsTolerateConcurrentAppendAndFlush() throws Exception {
+        installCapturing(new CapturingMetricsOut());
+
+        File dir = getTmpDir();
+        MetricsRegistry registry = Metrics.registry(QueueMetrics.APPENDER_SOURCE);
+        CapturingMetricsOut baseline = new CapturingMetricsOut();
+        final int writerThreads = 4;
+        final int appendsPerThread = 25;
+
+        try (ChronicleQueue queue = single(dir).testBlockSize().build()) {
+            registry.flush(baseline, EVENT_TIME, SECOND_NS);
+            CounterMetric baselineAppends = baseline.lastMetric("counterMetric", QueueMetrics.APPENDS_TOTAL);
+            final long baseCount = baselineAppends == null ? 0 : baselineAppends.count();
+            final CountDownLatch start = new CountDownLatch(1);
+            final AtomicBoolean done = new AtomicBoolean();
+            ExecutorService executor = Executors.newFixedThreadPool(writerThreads + 1);
+            try {
+                Future<?> flusher = executor.submit(() -> {
+                    await(start);
+                    while (!done.get())
+                        registry.flush(new CapturingMetricsOut(), EVENT_TIME, SECOND_NS);
+                });
+                List<Future<?>> writers = new ArrayList<>();
+                for (int t = 0; t < writerThreads; t++) {
+                    final int thread = t;
+                    writers.add(executor.submit(() -> {
+                        await(start);
+                        try (ExcerptAppender appender = queue.createAppender()) {
+                            for (int i = 0; i < appendsPerThread; i++) {
+                                try (DocumentContext dc = appender.writingDocument()) {
+                                    dc.wire().write("writer").int32(thread)
+                                            .write("seq").int32(i);
+                                }
+                            }
+                        }
+                    }));
+                }
+
+                start.countDown();
+                for (Future<?> writer : writers)
+                    writer.get();
+                done.set(true);
+                flusher.get();
+            } finally {
+                done.set(true);
+                executor.shutdownNow();
+                assertTrue("executor did not stop", executor.awaitTermination(5, TimeUnit.SECONDS));
+            }
+
+            CapturingMetricsOut capture = new CapturingMetricsOut();
+            registry.flush(capture, EVENT_TIME + SECOND_NS, SECOND_NS);
+            CounterMetric appends = capture.lastMetric("counterMetric", QueueMetrics.APPENDS_TOTAL);
+            assertNotNull(appends);
+            assertEquals(writerThreads * appendsPerThread, appends.count() - baseCount);
+        }
+    }
+
+    @Test
     public void storeFileListenerSeamCountsRollsWithQueueLabel() {
         CapturingMetricsOut capture = new CapturingMetricsOut();
         installCapturing(capture);
@@ -290,9 +356,15 @@ public class AppenderMetricsTest extends QueueTestCommon {
         registry.flush(new CapturingMetricsOut(), EVENT_TIME, SECOND_NS);
 
         // synchronous stand-in for the queue's background onAcquired callback
-        wrapped.onAcquired(1, new File("ignored"));
+        wrapped.onAcquired(1, new File("ignored"));   // first open: roll 1
         wrapped.onReleased(1, new File("ignored"));
-        wrapped.onAcquired(2, new File("ignored"));
+        wrapped.onAcquired(2, new File("ignored"));   // forward roll: roll 2
+
+        // NOT rolls: tailers replaying old cycles, metadata queries and current-cycle
+        // re-acquisitions all fire onAcquired too and must not inflate the counter
+        wrapped.onAcquired(1, new File("ignored"));   // tailer replaying an old cycle
+        wrapped.onAcquired(2, new File("ignored"));   // current-cycle re-acquisition
+        wrapped.onReleased(2, new File("ignored"));
 
         registry.flush(capture, EVENT_TIME + SECOND_NS, SECOND_NS);
 
@@ -300,7 +372,13 @@ public class AppenderMetricsTest extends QueueTestCommon {
         assertNotNull("expected a " + QueueMetrics.ROLLS_TOTAL + " counter", rolls);
         assertEquals(QueueMetrics.APPENDER_SOURCE, rolls.source());
         assertEquals("queue=rolls-queue", rolls.labels());
-        assertEquals(2, rolls.delta());
+        assertEquals("only the first open and the forward roll count", 2, rolls.delta());
+
+        // an idle gap across several cycles is one transition, not three
+        wrapped.onAcquired(5, new File("ignored"));
+        registry.flush(capture, EVENT_TIME + 2 * SECOND_NS, SECOND_NS);
+        rolls = capture.lastMetric("counterMetric", QueueMetrics.ROLLS_TOTAL);
+        assertEquals(1, rolls.delta());
     }
 
     /**
@@ -339,6 +417,15 @@ public class AppenderMetricsTest extends QueueTestCommon {
 
         StoreFileListener noOp = StoreFileListener.noOp();
         assertSame(noOp, MetricsStoreFileListener.wrap(noOp, "any-queue"));
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError(e);
+        }
     }
 
     private void installCapturing(final CapturingMetricsOut capture) {
