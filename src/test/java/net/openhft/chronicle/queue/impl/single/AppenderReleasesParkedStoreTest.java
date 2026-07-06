@@ -70,7 +70,6 @@ class AppenderReleasesParkedStoreTest extends IndexingTestCommon {
 
     // All roll-cycle files, earliest first; the pause lets freshly rolled files appear.
     private List<File> cycleFiles() {
-        Jvm.pause(300);
         final File[] files = queue.file().listFiles(FileUtil::hasQueueSuffix);
         assertNotNull(files, "no queue files found in " + queue.file());
         return Stream.of(files).sorted(EARLIEST_FIRST).collect(toList());
@@ -78,7 +77,6 @@ class AppenderReleasesParkedStoreTest extends IndexingTestCommon {
 
     // Removable candidates, earliest first; the pause lets rolled-off files be released first.
     private List<File> removableCandidates() {
-        Jvm.pause(300);
         final List<File> candidates = FileUtil.removableRollFileCandidates(queue.file()).collect(toList());
         assertEquals(candidates.stream().sorted(EARLIEST_FIRST).collect(toList()), candidates);
         return candidates;
