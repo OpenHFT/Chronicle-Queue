@@ -193,9 +193,29 @@ public final class QueueMetricsBinding implements MetricsBinding, Closeable {
      */
     public static QueueMetricsBinding at(@NotNull File path, @Nullable SourceSelection selection,
                                          @NotNull RollCycle rollCycle) {
-        ChronicleQueue queue = SingleChronicleQueueBuilder.single(path)
-                .rollCycle(rollCycle)
-                .build();
+        return at(path, selection, rollCycle, null);
+    }
+
+    /**
+     * As {@link #at(File, SourceSelection, RollCycle)}, additionally registering a
+     * {@link net.openhft.chronicle.queue.impl.StoreFileListener} on the metrics queue -
+     * the hook for demo/dev age-based retention (deleting released roll-cycle files), so
+     * an unattended producer cannot grow the queue without bound.
+     *
+     * @param path      the dedicated metrics queue directory
+     * @param selection which sources are enabled, or {@code null} for all
+     * @param rollCycle the metrics queue's roll cycle
+     * @param listener  store file listener for released cycles, or {@code null} for none
+     * @return the new binding
+     */
+    public static QueueMetricsBinding at(@NotNull File path, @Nullable SourceSelection selection,
+                                         @NotNull RollCycle rollCycle,
+                                         @Nullable net.openhft.chronicle.queue.impl.StoreFileListener listener) {
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(path)
+                .rollCycle(rollCycle);
+        if (listener != null)
+            builder.storeFileListener(listener);
+        ChronicleQueue queue = builder.build();
         try {
             return new QueueMetricsBinding(queue, selection, true);
         } catch (Throwable t) {
