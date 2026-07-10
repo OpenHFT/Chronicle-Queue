@@ -3,7 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.util.FileUtil;
 import org.junit.jupiter.api.Test;
 
@@ -68,15 +68,17 @@ class AppenderReleasesParkedStoreTest extends IndexingTestCommon {
         }
     }
 
-    // All roll-cycle files, earliest first; the pause lets freshly rolled files appear.
+    // All roll-cycle files, earliest first.
     private List<File> cycleFiles() {
         final File[] files = queue.file().listFiles(FileUtil::hasQueueSuffix);
         assertNotNull(files, "no queue files found in " + queue.file());
         return Stream.of(files).sorted(EARLIEST_FIRST).collect(toList());
     }
 
-    // Removable candidates, earliest first; the pause lets rolled-off files be released first.
+    // Removable candidates, earliest first. The parked store's file descriptor is dropped on a
+    // background thread, so drain the releaser before inspecting open descriptors.
     private List<File> removableCandidates() {
+        BackgroundResourceReleaser.releasePendingResources();
         final List<File> candidates = FileUtil.removableRollFileCandidates(queue.file()).collect(toList());
         assertEquals(candidates.stream().sorted(EARLIEST_FIRST).collect(toList()), candidates);
         return candidates;

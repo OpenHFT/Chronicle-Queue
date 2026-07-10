@@ -629,7 +629,9 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            normaliseEOFs0(cycle);
+            // use the getter, not the raw field: after the construction-time back-scan releases its
+            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
+            normaliseEOFs0(cycle());
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
