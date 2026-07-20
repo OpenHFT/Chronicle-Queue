@@ -142,10 +142,10 @@ public final class InternalTailerRetentionMain {
         final boolean disk = free < minFree;
         if (verbose)
             Jvm.debug().on(InternalTailerRetentionMain.class, "free disk at " + root + " = "
-                    + human(free) + " (threshold " + human(minFree) + ")");
+                    + Jvm.formatSize(free) + " (threshold " + Jvm.formatSize(minFree) + ")");
         if (disk)
-            Jvm.warn().on(InternalTailerRetentionMain.class, "free disk " + human(free)
-                    + " below threshold " + human(minFree) + " at " + root);
+            Jvm.warn().on(InternalTailerRetentionMain.class, "free disk " + Jvm.formatSize(free)
+                    + " below threshold " + Jvm.formatSize(minFree) + " at " + root);
         if (!lag && !disk)
             System.out.println("RETENTION_OK");
         return lag || disk;
@@ -196,17 +196,4 @@ public final class InternalTailerRetentionMain {
     }
 
 
-    /** Renders a byte count as a compact binary-unit string, e.g. {@code 5.0G}. */
-    static String human(long bytes) {
-        if (bytes < 1L << 10)
-            return bytes + "B";
-        final String units = "KMGT";
-        int u = -1;
-        double v = bytes;
-        while (v >= 1024 && u < units.length() - 1) {
-            v /= 1024;
-            u++;
-        }
-        return String.format(Locale.ROOT, "%.1f%c", v, units.charAt(u));
-    }
 }
