@@ -388,6 +388,19 @@
                         </configuration>
                     </execution>
 
+                    <!-- Consumer-gated roll-file retention; pass CLI args via -Dexec.args, e.g.
+                         -Dexec.args="/var/queues (rootDir and flags)". See TailerRetentionMain for flags. -->
+                    <execution>
+                        <id>TailerRetention</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <mainClass>net.openhft.chronicle.queue.main.TailerRetentionMain</mainClass>
+                        </configuration>
+                    </execution>
+
                 </executions>
             </plugin>
 
