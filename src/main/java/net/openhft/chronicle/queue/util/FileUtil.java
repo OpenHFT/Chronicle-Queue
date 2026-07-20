@@ -64,20 +64,20 @@ public final class FileUtil {
     }
 
     /**
-     * Returns a Stream of roll Queue files reclaimable from the given single-queue {@code baseDir}
-     * under <em>consumer-gated</em> (commitment-based) retention: a roll is reclaimable only when it
-     * is both older than the last {@code keepLastCycles} cycles and already read past by
-     * <em>every</em> named tailer registered against the queue.
+     * Returns a Stream of roll Queue files removable from the given single-queue {@code baseDir} by
+     * <em>named-tailer position</em>: a roll is removable only when it is both older than the last
+     * {@code keepLastCycles} cycles and already read past by <em>every</em> named tailer registered
+     * against the queue.
      * <p>
      * Unlike {@link #removableRollFileCandidates(File)}, which protects only processes
      * <em>currently</em> reading the queue, this protects every registered named tailer by its
-     * persisted index - so a consumer that is stopped (for example a gateway restarting) never loses
-     * unread rolls. It is therefore platform-independent and safe across consumer downtime, bounded
+     * persisted index - so a reader that is stopped (for example a gateway restarting) never loses
+     * unread rolls. It is therefore platform-independent and safe across reader downtime, bounded
      * only by free disk. Files are returned earliest first and can be removed in that order.
      *
      * @param baseDir        the queue directory to scan
      * @param keepLastCycles the minimum number of most-recent cycles always kept (>= 1)
-     * @return a Stream of reclaimable roll files, earliest first
+     * @return a Stream of removable roll files, earliest first
      */
     @NotNull
     public static Stream<File> removableRollFileCandidatesByTailerPosition(@NotNull File baseDir,

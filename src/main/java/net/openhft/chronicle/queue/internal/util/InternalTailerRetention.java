@@ -13,14 +13,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Consumer-gated (commitment-based) roll-file retention analysis: works out which roll files a
- * queue can shed given both a "keep the last N cycles" floor and the committed positions of the
- * queue's named tailers.
+ * Roll-file retention by named-tailer position: works out which roll files a queue can remove given
+ * both a "keep the last N cycles" floor and the committed indexes of the queue's named tailers.
  *
- * <p>This complements the liveness-based {@link InternalFileUtil#removableRollFileCandidates(File)
- * open-file model}: that one protects readers that are <em>currently running</em>; this one protects
- * every <em>registered</em> named tailer by its persisted index, so a consumer that is stopped (for
- * example a gateway restarting) never loses the rolls it has not yet read. Positions come from
+ * <p>This complements {@link InternalFileUtil#removableRollFileCandidates(File) the open-file model}:
+ * that one protects readers that are <em>currently running</em>; this one protects every
+ * <em>registered</em> named tailer by its persisted index, so a reader that is stopped (for example a
+ * gateway restarting) never loses the rolls it has not yet read. Positions come from
  * {@link SingleChronicleQueue#namedTailerIndexes()} (a read-only metadata read), so analysis never
  * opens or advances a tailer.
  *
@@ -33,7 +32,7 @@ public final class InternalTailerRetention {
     }
 
     /**
-     * The retention verdict for one queue: the reclaimable roll files plus the cycle bookkeeping and
+     * The retention verdict for one queue: the removable roll files plus the cycle bookkeeping and
      * lagging-tailer diagnosis behind the decision.
      */
     public static final class Analysis {
@@ -93,7 +92,7 @@ public final class InternalTailerRetention {
             return laggingTailers;
         }
 
-        /** @return the roll files reclaimable now, earliest first. */
+        /** @return the roll files removable now, earliest first. */
         public List<File> removable() {
             return removable;
         }
@@ -102,36 +101,6 @@ public final class InternalTailerRetention {
         public boolean lagWarning() {
             return !laggingTailers.isEmpty();
         }
-    }
-
-    /**
-     * Computes only the reclaim floor (the lowest cycle that must be kept) for an open queue: the
-     * minimum of the last-N-cycles window and the oldest cycle any named tailer is indexed to. Rolls
-     * strictly below the returned cycle are reclaimable. This does no file resolution, so it is cheap
-     * and safe to call from a store-file-release callback.
-     *
-     * @param q              the open queue
-     * @param keepLastCycles the minimum number of most-recent cycles always kept (>= 1)
-     * @return the lowest cycle to keep; delete cycles strictly below it
-     */
-    public static int reclaimFloor(SingleChronicleQueue q, int keepLastCycles) {
-        if (keepLastCycles < 1)
-            throw new IllegalArgumentException("keepLastCycles must be >= 1");
-        final int first = q.firstCycle();
-        final int last = q.lastCycle();
-        if (first > last)
-            return first;
-        final int keepFloor = Math.max(first, last - keepLastCycles + 1);
-        int oldest = -1;
-        for (Long index : q.namedTailerIndexes().values()) {
-            // A tailer at index 0 (the new-tailer default, and how a parked tailer is marked) does
-            // not pin: if it ever runs it resumes from the oldest available roll. Skip it.
-            if (index <= 0)
-                continue;
-            final int cycle = q.rollCycle().toCycle(index);
-            oldest = oldest == -1 ? cycle : Math.min(oldest, cycle);
-        }
-        return oldest == -1 ? keepFloor : Math.min(keepFloor, oldest);
     }
 
     /**

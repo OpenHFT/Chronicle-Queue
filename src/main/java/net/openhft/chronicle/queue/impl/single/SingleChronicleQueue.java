@@ -1274,8 +1274,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * tailer name. Positions are read from the metadata store (a volatile read); no tailer is
      * opened or advanced, so this is safe to call from any process while the owning consumers run.
      * <p>
-     * This exposes what consumer-gated retention and consumer-lag monitoring need: the cycle a
-     * tailer is indexed to is {@code rollCycle().toCycle(index)}.
+     * This exposes what retention by named-tailer position and consumer-lag monitoring need: the
+     * cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}.
      *
      * @return a name-ordered map of named-tailer id to its committed index (empty if none)
      */
@@ -1313,8 +1313,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     /**
      * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
-     * same value a freshly created, never-read tailer has - so consumer-gated retention treats it as
-     * not pinning any roll. Use this to retire a dead or over-lagging consumer when free disk matters
+     * same value a freshly created, never-read tailer has - so retention by named-tailer position
+     * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free disk matters
      * more than its unread backlog: the registration remains (there is no clean way to delete a
      * table-store entry), but it stops blocking removal. If that consumer is ever restarted it simply
      * resumes from the oldest roll still available - losing only what retention has since removed,

@@ -6,7 +6,7 @@ package net.openhft.chronicle.queue.main;
 import net.openhft.chronicle.queue.internal.main.InternalTailerRetentionMain;
 
 /**
- * TailerRetentionMain applies consumer-gated roll-file retention across a directory of Chronicle
+ * TailerRetentionMain applies roll-file retention by named-tailer position across a directory of Chronicle
  * queues: for each queue it deletes (or, by default, just lists) the roll files that are both older
  * than the last {@code N} cycles and already read past by every registered named tailer, then warns
  * if free disk is low.
@@ -26,7 +26,7 @@ import net.openhft.chronicle.queue.internal.main.InternalTailerRetentionMain;
  *       roll, losing only what retention has since removed</li>
  *   <li>{@code --interval <secs>}  loop every N seconds instead of a single cron-style sweep</li>
  *   <li>{@code --fail-on-warn}     exit non-zero (3) if a lag or disk warning fired</li>
- *   <li>{@code --verbose} / {@code -v}  trace each decision (tailer positions, floor, reclaims) at
+ *   <li>{@code --verbose} / {@code -v}  trace each decision (tailer positions, floor, removals) at
  *       debug level</li>
  * </ul>
  *

@@ -15,9 +15,9 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Directory-walking, consumer-gated roll-file retention. Scans a directory of Chronicle queues,
- * and for each queue reports (and optionally deletes) the roll files reclaimable under the
- * keep-last-N ∧ commitment-gated policy of {@link InternalTailerRetention}. After walking every
+ * Directory-walking roll-file retention by named-tailer position. Scans a directory of Chronicle
+ * queues, and for each queue reports (and optionally deletes) the roll files removable under the
+ * keep-last-N and tailer-position policy of {@link InternalTailerRetention}. After walking every
  * queue it checks free disk once and warns if it is below a threshold.
  *
  * <p>Runs a single sweep and exits (so external periodicity can come from cron), or loops with
@@ -151,7 +151,7 @@ public final class InternalTailerRetentionMain {
         return lag || disk;
     }
 
-    /** Emits a per-queue decision trace at debug level: tailer positions, the floor, and reclaims. */
+    /** Emits a per-queue decision trace at debug level: tailer positions, the floor, and removals. */
     private static void traceQueue(SingleChronicleQueue q, InternalTailerRetention.Analysis a) {
         final Class<?> cls = InternalTailerRetentionMain.class;
         Jvm.debug().on(cls, "queue " + a.queue() + " cycles [" + a.firstCycle() + ".." + a.lastCycle() + "]");
@@ -168,7 +168,7 @@ public final class InternalTailerRetentionMain {
         Jvm.debug().on(cls, "  keepFloor=" + a.keepFloor() + " oldestTailer=" + a.oldestTailerCycle()
                 + " -> deleteBelow=" + a.deleteBelow());
         for (File file : a.removable())
-            Jvm.debug().on(cls, "  reclaim " + file.getName());
+            Jvm.debug().on(cls, "  removable " + file.getName());
     }
 
     /** The queue directories under {@code root} (or {@code root} itself if it is a queue). */

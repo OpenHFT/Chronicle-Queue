@@ -70,7 +70,7 @@ public class TailerPositionRetentionTest extends QueueTestCommon {
             // keepFloor (last-2 window) would allow deleting more, but the lagging consumer at cycle
             // f+2 pulls the floor down to itself: only the strictly-older rolls go.
             assertEquals(target, a.deleteBelow());
-            assertEquals("only cycles f and f+1 are reclaimable", 2, a.removable().size());
+            assertEquals("only cycles f and f+1 are removable", 2, a.removable().size());
             assertTrue("a consumer older than the last-2 window is lagging", a.lagWarning());
             assertEquals(Collections.singletonList("gateway"), a.laggingTailers());
 
@@ -96,7 +96,7 @@ public class TailerPositionRetentionTest extends QueueTestCommon {
             InternalTailerRetention.Analysis a = InternalTailerRetention.analyse(q, 2);
             assertTrue("tailer pins rolls older than the last-2 window", a.lagWarning());
             assertEquals(Collections.singletonList("stalled"), a.laggingTailers());
-            assertTrue("nothing reclaimable behind a first-cycle tailer", a.removable().isEmpty());
+            assertTrue("nothing removable behind a first-cycle tailer", a.removable().isEmpty());
         }
     }
 
@@ -120,7 +120,7 @@ public class TailerPositionRetentionTest extends QueueTestCommon {
 
             InternalTailerRetention.Analysis a = InternalTailerRetention.analyse(q, 2);
             assertFalse("parked tailer no longer lags", a.lagWarning());
-            // keep-last-2 now governs: 5 cycles -> 3 reclaimable. A restarted "dead" would resume
+            // keep-last-2 now governs: 5 cycles -> 3 removable. A restarted "dead" would resume
             // from the oldest surviving roll.
             assertEquals(3, a.removable().size());
         }
@@ -134,7 +134,7 @@ public class TailerPositionRetentionTest extends QueueTestCommon {
 
         List<File> removable = FileUtil.removableRollFileCandidatesByTailerPosition(dir, 2)
                 .collect(Collectors.toList());
-        // 5 rolls, keep last 2 -> 3 reclaimable, earliest first.
+        // 5 rolls, keep last 2 -> 3 removable, earliest first.
         assertEquals(3, removable.size());
         assertTrue(removable.get(0).getName().compareTo(removable.get(2).getName()) < 0);
     }

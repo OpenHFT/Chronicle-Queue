@@ -26,7 +26,7 @@ import static org.junit.Assert.assertTrue;
  * have fallen below the keep-last-N ∧ commitment floor, and keeps those a named tailer still needs.
  * The release call itself is Chronicle-Queue's contract, so it is invoked directly here.
  */
-public class TailerGatedRetentionFileListenerTest extends QueueTestCommon {
+public class TailerPositionRetentionFileListenerTest extends QueueTestCommon {
 
     private static SingleChronicleQueueBuilder builder(File dir, SetTimeProvider time) {
         return SingleChronicleQueueBuilder.single(dir).rollCycle(TestRollCycles.TEST_DAILY).timeProvider(time);
@@ -56,7 +56,7 @@ public class TailerGatedRetentionFileListenerTest extends QueueTestCommon {
         writeDailyExcerpts(dir, time, 6); // 6 daily rolls, no listener
 
         try (SingleChronicleQueue q = builder(dir, time).build()) {
-            TailerGatedRetentionFileListener retention = new TailerGatedRetentionFileListener(2);
+            TailerPositionRetentionFileListener retention = new TailerPositionRetentionFileListener(2);
             retention.queue(q);
 
             assertEquals(6, rollCount(dir));
@@ -80,7 +80,7 @@ public class TailerGatedRetentionFileListenerTest extends QueueTestCommon {
                 assertTrue(consumer.moveToIndex(at));
             }
 
-            TailerGatedRetentionFileListener retention = new TailerGatedRetentionFileListener(2);
+            TailerPositionRetentionFileListener retention = new TailerPositionRetentionFileListener(2);
             retention.queue(q);
             retention.onReleased(q.lastCycle(), q.fileForCycle(q.lastCycle()));
 
