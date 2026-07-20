@@ -54,7 +54,7 @@ public final class InternalTailerRetentionMain {
             if ("--keep".equals(a))
                 keep = Integer.parseInt(args[++i]);
             else if ("--min-free".equals(a))
-                minFree = parseSize(args[++i]);
+                minFree = Jvm.parseSize(args[++i]);
             else if ("--interval".equals(a))
                 intervalMs = Long.parseLong(args[++i]) * 1000L;
             else if ("--delete".equals(a))
@@ -195,23 +195,6 @@ public final class InternalTailerRetentionMain {
         return files != null && files.length > 0;
     }
 
-    /** Parses a byte size with an optional {@code K}/{@code M}/{@code G}/{@code T} suffix. */
-    static long parseSize(String s) {
-        final String v = s.trim().toUpperCase(Locale.ROOT);
-        final char suffix = v.charAt(v.length() - 1);
-        final long mult;
-        if (suffix == 'K')
-            mult = 1L << 10;
-        else if (suffix == 'M')
-            mult = 1L << 20;
-        else if (suffix == 'G')
-            mult = 1L << 30;
-        else if (suffix == 'T')
-            mult = 1L << 40;
-        else
-            mult = 0;
-        return mult == 0 ? Long.parseLong(v) : (long) (Double.parseDouble(v.substring(0, v.length() - 1)) * mult);
-    }
 
     /** Renders a byte count as a compact binary-unit string, e.g. {@code 5.0G}. */
     static String human(long bytes) {
