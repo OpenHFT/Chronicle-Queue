@@ -1,0 +1,229 @@
+/*
+ * Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
+ */
+package net.openhft.chronicle.queue.internal.main;
+
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.internal.util.InternalTailerRetention;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Directory-walking, consumer-gated roll-file retention. Scans a directory of Chronicle queues,
+ * and for each queue reports (and optionally deletes) the roll files reclaimable under the
+ * keep-last-N ∧ commitment-gated policy of {@link InternalTailerRetention}. After walking every
+ * queue it checks free disk once and warns if it is below a threshold.
+ *
+ * <p>Runs a single sweep and exits (so external periodicity can come from cron), or loops with
+ * {@code --interval <seconds>} where no scheduler is available. See {@code TailerRetentionMain}
+ * for the argument reference.
+ */
+public final class InternalTailerRetentionMain {
+
+    private InternalTailerRetentionMain() {
+    }
+
+    /**
+     * Entry point. See {@code TailerRetentionMain#main(String[])} for the argument list.
+     *
+     * @param args the root directory followed by options
+     * @throws InterruptedException if interrupted while sleeping between interval sweeps
+     */
+    public static void main(String[] args) throws InterruptedException {
+        if (args.length == 0) {
+            System.err.println("usage: TailerRetentionMain <rootDir> [--keep N] [--min-free 1G] "
+                    + "[--delete] [--park name,...] [--interval <secs>] [--fail-on-warn] [--verbose]");
+            return;
+        }
+        final File root = new File(args[0]);
+        int keep = 2;
+        long minFree = 1L << 30; // 1 GiB
+        long intervalMs = 0;
+        boolean delete = false;
+        boolean failOnWarn = false;
+        boolean verbose = false;
+        final List<String> park = new ArrayList<>();
+        for (int i = 1; i < args.length; i++) {
+            final String a = args[i];
+            if ("--keep".equals(a))
+                keep = Integer.parseInt(args[++i]);
+            else if ("--min-free".equals(a))
+                minFree = parseSize(args[++i]);
+            else if ("--interval".equals(a))
+                intervalMs = Long.parseLong(args[++i]) * 1000L;
+            else if ("--delete".equals(a))
+                delete = true;
+            else if ("--park".equals(a))
+                addNames(park, args[++i]);
+            else if ("--fail-on-warn".equals(a))
+                failOnWarn = true;
+            else if ("--verbose".equals(a) || "-v".equals(a))
+                verbose = true;
+            else
+                throw new IllegalArgumentException("unknown option: " + a);
+        }
+
+        boolean warned;
+        do {
+            warned = sweep(root, keep, minFree, delete, park, verbose);
+            if (intervalMs > 0)
+                Thread.sleep(intervalMs);
+        } while (intervalMs > 0);
+
+        if (failOnWarn && warned)
+            System.exit(3);
+    }
+
+    /** Adds trimmed, non-empty comma-separated names to {@code target}. */
+    private static void addNames(List<String> target, String csv) {
+        for (String name : csv.split(","))
+            if (!name.trim().isEmpty())
+                target.add(name.trim());
+    }
+
+    /**
+     * Sweeps every queue under {@code root} once; returns {@code true} if any lag or disk warning
+     * fired. Trace detail is emitted at {@link Jvm#debug() debug} level (when {@code verbose}), and
+     * lag/disk/failed-delete warnings at {@link Jvm#warn() warn} level, so both are capturable in
+     * tests. Package-private so it can be driven directly, without {@code main}'s {@code System.exit}.
+     */
+    static boolean sweep(File root, int keep, long minFree, boolean delete, List<String> park,
+                         boolean verbose) {
+        boolean lag = false;
+        if (verbose)
+            Jvm.debug().on(InternalTailerRetentionMain.class, "scanning " + root + " (keep=" + keep
+                    + ", " + (delete ? "delete" : "dry-run") + ")");
+        for (File queueDir : discoverQueues(root)) {
+            try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(queueDir).build()) {
+                // Explicit operator action: retire named consumers (reset to index 0) so they stop
+                // pinning rolls; a restarted consumer then resumes from the oldest available roll.
+                for (String name : park)
+                    if (q.parkNamedTailer(name))
+                        System.out.printf(Locale.ROOT, "RETENTION_PARKED %s %s%n", queueDir.getName(), name);
+
+                final InternalTailerRetention.Analysis a = InternalTailerRetention.analyse(q, keep);
+                if (verbose)
+                    traceQueue(q, a);
+
+                int deleted = 0;
+                if (delete) {
+                    for (File file : a.removable()) {
+                        if (file.delete()) {
+                            deleted++;
+                            if (verbose)
+                                Jvm.debug().on(InternalTailerRetentionMain.class, "deleted " + file.getName());
+                        } else { // stop on first failure so later files stay untouched (ordering matters)
+                            Jvm.warn().on(InternalTailerRetentionMain.class,
+                                    "failed to delete " + file + " (stopping this queue)");
+                            break;
+                        }
+                    }
+                }
+                System.out.printf(Locale.ROOT,
+                        "%s: cycles [%d..%d] keepFloor=%d deleteBelow=%d %s=%d retainable=%d%n",
+                        a.queue(), a.firstCycle(), a.lastCycle(), a.keepFloor(), a.deleteBelow(),
+                        delete ? "deleted" : "removable", delete ? deleted : a.removable().size(),
+                        a.removable().size());
+                if (a.lagWarning()) {
+                    lag = true;
+                    Jvm.warn().on(InternalTailerRetentionMain.class, "queue " + a.queue() + ": tailers "
+                            + a.laggingTailers() + " pin rolls below cycle " + a.keepFloor());
+                }
+            }
+        }
+
+        final long free = root.getUsableSpace();
+        final boolean disk = free < minFree;
+        if (verbose)
+            Jvm.debug().on(InternalTailerRetentionMain.class, "free disk at " + root + " = "
+                    + human(free) + " (threshold " + human(minFree) + ")");
+        if (disk)
+            Jvm.warn().on(InternalTailerRetentionMain.class, "free disk " + human(free)
+                    + " below threshold " + human(minFree) + " at " + root);
+        if (!lag && !disk)
+            System.out.println("RETENTION_OK");
+        return lag || disk;
+    }
+
+    /** Emits a per-queue decision trace at debug level: tailer positions, the floor, and reclaims. */
+    private static void traceQueue(SingleChronicleQueue q, InternalTailerRetention.Analysis a) {
+        final Class<?> cls = InternalTailerRetentionMain.class;
+        Jvm.debug().on(cls, "queue " + a.queue() + " cycles [" + a.firstCycle() + ".." + a.lastCycle() + "]");
+        for (Map.Entry<String, Long> e : q.namedTailerIndexes().entrySet()) {
+            final long index = e.getValue();
+            if (index <= 0)
+                Jvm.debug().on(cls, "  tailer " + e.getKey() + " index=0 (parked, not pinning)");
+            else {
+                final int cycle = q.rollCycle().toCycle(index);
+                Jvm.debug().on(cls, "  tailer " + e.getKey() + " index=" + index + " -> cycle " + cycle
+                        + (cycle < a.keepFloor() ? " (LAGGING)" : ""));
+            }
+        }
+        Jvm.debug().on(cls, "  keepFloor=" + a.keepFloor() + " oldestTailer=" + a.oldestTailerCycle()
+                + " -> deleteBelow=" + a.deleteBelow());
+        for (File file : a.removable())
+            Jvm.debug().on(cls, "  reclaim " + file.getName());
+    }
+
+    /** The queue directories under {@code root} (or {@code root} itself if it is a queue). */
+    private static List<File> discoverQueues(File root) {
+        final List<File> queues = new ArrayList<>();
+        if (isQueueDir(root)) {
+            queues.add(root);
+            return queues;
+        }
+        final File[] subs = root.listFiles(File::isDirectory);
+        if (subs == null) {
+            Jvm.warn().on(InternalTailerRetentionMain.class, "not a directory: " + root);
+            return queues;
+        }
+        for (File sub : subs)
+            if (isQueueDir(sub))
+                queues.add(sub);
+        return queues;
+    }
+
+    /** A directory is a queue if it holds any roll file or the queue metadata file. */
+    private static boolean isQueueDir(File dir) {
+        final File[] files = dir.listFiles((d, name) -> name.endsWith(".cq4") || name.equals("metadata.cq4t"));
+        return files != null && files.length > 0;
+    }
+
+    /** Parses a byte size with an optional {@code K}/{@code M}/{@code G}/{@code T} suffix. */
+    static long parseSize(String s) {
+        final String v = s.trim().toUpperCase(Locale.ROOT);
+        final char suffix = v.charAt(v.length() - 1);
+        final long mult;
+        if (suffix == 'K')
+            mult = 1L << 10;
+        else if (suffix == 'M')
+            mult = 1L << 20;
+        else if (suffix == 'G')
+            mult = 1L << 30;
+        else if (suffix == 'T')
+            mult = 1L << 40;
+        else
+            mult = 0;
+        return mult == 0 ? Long.parseLong(v) : (long) (Double.parseDouble(v.substring(0, v.length() - 1)) * mult);
+    }
+
+    /** Renders a byte count as a compact binary-unit string, e.g. {@code 5.0G}. */
+    static String human(long bytes) {
+        if (bytes < 1L << 10)
+            return bytes + "B";
+        final String units = "KMGT";
+        int u = -1;
+        double v = bytes;
+        while (v >= 1024 && u < units.length() - 1) {
+            v /= 1024;
+            u++;
+        }
+        return String.format(Locale.ROOT, "%.1f%c", v, units.charAt(u));
+    }
+}
