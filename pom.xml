@@ -28,6 +28,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Consume Jvm.formatSize from the local Chronicle-Core build ahead of a bom bump.
+                 A direct entry overrides the version the imported chronicle-bom would pin. -->
+            <dependency>
+                <groupId>net.openhft</groupId>
+                <artifactId>chronicle-core</artifactId>
+                <version>2026.6-SNAPSHOT</version>
+            </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
@@ -398,6 +405,8 @@
                         <configuration>
                             <skip>false</skip>
                             <mainClass>net.openhft.chronicle.queue.main.TailerRetentionMain</mainClass>
+                            <!-- test scope so an slf4j binding is present and Jvm.warn/debug show -->
+                            <classpathScope>test</classpathScope>
                         </configuration>
                     </execution>
 
