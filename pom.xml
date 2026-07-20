@@ -28,8 +28,9 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Consume Jvm.formatSize from the local Chronicle-Core build ahead of a bom bump.
-                 A direct entry overrides the version the imported chronicle-bom would pin. -->
+            <!-- Consume Jvm.formatSize from the Chronicle-Core CORE-73 branch
+                 (feature/CORE-73-Jvm-formatSize, 2026.6-SNAPSHOT). A direct entry overrides the
+                 version the imported chronicle-bom would pin, until it lands in a released bom. -->
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-core</artifactId>
