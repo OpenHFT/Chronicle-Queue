@@ -1270,6 +1270,71 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Returns the committed index of every named tailer registered against this queue, keyed by
+     * tailer name. Positions are read from the metadata store (a volatile read); no tailer is
+     * opened or advanced, so this is safe to call from any process while the owning consumers run.
+     * <p>
+     * This exposes what consumer-gated retention and consumer-lag monitoring need: the cycle a
+     * tailer is indexed to is {@code rollCycle().toCycle(index)}.
+     *
+     * @return a name-ordered map of named-tailer id to its committed index (empty if none)
+     */
+    public NavigableMap<String, Long> namedTailerIndexes() {
+        final List<String> names = new ArrayList<>();
+        metaStore.forEachKey(names, (acc, key, value) -> {
+            final String k = key.toString();
+            if (k.startsWith("index.") && !k.endsWith(".lock") && !k.endsWith(".version"))
+                acc.add(k.substring("index.".length()));
+        });
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        for (String name : names)
+            result.put(name, tableStoreGet("index." + name));
+        return result;
+    }
+
+    /**
+     * Returns the roll file backing the given cycle, or {@code null} if that cycle is not present.
+     * The store is acquired only to resolve its path and is released again before returning, so the
+     * caller receives just the {@link File}.
+     *
+     * @param cycle the roll cycle
+     * @return the cycle's {@code .cq4} file, or {@code null} if absent
+     */
+    public File fileForCycle(int cycle) {
+        final SingleChronicleQueueStore store = storeForCycle(cycle, epoch, false, null);
+        if (store == null)
+            return null;
+        try {
+            return store.file();
+        } finally {
+            closeStore(store);
+        }
+    }
+
+    /**
+     * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
+     * same value a freshly created, never-read tailer has - so consumer-gated retention treats it as
+     * not pinning any roll. Use this to retire a dead or over-lagging consumer when free disk matters
+     * more than its unread backlog: the registration remains (there is no clean way to delete a
+     * table-store entry), but it stops blocking removal. If that consumer is ever restarted it simply
+     * resumes from the oldest roll still available - losing only what retention has since removed,
+     * never everything - which makes this a self-adjusting, minimal-loss retirement.
+     *
+     * @param name the named-tailer id to park
+     * @return {@code true} if the tailer existed and was parked, {@code false} if unknown
+     */
+    public boolean parkNamedTailer(String name) {
+        if (!namedTailerIndexes().containsKey(name))
+            return false;
+        // tableStoreAcquire returns a cached, queue-managed LongValue (unlike indexForId, which
+        // creates a fresh one the caller would have to close), so there is nothing to leak here.
+        final LongValue index = tableStoreAcquire("index." + name, 0L);
+        if (index != null)
+            index.setVolatileValue(0);
+        return true;
+    }
+
+    /**
      * Puts a new value in the table store for the given key and index. If the index is Long.MIN_VALUE,
      * it sets the value as volatile, otherwise, it sets the max value.
      *
