@@ -51,6 +51,10 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      */
     LongValue acquireValueFor(CharSequence key, long defaultValue);
 
+    default LongValue acquireOrGetValueFor(CharSequence key, long defaultValue, boolean createIfAbsent) {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Iterates over each key in the table store and applies the given {@link TableStoreIterator} on it.
      *

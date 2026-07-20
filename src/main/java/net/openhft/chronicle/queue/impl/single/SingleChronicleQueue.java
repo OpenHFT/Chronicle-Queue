@@ -719,6 +719,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
+        if (id != null && (id.endsWith(".lock") || id.endsWith(".version")))
+            throw new IllegalStateException("Can't create tailer for lock id " + id);
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this); // NOSONAR
 
@@ -1266,6 +1268,68 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Returns the committed index of every named tailer registered against this queue, keyed by
+     * tailer name. Positions are read directly during a single read-only scan of the metadata keys;
+     * no tailer is opened or advanced, so this is safe to call from any process while the owning
+     * consumers run.
+     * <p>
+     * This exposes what retention by named-tailer position and consumer-lag monitoring need: the
+     * cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}.
+     *
+     * @return a name-ordered map of named-tailer id to its committed index (empty if none)
+     */
+    public NavigableMap<String, Long> namedTailerIndexes() {
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        metaStore.forEachKey(result, (acc, key, value) -> {
+            final String k = key.toString();
+            if (k.startsWith("index.") && !k.endsWith(".lock") && !k.endsWith(".version")) {
+                String namedTailer = k.substring("index.".length());
+                acc.put(namedTailer, value.int64());
+            }
+        });
+        return result;
+    }
+
+    /**
+     * Returns the roll file backing the given cycle, or {@code null} if that cycle is not present.
+     * The store is acquired only to resolve its path and is released again before returning, so the
+     * caller receives just the {@link File}.
+     *
+     * @param cycle the roll cycle
+     * @return the cycle's {@code .cq4} file, or {@code null} if absent
+     */
+    public File fileForCycle(int cycle) {
+        final SingleChronicleQueueStore store = storeForCycle(cycle, epoch, false, null);
+        try {
+            return store == null ? null : store.file();
+        } finally {
+            closeStore(store); // to ensure onRelease is notified
+        }
+    }
+
+    /**
+     * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
+     * same value a freshly created, never-read tailer has - so retention by named-tailer position
+     * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free disk matters
+     * more than its unread backlog: the registration remains (there is no clean way to delete a
+     * table-store entry), but it stops blocking removal. If that consumer is ever restarted it simply
+     * resumes from the oldest roll still available - losing only what retention has since removed,
+     * never everything - which makes this a self-adjusting, minimal-loss retirement.
+     *
+     * @param name the named-tailer id to park
+     * @return {@code true} if the tailer existed and was parked, {@code false} if unknown
+     */
+    public boolean parkNamedTailer(String name) {
+        try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
+            Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
+            LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
+            if (longValue == null) return false;
+            longValue.setOrderedValue(0);
+            return true;
+        }
+    }
+
+    /**
      * Puts a new value in the table store for the given key and index. If the index is Long.MIN_VALUE,
      * it sets the value as volatile, otherwise, it sets the max value.
      *
@@ -1291,6 +1355,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
+        return tableStoreAcquireOrGet(key, defaultValue, true);
+    }
+
+    protected LongValue tableStoreAcquireOrGet(CharSequence key, long defaultValue, boolean createIfAbsent) {
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
@@ -1298,7 +1366,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
                     if (longValue == null) {
-                        longValue = metaStore.acquireValueFor(key, defaultValue);
+                        longValue = metaStore.acquireOrGetValueFor(key, defaultValue, createIfAbsent);
+                        if (longValue == null) {
+                            return null;
+                        }
                         int length = key.length();
                         HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
                         key2.write(0, keyBytes, 0, length);
@@ -1319,7 +1390,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
     public long tableStoreGet(CharSequence key) {
-        LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
+        LongValue longValue = tableStoreAcquireOrGet(key, Long.MIN_VALUE, false);
         if (longValue == null) return Long.MIN_VALUE;
         return longValue.getVolatileValue();
     }
