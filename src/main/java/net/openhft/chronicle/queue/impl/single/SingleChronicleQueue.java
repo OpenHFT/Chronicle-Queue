@@ -732,12 +732,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
-        if (id != null && (id.endsWith(".lock") || id.endsWith(".version")))
-            throw new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
-                    + "'.lock' and '.version' are reserved. Tailer state is kept under the metadata "
-                    + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
-                    + "would collide with the metadata of the tailer named '"
-                    + id.substring(0, id.lastIndexOf('.')) + "'");
+        if (isReservedNamedTailerId(id))
+            throw reservedNamedTailerIdException(id);
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this); // NOSONAR
 
@@ -1341,11 +1337,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * could desynchronise replication.
      *
      * @param name the named-tailer id to park
-     * @return {@code true} if the tailer existed and was parked; {@code false} if it is unknown or a
-     * replicated named tailer (which is never parked)
+     * @return {@code true} if the tailer existed and was parked; {@code false} if it is unknown or
+     * {@code null}, or if it is a replicated named tailer (which is never parked)
+     * @throws IllegalArgumentException if {@code name} ends with the reserved suffix {@code .lock} or
+     *                                  {@code .version}
      */
     public boolean parkNamedTailer(String name) {
-        if (name != null && name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+        if (name == null)
+            return false;
+        if (isReservedNamedTailerId(name))
+            throw reservedNamedTailerIdException(name);
+        if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
             return false;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
@@ -1354,6 +1356,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             longValue.setOrderedValue(0);
             return true;
         }
+    }
+
+    private static boolean isReservedNamedTailerId(String id) {
+        return id != null && (id.endsWith(".lock") || id.endsWith(".version"));
+    }
+
+    private static IllegalArgumentException reservedNamedTailerIdException(String id) {
+        return new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
+                + "'.lock' and '.version' are reserved. Tailer state is kept under the metadata "
+                + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
+                + "would collide with the metadata of the tailer named '"
+                + id.substring(0, id.lastIndexOf('.')) + "'");
     }
 
     /**

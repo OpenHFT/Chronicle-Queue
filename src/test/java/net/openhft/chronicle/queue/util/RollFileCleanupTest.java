@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.TableStoreWriteLock;
 import net.openhft.chronicle.queue.internal.util.InternalRollFileCleanup;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -125,6 +126,58 @@ public class RollFileCleanupTest extends QueueTestCommon {
             // keep-last-2 now governs: 5 cycles -> 3 removable. A restarted "dead" would resume
             // from the oldest surviving roll.
             assertEquals(3, a.removable().size());
+        }
+    }
+
+    @Test
+    public void parkingNullDoesNotParkTailerNamedNull() throws Exception {
+        File dir = Files.createTempDirectory("retain-park-null").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(32_000));
+        writeDailyExcerpts(dir, time, 5);
+
+        try (SingleChronicleQueue q = builder(dir, time).build()) {
+            final long pinned = q.rollCycle().toIndex(q.firstCycle(), 0);
+            try (ExcerptTailer tailer = q.createTailer("null")) {
+                assertTrue(tailer.moveToIndex(pinned));
+            }
+
+            assertFalse("null is not a named tailer id to park", q.parkNamedTailer(null));
+            assertEquals("parking null must not mutate the tailer literally named \"null\"",
+                    Long.valueOf(pinned), q.namedTailerIndexes().get("null"));
+        }
+    }
+
+    @Test
+    public void parkingReservedSuffixesIsRejectedWithoutMutatingMetadata() throws Exception {
+        File dir = Files.createTempDirectory("retain-park-reserved").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(33_000));
+        writeDailyExcerpts(dir, time, 1);
+
+        try (SingleChronicleQueue q = builder(dir, time).build();
+             LongValue version = q.indexVersionForId("gateway");
+             TableStoreWriteLock lock = q.versionIndexLockForId("gateway")) {
+            final long versionBefore = 42L;
+            version.setValue(versionBefore);
+            lock.lock();
+            try {
+                final long lockBefore = q.tableStoreGet("index.gateway.lock");
+
+                IllegalArgumentException versionException = assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.version"));
+                assertTrue("message explains reserved suffix: " + versionException.getMessage(),
+                        versionException.getMessage().contains("reserved"));
+                assertEquals("reserved .version park must not reset version metadata",
+                        versionBefore, version.getValue());
+
+                IllegalArgumentException lockException = assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.lock"));
+                assertTrue("message explains reserved suffix: " + lockException.getMessage(),
+                        lockException.getMessage().contains("reserved"));
+                assertEquals("reserved .lock park must not reset lock metadata",
+                        lockBefore, q.tableStoreGet("index.gateway.lock"));
+            } finally {
+                lock.unlock();
+            }
         }
     }
 
