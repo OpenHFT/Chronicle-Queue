@@ -711,16 +711,28 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Creates an {@link ExcerptTailer} with a specific ID. The tailer will use the
      * provided ID to track its position, and the preconditions for creating a tailer
      * are verified before initialization.
+     * <p>
+     * Ids ending in {@code .lock} or {@code .version} are rejected: a named tailer keeps its state
+     * in the queue metadata under the keys {@code index.<id>}, {@code index.<id>.lock} and
+     * {@code index.<id>.version}, so a tailer named {@code a.lock} or {@code a.version} would write
+     * its position into the very keys that hold tailer {@code a}'s lock and version metadata, and
+     * the two tailers would silently corrupt each other's state.
      *
      * @param id the identifier for the tailer
      * @return a new ExcerptTailer
+     * @throws IllegalArgumentException         if {@code id} ends with the reserved suffix
+     *                                          {@code .lock} or {@code .version}
      * @throws NamedTailerNotAvailableException if the tailer is not available due to replication locks
      */
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
         if (id != null && (id.endsWith(".lock") || id.endsWith(".version")))
-            throw new IllegalStateException("Can't create tailer for lock id " + id);
+            throw new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
+                    + "'.lock' and '.version' are reserved. Tailer state is kept under the metadata "
+                    + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
+                    + "would collide with the metadata of the tailer named '"
+                    + id.substring(0, id.lastIndexOf('.')) + "'");
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this); // NOSONAR
 
@@ -1269,9 +1281,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     /**
      * Returns the committed index of every named tailer registered against this queue, keyed by
-     * tailer name. Positions are read directly during a single read-only scan of the metadata keys;
-     * no tailer is opened or advanced, so this is safe to call from any process while the owning
-     * consumers run.
+     * tailer name. Positions are read directly during a single scan of the metadata keys; no tailer
+     * is opened or advanced, so on a queue opened read-write this is safe to call from any process
+     * while the owning consumers run. (A queue opened {@code readOnly} may fall back to a read-only
+     * metadata store that does not support this scan.)
      * <p>
      * This exposes what retention by named-tailer position and consumer-lag monitoring need: the
      * cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}. Internal lock and version
@@ -1295,19 +1308,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     /**
      * Returns the roll file backing the given cycle, or {@code null} if that cycle is not present.
-     * The store is acquired only to resolve its path and is released again before returning, so the
-     * caller receives just the {@link File}.
+     * The path is resolved from the cycle number alone and only the file's existence is checked, so
+     * no store is acquired and nothing is memory-mapped - a caller may safely delete the returned
+     * file (a mapping held by this process would make that fail on Windows and defer the space
+     * reclaim on Linux).
      *
      * @param cycle the roll cycle
      * @return the cycle's {@code .cq4} file, or {@code null} if absent
      */
     public File fileForCycle(int cycle) {
-        final SingleChronicleQueueStore store = storeForCycle(cycle, epoch, false, null);
-        try {
-            return store == null ? null : store.file();
-        } finally {
-            closeStore(store); // to ensure onRelease is notified
-        }
+        final File file = dateCache.resourceFor(cycle).path;
+        return file.exists() ? file : null;
     }
 
     /**
@@ -1319,13 +1330,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * it simply resumes from the oldest roll still available - losing only what retention has since
      * removed, never everything - which makes this a self-adjusting, minimal-loss retirement.
      * <p>
-     * Parking is not a read-position update, so replicated named tailers are not expected to bump
-     * their version metadata when parked.
+     * Replicated named tailers (those whose id starts with {@link #REPLICATED_NAMED_TAILER_PREFIX})
+     * are refused, returning {@code false} without change: their position is coordinated with sinks
+     * through version metadata, and a backward reset here would not bump that version, so parking one
+     * could desynchronise replication.
      *
      * @param name the named-tailer id to park
-     * @return {@code true} if the tailer existed and was parked, {@code false} if unknown
+     * @return {@code true} if the tailer existed and was parked; {@code false} if it is unknown or a
+     * replicated named tailer (which is never parked)
      */
     public boolean parkNamedTailer(String name) {
+        if (name != null && name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+            return false;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
             LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
@@ -1400,6 +1416,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     /**
      * Gets the value for the given key from the table store. If the key does not exist,
      * returns Long.MIN_VALUE.
+     * <p>
+     * This is a pure read: a missing key is never created or cached, because a matching entry (for
+     * example a named tailer's index) may legitimately appear later. Use
+     * {@link #tableStoreAcquire(CharSequence, long)} for get-or-create semantics.
      *
      * @param key the key for the entry in the table store
      * @return the value associated with the key, or Long.MIN_VALUE if not found

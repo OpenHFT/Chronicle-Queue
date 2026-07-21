@@ -73,9 +73,11 @@ public final class FileUtil {
      * <p>
      * Unlike {@link #removableRollFileCandidates(File)}, which protects only processes
      * <em>currently</em> reading the queue, this protects every registered named tailer by its
-     * persisted index - so a reader that is stopped (for example a gateway restarting) never loses
-     * unread rolls. It is therefore platform-independent and safe across reader downtime, bounded
-     * only by free disk. Files are returned earliest first and can be removed in that order.
+     * persisted index - so a reader that is stopped (for example a gateway restarting) does not lose
+     * rolls it is known not to have read once it has committed a real (non-zero) index. A tailer at
+     * index {@code 0} is treated as parked or never-read and does not pin files, so size
+     * {@code keepLastCycles} to cover those readers. Files are returned earliest first and can be
+     * removed in that order.
      *
      * @param baseDir        the queue directory to scan
      * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)

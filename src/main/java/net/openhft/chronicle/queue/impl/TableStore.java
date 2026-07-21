@@ -55,8 +55,10 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      * Acquires or looks up a {@link LongValue} for the given key.
      * <p>
      * This is the non-mutating counterpart to {@link #acquireValueFor(CharSequence, long)} when
-     * {@code createIfAbsent} is {@code false}: existing values are returned, but missing keys are not
-     * inserted into the table store.
+     * {@code createIfAbsent} is {@code false}: implementations that support it return existing values
+     * without inserting missing keys. The default implementation preserves compatibility for existing
+     * implementations by delegating to {@link #acquireValueFor(CharSequence, long)} when
+     * {@code createIfAbsent} is {@code true}.
      *
      * @param key            the key for which to acquire or look up the {@link LongValue}
      * @param defaultValue   the default value to use when creating a missing key
@@ -65,7 +67,9 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      * and {@code createIfAbsent} is {@code false}
      */
     default LongValue acquireOrGetValueFor(CharSequence key, long defaultValue, boolean createIfAbsent) {
-        throw new UnsupportedOperationException();
+        if (createIfAbsent)
+            return acquireValueFor(key, defaultValue);
+        throw new UnsupportedOperationException("Non-mutating lookup is not supported");
     }
 
     /**
