@@ -1274,7 +1274,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * consumers run.
      * <p>
      * This exposes what retention by named-tailer position and consumer-lag monitoring need: the
-     * cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}.
+     * cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}. Internal lock and version
+     * metadata entries are excluded; replicated named tailers are returned under their persisted ids.
+     * An index of {@code 0} means the tailer has never read, or has been parked, and should not be
+     * interpreted as a real roll-cycle position.
      *
      * @return a name-ordered map of named-tailer id to its committed index (empty if none)
      */
@@ -1310,11 +1313,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     /**
      * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
      * same value a freshly created, never-read tailer has - so retention by named-tailer position
-     * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free disk matters
-     * more than its unread backlog: the registration remains (there is no clean way to delete a
-     * table-store entry), but it stops blocking removal. If that consumer is ever restarted it simply
-     * resumes from the oldest roll still available - losing only what retention has since removed,
-     * never everything - which makes this a self-adjusting, minimal-loss retirement.
+     * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free
+     * disk matters more than its unread backlog: the registration remains (there is no clean way to
+     * delete a table-store entry), but it stops blocking removal. If that consumer is ever restarted
+     * it simply resumes from the oldest roll still available - losing only what retention has since
+     * removed, never everything - which makes this a self-adjusting, minimal-loss retirement.
+     * <p>
+     * Parking is not a read-position update, so replicated named tailers are not expected to bump
+     * their version metadata when parked.
      *
      * @param name the named-tailer id to park
      * @return {@code true} if the tailer existed and was parked, {@code false} if unknown
@@ -1358,14 +1364,23 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return tableStoreAcquireOrGet(key, defaultValue, true);
     }
 
+    /**
+     * Acquires or reads a {@link LongValue} from the queue metadata table.
+     *
+     * @param key            the table-store key
+     * @param defaultValue   the default value to use when creating a missing key
+     * @param createIfAbsent whether a missing key should be created
+     * @return the existing or newly-created {@link LongValue}, or {@code null} when the key is missing
+     * and {@code createIfAbsent} is {@code false}
+     */
     protected LongValue tableStoreAcquireOrGet(CharSequence key, long defaultValue, boolean createIfAbsent) {
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null) {
+            if (longValue == null || longValue.isClosed()) {
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null) {
+                    if (longValue == null || longValue.isClosed()) {
                         longValue = metaStore.acquireOrGetValueFor(key, defaultValue, createIfAbsent);
                         if (longValue == null) {
                             return null;

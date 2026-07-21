@@ -51,6 +51,19 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      */
     LongValue acquireValueFor(CharSequence key, long defaultValue);
 
+    /**
+     * Acquires or looks up a {@link LongValue} for the given key.
+     * <p>
+     * This is the non-mutating counterpart to {@link #acquireValueFor(CharSequence, long)} when
+     * {@code createIfAbsent} is {@code false}: existing values are returned, but missing keys are not
+     * inserted into the table store.
+     *
+     * @param key            the key for which to acquire or look up the {@link LongValue}
+     * @param defaultValue   the default value to use when creating a missing key
+     * @param createIfAbsent whether a missing key should be created
+     * @return the existing or newly-created {@link LongValue}, or {@code null} when the key is missing
+     * and {@code createIfAbsent} is {@code false}
+     */
     default LongValue acquireOrGetValueFor(CharSequence key, long defaultValue, boolean createIfAbsent) {
         throw new UnsupportedOperationException();
     }
