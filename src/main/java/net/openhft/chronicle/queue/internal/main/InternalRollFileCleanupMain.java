@@ -11,7 +11,6 @@ import net.openhft.chronicle.queue.internal.util.InternalRollFileCleanup;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -43,15 +42,23 @@ public final class InternalRollFileCleanupMain {
         }
     }
 
+    /**
+     * Runs the command-line implementation without calling {@link System#exit(int)} directly.
+     * Non-zero termination is reported by throwing {@link ExitCodeException}, which keeps the
+     * implementation testable while {@link #main(String[])} remains a normal process entry point.
+     *
+     * @param args the root directory followed by options
+     * @throws InterruptedException if interrupted while sleeping between interval sweeps
+     */
     static void run(String[] args) throws InterruptedException {
         if (args.length == 0) {
-            System.err.println("usage: RollFileCleanupMain <rootDir> [--keep N] [--min-free 1G] "
+            System.err.println("usage: RollFileCleanupMain <rootDir> [--keep N] [--min-free 10G] "
                     + "[--delete] [--park name,...] [--interval <secs>] [--fail-on-warn] [--verbose]");
             return;
         }
         final File root = new File(args[0]);
         int keep = 2;
-        long minFree = 1L << 30; // 1 GiB
+        long minFree = 10L << 30; // 10 GiB
         long intervalMs = 0;
         boolean delete = false;
         boolean failOnWarn = false;
@@ -64,7 +71,7 @@ public final class InternalRollFileCleanupMain {
             else if ("--min-free".equals(a))
                 minFree = Jvm.parseSize(args[++i]);
             else if ("--interval".equals(a))
-                intervalMs = Long.parseLong(args[++i]) * 1000L;
+                intervalMs = (long) (Double.parseDouble(args[++i]) * 1e3);
             else if ("--delete".equals(a))
                 delete = true;
             else if ("--park".equals(a))
@@ -82,11 +89,15 @@ public final class InternalRollFileCleanupMain {
             warned = sweep(root, keep, minFree, delete, park, verbose);
             if (failOnWarn && warned)
                 throw new ExitCodeException(3);
-            if (intervalMs > 0)
-                Thread.sleep(intervalMs);
-        } while (intervalMs > 0);
+            if (intervalMs <= 0)
+                break;
+            Thread.sleep(intervalMs);
+        } while (true);
     }
 
+    /**
+     * Signals the process exit code that {@link #main(String[])} should use.
+     */
     static final class ExitCodeException extends RuntimeException {
         private static final long serialVersionUID = 0L;
         private final int exitCode;
@@ -95,11 +106,16 @@ public final class InternalRollFileCleanupMain {
             this.exitCode = exitCode;
         }
 
+        /** @return the process exit code. */
         int exitCode() {
             return exitCode;
         }
     }
 
+    /**
+     * Builds a queue for a queue directory. Tests provide this hook to keep a queue open across a
+     * sweep and inspect post-sweep metadata without racing a second queue instance.
+     */
     @FunctionalInterface
     interface QueueFactory {
         SingleChronicleQueue build(File queueDir);
@@ -124,6 +140,10 @@ public final class InternalRollFileCleanupMain {
                 queueDir -> SingleChronicleQueueBuilder.single(queueDir).build());
     }
 
+    /**
+     * Sweeps every queue under {@code root} using the supplied {@code queueFactory}. This overload is
+     * only for tests that need control over queue construction.
+     */
     static boolean sweep(File root, int keep, long minFree, boolean delete, List<String> park,
                          boolean verbose, QueueFactory queueFactory) {
         boolean lag = false;
@@ -138,12 +158,14 @@ public final class InternalRollFileCleanupMain {
                 if (delete) {
                     for (String name : park)
                         if (q.parkNamedTailer(name))
-                            System.out.printf(Locale.ROOT, "RETENTION_PARKED %s %s%n", queueDir.getName(), name);
+                            Jvm.debug().on(InternalRollFileCleanupMain.class,
+                                    "RETENTION_PARKED " + queueDir.getName() + " " + name);
                 } else if (!park.isEmpty()) {
                     final Map<String, Long> tailerIndexes = q.namedTailerIndexes();
                     for (String name : park)
                         if (tailerIndexes.containsKey(name))
-                            System.out.printf(Locale.ROOT, "RETENTION_WOULD_PARK %s %s%n", queueDir.getName(), name);
+                            Jvm.debug().on(InternalRollFileCleanupMain.class,
+                                    "RETENTION_WOULD_PARK " + queueDir.getName() + " " + name);
                 }
 
                 final InternalRollFileCleanup.Analysis a = InternalRollFileCleanup.analyse(q, keep);
@@ -164,11 +186,12 @@ public final class InternalRollFileCleanupMain {
                         }
                     }
                 }
-                System.out.printf(Locale.ROOT,
-                        "%s: cycles [%d..%d] keepFloor=%d deleteBelow=%d %s=%d retainable=%d%n",
-                        a.queue(), a.firstCycle(), a.lastCycle(), a.keepFloor(), a.deleteBelow(),
-                        delete ? "deleted" : "removable", delete ? deleted : a.removable().size(),
-                        a.removable().size());
+                Jvm.debug().on(InternalRollFileCleanupMain.class,
+                        a.queue() + ": cycles [" + a.firstCycle() + ".." + a.lastCycle() + "] keepFloor="
+                                + a.keepFloor() + " deleteBelow=" + a.deleteBelow() + " "
+                                + (delete ? "deleted" : "removable") + "="
+                                + (delete ? deleted : a.removable().size())
+                                + " retainable=" + a.removable().size());
                 if (a.lagWarning()) {
                     lag = true;
                     Jvm.warn().on(InternalRollFileCleanupMain.class, "queue " + a.queue() + ": tailers "
@@ -186,7 +209,7 @@ public final class InternalRollFileCleanupMain {
             Jvm.warn().on(InternalRollFileCleanupMain.class, "free disk " + Jvm.formatSize(free)
                     + " below threshold " + Jvm.formatSize(minFree) + " at " + root);
         if (!lag && !disk)
-            System.out.println("RETENTION_OK");
+            Jvm.debug().on(InternalRollFileCleanupMain.class, "RETENTION_OK");
         return lag || disk;
     }
 
@@ -233,6 +256,4 @@ public final class InternalRollFileCleanupMain {
         final File[] files = dir.listFiles((d, name) -> name.endsWith(".cq4") || name.equals("metadata.cq4t"));
         return files != null && files.length > 0;
     }
-
-
 }
