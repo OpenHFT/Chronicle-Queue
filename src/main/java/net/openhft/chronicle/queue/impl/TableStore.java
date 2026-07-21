@@ -63,8 +63,13 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      * @param key            the key for which to acquire or look up the {@link LongValue}
      * @param defaultValue   the default value to use when creating a missing key
      * @param createIfAbsent whether a missing key should be created
-     * @return the existing or newly-created {@link LongValue}, or {@code null} when the key is missing
-     * and {@code createIfAbsent} is {@code false}
+     * @return the existing or newly-created {@link LongValue}, or {@code null} when the key is missing,
+     * {@code createIfAbsent} is {@code false} and the implementation supports non-mutating lookup
+     * @throws UnsupportedOperationException from the default implementation when
+     *                                       {@code createIfAbsent} is {@code false}: an implementation
+     *                                       that predates this method has no non-mutating lookup to
+     *                                       delegate to, so it must override this method to support
+     *                                       {@code createIfAbsent = false}
      */
     default LongValue acquireOrGetValueFor(CharSequence key, long defaultValue, boolean createIfAbsent) {
         if (createIfAbsent)

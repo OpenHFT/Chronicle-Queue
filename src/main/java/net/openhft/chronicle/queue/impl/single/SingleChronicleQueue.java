@@ -717,6 +717,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * {@code index.<id>.version}, so a tailer named {@code a.lock} or {@code a.version} would write
      * its position into the very keys that hold tailer {@code a}'s lock and version metadata, and
      * the two tailers would silently corrupt each other's state.
+     * <p>
+     * This is a deliberate breaking change: earlier releases accepted such ids, but the overlap in
+     * the metadata key namespace made their state ambiguous, so they are now rejected to guarantee
+     * every tailer's keys are non-overlapping. Rename any existing tailer using a reserved suffix
+     * before upgrading.
      *
      * @param id the identifier for the tailer
      * @return a new ExcerptTailer
@@ -1418,7 +1423,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * returns Long.MIN_VALUE.
      * <p>
      * This is a pure read: a missing key is never created or cached, because a matching entry (for
-     * example a named tailer's index) may legitimately appear later. Use
+     * example a named tailer's index) may legitimately appear later - a named tailer can be
+     * registered by another process at any time without notice. A miss is therefore always
+     * expensive (a scan of the table store on every call, not just the first); callers polling a
+     * key that may not exist yet should expect that cost. Use
      * {@link #tableStoreAcquire(CharSequence, long)} for get-or-create semantics.
      *
      * @param key the key for the entry in the table store
