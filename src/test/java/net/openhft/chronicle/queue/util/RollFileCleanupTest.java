@@ -9,8 +9,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.impl.single.NamedTailerParkResult;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.TableStoreWriteLock;
 import net.openhft.chronicle.queue.internal.util.InternalRollFileCleanup;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -117,7 +119,7 @@ public class RollFileCleanupTest extends QueueTestCommon {
             assertTrue(InternalRollFileCleanup.analyse(q, 2).removable().isEmpty());
 
             // Park it: index reset to 0, the new-tailer default, so it no longer pins.
-            assertTrue(q.parkNamedTailer("dead"));
+            assertEquals(NamedTailerParkResult.PARKED, q.parkNamedTailer("dead"));
             assertEquals(Long.valueOf(0L), q.namedTailerIndexes().get("dead"));
 
             InternalRollFileCleanup.Analysis a = InternalRollFileCleanup.analyse(q, 2);
@@ -125,6 +127,55 @@ public class RollFileCleanupTest extends QueueTestCommon {
             // keep-last-2 now governs: 5 cycles -> 3 removable. A restarted "dead" would resume
             // from the oldest surviving roll.
             assertEquals(3, a.removable().size());
+        }
+    }
+
+    @Test
+    public void parkingNullDoesNotParkTailerNamedNull() throws Exception {
+        File dir = Files.createTempDirectory("retain-park-null").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(32_000));
+        writeDailyExcerpts(dir, time, 5);
+
+        try (SingleChronicleQueue q = builder(dir, time).build()) {
+            final long pinned = q.rollCycle().toIndex(q.firstCycle(), 0);
+            try (ExcerptTailer tailer = q.createTailer("null")) {
+                assertTrue(tailer.moveToIndex(pinned));
+            }
+
+            assertEquals("null is not a named tailer id to park",
+                    NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer(null));
+            assertEquals("parking null must not mutate the tailer literally named \"null\"",
+                    Long.valueOf(pinned), q.namedTailerIndexes().get("null"));
+        }
+    }
+
+    @Test
+    public void parkingReservedSuffixesIsRejectedWithoutMutatingMetadata() throws Exception {
+        File dir = Files.createTempDirectory("retain-park-reserved").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(33_000));
+        writeDailyExcerpts(dir, time, 1);
+
+        try (SingleChronicleQueue q = builder(dir, time).build();
+             LongValue version = q.indexVersionForId("gateway");
+             TableStoreWriteLock lock = q.versionIndexLockForId("gateway")) {
+            final long versionBefore = 42L;
+            version.setValue(versionBefore);
+            lock.lock();
+            try {
+                final long lockBefore = q.tableStoreGet("index.gateway.lock");
+
+                assertEquals(NamedTailerParkResult.INVALID_NAME,
+                        q.parkNamedTailer("gateway.version"));
+                assertEquals("reserved .version park must not reset version metadata",
+                        versionBefore, version.getValue());
+
+                assertEquals(NamedTailerParkResult.INVALID_NAME,
+                        q.parkNamedTailer("gateway.lock"));
+                assertEquals("reserved .lock park must not reset lock metadata",
+                        lockBefore, q.tableStoreGet("index.gateway.lock"));
+            } finally {
+                lock.unlock();
+            }
         }
     }
 
@@ -212,9 +263,10 @@ public class RollFileCleanupTest extends QueueTestCommon {
             try (LongValue version = q.indexVersionForId(name)) {
                 final long versionBefore = version.getValue();
                 // A backward index reset with no replication-version coordination is unsafe, so
-                // parkNamedTailer refuses a replicated named tailer - returning false and leaving both
+                // parkNamedTailer refuses a replicated named tailer, leaving both
                 // its committed index and its replication version untouched.
-                assertFalse("parking a replicated named tailer must be refused", q.parkNamedTailer(name));
+                assertEquals("parking a replicated named tailer must be refused",
+                        NamedTailerParkResult.REFUSED_REPLICATED, q.parkNamedTailer(name));
                 assertEquals("a refused park must not move the committed index",
                         Long.valueOf(pinned), q.namedTailerIndexes().get(name));
                 assertEquals("a refused park must not touch the replication version",
