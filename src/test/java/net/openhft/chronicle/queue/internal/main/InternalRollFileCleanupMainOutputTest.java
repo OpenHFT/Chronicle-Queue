@@ -69,8 +69,10 @@ public class InternalRollFileCleanupMainOutputTest {
         File dir = queueWith("out-summary", 3, null);
         List<String> log = captureDebug(() ->
                 InternalRollFileCleanupMain.sweep(dir, 2, 0, false, Collections.emptyList(), false));
-        assertTrue("per-queue summary logged",
-                log.stream().anyMatch(m -> m.contains("cycles [") && m.contains("retainable=")));
+        // 3 rolls, keep last 2 -> 1 removable, 2 retained: the counts must be distinct and correct.
+        assertTrue("per-queue summary logs accurate removable and retainable counts: " + log,
+                log.stream().anyMatch(m -> m.contains("cycles [")
+                        && m.contains("removable=1") && m.contains("retainable=2")));
         assertTrue("RETENTION_OK logged when nothing is wrong",
                 log.stream().anyMatch(m -> m.contains("RETENTION_OK")));
     }
@@ -78,19 +80,14 @@ public class InternalRollFileCleanupMainOutputTest {
     @Test
     public void retentionParkedAtDebugLevel() throws Exception {
         File dir = queueWith("out-parked", 3, "dead");
+        // --park is a one-shot action, applied without --delete.
         List<String> log = captureDebug(() ->
-                InternalRollFileCleanupMain.sweep(dir, 2, 0, true, Collections.singletonList("dead"), false));
+                InternalRollFileCleanupMain.sweep(dir, 2, 0, false, Collections.singletonList("dead"), true));
         assertTrue("RETENTION_PARKED logged when a named tailer is parked",
                 log.stream().anyMatch(m -> m.contains("RETENTION_PARKED") && m.contains("dead")));
-    }
-
-    @Test
-    public void retentionWouldParkInDryRunAtDebugLevel() throws Exception {
-        File dir = queueWith("out-would-park", 3, "dead");
-        List<String> log = captureDebug(() ->
-                InternalRollFileCleanupMain.sweep(dir, 2, 0, false, Collections.singletonList("dead"), false));
-        assertTrue("RETENTION_WOULD_PARK logged in dry-run",
-                log.stream().anyMatch(m -> m.contains("RETENTION_WOULD_PARK") && m.contains("dead")));
+        assertTrue("one-shot park mode must not be labelled as a dry run: " + log,
+                log.stream().anyMatch(m -> m.contains("scanning") && m.contains("park"))
+                        && log.stream().noneMatch(m -> m.contains("scanning") && m.contains("dry-run")));
     }
 
     @Test
@@ -101,5 +98,17 @@ public class InternalRollFileCleanupMainOutputTest {
         // trace-only detail (the summary carries keepFloor/deleteBelow but not oldestTailer)
         assertTrue("verbose per-cycle trace logged",
                 log.stream().anyMatch(m -> m.contains("oldestTailer=")));
+    }
+
+    @Test
+    public void wrongRootDoesNotReportRetentionOk() throws Exception {
+        File notQueues = Files.createTempDirectory("out-wrong-root").toFile();
+        assertTrue(new File(notQueues, "logs").mkdir());
+        List<String> log = captureDebug(() ->
+                InternalRollFileCleanupMain.sweep(notQueues, 2, 0, false, Collections.emptyList(), false));
+        // A root that resolves to zero queues is almost certainly a mistyped path, so the tool must
+        // not claim RETENTION_OK exactly like a healthy run.
+        assertTrue("a root with no queues should not report RETENTION_OK: " + log,
+                log.stream().noneMatch(m -> m.contains("RETENTION_OK")));
     }
 }
