@@ -31,7 +31,30 @@ A roll file is removable only when it is below the effective delete floor.
 
 The keep window is by roll-cycle number, not by count of files on disk. This matters for sparse queues. For example, with hourly rolling and a queue idle for a day, many roll-cycle numbers may have no file. In that case, `--keep 48` means keep the last 48 hourly cycle numbers, not necessarily 48 files.
 
-An index of `0` is treated as parked or never-read. It does not pin any roll file.
+An index of `0` is treated as parked or never-read, so it does not pin any roll file.
+
+[WARNING]
+====
+A named tailer that has just been registered but has not yet read also sits at index `0`, and is therefore indistinguishable from a parked one. Do not run with `--delete` while bootstrapping a new from-start consumer: its intended backlog is not protected and may be removed before it first reads.
+====
+
+[#sizing-keep]
+=== Sizing `--keep` for late-arriving tailers
+
+`--delete` runs against a live queue, so `--keep N` is a safety decision, not only a disk one.
+
+The sweep reads named-tailer positions once, then deletes. A consumer that registers - or first reads - *after* that snapshot is not yet pinning anything, so a roll it still needs can be removed just before, or just as, it arrives. It might see a roll that is about to be removed, or miss a roll that was removed moments before it looked.
+
+Only named tailers have a persisted position, so only they pull the delete floor down. An un-named (anonymous) tailer records nothing, is invisible to the sweep, and pins no rolls - so for any reader that consumes without a name, `--keep N` is the *only* retention control. Everything such a reader might still need must fall within the last `N` cycles, because nothing else protects it.
+
+Choose `N` for the latest a reader could turn up, not for how many recent files you want to keep. The question is "how far back must any future reader still be able to start?". If consumers can appear hours later, restart after an outage, or replay from an old position, then `N` - counted in roll-cycle numbers - must span that whole window, with margin. The default of `2` is a conservative floor, not a recommendation: set it deliberately from your worst-case arrival and replay time.
+
+[#reserved-ids]
+=== Reserved named-tailer ids
+
+Named tailer ids ending in `.lock` or `.version` are rejected by `createTailer(String)`.
+
+A named tailer `a` keeps its state in the queue metadata under three keys: `index.a` (its committed position), `index.a.lock` and `index.a.version` (its lock and replication-version metadata). A tailer *named* `a.lock` or `a.version` would store its own position under `index.a.lock` or `index.a.version` - the very keys tailer `a` uses - so the two tailers would silently share and corrupt each other's state, and tools reading tailer positions could not tell a real tailer from another tailer's metadata. The suffixes are therefore reserved.
 
 == Running the tool
 
@@ -51,7 +74,9 @@ mvn exec:java \
   -Dexec.args="/var/queues --keep 48 --min-free 20G --verbose"
 ----
 
-The root can be a queue directory, or a directory whose immediate children are queue directories.
+The root can be a queue directory, or a directory whose immediate children are queue directories. A root that does not exist (or is not a directory) is an error (exit code `2`). Directories inside a queue directory are not supported: if a discovered queue contains a nested queue directory - usually the sign of a stray roll file copied into the parent, which makes the parent itself look like a queue and hides the real queues below it - the sweep warns.
+
+A queue that fails to open or analyse (for example, corrupt metadata) is warned about and skipped; the remaining queues are still swept, so one bad queue never stops retention for the rest of the root.
 
 == Running periodically with cron
 
@@ -72,6 +97,17 @@ This form runs a single sweep each time cron starts it. After a machine restart,
 daemon resumes the schedule without needing a long-running clean-up JVM. Use an absolute project
 path, run as the user that owns the queue files, and redirect output to a log file that is rotated.
 
+Two operational notes:
+
+* Invoking through Maven means the cron host needs the project checked out with its dependencies already resolved. For a leaner deployment, run the packaged application directly, for example
++
+[source,bash]
+----
+java -cp "chronicle-queue-all.jar" net.openhft.chronicle.queue.main.RollFileCleanupMain \
+  /var/queues --keep 48 --min-free 20G --delete --fail-on-warn
+----
+* With `mvn -q` and default logging, only warnings reach the log. A successful sweep is silent unless you enable debug logging (see <<Logging and exit behaviour>>). This is usually what you want for cron: quiet on success, loud on a warning, non-zero exit under `--fail-on-warn`.
+
 == Options
 
 [cols="1,1,4", options="header"]
@@ -86,43 +122,45 @@ path, run as the user that owns the queue files, and redirect output to a log fi
 
 | `--keep N`
 | `2`
-| Retain at least the last `N` roll-cycle numbers.
+| Retain at least the last `N` roll-cycle numbers. Size this for late-arriving readers, not just recent files - see <<sizing-keep>>.
 
 | `--min-free size`
 | `10G`
-| Warn if usable disk under the root falls below this size. Uses Chronicle size parsing, e.g. `500M`, `10G`, `2T`.
+| Warn if usable disk falls below this size on any distinct filesystem holding the root or a queue directory (queues may be symlinks or mounts onto other filesystems). Uses Chronicle size parsing, e.g. `500M`, `10G`, `2T`.
 
 | `--delete`
 | off
-| Actually delete removable files and apply `--park` metadata updates. Without this, the tool is a dry run.
+| Actually delete removable files. Without this, the tool is a dry run. Cannot be combined with `--park`.
 
 | `--park name,...`
 | none
-| Retire named tailers by setting their committed index to `0`. In dry-run mode, this is only reported.
+| One-shot: retire named tailers by setting their committed index to `0`, then report the resulting analysis without deleting. Cannot be combined with `--delete` or `--interval` - park first, then sweep with `--delete` separately. Replicated named tailers (ids starting `replicated:`) are refused with a warning, to avoid desynchronising replication; a name found in no queue also warns.
 
 | `--interval secs`
 | off
-| Repeat the sweep every `secs`; fractional seconds are accepted. Without this, the tool runs once.
+| Repeat the sweep every `secs`; fractional seconds are accepted (a value that rounds to under a millisecond runs a single sweep). Without this, the tool runs once. Cannot be combined with `--park`.
 
 | `--fail-on-warn`
 | off
-| Throw an exit-code exception for process exit code `3` if lag or low disk is detected.
+| Exit with code `3` if the sweep emits any retention warning: a lagging tailer, low disk, a failed delete, a skipped (unopenable) queue, a nested queue directory, a root that contains no queues, an unknown `--park` name, or a refused replicated-tailer park.
 
 | `--verbose`, `-v`
 | off
-| Emit detailed per-queue trace at debug level.
+| Emit a detailed per-queue trace at debug level. See <<Logging and exit behaviour>> for enabling debug output.
 |===
 
 == Dry run first
 
-The default mode does not delete files and does not park named tailers.
+The default mode does not delete files.
 
 [source,bash]
 ----
-mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --min-free 20G --park old-gateway --verbose"
+mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --min-free 20G --verbose"
 ----
 
-This reports the files that would be removable and whether `old-gateway` would be parked. It still analyses the original tailer position, so a dry-run park does not hide a real lag warning.
+This reports the files that would be removable, and any lagging tailers, without changing anything. Because parking changes what a later delete pass will remove, `--park` is a separate one-shot step (see <<Parking a dead named tailer>>): the dry run and the delete pass then analyse the same tailer positions, so the preview matches what `--delete` will actually do.
+
+NOTE: The removable list and the per-queue summary are emitted at debug level. Enable debug logging (see <<Logging and exit behaviour>>) to see them; otherwise a clean dry run prints only warnings.
 
 == Deleting files
 
@@ -133,48 +171,72 @@ Once the dry run is understood, add `--delete`:
 mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --min-free 20G --delete --fail-on-warn"
 ----
 
-Deletion stops on the first failed file in a queue. Later candidates are left untouched because ordering matters.
+Deletion happens after the queue has been closed and any pending store releases have completed, so no file is deleted while still memory-mapped by the sweep (a mapped file cannot be deleted on Windows, and its space is not reclaimed until unmapped on Linux). Deletion stops on the first failed file in a queue; later candidates are left untouched because ordering matters, and the warning includes the reason the delete failed. A failed delete is a warning, so under `--fail-on-warn` it makes the sweep exit `3` rather than reporting success while disk was not reclaimed - which is what you want when a permission or lock problem is blocking cleanup.
 
 == Parking a dead named tailer
 
 A dead named tailer can pin old roll files indefinitely. Parking resets its committed index to `0` so it no longer pins retention.
 
-Dry run:
+Parking irreversibly discards that consumer's committed position, so it is a deliberate, one-shot action, run on its own:
 
 [source,bash]
 ----
-mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --park old-gateway --verbose"
+mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --park old-gateway --fail-on-warn"
 ----
 
-Apply:
+It cannot be combined with `--delete` or `--interval`. Bundled with `--delete`, parking would silently widen the delete pass beyond what a dry run previewed; repeated by an interval loop, it would re-reset a consumer that has since been restarted, discarding its progress every sweep. Park once, review the reported analysis, then sweep with `--delete` separately.
 
-[source,bash]
-----
-mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --park old-gateway --delete --fail-on-warn"
-----
+A `--park` name that matches no named tailer in any queue is warned about rather than silently ignored - otherwise a typo would leave the operator believing a tailer was retired while its stale index continues to pin rolls.
 
-If that consumer is restarted later, it resumes from the oldest roll still available. It loses only the data that retention has since removed, not the whole queue.
+If a parked consumer is restarted later, it resumes from the oldest roll still available. It loses only the data that retention has since removed, not the whole queue.
 
-Parking is not a read-position update. For replicated named tailers, parking does not bump the version metadata.
+Parking a replicated named tailer (an id starting `replicated:`) is refused: the tool warns and changes nothing. A replicated tailer's position is coordinated with its sinks through version metadata, and resetting it here without bumping that version could desynchronise replication. Retire a replicated consumer through replication configuration, not this tool.
 
 == Logging and exit behaviour
 
 Warnings are emitted through `Jvm.warn()`:
 
 * named tailers pinning rolls below the keep floor;
-* free disk below `--min-free`;
-* a failed file delete;
-* an invalid queue root.
+* free disk below `--min-free` on any filesystem holding the root or a queue;
+* a failed file delete (with the reason);
+* a queue that could not be opened or analysed (skipped; the sweep continues);
+* a directory that contains no queues;
+* a nested queue directory inside a queue;
+* a `--park` name found in no queue;
+* a refused `--park` of a replicated named tailer.
 
 Operational trace and positive status are emitted through `Jvm.debug()`:
 
 * per-queue summary;
 * `RETENTION_OK`;
 * `RETENTION_PARKED`;
-* `RETENTION_WOULD_PARK`;
 * per-tailer verbose trace.
 
-With `--fail-on-warn`, any lag or low-disk warning causes process exit code `3` from `main()`.
+[IMPORTANT]
+====
+Only `Jvm.warn()` output is visible by default. Everything in the `Jvm.debug()` list above - including the removable summary a dry run produces and the whole `--verbose` trace - is at debug level, so an unconfigured run prints nothing beyond warnings. To see it, enable debug logging, for example:
+
+[source,bash]
+----
+mvn exec:java@RollFileCleanup \
+  -Dorg.slf4j.simpleLogger.defaultLogLevel=debug \
+  -Dexec.args="/var/queues --keep 48 --verbose"
+----
+
+or set the equivalent `DEBUG` level for `net.openhft.chronicle.queue.internal.main.InternalRollFileCleanupMain` in your logging backend.
+====
+
+Exit codes from `main()`:
+
+[cols="1,4", options="header"]
+|===
+| Code | Meaning
+
+| `0` | Success (or a warning fired without `--fail-on-warn`).
+| `1` | Usage error: missing `<rootDir>`, an unknown option, a missing or malformed option value, `--keep` below 1, or `--park` combined with `--delete`/`--interval`. No metadata is changed and nothing is deleted.
+| `2` | The root is not an existing directory.
+| `3` | A retention warning fired and `--fail-on-warn` was set, so a cron job or scheduler fails loudly instead of silently doing nothing.
+|===
 
 == API entry points
 
@@ -204,7 +266,7 @@ Before running with `--delete`:
 * check the named tailers reported as lagging;
 * decide whether each lagging tailer is live, dead, or intentionally paused;
 * park only named tailers you are prepared to retire;
-* keep enough cycles to cover normal outage and restart time;
+* keep enough cycles to cover normal outage, restart time, and any consumer that may arrive or replay later (see <<sizing-keep>>);
 * use `--fail-on-warn` from automation if lag or low disk should fail the job.
 
 The point is not to be clever. It is to make an offline clean-up predictable enough that you can run it in production without guessing.
