@@ -361,7 +361,8 @@ public class InternalRollFileCleanupMainTest extends QueueTestCommon {
             // memory-mapped queue files are unaffected, so the sweep still analyses (and closes) normally.
             File probe = new File(dir, "perm-probe");
             assertTrue(probe.createNewFile());
-            assertTrue(dir.setWritable(false, false));
+            Assume.assumeTrue("filesystem supports removing directory write permission",
+                    dir.setWritable(false, false));
             final boolean permissionsEnforced = !probe.delete();
             if (!permissionsEnforced) {   // running as root, or a filesystem that ignores the bit
                 dir.setWritable(true, false);
