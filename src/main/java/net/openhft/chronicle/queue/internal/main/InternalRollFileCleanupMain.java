@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.internal.util.InternalRollFileCleanup;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -83,8 +84,14 @@ public final class InternalRollFileCleanupMain {
                     intervalMs = (long) (Double.parseDouble(optionValue(args, ++i, a)) * 1e3);
                 else if ("--delete".equals(a))
                     delete = true;
-                else if ("--park".equals(a))
+                else if ("--park".equals(a)) {
+                    final int before = park.size();
                     addNames(park, optionValue(args, ++i, a));
+                    // An empty value (e.g. an unset shell variable expanding to --park "") must fail
+                    // loudly, not silently degrade to a sweep the operator mistakes for a park.
+                    if (park.size() == before)
+                        throw usageError("--park requires at least one tailer name");
+                }
                 else if ("--fail-on-warn".equals(a))
                     failOnWarn = true;
                 else if ("--verbose".equals(a) || "-v".equals(a))
@@ -342,17 +349,20 @@ public final class InternalRollFileCleanupMain {
      */
     private static boolean checkFreeDisk(File root, List<File> queues, long minFree, boolean verbose) {
         boolean warned = false;
-        final Set<String> seenFileStores = new HashSet<>();
+        final Set<FileStore> seenFileStores = new HashSet<>();
         final List<File> dirs = new ArrayList<>();
         dirs.add(root);
         dirs.addAll(queues);
         for (File dir : dirs) {
-            final String fileStore;
+            final FileStore fileStore;
             try {
-                fileStore = Files.getFileStore(dir.toPath()).name();
+                fileStore = Files.getFileStore(dir.toPath());
             } catch (IOException e) {
                 continue; // the directory vanished mid-sweep; nothing left to measure
             }
+            // Dedupe by the FileStore itself, whose platform equals() compares device identity.
+            // name() is not unique: every tmpfs mount is "tmpfs", overlays "overlay", so keying by
+            // name would silently skip a distinct same-named filesystem that is actually filling.
             if (!seenFileStores.add(fileStore))
                 continue;
             final long free = dir.getUsableSpace();

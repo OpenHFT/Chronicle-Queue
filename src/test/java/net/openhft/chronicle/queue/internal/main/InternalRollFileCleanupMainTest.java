@@ -142,6 +142,24 @@ public class InternalRollFileCleanupMainTest extends QueueTestCommon {
     }
 
     @Test
+    public void emptyParkValueIsUsageError() throws Exception {
+        // A wrapper script expanding an unset variable produces --park "" - the run must fail
+        // loudly, not silently degrade to a plain sweep the operator mistakes for a parked tailer.
+        File dir = Files.createTempDirectory("main-park-empty").toFile();
+        InternalRollFileCleanupMain.ExitCodeException e = assertThrows(
+                InternalRollFileCleanupMain.ExitCodeException.class,
+                () -> InternalRollFileCleanupMain.run(new String[]{
+                        dir.getAbsolutePath(), "--park", ""}));
+        assertEquals("--park with an empty value is a usage error", 1, e.exitCode());
+
+        InternalRollFileCleanupMain.ExitCodeException e2 = assertThrows(
+                InternalRollFileCleanupMain.ExitCodeException.class,
+                () -> InternalRollFileCleanupMain.run(new String[]{
+                        dir.getAbsolutePath(), "--park", ","}));
+        assertEquals("--park with only commas is a usage error", 1, e2.exitCode());
+    }
+
+    @Test
     public void unknownParkNameWarns() throws Exception {
         File dir = Files.createTempDirectory("main-park-unknown").toFile();
         SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(82_000));
