@@ -80,7 +80,7 @@ public final class FileUtil {
      * removed in that order.
      *
      * @param baseDir        the queue directory to scan
-     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)
+     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept ({@code >= 1})
      * @return a Stream of removable roll files, earliest first
      * @throws IllegalArgumentException if {@code baseDir} is not an existing queue directory (one
      *                                  holding a roll file or the queue metadata file) - a typo'd

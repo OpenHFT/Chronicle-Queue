@@ -138,7 +138,7 @@ public final class InternalRollFileCleanup {
      * path would silently gain a queue skeleton that later sweeps discover as a real, empty queue.
      *
      * @param baseDir        the queue directory
-     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)
+     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept ({@code >= 1})
      * @return the retention verdict
      * @throws IllegalArgumentException if {@code baseDir} is not an existing queue directory
      */
@@ -162,7 +162,7 @@ public final class InternalRollFileCleanup {
      * the CLI's per-queue sweep.
      *
      * @param q              the open queue
-     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)
+     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept ({@code >= 1})
      * @return the retention verdict
      */
     public static Analysis analyse(SingleChronicleQueue q, int keepLastCycles) {
