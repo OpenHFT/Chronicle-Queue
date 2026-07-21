@@ -26,7 +26,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Verifies the retention CLI surfaces the expected {@code warn}-level conditions, asserted through
  * {@link QueueTestCommon#expectException}. The {@code --verbose} debug trace is captured separately
- * in {@code InternalRollFileCleanupMainVerboseTest} (it swaps exception handlers, which must not
+ * in {@code InternalRollFileCleanupMainOutputTest} (it swaps exception handlers, which must not
  * clash with this base class's tracker).
  */
 public class InternalRollFileCleanupMainTest extends QueueTestCommon {
