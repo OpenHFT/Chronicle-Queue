@@ -64,10 +64,12 @@ public final class FileUtil {
     }
 
     /**
-     * Returns a Stream of roll Queue files removable from the given single-queue {@code baseDir} by
+     * Returns a stream of roll files removable from the given single-queue {@code baseDir} by
      * <em>named-tailer position</em>: a roll is removable only when it is both older than the last
-     * {@code keepLastCycles} cycles and already read past by <em>every</em> named tailer registered
-     * against the queue.
+     * {@code keepLastCycles} roll-cycle numbers and already read past by <em>every</em> named tailer
+     * registered against the queue. The keep window is based on cycle numbers, not the count of files
+     * present on disk, so sparse queues with idle cycles can retain fewer than {@code keepLastCycles}
+     * files.
      * <p>
      * Unlike {@link #removableRollFileCandidates(File)}, which protects only processes
      * <em>currently</em> reading the queue, this protects every registered named tailer by its
@@ -76,7 +78,7 @@ public final class FileUtil {
      * only by free disk. Files are returned earliest first and can be removed in that order.
      *
      * @param baseDir        the queue directory to scan
-     * @param keepLastCycles the minimum number of most-recent cycles always kept (>= 1)
+     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)
      * @return a Stream of removable roll files, earliest first
      */
     @NotNull

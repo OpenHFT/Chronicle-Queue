@@ -14,7 +14,9 @@ import java.util.Map;
 
 /**
  * Roll-file retention by named-tailer position: works out which roll files a queue can remove given
- * both a "keep the last N cycles" floor and the committed indexes of the queue's named tailers.
+ * both a "keep the last N roll-cycle numbers" floor and the committed indexes of the queue's named
+ * tailers. The keep window is based on cycle numbers, not the count of roll files currently present,
+ * so sparse queues with idle cycles can retain fewer than N files.
  *
  * <p>This complements {@link InternalFileUtil#removableRollFileCandidates(File) the open-file model}:
  * that one protects readers that are <em>currently running</em>; this one protects every
@@ -72,7 +74,10 @@ public final class InternalRollFileCleanup {
             return lastCycle;
         }
 
-        /** @return the last-N-cycles floor ({@code lastCycle - keepLastCycles + 1}). */
+        /**
+         * @return the last-N-cycles floor ({@code lastCycle - keepLastCycles + 1}), expressed as a
+         * roll-cycle number rather than a present-file count
+         */
         public int keepFloor() {
             return keepFloor;
         }
@@ -107,7 +112,7 @@ public final class InternalRollFileCleanup {
      * Analyses a queue directory, opening and closing it around the analysis.
      *
      * @param baseDir        the queue directory
-     * @param keepLastCycles the minimum number of most-recent cycles always kept (>= 1)
+     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)
      * @return the retention verdict
      */
     public static Analysis analyse(File baseDir, int keepLastCycles) {
@@ -121,7 +126,7 @@ public final class InternalRollFileCleanup {
      * the CLI's per-queue sweep.
      *
      * @param q              the open queue
-     * @param keepLastCycles the minimum number of most-recent cycles always kept (>= 1)
+     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)
      * @return the retention verdict
      */
     public static Analysis analyse(SingleChronicleQueue q, int keepLastCycles) {
