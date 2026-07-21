@@ -21,6 +21,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Regression coverage for roll-file cleanup helper behaviour.
@@ -34,11 +37,10 @@ public class RollFileCleanupRegressionTest extends QueueTestCommon {
     }
 
     @Test
-    public void fileForCycleReleasesStoreItAcquires() throws Exception {
+    public void fileForCycleResolvesWithoutMappingAStore() throws Exception {
         File dir = Files.createTempDirectory("cleanup-regression-listener").toFile();
         SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(100));
         AtomicInteger acquired = new AtomicInteger();
-        AtomicInteger released = new AtomicInteger();
         StoreFileListener listener = new StoreFileListener() {
             @Override
             public void onAcquired(int cycle, File file) {
@@ -47,7 +49,6 @@ public class RollFileCleanupRegressionTest extends QueueTestCommon {
 
             @Override
             public void onReleased(int cycle, File file) {
-                released.incrementAndGet();
             }
         };
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(dir)
@@ -59,13 +60,15 @@ public class RollFileCleanupRegressionTest extends QueueTestCommon {
             }
             BackgroundResourceReleaser.releasePendingResources();
             acquired.set(0);
-            released.set(0);
 
-            q.fileForCycle(q.firstCycle());
-            BackgroundResourceReleaser.releasePendingResources();
-
-            assertEquals("fileForCycle acquired a store", 1, acquired.get());
-            assertEquals("fileForCycle must release every store it acquires", acquired.get(), released.get());
+            // Resolving a cycle's file must not map the store: a mapping held (even briefly, via the
+            // background releaser) makes the subsequent delete fail on Windows and defers space
+            // reclaim on Linux.
+            File file = q.fileForCycle(q.firstCycle());
+            assertNotNull("an existing cycle resolves to its roll file", file);
+            assertTrue("the resolved file is the on-disk roll", file.exists());
+            assertNull("an absent cycle resolves to null", q.fileForCycle(q.firstCycle() - 1));
+            assertEquals("fileForCycle must not acquire any store", 0, acquired.get());
         }
     }
 

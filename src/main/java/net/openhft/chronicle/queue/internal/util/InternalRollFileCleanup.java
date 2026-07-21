@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 
 /**
  * Roll-file retention by named-tailer position: works out which roll files a queue can remove given
@@ -24,6 +25,12 @@ import java.util.Map;
  * gateway restarting) never loses the rolls it has not yet read. Positions come from
  * {@link SingleChronicleQueue#namedTailerIndexes()} (a read-only metadata read), so analysis never
  * opens or advances a tailer.
+ *
+ * <p>Positions are a snapshot: a tailer can register, or commit its first read, at any moment -
+ * including between the snapshot and a subsequent deletion - and an index of {@code 0} (freshly
+ * registered or parked) pins nothing. This race is inherent, so {@code keepLastCycles} is the safety
+ * margin: size it to cover the latest a reader could turn up or replay from, not just the files you
+ * want on disk.
  *
  * <p>Analysis is side-effect free; deletion, disk-space checks and directory walking are the
  * caller's concern (the {@code RollFileCleanupMain} CLI entry point).
@@ -46,9 +53,12 @@ public final class InternalRollFileCleanup {
         private final int oldestTailerCycle;
         private final List<String> laggingTailers;
         private final List<File> removable;
+        private final int retainable;
+        private final NavigableMap<String, Long> tailerIndexes;
 
         Analysis(String queue, int firstCycle, int lastCycle, int keepFloor, int deleteBelow,
-                 int oldestTailerCycle, List<String> laggingTailers, List<File> removable) {
+                 int oldestTailerCycle, List<String> laggingTailers, List<File> removable,
+                 int retainable, NavigableMap<String, Long> tailerIndexes) {
             this.queue = queue;
             this.firstCycle = firstCycle;
             this.lastCycle = lastCycle;
@@ -57,6 +67,8 @@ public final class InternalRollFileCleanup {
             this.oldestTailerCycle = oldestTailerCycle;
             this.laggingTailers = laggingTailers;
             this.removable = removable;
+            this.retainable = retainable;
+            this.tailerIndexes = tailerIndexes;
         }
 
         /** @return the queue directory name. */
@@ -102,6 +114,16 @@ public final class InternalRollFileCleanup {
             return removable;
         }
 
+        /** @return the count of present roll files that are retained (at or above {@link #deleteBelow()}). */
+        public int retainable() {
+            return retainable;
+        }
+
+        /** @return the named-tailer positions the verdict was computed from (one metadata scan). */
+        public NavigableMap<String, Long> tailerIndexes() {
+            return tailerIndexes;
+        }
+
         /** @return {@code true} when a tailer is pinning rolls older than the last-N window. */
         public boolean lagWarning() {
             return !laggingTailers.isEmpty();
@@ -138,15 +160,17 @@ public final class InternalRollFileCleanup {
         final int last = q.lastCycle();
         if (first > last) // empty queue
             return new Analysis(name, first, last, last, last, -1,
-                    Collections.emptyList(), Collections.emptyList());
+                    Collections.emptyList(), Collections.emptyList(), 0, Collections.emptyNavigableMap());
 
         // Floor 1: always keep the last N cycles.
         final int keepFloor = Math.max(first, last - keepLastCycles + 1);
 
-        // Floor 2: a tailer indexed older than the window pulls the floor down to it.
+        // Floor 2: a tailer indexed older than the window pulls the floor down to it. One metadata
+        // scan; the snapshot is recorded on the Analysis so callers trace the positions decided on.
+        final NavigableMap<String, Long> tailerIndexes = q.namedTailerIndexes();
         int oldest = -1;
         final List<String> lagging = new ArrayList<>();
-        for (Map.Entry<String, Long> e : q.namedTailerIndexes().entrySet()) {
+        for (Map.Entry<String, Long> e : tailerIndexes.entrySet()) {
             final long index = e.getValue();
             if (index <= 0) // parked (index 0): does not pin, resumes from oldest available if it runs
                 continue;
@@ -158,14 +182,20 @@ public final class InternalRollFileCleanup {
         final int deleteBelow = oldest == -1 ? keepFloor : Math.min(keepFloor, oldest);
 
         // Walk the whole cycle-number range rather than enumerating present files: an absent cycle
-        // resolves to a null store quickly, so even a large span is cheap - about 0.3 seconds for
-        // 10 years of hourly rolling (~88k cycles).
+        // is just a failed existence check (no store is opened or mapped), so even a large span is
+        // cheap.
         final List<File> removable = new ArrayList<>();
-        for (int cycle = first; cycle < deleteBelow; cycle++) {
+        int retainable = 0;
+        for (int cycle = first; cycle <= last; cycle++) {
             final File file = q.fileForCycle(cycle);
-            if (file != null && file.exists())
+            if (file == null)
+                continue;
+            if (cycle < deleteBelow)
                 removable.add(file);
+            else
+                retainable++;
         }
-        return new Analysis(name, first, last, keepFloor, deleteBelow, oldest, lagging, removable);
+        return new Analysis(name, first, last, keepFloor, deleteBelow, oldest, lagging, removable,
+                retainable, tailerIndexes);
     }
 }

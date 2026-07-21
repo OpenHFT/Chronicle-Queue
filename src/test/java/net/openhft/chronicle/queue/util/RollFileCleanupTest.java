@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -128,25 +129,96 @@ public class RollFileCleanupTest extends QueueTestCommon {
     }
 
     @Test
-    public void parkingReplicatedTailerDoesNotIncrementVersion() throws Exception {
-        File dir = Files.createTempDirectory("retain-replicated-park").toFile();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(27_000));
+    public void aRegisteredButUnreadFromStartConsumerDoesNotProtectItsBacklog() throws Exception {
+        File dir = Files.createTempDirectory("retain-unread").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(28_000));
+        writeDailyExcerpts(dir, time, 5); // cycles f .. f+4
+
+        try (SingleChronicleQueue q = builder(dir, time).build()) {
+            // Register a named consumer but never advance it: its committed index stays at 0, the
+            // same value the analysis reads as "parked / never read".
+            q.createTailer("newFromStart").close();
+            assertEquals("a freshly registered named tailer sits at index 0",
+                    Long.valueOf(0L), q.namedTailerIndexes().get("newFromStart"));
+
+            InternalRollFileCleanup.Analysis a = InternalRollFileCleanup.analyse(q, 2);
+
+            // Index 0 is indistinguishable from parked, so a consumer that intends to replay from the
+            // start but has not yet read is NOT treated as lagging and does NOT pin its backlog.
+            assertFalse("an unread from-start consumer is not flagged as lagging", a.lagWarning());
+            assertEquals("its intended backlog (3 of 5 cycles) is removable", 3, a.removable().size());
+        }
+    }
+
+    @Test
+    public void createTailerRejectsLockAndVersionIdsWithIllegalArgument() throws Exception {
+        File dir = Files.createTempDirectory("retain-badid").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(29_000));
+        writeDailyExcerpts(dir, time, 1);
+
+        try (SingleChronicleQueue q = builder(dir, time).build()) {
+            // A bad tailer id is an argument error, so createTailer(String) rejects reserved
+            // metastore suffixes with IllegalArgumentException.
+            assertThrows(IllegalArgumentException.class, () -> q.createTailer("index.gateway.version"));
+            assertThrows(IllegalArgumentException.class, () -> q.createTailer("index.gateway.lock"));
+        }
+    }
+
+    @Test
+    public void reservedTailerIdSuffixesCollideWithAnotherTailersMetadata() throws Exception {
+        File dir = Files.createTempDirectory("retain-collide").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(31_000));
+        writeDailyExcerpts(dir, time, 1);
+
+        try (SingleChronicleQueue q = builder(dir, time).build()) {
+            // Why the suffixes are reserved: tailer "a" keeps its state under the metadata keys
+            // "index.a", "index.a.lock" and "index.a.version". A tailer *named* "a.lock" or
+            // "a.version" would store its position under "index.a.lock" / "index.a.version" - the
+            // very keys tailer "a" uses - so the two tailers would silently share state.
+            final String replicated = SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX + "a";
+            q.createTailer(replicated).close();
+
+            // The replicated tailer's ".lock"/".version" companion keys exist in the metastore but
+            // must never surface as tailers of their own.
+            assertTrue("the tailer itself is listed",
+                    q.namedTailerIndexes().containsKey(replicated));
+            assertTrue("its lock/version metadata keys are not tailers",
+                    q.namedTailerIndexes().keySet().stream()
+                            .noneMatch(k -> k.endsWith(".lock") || k.endsWith(".version")));
+
+            // Both reserved suffixes are rejected with a message explaining the collision.
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                    () -> q.createTailer("a.version"));
+            assertTrue("message names the offending id: " + e.getMessage(),
+                    e.getMessage().contains("a.version"));
+            assertTrue("message explains the reservation: " + e.getMessage(),
+                    e.getMessage().contains("reserved"));
+            assertThrows(IllegalArgumentException.class, () -> q.createTailer("a.lock"));
+        }
+    }
+
+    @Test
+    public void parkingAReplicatedTailerIsRefused() throws Exception {
+        File dir = Files.createTempDirectory("retain-replicated-refuse").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(26_000));
         writeDailyExcerpts(dir, time, 5);
 
         try (SingleChronicleQueue q = builder(dir, time).build()) {
-            final String name = SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX + "dead";
-            try (ExcerptTailer dead = q.createTailer(name)) {
-                assertTrue(dead.moveToIndex(q.rollCycle().toIndex(q.firstCycle(), 0)));
+            final String name = SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX + "sink";
+            final long pinned = q.rollCycle().toIndex(q.firstCycle(), 0);
+            try (ExcerptTailer sink = q.createTailer(name)) {
+                assertTrue(sink.moveToIndex(pinned));
             }
-
             try (LongValue version = q.indexVersionForId(name)) {
-                final long before = version.getValue();
-                q.tableStoreGet("index." + name);
-
-                assertTrue(q.parkNamedTailer(name));
-
-                assertEquals(Long.valueOf(0L), q.namedTailerIndexes().get(name));
-                assertEquals("parking a replicated tailer must not bump its version", before, version.getValue());
+                final long versionBefore = version.getValue();
+                // A backward index reset with no replication-version coordination is unsafe, so
+                // parkNamedTailer refuses a replicated named tailer - returning false and leaving both
+                // its committed index and its replication version untouched.
+                assertFalse("parking a replicated named tailer must be refused", q.parkNamedTailer(name));
+                assertEquals("a refused park must not move the committed index",
+                        Long.valueOf(pinned), q.namedTailerIndexes().get(name));
+                assertEquals("a refused park must not touch the replication version",
+                        versionBefore, version.getValue());
             }
         }
     }
