@@ -82,6 +82,9 @@ public final class FileUtil {
      * @param baseDir        the queue directory to scan
      * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept (>= 1)
      * @return a Stream of removable roll files, earliest first
+     * @throws IllegalArgumentException if {@code baseDir} is not an existing queue directory (one
+     *                                  holding a roll file or the queue metadata file) - a typo'd
+     *                                  path fails rather than silently gaining a queue skeleton
      */
     @NotNull
     public static Stream<File> removableRollFileCandidatesByTailerPosition(@NotNull File baseDir,

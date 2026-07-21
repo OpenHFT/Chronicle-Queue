@@ -224,6 +224,23 @@ public class RollFileCleanupTest extends QueueTestCommon {
     }
 
     @Test
+    public void analysisRejectsNonQueueDirectoriesWithoutCreatingFiles() throws Exception {
+        // A typo'd path must fail loudly, not silently mkdir a queue skeleton (metadata.cq4t) that
+        // later sweeps discover as a real, empty queue.
+        File parent = Files.createTempDirectory("retain-typo").toFile();
+        File missing = new File(parent, "no-such-queue");
+        assertThrows(IllegalArgumentException.class,
+                () -> FileUtil.removableRollFileCandidatesByTailerPosition(missing, 2));
+        assertFalse("a nonexistent path must not be created", missing.exists());
+
+        File notAQueue = Files.createTempDirectory("retain-not-a-queue").toFile();
+        assertThrows(IllegalArgumentException.class,
+                () -> FileUtil.removableRollFileCandidatesByTailerPosition(notAQueue, 2));
+        assertEquals("no queue skeleton may be written into a non-queue directory",
+                0, notAQueue.list().length);
+    }
+
+    @Test
     public void keepsOnlyLastNWhenNoTailers() throws Exception {
         File dir = Files.createTempDirectory("retain-none").toFile();
         SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(30_000));
