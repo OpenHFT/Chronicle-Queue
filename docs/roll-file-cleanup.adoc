@@ -1,0 +1,212 @@
+= Roll File Cleanup
+:toc:
+:toclevels: 3
+:css-signature: demo
+
+`RollFileCleanupMain` removes old Chronicle Queue roll files using the persisted positions of named tailers.
+
+This is different from checking which files are currently open. A process can be down, but its named tailer can still have unread data. This tool treats the named tailer index as the durable contract: if a named tailer has not read past a roll file, that roll file is retained.
+
+== When to use it
+
+Use this tool when a queue directory grows because one or more named consumers have stopped, fallen behind, or been retired.
+
+Typical cases:
+
+* a gateway was stopped for a long time and still pins old roll files;
+* a consumer was replaced but its named tailer entry remains in the table store;
+* a production queue needs an offline retention sweep that is safer than deleting by age;
+* free disk is becoming more important than preserving the unread backlog of a dead consumer.
+
+Do not use this as a substitute for understanding the queue. The tool is deliberately conservative until you ask it to delete or park.
+
+== How it decides what is removable
+
+For each queue, the tool calculates two floors:
+
+. the newest `N` roll-cycle numbers are always retained (`--keep N`);
+. any named tailer positioned before that floor pulls the delete floor back to its own cycle.
+
+A roll file is removable only when it is below the effective delete floor.
+
+The keep window is by roll-cycle number, not by count of files on disk. This matters for sparse queues. For example, with hourly rolling and a queue idle for a day, many roll-cycle numbers may have no file. In that case, `--keep 48` means keep the last 48 hourly cycle numbers, not necessarily 48 files.
+
+An index of `0` is treated as parked or never-read. It does not pin any roll file.
+
+== Running the tool
+
+From the `Chronicle-Queue` project root:
+
+[source,bash]
+----
+mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --min-free 20G --verbose"
+----
+
+or directly by main class:
+
+[source,bash]
+----
+mvn exec:java \
+  -Dexec.mainClass="net.openhft.chronicle.queue.main.RollFileCleanupMain" \
+  -Dexec.args="/var/queues --keep 48 --min-free 20G --verbose"
+----
+
+The root can be a queue directory, or a directory whose immediate children are queue directories.
+
+== Running periodically with cron
+
+For a host-level periodic sweep that starts again after a reboot, run the tool from `cron` rather
+than keeping the Java process alive with `--interval`. For example, to run every hour at five
+minutes past the hour:
+
+[source,bash]
+----
+# /etc/cron.d/chronicle-roll-file-cleanup
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+5 * * * * chronicle cd /opt/Chronicle-Queue && mvn -q exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --min-free 20G --delete --fail-on-warn" >> /var/log/chronicle-roll-file-cleanup.log 2>&1
+----
+
+This form runs a single sweep each time cron starts it. After a machine restart, the system cron
+daemon resumes the schedule without needing a long-running clean-up JVM. Use an absolute project
+path, run as the user that owns the queue files, and redirect output to a log file that is rotated.
+
+== Options
+
+[cols="1,1,4", options="header"]
+|===
+| Option
+| Default
+| Meaning
+
+| `<rootDir>`
+| required
+| Queue directory, or a directory containing queue directories.
+
+| `--keep N`
+| `2`
+| Retain at least the last `N` roll-cycle numbers.
+
+| `--min-free size`
+| `10G`
+| Warn if usable disk under the root falls below this size. Uses Chronicle size parsing, e.g. `500M`, `10G`, `2T`.
+
+| `--delete`
+| off
+| Actually delete removable files and apply `--park` metadata updates. Without this, the tool is a dry run.
+
+| `--park name,...`
+| none
+| Retire named tailers by setting their committed index to `0`. In dry-run mode, this is only reported.
+
+| `--interval secs`
+| off
+| Repeat the sweep every `secs`; fractional seconds are accepted. Without this, the tool runs once.
+
+| `--fail-on-warn`
+| off
+| Throw an exit-code exception for process exit code `3` if lag or low disk is detected.
+
+| `--verbose`, `-v`
+| off
+| Emit detailed per-queue trace at debug level.
+|===
+
+== Dry run first
+
+The default mode does not delete files and does not park named tailers.
+
+[source,bash]
+----
+mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --min-free 20G --park old-gateway --verbose"
+----
+
+This reports the files that would be removable and whether `old-gateway` would be parked. It still analyses the original tailer position, so a dry-run park does not hide a real lag warning.
+
+== Deleting files
+
+Once the dry run is understood, add `--delete`:
+
+[source,bash]
+----
+mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --min-free 20G --delete --fail-on-warn"
+----
+
+Deletion stops on the first failed file in a queue. Later candidates are left untouched because ordering matters.
+
+== Parking a dead named tailer
+
+A dead named tailer can pin old roll files indefinitely. Parking resets its committed index to `0` so it no longer pins retention.
+
+Dry run:
+
+[source,bash]
+----
+mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --park old-gateway --verbose"
+----
+
+Apply:
+
+[source,bash]
+----
+mvn exec:java@RollFileCleanup -Dexec.args="/var/queues --keep 48 --park old-gateway --delete --fail-on-warn"
+----
+
+If that consumer is restarted later, it resumes from the oldest roll still available. It loses only the data that retention has since removed, not the whole queue.
+
+Parking is not a read-position update. For replicated named tailers, parking does not bump the version metadata.
+
+== Logging and exit behaviour
+
+Warnings are emitted through `Jvm.warn()`:
+
+* named tailers pinning rolls below the keep floor;
+* free disk below `--min-free`;
+* a failed file delete;
+* an invalid queue root.
+
+Operational trace and positive status are emitted through `Jvm.debug()`:
+
+* per-queue summary;
+* `RETENTION_OK`;
+* `RETENTION_PARKED`;
+* `RETENTION_WOULD_PARK`;
+* per-tailer verbose trace.
+
+With `--fail-on-warn`, any lag or low-disk warning causes process exit code `3` from `main()`.
+
+== API entry points
+
+The tool is built on a small API that can be used directly:
+
+[source,java]
+----
+List<File> removable = FileUtil
+        .removableRollFileCandidatesByTailerPosition(queueDir, 48)
+        .collect(Collectors.toList());
+----
+
+For lower-level diagnostics:
+
+[source,java]
+----
+NavigableMap<String, Long> indexes = queue.namedTailerIndexes();
+boolean parked = queue.parkNamedTailer("old-gateway");
+File rollFile = queue.fileForCycle(cycle);
+----
+
+== Operational checklist
+
+Before running with `--delete`:
+
+* run the command without `--delete`;
+* check the named tailers reported as lagging;
+* decide whether each lagging tailer is live, dead, or intentionally paused;
+* park only named tailers you are prepared to retire;
+* keep enough cycles to cover normal outage and restart time;
+* use `--fail-on-warn` from automation if lag or low disk should fail the job.
+
+The point is not to be clever. It is to make an offline clean-up predictable enough that you can run it in production without guessing.
+
+<<../README.adoc#,Back to Chronicle Queue>>
