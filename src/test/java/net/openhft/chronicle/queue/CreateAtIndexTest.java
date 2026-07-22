@@ -18,7 +18,9 @@ import java.io.File;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
 public class CreateAtIndexTest extends QueueTestCommon {
@@ -43,7 +45,10 @@ public class CreateAtIndexTest extends QueueTestCommon {
             String before = queue.dump();
             appender.writeBytes(0x421d00000000L, HELLO_WORLD);
             String after = queue.dump();
-            // ignore benign metadata deltas from the appender's first-write EOF normalisation
+            // the appender's first write normalises EOFs, adding a normalisedEOFsTo record;
+            // assert that delta explicitly, then require the dumps to match once it is masked out
+            assertFalse(before.contains("normalisedEOFsTo"));
+            assertTrue(after.contains("normalisedEOFsTo"));
             assertEquals(cleanDump(before), cleanDump(after));
         }
 
