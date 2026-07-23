@@ -98,6 +98,34 @@ public class NormaliseEOFsTest extends QueueTestCommon {
         }
     }
 
+    // A freshly constructed appender parks on the current cycle during its EOF back-scan and then
+    // releases that store, leaving its cycle field unset. normaliseEOFs() must still finalise the older
+    // cycles rather than silently no-op - the watermark it advances is "normalisedEOFsTo" in the table store.
+    @Test
+    public void freshlyConstructedAppenderNormalisesWithoutWriting() {
+        SetTimeProvider setTimeProvider = new SetTimeProvider();
+        try (final SingleChronicleQueue queue = createQueue(setTimeProvider);
+             final ExcerptAppender writer = queue.createAppender()) {
+            writer.writeText("cycle-0");
+            setTimeProvider.advanceMillis(1_001);
+            writer.writeText("cycle-1");
+            setTimeProvider.advanceMillis(1_001);
+            writer.writeText("cycle-2");
+
+            final int firstCycle = queue.firstCycle();
+            try (final ExcerptAppender fresh = queue.createAppender()) {
+                final long normalisedBefore = queue.tableStoreAcquire("normalisedEOFsTo", firstCycle).getVolatileValue();
+
+                fresh.normaliseEOFs();
+
+                final long normalisedAfter = queue.tableStoreAcquire("normalisedEOFsTo", firstCycle).getVolatileValue();
+                assertTrue(normalisedAfter > normalisedBefore,
+                        "normaliseEOFs on a never-written appender should have advanced the watermark past "
+                                + normalisedBefore + " but it stayed at " + normalisedAfter);
+            }
+        }
+    }
+
     private void createNewRollCycles(ExcerptAppender appender, SetTimeProvider timeProvider) {
         for (int i = 0; i < 10; i++) {
             timeProvider.advanceMillis(3_000);

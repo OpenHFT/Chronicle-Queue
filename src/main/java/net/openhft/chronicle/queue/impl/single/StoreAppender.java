@@ -48,6 +48,7 @@ class StoreAppender extends AbstractCloseable
      * This is the key in the table-store where we store that information
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
+
     @NotNull
     private final SingleChronicleQueue queue;
     @NotNull
@@ -99,6 +100,7 @@ class StoreAppender extends AbstractCloseable
             int lastExistingCycle = queue.lastCycle();
             int firstCycle = queue.firstCycle();
             long start = System.nanoTime();
+            int scannedCycle = Integer.MIN_VALUE;
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
@@ -120,12 +122,16 @@ class StoreAppender extends AbstractCloseable
                     }
                     if (wire != null)
                         resetPosition();
+                    scannedCycle = cycle;
+
+                    // Don't hold the back-scan's store open; the first write re-acquires it
+                    releaseParkedStore();
                 }
             } finally {
                 writeLock.unlock();
                 long tookMillis = (System.nanoTime() - start) / 1_000_000;
-                if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && cycle != lastExistingCycle))
-                    Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + cycle);
+                if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && scannedCycle != lastExistingCycle))
+                    Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + scannedCycle);
             }
         } catch (RuntimeException ex) {
             // Perhaps initialization code needs to be moved away from constructor
@@ -400,6 +406,26 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
+     * Releases the store (and its wires) that the construction-time EOF back-scan left this appender
+     * parked on, returning the appender to the same "never written" state as one created on an empty
+     * queue. The next write re-acquires the current cycle. Only the mapped-file reservation and open
+     * FD are dropped; nothing on disk changes.
+     */
+    private void releaseParkedStore() {
+        if (store == null)
+            return;
+
+        releaseBytesFor(wireForIndex);
+        releaseBytesFor(wire);
+        wireForIndex = null;
+        wire = null;
+
+        storePool.closeStore(store);
+        store = null;
+        cycle = Integer.MIN_VALUE;
+    }
+
+    /**
      * Resets the wires (primary and indexing) for this appender based on the store.
      * Releases any existing wire resources before creating new ones.
      *
@@ -603,7 +629,9 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            normaliseEOFs0(cycle);
+            // use the getter, not the raw field: after the construction-time back-scan releases its
+            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
+            normaliseEOFs0(cycle());
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
