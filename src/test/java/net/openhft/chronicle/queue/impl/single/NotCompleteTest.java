@@ -152,7 +152,10 @@ public class NotCompleteTest extends QueueTestCommon {
 
     // the last line of the dump changes - haven't spent the time to get to the bottom of this
     private String cleanQueueDump(String from) {
-        return from.replaceAll("# [0-9]+ bytes remaining$", "").replaceAll("modCount: (\\d+)", "modCount: 00");
+        return from.replaceAll("# [0-9]+ bytes remaining", "# NN bytes remaining")
+                .replaceAll("modCount: (\\d+)", "modCount: 00")
+                // strip the normalisedEOFsTo record written by first-write EOF normalisation
+                .replaceAll("# position: \\d+, header: \\d+\\R--- !!data #binary\\RnormalisedEOFsTo: \\d+\\R", "");
     }
 
     private void doWrite(ChronicleQueue queue, BiConsumer<PersonListener, ChronicleQueue> action) {
