@@ -1,19 +1,5 @@
 /*
- * Copyright 2016-2022 chronicle.software
- *
- *       https://chronicle.software
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
  */
 
 package net.openhft.chronicle.queue.impl.single;
@@ -101,6 +87,7 @@ class StoreAppender extends AbstractCloseable
             int lastExistingCycle = queue.lastCycle();
             int firstCycle = queue.firstCycle();
             long start = System.nanoTime();
+            int scannedCycle = Integer.MIN_VALUE;
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
@@ -121,12 +108,16 @@ class StoreAppender extends AbstractCloseable
                     }
                     if (wire != null)
                         resetPosition();
+                    scannedCycle = cycle;
+
+                    // Don't hold the back-scan's store open; the first write re-acquires it
+                    releaseParkedStore();
                 }
             } finally {
                 writeLock.unlock();
                 long tookMillis = (System.nanoTime() - start) / 1_000_000;
-                if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && cycle != lastExistingCycle))
-                    Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + cycle);
+                if (tookMillis > WARN_SLOW_APPENDER_MS || (lastExistingCycle >= 0 && scannedCycle != lastExistingCycle))
+                    Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to find first open cycle " + scannedCycle);
             }
         } catch (RuntimeException ex) {
             // Perhaps initialization code needs to be moved away from constructor
@@ -334,6 +325,32 @@ class StoreAppender extends AbstractCloseable
         queue.onRoll(cycle);
     }
 
+    /**
+     * Releases the store (and its wires) that the construction-time EOF back-scan left this appender
+     * parked on, returning the appender to the same "never written" state as one created on an empty
+     * queue. The next write re-acquires the current cycle. Only the mapped-file reservation and open
+     * FD are dropped; nothing on disk changes.
+     */
+    private void releaseParkedStore() {
+        if (store == null)
+            return;
+
+        releaseBytesFor(wireForIndex);
+        releaseBytesFor(wire);
+        wireForIndex = null;
+        wire = null;
+
+        storePool.closeStore(store);
+        store = null;
+        cycle = Integer.MIN_VALUE;
+    }
+
+    /**
+     * Resets the wires (primary and indexing) for this appender based on the store.
+     * Releases any existing wire resources before creating new ones.
+     *
+     * @param queue The ChronicleQueue instance to reset wires for.
+     */
     private void resetWires(@NotNull final ChronicleQueue queue) {
         WireType wireType = queue.wireType();
         {
@@ -489,7 +506,9 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            normaliseEOFs0(cycle);
+            // use the getter, not the raw field: after the construction-time back-scan releases its
+            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
+            normaliseEOFs0(cycle());
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
