@@ -127,6 +127,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     final AppenderListener appenderListener;
+    @Nullable
+    final Class<?> contextListenerWriterType;
+    @Nullable
+    final MarshallableOut.ContextListener<?> contextListener;
+    // Guards one-context-record-per-cycle across appenders. Touched only under the write lock, but
+    // volatile so the update is visible to other appender threads in this JVM (the write lock is a
+    // cross-process mapped lock, not a JVM monitor, so it establishes no happens-before by itself).
+    private volatile long lastCycleChecked = Long.MIN_VALUE;
+    private final Map<MarshallableOut.ContextListener<?>, int[]> appenderContextListenerRefs = new IdentityHashMap<>();
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -185,6 +194,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
+            contextListenerWriterType = builder.contextListenerWriterType();
+            contextListener = builder.newContextListener();
 
             if (metaStore.readOnly()) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
@@ -629,6 +640,71 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return storeFileListener;
     }
 
+    @Nullable
+    MarshallableOut.ContextListener<?> contextListener() {
+        return contextListener;
+    }
+
+    @Nullable
+    Class<?> contextListenerWriterType() {
+        return contextListenerWriterType;
+    }
+
+    boolean shouldNotifyContextListener(int cycle, @NotNull SingleChronicleQueueStore store, @NotNull ExcerptContext context) {
+        if (lastCycleChecked >= cycle)
+            return false;
+        try {
+            if (store.lastSequenceNumber(context) >= 0) {
+                lastCycleChecked = cycle;
+                return false;
+            }
+            return true;
+        } catch (StreamCorruptedException e) {
+            // A damaged last-sequence index must not escalate into a fatal Error that fails the
+            // append (it was tolerated before this feature existed); skip the context record for
+            // this cycle and carry on.
+            Jvm.warn().on(SingleChronicleQueue.class,
+                    "Could not read last sequence for cycle " + cycle + "; skipping context listener", e);
+            lastCycleChecked = cycle;
+            return false;
+        }
+    }
+
+    void contextListenerComplete(int cycle) {
+        lastCycleChecked = Math.max(lastCycleChecked, cycle);
+    }
+
+    /**
+     * Reference-counts a context listener set on an appender so that a listener shared by several
+     * appenders is closed once, by the last appender to release it, and never while another appender
+     * still holds it. The queue's own builder listener is owned by the queue and ignored here.
+     */
+    void retainAppenderContextListener(@Nullable MarshallableOut.ContextListener<?> listener) {
+        if (listener == null || listener == contextListener)
+            return;
+        synchronized (appenderContextListenerRefs) {
+            appenderContextListenerRefs.computeIfAbsent(listener, k -> new int[1])[0]++;
+        }
+    }
+
+    /** Releases one reference to an appender-set context listener, closing it when the count reaches zero. */
+    void releaseAppenderContextListener(@Nullable MarshallableOut.ContextListener<?> listener) {
+        if (listener == null || listener == contextListener)
+            return;
+        boolean close = false;
+        synchronized (appenderContextListenerRefs) {
+            final int[] count = appenderContextListenerRefs.get(listener);
+            if (count == null)
+                return;
+            if (--count[0] <= 0) {
+                appenderContextListenerRefs.remove(listener);
+                close = true;
+            }
+        }
+        if (close)
+            Closeable.closeQuietly(listener);
+    }
+
     // used by enterprise CQ
     WireStoreSupplier storeSupplier() {
         return storeSupplier;
@@ -980,6 +1056,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             metaStoreMap.clear();
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
+            Closeable.closeQuietly(contextListener);
 
             // must be closed after closers.
             closeQuietly(
