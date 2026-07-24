@@ -121,6 +121,7 @@ Primary files:
 * `src/main/java/net/openhft/chronicle/queue/impl/single/SingleChronicleQueue.java`
 * `src/main/java/net/openhft/chronicle/queue/impl/single/StoreAppender.java`
 * `src/main/java/net/openhft/chronicle/queue/impl/single/StoreTailer.java`
+* `src/main/java/net/openhft/chronicle/queue/TailerContextRecovery.java`
 
 Fit-for-purpose assessment:
 
@@ -144,6 +145,7 @@ Evidence to inspect:
 * `src/test/java/net/openhft/chronicle/queue/ContextListenerTest.java`
 * `src/test/java/net/openhft/chronicle/queue/ContextListenerBugTest.java`
 * `src/test/java/net/openhft/chronicle/queue/impl/single/ContextListenerWhiteBoxBugTest.java`
+* `src/test/java/net/openhft/chronicle/queue/TailerContextRecoveryTest.java`
 
 Particular scenario to review:
 
@@ -159,6 +161,10 @@ try (DocumentContext dc = appender.writingDocument()) {
 This progressive pattern is the main reason `contextCount()` exists.
 It is deliberately not a double-buffering pattern.
 For a large dump-on-roll strategy, double buffering can still be useful because the dump itself is produced by the listener and does not need the caller to inspect `contextCount()`.
+
+Named tailers that restart mid-cycle should be reviewed with the pattern in `docs/named-tailer-context-recovery.adoc`.
+The utility opens a temporary unnamed tailer, replays same-cycle records before the named tailer persisted index into a context-only projection, and then lets the named tailer continue from its saved position.
+This is fit for purpose only when the replay projection has no business side effects.
 
 === Chronicle-FIX
 
