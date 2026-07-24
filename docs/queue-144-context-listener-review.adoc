@@ -1,0 +1,360 @@
+= QUEUE-144 Context Listener Review Guide
+:toc:
+:toclevels: 3
+:css-signature: demo
+
+This document is a reviewer guide for the `QUEUE-144:` changes across the Queue, Wire and downstream integration branches.
+It is intended to help a reviewer decide whether the strategy is fit for purpose, not merely whether each patch compiles.
+
+== Review Scope
+
+The feature branch is `feature/QUEUE-144-rollFileListener` in each repository.
+
+Review only commits whose subject starts with `QUEUE-144:` unless the pull request intentionally includes earlier work.
+In `Chronicle-Queue`, the branch also contains earlier `QUEUE-143:` commits relative to `origin/develop`; those are outside this review unless the PR base makes them visible.
+
+Repositories and commits:
+
+* `Chronicle-Wire`
+  ** `7f0425c21` `QUEUE-144: add document context count contract`
+  ** `2c3a5deb8` `QUEUE-144: add wire context listener API`
+  ** `97167d92c` `QUEUE-144: support context listeners in marshallable outputs`
+  ** `662e2e8f2` `QUEUE-144: cover wire context listener behaviour`
+  ** `fabd4e404` `QUEUE-144: document wire context listener decisions`
+* `Chronicle-Queue`
+  ** `9c39a66dd` `QUEUE-144: add queue context listener API`
+  ** `214514891` `QUEUE-144: manage queue context listener lifecycle`
+  ** `b5769b22c` `QUEUE-144: write context records from appenders`
+  ** `cd3bc3df3` `QUEUE-144: expose queue context counts to tailers`
+  ** `9b5287926` `QUEUE-144: cover queue context listener workflows`
+  ** `be3dfaad7` `QUEUE-144: add queue context listener regression tests`
+* `Chronicle-FIX`
+  ** `83413c2351` `QUEUE-144: cover FIX monitor queue context records`
+* `Chronicle-Queue-Enterprise`
+  ** `ea99907c` `QUEUE-144: integrate context listeners with enterprise appenders`
+* `Chronicle-Services-Enterprise`
+  ** `e94fcd99` `QUEUE-144: checkpoint idempotent stores on queue roll`
+
+Useful review commands:
+
+[source,bash]
+----
+git log --oneline --grep '^QUEUE-144:'
+git diff 9c39a66dd^..HEAD        # Chronicle-Queue only
+git diff 7f0425c21^..HEAD        # Chronicle-Wire only
+git show --stat 83413c2351       # Chronicle-FIX
+git show --stat ea99907c         # Chronicle-Queue-Enterprise
+git show --stat e94fcd99         # Chronicle-Services-Enterprise
+----
+
+== Strategy Under Review
+
+The design generalises a Queue roll-file listener into a Wire-level `MarshallableOut.ContextListener`.
+The listener receives a method writer and is called before writing into a new output context.
+
+The intended layering is:
+
+* Wire owns the generic listener API, first-use notification and `DocumentContext.contextCount()` contract.
+* Queue maps "new context" to queue roll cycles and emits context records before the first user data excerpt in that cycle.
+* Downstream projects use the feature only where context records are part of a normal method-writer stream.
+* Raw or fixed-format queues, encrypted output, asynchronous ring-buffer output and other incompatible modes are rejected or left out of scope.
+
+This strategy is fit for purpose only if reviewers are satisfied that context records are advisory preambles in a method-writer stream, not a universal Queue metadata mechanism.
+
+== Behavioural Contract To Check
+
+The expected contract is:
+
+* A listener may write zero or more records before the first user record in a new output context.
+* Queue invokes the listener on first use of the first cycle an appender sees, and again on the first user write after each later roll.
+* Queue context records are normal data records, so file tailers and method readers should observe them in stream order.
+* Context records do not receive `MessageHistory` by default. Applications may add history explicitly if that is required, but the default avoids creating event provenance for non-event context records.
+* Retaining the writer supplied to the listener is not supported. The listener should use it only during the callback.
+* `DocumentContext.contextCount()` is a small-context discriminator:
+  ** Queue write/read contexts expose the roll cycle number.
+  ** Wires without multiple contexts report `1`.
+  ** Channel-like outputs may use a one-based connection count.
+  ** unavailable or closed contexts report a negative value.
+* Queue double-buffered appenders cannot provide a reliable `contextCount()` for progressive resend decisions, because the roll may change after data is written to the buffer. Callers that need `contextCount()` must not use double buffering.
+
+== Repository Evaluation
+
+=== Chronicle-Wire
+
+Primary files:
+
+* `src/main/java/net/openhft/chronicle/wire/MarshallableOut.java`
+* `src/main/java/net/openhft/chronicle/wire/WireOut.java`
+* `src/main/java/net/openhft/chronicle/wire/AbstractWire.java`
+* `src/main/java/net/openhft/chronicle/wire/DocumentContext.java`
+* `src/main/java/net/openhft/chronicle/wire/internal/FileMarshallableOut.java`
+* `src/main/java/net/openhft/chronicle/wire/internal/HTTPMarshallableOut.java`
+* `src/main/java/net/openhft/chronicle/wire/internal/StringConsumerMarshallableOut.java`
+
+Fit-for-purpose assessment:
+
+* The API is plausible if `ContextListener` is treated as a low-level output-context hook and not as a Queue-only roll listener.
+* `contextCount()` gives applications a cheap way to decide whether static context needs to be resent without making the listener responsible for the full dump.
+* The risk is public-surface ambiguity: reviewers should check that the Javadocs are explicit about first-use semantics, writer lifetime, history defaults and unsupported double-buffered progressive usage.
+
+Reviewer focus:
+
+* Source and binary compatibility of the new default methods.
+* Whether `MarshallableOut.ContextListener<? super T>` is the right generic shape.
+* Whether first-use notification in `BinaryWire`, `TextWire`, `YamlWire` and `RawWire` fires once and only once per output context.
+* Whether `clear()`, `reset()` and reused wires define a new context consistently.
+* Whether the listener path adds allocations or branches to hot write paths beyond what is acceptable.
+
+Evidence to inspect:
+
+* `src/test/java/net/openhft/chronicle/wire/MarshallableOutContextListenerTest.java`
+* `src/test/java/net/openhft/chronicle/wire/DocumentContextLifecycleTest.java`
+* `src/test/java/net/openhft/chronicle/wire/BinaryWire2Test.java`
+* `src/test/java/net/openhft/chronicle/wire/YamlWireTest.java`
+
+=== Chronicle-Queue
+
+Primary files:
+
+* `src/main/java/net/openhft/chronicle/queue/ExcerptAppender.java`
+* `src/main/java/net/openhft/chronicle/queue/impl/single/SingleChronicleQueueBuilder.java`
+* `src/main/java/net/openhft/chronicle/queue/impl/single/SingleChronicleQueue.java`
+* `src/main/java/net/openhft/chronicle/queue/impl/single/StoreAppender.java`
+* `src/main/java/net/openhft/chronicle/queue/impl/single/StoreTailer.java`
+
+Fit-for-purpose assessment:
+
+* The Queue implementation is useful for roll-boundary static context, schema state and progressive resend of large reference data.
+* It is not a replacement for session-boundary events. If a protocol session resets on a schedule that differs from the roll cycle, the application must still use its own session hook.
+* The listener writes normal queue data, so it is suitable for method-writer streams and unsuitable for fixed binary formats that expect every record to start with a private header.
+
+Reviewer focus:
+
+* The callback must occur after the roll file is created and initialised, but before the first user data excerpt in that context.
+* The callback should be triggered when this appender first writes to a cycle, including the first cycle it sees.
+* Metadata writes must not trigger user context records.
+* Listener failure should not leave the cross-process write lock held, commit a partial user record, or poison later appends.
+* Appender-local listener ownership and builder-level listener ownership must be clear across multiple appenders and queue close.
+* Re-entrant writes through the supplied method writer must not recurse indefinitely.
+* `contextCount()` must be correct for direct append/read contexts and explicitly unavailable where double buffering makes it unreliable.
+* Context records consume queue indexes and max-message budget; reviewers should decide whether that is acceptable and documented clearly enough.
+
+Evidence to inspect:
+
+* `src/test/java/net/openhft/chronicle/queue/ContextListenerTest.java`
+* `src/test/java/net/openhft/chronicle/queue/ContextListenerBugTest.java`
+* `src/test/java/net/openhft/chronicle/queue/impl/single/ContextListenerWhiteBoxBugTest.java`
+
+Particular scenario to review:
+
+[source,java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    if (largeDto.isNewerContext(dc.contextCount()))
+        out.largeDto(largeDto);
+    out.smallEvent(smallDtoWithForeignKeyToLargeDto);
+}
+----
+
+This progressive pattern is the main reason `contextCount()` exists.
+It is deliberately not a double-buffering pattern.
+For a large dump-on-roll strategy, double buffering can still be useful because the dump itself is produced by the listener and does not need the caller to inspect `contextCount()`.
+
+=== Chronicle-FIX
+
+Primary files:
+
+* `Chronicle-Fix-Runtime/src/test/java/software/chronicle/fix/staticcode/internal/monitor/ConsolidatedSessionMonitorTest.java`
+* `pom.xml`
+
+Fit-for-purpose assessment:
+
+* The change is correctly limited to the method-writer monitor queue.
+* It should not be applied to the FIX message store in its current form because that store has a fixed raw-binary record format.
+* It should not be used as a FIX session-boundary mechanism unless the listener reads state from a durable previous-cycle source rather than from incomplete live recovery state.
+
+Reviewer focus:
+
+* Verify the test proves context records are readable by `MonitorReader` in normal stream order.
+* Check that no production FIX message-store path is accidentally configured with a method-writer context listener.
+* Decide whether the dependency override to `chronicle-queue` `2026.6-SNAPSHOT` is acceptable for the branch and release plan.
+
+=== Chronicle-Queue-Enterprise
+
+Primary files:
+
+* `Chronicle-Queue-Enterprise/src/main/java/software/chronicle/enterprise/queue/DelegatingAppender.java`
+* `Chronicle-Queue-Enterprise/src/main/java/software/chronicle/enterprise/queue/BufferedAppender.java`
+* `Chronicle-Queue-Enterprise/src/main/java/software/chronicle/enterprise/queue/AsyncBufferedAppender.java`
+* `Chronicle-Queue-Enterprise/src/test/java/software/chronicle/enterprise/queue/EncryptionExampleTest.java`
+* `Chronicle-Queue-Enterprise/src/test/java/software/chronicle/enterprise/queue/config/QueueBuilderFromConfigTest.java`
+* `pom.xml`
+
+Fit-for-purpose assessment:
+
+* Forwarding through `DelegatingAppender` is required; otherwise enterprise wrappers would expose the interface but throw the default `UnsupportedOperationException`.
+* Rejecting encrypted or encoded buffered appenders is a conservative fit until context records can be encoded with the same guarantees as user data.
+* Rejecting asynchronous buffered appenders is reasonable because ring-buffer tailers and file tailers would otherwise observe different streams.
+
+Reviewer focus:
+
+* Confirm all enterprise appender wrappers either forward `contextListener(...)` or reject it with a clear message.
+* Check whether rejection belongs only on appender-local APIs or should also be enforced at builder/config level for every unsupported mode.
+* Verify the config path uses a listener supplier or builder consumer so shallow-cloned builders do not share a single close-owned listener instance.
+* Decide whether replication needs an explicit parity test: source with context listener, replicated sink with identical readable context records.
+
+=== Chronicle-Services-Enterprise
+
+Primary files:
+
+* `chronicle-services/src/main/java/software/chronicle/services/idempotent/IdempotentKeyValueStore.java`
+* `chronicle-services/src/main/java/software/chronicle/services/idempotent/IdempotentKeyValueStoreBuilder.java`
+* `chronicle-services/src/test/java/software/chronicle/services/idempotent/IdempotentKeyValueStoreTest.java`
+* `pom.xml`
+
+Fit-for-purpose assessment:
+
+* The idempotent store is a good trial integration because it already maintains context progressively through checkpoints.
+* `checkpointOnRoll()` is intentionally opt-in, which avoids changing existing queue streams.
+* The design fits method-writer queues, but reviewers should confirm replay, startup load, read-only mode and batching semantics still behave correctly.
+
+Reviewer focus:
+
+* Check that checkpoints are written before the first put in each roll and not on metadata or read-only use.
+* Confirm loading from queue tolerates additional checkpoints at roll boundaries.
+* Check that the builder overload taking `SingleChronicleQueueBuilder` clones before building and does not retain a mutable builder shared across stores.
+* Decide whether the option name should be `checkpointOnRoll`, `checkpointOnContext`, or another name that aligns with the Wire-level abstraction.
+
+== Cross-Repository Risk Register
+
+[cols="1,1,2,2",options="header"]
+|===
+|Risk
+|Severity
+|Why it matters
+|What to verify
+
+|Public API naming drift
+|High
+|The feature started as a roll-file listener but is now a generic output-context listener.
+|No stale public names or docs should imply Queue-only roll files where the type is Wire-level.
+
+|Raw-format queues
+|High
+|A method-writer context record can corrupt consumers that expect a fixed binary record format.
+|FIX message stores and similar raw queues must not install this listener.
+
+|Ownership and close semantics
+|High
+|Builder instances are often shallow-cloned; one shared listener closed by the first queue would break later queues.
+|Builder-level APIs should use supplier/factory semantics where cloning is common, and appender-local listeners should have clear ownership.
+
+|Failure under write lock
+|High
+|The listener runs before data while the append path is active; blocking or failure can stall writers.
+|Exceptions must release locks and leave subsequent appends possible.
+
+|Consumer visibility mismatch
+|High
+|File tailers see context records, but ring-buffer consumers may not.
+|Unsupported async/ring-buffer paths must reject or document the mismatch explicitly.
+
+|MessageHistory absence
+|Medium
+|Context records are not naturally triggered event messages, so provenance tooling may not see them.
+|Docs and tests should confirm history is absent by default and may be added explicitly by applications.
+
+|Restart and failover gaps
+|Medium
+|A listener only emits on first write in a context seen by the appender; it is not a durable guarantee that every existing roll contains a context record.
+|Applications requiring guaranteed context after failover may need progressive resend checks using `contextCount()` or separate state recovery.
+
+|Double buffering with `contextCount()`
+|Medium
+|The roll can change after data enters the buffer, so the writer cannot safely decide context freshness from `contextCount()`.
+|Double-buffered queue contexts should reject or make `contextCount()` unavailable for this use case.
+
+|Index and message budget
+|Medium
+|Context records are normal queue records.
+|Review max-messages-per-cycle and first-index assumptions under concurrent appenders.
+
+|Snapshot dependency overrides
+|Medium
+|Downstream repos pin `chronicle-queue` to `2026.6-SNAPSHOT` for branch testing.
+|Release managers should decide when to remove or align these overrides.
+|===
+
+== Verification Already Run
+
+The following focused verification was run before this guide was written:
+
+[source,bash]
+----
+# Local dependency installation for downstream repositories
+cd /home/peter/Build-All/Chronicle-Wire
+mvn install -DskipTests -q
+
+cd /home/peter/Build-All/Chronicle-Queue
+mvn install -DskipTests -q
+
+# Wire
+cd /home/peter/Build-All/Chronicle-Wire
+mvn -q -Dtest=DocumentContextLifecycleTest,MarshallableOutContextListenerTest test
+
+# Queue
+cd /home/peter/Build-All/Chronicle-Queue
+mvn -q -Dtest=ContextListenerTest,ContextListenerBugTest,ContextListenerWhiteBoxBugTest test
+
+# FIX
+cd /home/peter/Build-All/Chronicle-FIX
+mvn -q -pl Chronicle-Fix-Runtime -Dtest=ConsolidatedSessionMonitorTest#queueContextListenerCanPublishMonitoringContextAtRoll test
+
+# Queue Enterprise
+cd /home/peter/Build-All/Chronicle-Queue-Enterprise
+mvn -q -pl Chronicle-Queue-Enterprise -Dtest=EncryptionExampleTest,QueueBuilderFromConfigTest test
+
+# Services Enterprise
+cd /home/peter/Build-All/Chronicle-Services-Enterprise
+mvn -q -pl chronicle-services -Dtest=IdempotentKeyValueStoreTest#checkpointOnRollWritesCheckpointBeforeFirstPutInEachRoll test
+
+# Diff hygiene
+git diff --check
+----
+
+These checks are necessary but not sufficient.
+Before merge, reviewers should still run the relevant full module builds after all dependent branches are locally installed or available from a snapshot repository.
+
+== Suggested Review Order
+
+. Review `Chronicle-Wire` API and docs first. If the generic contract is wrong, downstream integrations should not be merged.
+. Review `Chronicle-Queue` write-path semantics next, especially first-use, roll transition, listener failure and `contextCount()`.
+. Review Queue tests for whether they demonstrate the risky behaviours rather than only happy paths.
+. Review `Chronicle-Queue-Enterprise` to ensure unsupported enterprise modes fail loudly and supported wrappers forward correctly.
+. Review `Chronicle-FIX` and `Chronicle-Services-Enterprise` as fit checks, not as proof that every downstream integration is safe.
+
+== Reviewer Decision Questions
+
+Answer these before approving:
+
+* Is `MarshallableOut.ContextListener` the right abstraction name, or should the public API remain more Queue-specific?
+* Should builder-level Queue listeners be supplier-only to avoid shared-listener ownership hazards?
+* Is it acceptable that context records are normal data records and therefore visible to file tailers, replicated sinks and method readers?
+* Are raw-format queues sufficiently protected from accidental use?
+* Is rejecting asynchronous and encrypted/encoded buffered appenders the right first-scope decision?
+* Should `contextCount()` throw for more unsupported contexts, or is a negative return value enough outside Queue?
+* Do the docs state clearly that the listener may write nothing and that applications can progressively resend context using `contextCount()`?
+* Do the tests cover first-use, roll transition, listener failure, re-entrancy, ownership, history defaults, double-buffering and downstream compatibility?
+
+== Merge Readiness
+
+Adopt with changes if any of the following are unresolved:
+
+* stale roll-file-only naming remains in public Wire API or docs;
+* listener ownership is ambiguous for cloned builders;
+* unsupported raw/encrypted/asynchronous paths silently accept listeners;
+* context records can be emitted with `MessageHistory` by default;
+* `contextCount()` appears reliable in double-buffered Queue writes;
+* focused tests pass but full module builds fail against the same local dependency set.
+
+Adopt as-is only if the review confirms the feature is deliberately scoped as a method-writer context preamble mechanism and all unsupported integrations fail loudly.
