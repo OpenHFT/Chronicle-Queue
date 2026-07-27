@@ -14,6 +14,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 
 /**
  * Verifies that {@link StoreAppender} delegates its listener-related entry points to one lifecycle
@@ -21,6 +23,17 @@ import static org.junit.Assert.assertFalse;
  * when a write path bypasses the lifecycle abstraction.
  */
 public class AppenderContextListenerLifecycleTest extends QueueTestCommon {
+
+    @Test
+    public void defaultBuilderHasNonNullSharedConfiguration() {
+        SingleChronicleQueueBuilder first = SingleChronicleQueueBuilder.binary(getTmpDir());
+        SingleChronicleQueueBuilder second = SingleChronicleQueueBuilder.binary(getTmpDir());
+
+        assertNotNull(first.contextListenerConfiguration());
+        assertSame(ContextListenerConfiguration.NONE, first.contextListenerConfiguration());
+        assertSame(first.contextListenerConfiguration(), second.contextListenerConfiguration());
+        assertFalse(first.contextListenerConfiguration().configured());
+    }
 
     @Test
     public void documentWritesUseInjectedLifecycle() {

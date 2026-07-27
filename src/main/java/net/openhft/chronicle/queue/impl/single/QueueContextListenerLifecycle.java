@@ -14,6 +14,8 @@ import java.io.StreamCorruptedException;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Shared per-queue coordination and ownership for configured context listeners.
  *
@@ -51,10 +53,12 @@ interface QueueContextListenerLifecycle extends AutoCloseable {
     @Override
     void close();
 
-    static QueueContextListenerLifecycle from(@Nullable ContextListenerConfiguration configuration) {
-        return configuration == null
+    static QueueContextListenerLifecycle from(@NotNull ContextListenerConfiguration configuration) {
+        return !configuration.configured()
                 ? NO_OP
-                : new ActiveQueueContextListenerLifecycle(configuration.writerType(), configuration.newListener());
+                : new ActiveQueueContextListenerLifecycle(
+                        requireNonNull(configuration.writerType()),
+                        configuration.newListener());
     }
 
     static QueueContextListenerLifecycle activeWithoutQueueListener() {

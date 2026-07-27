@@ -139,7 +139,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
-    private ContextListenerConfiguration contextListenerConfiguration;
+    @NotNull
+    private ContextListenerConfiguration contextListenerConfiguration = ContextListenerConfiguration.NONE;
     private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
@@ -389,7 +390,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private void validateContextListenerCompatibility() {
-        if (contextListenerConfiguration == null)
+        if (!contextListenerConfiguration.configured())
             return;
         if (key != null || encodingSupplier != null)
             throw new UnsupportedOperationException("contextListener is not supported on encoded or encrypted Enterprise queues");
@@ -1697,7 +1698,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @Nullable
     public Class<?> contextListenerWriterType() {
-        return contextListenerConfiguration == null ? null : contextListenerConfiguration.writerType();
+        return contextListenerConfiguration.writerType();
     }
 
     /**
@@ -1707,10 +1708,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @Nullable
     public MarshallableOut.ContextListener<?> contextListener() {
-        return contextListenerConfiguration == null ? null : contextListenerConfiguration.listener();
+        return contextListenerConfiguration.listener();
     }
 
-    @Nullable
+    @NotNull
     ContextListenerConfiguration contextListenerConfiguration() {
         return contextListenerConfiguration;
     }

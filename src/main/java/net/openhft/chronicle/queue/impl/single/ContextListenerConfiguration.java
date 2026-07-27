@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.wire.MarshallableOut;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Supplier;
@@ -15,34 +16,45 @@ import static java.util.Objects.requireNonNull;
  *
  * <p>{@link SingleChronicleQueueBuilder} keeps this as its only context-listener field. A direct
  * listener is reused by every queue built from that builder; a supplier creates a separately owned
- * listener for each queue. No configuration object exists for the normal, listener-free case.</p>
+ * listener for each queue. Listener-free builders share {@link #NONE}, so the builder field remains
+ * non-null without allocating configuration state per builder.</p>
  */
 final class ContextListenerConfiguration {
+    static final ContextListenerConfiguration NONE =
+            new ContextListenerConfiguration(null, null, null);
+
+    @Nullable
     private final Class<?> writerType;
     @Nullable
     private final MarshallableOut.ContextListener<?> listener;
     @Nullable
     private final Supplier<? extends MarshallableOut.ContextListener<?>> listenerSupplier;
 
-    private ContextListenerConfiguration(Class<?> writerType,
+    private ContextListenerConfiguration(@Nullable Class<?> writerType,
                                          @Nullable MarshallableOut.ContextListener<?> listener,
                                          @Nullable Supplier<? extends MarshallableOut.ContextListener<?>> listenerSupplier) {
-        this.writerType = requireNonNull(writerType);
+        this.writerType = writerType;
         this.listener = listener;
         this.listenerSupplier = listenerSupplier;
     }
 
     static <T> ContextListenerConfiguration of(Class<T> writerType,
                                                MarshallableOut.ContextListener<? super T> listener) {
-        return new ContextListenerConfiguration(writerType, requireNonNull(listener), null);
+        return new ContextListenerConfiguration(requireNonNull(writerType), requireNonNull(listener), null);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     static <T> ContextListenerConfiguration supplied(Class<T> writerType,
                                                      Supplier<? extends MarshallableOut.ContextListener<? super T>> listenerSupplier) {
-        return new ContextListenerConfiguration(writerType, null, (Supplier) requireNonNull(listenerSupplier));
+        return new ContextListenerConfiguration(
+                requireNonNull(writerType), null, (Supplier) requireNonNull(listenerSupplier));
     }
 
+    boolean configured() {
+        return writerType != null;
+    }
+
+    @Nullable
     Class<?> writerType() {
         return writerType;
     }
@@ -52,7 +64,10 @@ final class ContextListenerConfiguration {
         return listener;
     }
 
+    @NotNull
     MarshallableOut.ContextListener<?> newListener() {
+        if (!configured())
+            throw new IllegalStateException("No context listener is configured");
         return listenerSupplier == null
                 ? requireNonNull(listener)
                 : requireNonNull(listenerSupplier.get(), "contextListenerSupplier.get()");
