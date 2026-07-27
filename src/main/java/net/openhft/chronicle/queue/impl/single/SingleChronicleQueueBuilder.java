@@ -1692,16 +1692,6 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Returns the event interface configured for the context listener.
-     *
-     * @return the event interface type, or {@code null} if no listener is configured
-     */
-    @Nullable
-    public Class<?> contextListenerWriterType() {
-        return contextListenerConfiguration.writerType();
-    }
-
-    /**
      * Returns the listener instance configured by {@link #contextListener(Class, MarshallableOut.ContextListener)}.
      *
      * @return the listener, or {@code null} if none is configured or the supplier form is used
