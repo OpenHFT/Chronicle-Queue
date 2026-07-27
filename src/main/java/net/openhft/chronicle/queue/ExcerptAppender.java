@@ -100,7 +100,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * the buffer is flushed, so buffered contexts reject context-count access.
      * <p>
      * The callback runs while the queue write lock is held. It must be allocation-light, must not
-     * block, and must not perform slow I/O.
+     * block, and must not perform slow I/O. The first callback for a writer interface may also pay
+     * the one-time cost of constructing its method-writer proxy while that lock is held.
      * <p>
      * The supplied writer emits normal method-writer documents. Do not enable this listener on a
      * queue whose readers require one fixed raw payload format unless those readers explicitly
@@ -131,7 +132,13 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * This method must be called before the appender's first write attempt. If the listener also implements
      * {@link java.lang.AutoCloseable}, it is closed when this appender is closed, unless the same
      * instance is configured on the queue builder (then the queue owns it) or is shared with another
-     * appender (then it is closed once, by the last appender to release it).
+     * appender on the same queue (then it is closed once, by the last appender to release it).
+     * Ownership coordination is queue-local, so a closeable listener instance must not be shared
+     * between appenders belonging to different queues.
+     * <p>
+     * If different listeners are configured on appenders of the same queue, the first appender to
+     * write into an empty roll cycle supplies that cycle's context; the other listeners are not
+     * called for that cycle.
      *
      * @param writerType event interface type for the supplied method writer
      * @param listener   listener to call for new output contexts

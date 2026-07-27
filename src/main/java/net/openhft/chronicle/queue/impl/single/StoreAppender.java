@@ -77,11 +77,7 @@ class StoreAppender extends AbstractCloseable
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
     @Nullable
-    private Class<?> contextListenerWriterType;
-    @Nullable
-    private MarshallableOut.ContextListener<?> contextListener;
-    private boolean contextListenerMayBeChanged = true;
-    private boolean notifyingContextListener;
+    private AppenderContextListenerLifecycle contextListenerLifecycle;
     private int count = 0;
 
     /**
@@ -101,6 +97,7 @@ class StoreAppender extends AbstractCloseable
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
         this.context = new StoreAppenderContext();
+        this.contextListenerLifecycle = queue.newAppenderContextListenerLifecycle(this, context);
         this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
 
         try {
@@ -250,7 +247,10 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     protected void performClose() {
-        closeAppenderOwnedContextListener();
+        AppenderContextListenerLifecycle lifecycle = contextListenerLifecycle;
+        if (lifecycle != null)
+            lifecycle.close();
+        contextListenerLifecycle = AppenderContextListenerLifecycle.NO_OP;
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
@@ -526,26 +526,15 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         Objects.requireNonNull(writerType);
         Objects.requireNonNull(listener);
-        if (!contextListenerMayBeChanged)
-            throw new IllegalStateException("Cannot change contextListener after this appender has written");
-
-        MarshallableOut.ContextListener<?> previous = contextListener;
-        if (previous != listener) {
-            // Reference-count through the queue so a listener shared by several appenders is closed
-            // once, by the last appender to release it - never early while another still holds it.
-            queue.retainAppenderContextListener(listener);
-            queue.releaseAppenderContextListener(previous);
+        AppenderContextListenerLifecycle lifecycle = contextListenerLifecycle;
+        if (lifecycle == null) {
+            lifecycle = AppenderContextListenerLifecycle.active(
+                    this, context, queue.activeContextListenerLifecycle(), writerType, listener);
+        } else {
+            lifecycle = lifecycle.configure(writerType, listener);
         }
-
-        contextListenerWriterType = writerType;
-        contextListener = listener;
+        contextListenerLifecycle = lifecycle;
         return this;
-    }
-
-    private void closeAppenderOwnedContextListener() {
-        queue.releaseAppenderContextListener(contextListener);
-        contextListener = null;
-        contextListenerWriterType = null;
     }
 
     @NotNull
@@ -567,13 +556,12 @@ class StoreAppender extends AbstractCloseable
     // throws UnrecoverableTimeoutException
     public DocumentContext writingDocument(final boolean metaData) {
         throwExceptionIfClosed();
-        throwIfNotifyingContextListener();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
-        contextListenerMayBeChanged = false;
+        AppenderContextListenerLifecycle listenerLifecycle = startContextListenerWriteAttempt();
         count++;
         try {
-            return prepareAndReturnWriteContext(metaData);
+            return prepareAndReturnWriteContext(metaData, listenerLifecycle);
         } catch (Throwable e) {
             // Throwable, not just RuntimeException: an Error from a context listener must also
             // restore count, or the next write takes the count>1 fast path and is handed a stale,
@@ -583,12 +571,14 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    /** A listener must write only through its supplied writer - the appender's own write paths
-     * self-deadlock on the non-reentrant cross-process write lock the thread already holds. */
-    private void throwIfNotifyingContextListener() {
-        if (notifyingContextListener)
-            throw new IllegalStateException("Cannot write to the appender from " +
-                    "within a ContextListener; write through the supplied method writer instead");
+    private AppenderContextListenerLifecycle startContextListenerWriteAttempt() {
+        AppenderContextListenerLifecycle lifecycle = contextListenerLifecycle;
+        if (lifecycle == null) {
+            contextListenerLifecycle = lifecycle = AppenderContextListenerLifecycle.NO_OP;
+        } else if (lifecycle != AppenderContextListenerLifecycle.NO_OP) {
+            lifecycle.onWriteAttempt();
+        }
+        return lifecycle;
     }
 
     /**
@@ -599,7 +589,8 @@ class StoreAppender extends AbstractCloseable
      * @param metaData indicates if the write context is for metadata
      * @return the prepared {@link StoreAppenderContext} ready for writing
      */
-    private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(boolean metaData) {
+    private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(
+            boolean metaData, AppenderContextListenerLifecycle listenerLifecycle) {
         if (count > 1) {
             assert metaData == context.metaData;
             return context;
@@ -622,7 +613,8 @@ class StoreAppender extends AbstractCloseable
 
                 long safeLength = queue.overlapSize();
                 resetPosition();
-                if (initialiseContextIfNeeded(safeLength, metaData))
+                if (listenerLifecycle != AppenderContextListenerLifecycle.NO_OP &&
+                        listenerLifecycle.beforeDocument(metaData, safeLength))
                     resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
@@ -764,60 +756,6 @@ class StoreAppender extends AbstractCloseable
         return wire.enterHeader(safeLength);
     }
 
-    private boolean initialiseContextIfNeeded(long safeLength, boolean metaData) {
-        // Never fire for a metadata write: metadata is all a sink (append-locked) process may write,
-        // and injecting listener data records there would bypass the append lock and diverge a
-        // replication sink from its source. The context record precedes the first data document.
-        if (metaData || notifyingContextListener || store == null || wire == null)
-            return false;
-
-        MarshallableOut.ContextListener<?> listener = effectiveContextListener();
-        Class<?> writerType = effectiveContextListenerWriterType();
-        if (listener == null || writerType == null || !queue.shouldNotifyContextListener(cycle, store, this))
-            return false;
-
-        // A context listener must complete-or-not-write: if it writes some records and then throws
-        // there is no safe way to un-write a committed excerpt, so the exception is surfaced to the
-        // caller and the listener is not retried for this cycle (at-most-once), rather than silently
-        // re-running and duplicating the records it already committed. A listener that throws before
-        // writing anything leaves the cycle empty and is retried on the next write.
-        notifyingContextListener = true;
-        try {
-            notifyContextListener(listener, writerType, safeLength);
-            queue.contextListenerComplete(cycle);
-            return true;
-        } finally {
-            notifyingContextListener = false;
-        }
-    }
-
-    private boolean hasContextListener() {
-        return effectiveContextListener() != null && effectiveContextListenerWriterType() != null;
-    }
-
-    @Nullable
-    private MarshallableOut.ContextListener<?> effectiveContextListener() {
-        return contextListener != null ? contextListener : queue.contextListener();
-    }
-
-    @Nullable
-    private Class<?> effectiveContextListenerWriterType() {
-        return contextListenerWriterType != null ? contextListenerWriterType : queue.contextListenerWriterType();
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void notifyContextListener(MarshallableOut.ContextListener listener, Class writerType, long safeLength) {
-        LockedContextListenerMarshallableOut out = new LockedContextListenerMarshallableOut(
-                this, context, queue.wireType(), safeLength);
-        // Build the method writer through the MarshallableOut so it picks the invocation handler for
-        // the queue's wire type, rather than hardcoding the binary handler.
-        try {
-            listener.onNewContext(out.methodWriter(writerType));
-        } finally {
-            out.close();
-        }
-    }
-
     /**
      * Opens a new write context for appending data, setting up the necessary parameters such as
      * the header, write position, and metadata flag.
@@ -831,7 +769,6 @@ class StoreAppender extends AbstractCloseable
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
-        context.contextCount = cycle();
         context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
         context.metaData(metaData);
     }
@@ -849,6 +786,19 @@ class StoreAppender extends AbstractCloseable
     void openContextForContextListener(boolean metaData, long safeLength) {
         resetPosition();
         openContext(metaData, safeLength);
+    }
+
+    boolean contextListenerWriteReady() {
+        return store != null && wire != null;
+    }
+
+    void resetPositionForContextListener() {
+        resetPosition();
+    }
+
+    /** Package-private injection point for lifecycle integration tests. */
+    void contextListenerLifecycle(AppenderContextListenerLifecycle lifecycle) {
+        contextListenerLifecycle = Objects.requireNonNull(lifecycle);
     }
 
     /**
@@ -920,9 +870,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(@NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
-        throwIfNotifyingContextListener();
         checkAppendLock();
-        contextListenerMayBeChanged = false;
+        AppenderContextListenerLifecycle listenerLifecycle = startContextListenerWriteAttempt();
         writeLock.lock();
         try {
             int cycle = queue.cycle();
@@ -933,13 +882,9 @@ class StoreAppender extends AbstractCloseable
                 rollCycleTo(cycle);
 
             long safeLength = queue.overlapSize();
-            // Only pay for the context-listener pre-flight (resetPosition + lastSequenceNumber) when
-            // a listener is actually configured; a plain raw append goes straight to writeHeader.
-            if (hasContextListener()) {
+            if (listenerLifecycle != AppenderContextListenerLifecycle.NO_OP &&
+                    listenerLifecycle.beforeRawDocument(safeLength))
                 resetPosition();
-                if (initialiseContextIfNeeded(safeLength, false))
-                    resetPosition();
-            }
 
             this.positionOfHeader = writeHeader(wire, (int) safeLength); // writeHeader sets wire.byte().writePosition
 
@@ -980,9 +925,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
-        throwIfNotifyingContextListener();
         checkAppendLock();
-        contextListenerMayBeChanged = false;
+        startContextListenerWriteAttempt();
         writeLock.lock();
         try {
             writeBytesInternal(index, bytes);
@@ -1321,7 +1265,6 @@ class StoreAppender extends AbstractCloseable
         private boolean metaData = false;
         private boolean rollbackOnClose = false;
         private boolean buffered = false;
-        private long contextCount = -1; // negative = no known context yet (valid counts are positive)
         @Nullable
         private Wire wire;
         private boolean alreadyClosedFound;
@@ -1347,7 +1290,6 @@ class StoreAppender extends AbstractCloseable
             metaData = false;
             rollbackOnClose = false;
             buffered = false;
-            contextCount = -1;
             alreadyClosedFound = false;
             chainedElement = false;
         }
@@ -1603,7 +1545,7 @@ class StoreAppender extends AbstractCloseable
             // Progressive contextCount usage and double buffering are an unsupported combination.
             if (queue.doubleBuffer || buffered)
                 throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
-            return isClosed ? -1 : contextCount;
+            return isClosed ? -1 : StoreAppender.this.cycle();
         }
 
         /**

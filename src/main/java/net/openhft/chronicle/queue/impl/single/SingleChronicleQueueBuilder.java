@@ -139,9 +139,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
-    private Class<?> contextListenerWriterType;
-    private MarshallableOut.ContextListener<?> contextListener;
-    private transient Supplier<? extends MarshallableOut.ContextListener<?>> contextListenerSupplier;
+    private ContextListenerConfiguration contextListenerConfiguration;
     private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
@@ -391,7 +389,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     private void validateContextListenerCompatibility() {
-        if (contextListenerWriterType == null)
+        if (contextListenerConfiguration == null)
             return;
         if (key != null || encodingSupplier != null)
             throw new UnsupportedOperationException("contextListener is not supported on encoded or encrypted Enterprise queues");
@@ -1672,9 +1670,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public <T> SingleChronicleQueueBuilder contextListener(@NotNull Class<T> writerType,
                                                             @NotNull MarshallableOut.ContextListener<? super T> listener) {
-        this.contextListenerWriterType = requireNonNull(writerType);
-        this.contextListener = requireNonNull(listener);
-        this.contextListenerSupplier = null;
+        contextListenerConfiguration = ContextListenerConfiguration.of(writerType, listener);
         return this;
     }
 
@@ -1688,12 +1684,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      * @param <T>              event interface type
      * @return the current builder instance for method chaining
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public <T> SingleChronicleQueueBuilder contextListenerSupplier(@NotNull Class<T> writerType,
                                                                     @NotNull Supplier<? extends MarshallableOut.ContextListener<? super T>> listenerSupplier) {
-        this.contextListenerWriterType = requireNonNull(writerType);
-        this.contextListener = null;
-        this.contextListenerSupplier = (Supplier) requireNonNull(listenerSupplier);
+        contextListenerConfiguration = ContextListenerConfiguration.supplied(writerType, listenerSupplier);
         return this;
     }
 
@@ -1704,7 +1697,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @Nullable
     public Class<?> contextListenerWriterType() {
-        return contextListenerWriterType;
+        return contextListenerConfiguration == null ? null : contextListenerConfiguration.writerType();
     }
 
     /**
@@ -1714,14 +1707,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @Nullable
     public MarshallableOut.ContextListener<?> contextListener() {
-        return contextListener;
+        return contextListenerConfiguration == null ? null : contextListenerConfiguration.listener();
     }
 
     @Nullable
-    MarshallableOut.ContextListener<?> newContextListener() {
-        return contextListenerSupplier == null
-                ? contextListener
-                : requireNonNull(contextListenerSupplier.get(), "contextListenerSupplier.get()");
+    ContextListenerConfiguration contextListenerConfiguration() {
+        return contextListenerConfiguration;
     }
 
     /**
