@@ -807,7 +807,8 @@ class StoreAppender extends AbstractCloseable
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void notifyContextListener(MarshallableOut.ContextListener listener, Class writerType, long safeLength) {
-        LockedContextListenerMarshallableOut out = new LockedContextListenerMarshallableOut(safeLength);
+        LockedContextListenerMarshallableOut out = new LockedContextListenerMarshallableOut(
+                this, context, queue.wireType(), safeLength);
         // Build the method writer through the MarshallableOut so it picks the invocation handler for
         // the queue's wire type, rather than hardcoding the binary handler.
         try {
@@ -833,6 +834,39 @@ class StoreAppender extends AbstractCloseable
         context.contextCount = cycle();
         context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
         context.metaData(metaData);
+    }
+
+    /**
+     * Opens a document for a context listener while this appender's write lock is already held.
+     *
+     * <p>This is package-private solely for {@link LockedContextListenerMarshallableOut}. Context
+     * listeners cannot use the regular appender entry points because those paths attempt to acquire
+     * the non-reentrant write lock again.</p>
+     *
+     * @param metaData   whether the listener document contains metadata
+     * @param safeLength maximum number of bytes that may be written without overlapping a mapping
+     */
+    void openContextForContextListener(boolean metaData, long safeLength) {
+        resetPosition();
+        openContext(metaData, safeLength);
+    }
+
+    /**
+     * Closes the document written by a context listener without releasing the appender's write
+     * lock, which remains owned by the outer application write.
+     *
+     * <p>The temporary count prevents any nesting state from the application write from suppressing
+     * the listener document's commit. The original count is restored for the application document
+     * that follows.</p>
+     */
+    void closeContextForContextListener() {
+        int savedCount = count;
+        try {
+            count = 1;
+            context.close(false);
+        } finally {
+            count = savedCount;
+        }
     }
 
     /**
@@ -1274,150 +1308,6 @@ class StoreAppender extends AbstractCloseable
             super.finalize();
             context.rollbackOnClose();
             warnAndCloseIfNotClosed();
-        }
-    }
-
-    private final class LockedContextListenerMarshallableOut implements MarshallableOut {
-        private final long safeLength;
-        private ContextListenerDocumentContext activeContext;
-        private boolean closed;
-
-        private LockedContextListenerMarshallableOut(long safeLength) {
-            this.safeLength = safeLength;
-        }
-
-        @NotNull
-        @Override
-        public DocumentContext writingDocument() {
-            return writingDocument(false);
-        }
-
-        @Override
-        public DocumentContext writingDocument(boolean metaData) {
-            return acquireWritingDocument(metaData);
-        }
-
-        @Override
-        public DocumentContext acquireWritingDocument(boolean metaData) {
-            if (closed)
-                throw new IllegalStateException("ContextListener method writer cannot be used after the callback returns");
-            if (context.wire != null && context.isOpen() && context.chainedElement() && activeContext != null)
-                return activeContext;
-
-            resetPosition();
-            openContext(metaData, safeLength);
-            return activeContext = new ContextListenerDocumentContext();
-        }
-
-        @NotNull
-        @Override
-        public <T> MethodWriterBuilder<T> methodWriterBuilder(boolean metaData, @NotNull Class<T> tClass) {
-            VanillaMethodWriterBuilder<T> builder = new VanillaMethodWriterBuilder<>(tClass,
-                    queue.wireType(),
-                    () -> new BinaryMethodWriterInvocationHandler(tClass, metaData,
-                            () -> LockedContextListenerMarshallableOut.this));
-            builder.marshallableOut(this);
-            builder.metaData(metaData);
-            return builder;
-        }
-
-        @Override
-        public void rollbackIfNotComplete() {
-            context.rollbackIfNotComplete();
-        }
-
-        @Override
-        public boolean writingIsComplete() {
-            return context.writingIsComplete();
-        }
-
-        void close() {
-            closed = true;
-            activeContext = null;
-        }
-    }
-
-    private final class ContextListenerDocumentContext implements WriteDocumentContext {
-        @Override
-        public void start(boolean metaData) {
-            context.start(metaData);
-        }
-
-        @Override
-        public boolean chainedElement() {
-            return context.chainedElement();
-        }
-
-        @Override
-        public void chainedElement(boolean chainedElement) {
-            context.chainedElement(chainedElement);
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return context.isEmpty();
-        }
-
-        @Override
-        public boolean isMetaData() {
-            return context.isMetaData();
-        }
-
-        @Override
-        public boolean isPresent() {
-            return context.isPresent();
-        }
-
-        @Nullable
-        @Override
-        public Wire wire() {
-            return context.wire();
-        }
-
-        @Override
-        public boolean isNotComplete() {
-            return context.isNotComplete();
-        }
-
-        @Override
-        public void rollbackOnClose() {
-            context.rollbackOnClose();
-        }
-
-        @Override
-        public void close() {
-            int savedCount = count;
-            try {
-                count = 1;
-                context.close(false);
-            } finally {
-                count = savedCount;
-            }
-        }
-
-        @Override
-        public void reset() {
-            context.reset();
-        }
-
-        @Override
-        public int sourceId() {
-            return context.sourceId();
-        }
-
-        @Override
-        public long index() throws IORuntimeException {
-            return context.index();
-        }
-
-        @Override
-        public long contextCount() {
-            return context.contextCount();
-        }
-
-        @Override
-        public void rollbackIfNotComplete() {
-            context.rollbackIfNotComplete();
         }
     }
 
