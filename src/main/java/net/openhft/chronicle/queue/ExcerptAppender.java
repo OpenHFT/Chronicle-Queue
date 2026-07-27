@@ -100,8 +100,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * the buffer is flushed, so buffered contexts reject context-count access.
      * <p>
      * The callback runs while the queue write lock is held. It must be allocation-light, must not
-     * block, and must not perform slow I/O. The first callback for a writer interface may also pay
-     * the one-time cost of constructing its method-writer proxy while that lock is held.
+     * block, and must not perform slow I/O. Each configured appender constructs its method-writer
+     * proxy before its first write and reuses that proxy for later roll callbacks.
      * <p>
      * The supplied writer emits normal method-writer documents. Do not enable this listener on a
      * queue whose readers require one fixed raw payload format unless those readers explicitly

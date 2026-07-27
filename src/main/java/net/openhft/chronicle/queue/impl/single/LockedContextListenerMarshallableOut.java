@@ -10,6 +10,7 @@ import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A callback-scoped {@link MarshallableOut} that writes through an already-locked
@@ -20,34 +21,35 @@ import org.jetbrains.annotations.NotNull;
  * lock again. This adapter instead opens documents directly on the locked appender and returns
  * {@link ContextListenerDocumentContext} instances that commit without unlocking it.</p>
  *
- * <p>The adapter is deliberately short-lived and not thread-safe. {@link #close()} is called when
- * the listener callback returns; it invalidates the adapter so a method writer retained by the
- * listener cannot write outside the locked callback.</p>
+ * <p>One adapter and method writer are created per configured appender, outside the write lock.
+ * {@link #beginCallback(long)} activates that writer for the callback thread and
+ * {@link #endCallback()} invalidates it again. A retained writer therefore cannot write between
+ * callbacks or from another thread, while later roll callbacks avoid reconstructing the method
+ * writer.</p>
  */
 final class LockedContextListenerMarshallableOut implements MarshallableOut {
     private final StoreAppender appender;
     private final StoreAppender.StoreAppenderContext context;
     private final WireType wireType;
-    private final long safeLength;
+    private long safeLength;
+    @Nullable
     private ContextListenerDocumentContext activeContext;
-    private boolean closed;
+    @Nullable
+    private volatile Thread callbackThread;
 
     /**
-     * Creates an output for one context-listener callback.
+     * Creates the reusable, appender-bound output used to build one method writer.
      *
-     * @param appender   appender whose write lock is already held
-     * @param context    appender context used for the listener documents
-     * @param wireType   wire type used to construct the listener's method writer
-     * @param safeLength maximum number of bytes that may be written without overlapping a mapping
+     * @param appender appender whose write lock is held during callbacks
+     * @param context  appender context used for listener documents
+     * @param wireType wire type used to construct the listener's method writer
      */
     LockedContextListenerMarshallableOut(StoreAppender appender,
                                          StoreAppender.StoreAppenderContext context,
-                                         WireType wireType,
-                                         long safeLength) {
+                                         WireType wireType) {
         this.appender = appender;
         this.context = context;
         this.wireType = wireType;
-        this.safeLength = safeLength;
     }
 
     @NotNull
@@ -63,8 +65,7 @@ final class LockedContextListenerMarshallableOut implements MarshallableOut {
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
-        if (closed)
-            throw new IllegalStateException("ContextListener method writer cannot be used after the callback returns");
+        requireCallbackThread();
         if (context.wire() != null && context.isOpen() && context.chainedElement() && activeContext != null)
             return activeContext;
 
@@ -86,19 +87,38 @@ final class LockedContextListenerMarshallableOut implements MarshallableOut {
 
     @Override
     public void rollbackIfNotComplete() {
+        requireCallbackThread();
         context.rollbackIfNotComplete();
     }
 
     @Override
     public boolean writingIsComplete() {
+        requireCallbackThread();
         return context.writingIsComplete();
     }
 
     /**
-     * Ends the callback scope and prevents a retained method writer from opening another document.
+     * Activates the prebuilt method writer for one callback on the current thread.
+     *
+     * @param safeLength maximum number of bytes that may be written without overlapping a mapping
      */
-    void close() {
-        closed = true;
+    void beginCallback(long safeLength) {
+        if (callbackThread != null)
+            throw new IllegalStateException("ContextListener method writer is already in a callback");
+        this.safeLength = safeLength;
         activeContext = null;
+        callbackThread = Thread.currentThread();
+    }
+
+    /** Ends the callback scope and invalidates the method writer until the next callback. */
+    void endCallback() {
+        activeContext = null;
+        callbackThread = null;
+    }
+
+    private void requireCallbackThread() {
+        if (callbackThread != Thread.currentThread())
+            throw new IllegalStateException(
+                    "ContextListener method writer can only be used by the active callback thread");
     }
 }

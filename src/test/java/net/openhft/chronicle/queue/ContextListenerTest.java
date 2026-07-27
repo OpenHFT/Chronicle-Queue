@@ -377,6 +377,35 @@ public class ContextListenerTest extends QueueTestCommon {
     }
 
     @Test
+    public void appenderUsesCachedMethodWriterForEachNewRollFile() {
+        File path = getTmpDir();
+        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
+        List<ContextEvents> suppliedWriters = new ArrayList<>();
+
+        try (ChronicleQueue queue = builder(path, timeProvider)
+                .contextListener(ContextEvents.class, writer -> {
+                    suppliedWriters.add(writer);
+                    writer.context("queue");
+                })
+                .build()) {
+            ExcerptAppender first = queue.createAppender();
+            ExcerptAppender second = queue.createAppender();
+
+            writeMessage(first, "one");
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
+            writeMessage(second, "two");
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
+            writeMessage(first, "three");
+        }
+
+        assertEquals(3, suppliedWriters.size());
+        assertSame("an appender should use its cached method writer for each new roll file",
+                suppliedWriters.get(0), suppliedWriters.get(2));
+        assertNotSame("method writers must not be shared between appenders",
+                suppliedWriters.get(0), suppliedWriters.get(1));
+    }
+
+    @Test
     public void builderListenerClosesAfterQueueAppenders() {
         AtomicReference<ExcerptAppender> appenderRef = new AtomicReference<>();
         AtomicBoolean appenderWasClosedBeforeListener = new AtomicBoolean();

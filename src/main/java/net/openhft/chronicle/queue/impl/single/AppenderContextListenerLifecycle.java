@@ -96,15 +96,15 @@ enum NoOpAppenderContextListenerLifecycle implements AppenderContextListenerLife
 /**
  * Active appender lifecycle allocated only for a configured listener.
  *
- * <p>It owns appender-local listener references, prevents re-entry, and creates a fresh
- * {@link LockedContextListenerMarshallableOut} for each callback. The fresh callback adapter is
- * intentional: closing it invalidates any method writer retained beyond the write-lock scope.</p>
+ * <p>It owns appender-local listener references, prevents re-entry, and creates one method writer
+ * when the appender is configured. The appender-bound output enables that writer only for the
+ * callback thread while the write lock is held, avoiding proxy construction on every roll.</p>
  */
 final class ActiveAppenderContextListenerLifecycle implements AppenderContextListenerLifecycle {
     private final StoreAppender appender;
-    private final StoreAppender.StoreAppenderContext context;
     private final QueueContextListenerLifecycle queueLifecycle;
-    private Class<?> writerType;
+    private final LockedContextListenerMarshallableOut out;
+    private Object methodWriter;
     private MarshallableOut.ContextListener<?> listener;
     private boolean started;
     private boolean notifying;
@@ -115,10 +115,11 @@ final class ActiveAppenderContextListenerLifecycle implements AppenderContextLis
                                            Class<?> writerType,
                                            MarshallableOut.ContextListener<?> listener) {
         this.appender = appender;
-        this.context = context;
         this.queueLifecycle = queueLifecycle;
-        this.writerType = requireNonNull(writerType);
         this.listener = requireNonNull(listener);
+        this.out = new LockedContextListenerMarshallableOut(
+                appender, context, appender.queue().wireType());
+        this.methodWriter = out.methodWriter(requireNonNull(writerType));
         queueLifecycle.retain(listener);
     }
 
@@ -164,12 +165,11 @@ final class ActiveAppenderContextListenerLifecycle implements AppenderContextLis
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void notifyListener(long safeLength) {
-        LockedContextListenerMarshallableOut out = new LockedContextListenerMarshallableOut(
-                appender, context, appender.queue().wireType(), safeLength);
+        out.beginCallback(safeLength);
         try {
-            ((MarshallableOut.ContextListener) listener).onNewContext(out.methodWriter(writerType));
+            ((MarshallableOut.ContextListener) listener).onNewContext(methodWriter);
         } finally {
-            out.close();
+            out.endCallback();
         }
     }
 
@@ -180,13 +180,14 @@ final class ActiveAppenderContextListenerLifecycle implements AppenderContextLis
             throw new IllegalStateException("Cannot change contextListener after this appender has written");
         requireNonNull(writerType);
         requireNonNull(listener);
+        Object methodWriter = out.methodWriter(writerType);
 
         MarshallableOut.ContextListener<?> previous = this.listener;
         if (previous != listener) {
             queueLifecycle.retain(listener);
             queueLifecycle.release(previous);
         }
-        this.writerType = writerType;
+        this.methodWriter = methodWriter;
         this.listener = listener;
         return this;
     }
