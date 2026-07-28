@@ -316,6 +316,29 @@ public class ContextListenerWhiteBoxBugTest extends QueueTestCommon {
                 java.util.Arrays.asList("context:queue", "msg:message", "msg:message2"), events);
     }
 
+    @Test
+    public void noOpListenerDoesNotRollbackOuterDoubleBufferedDocument() throws Exception {
+        finishedNormally = false;
+        File path = getTmpDir();
+
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(path, WireType.BINARY)
+                .testBlockSize()
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(new SetTimeProvider(1_000_000_000L))
+                .doubleBuffer(true)
+                .contextListener(ContextEvents.class, writer -> {
+                    // A context listener is allowed to have nothing to write for this roll.
+                })
+                .build()) {
+            writeDoubleBuffered(queue, queue.createAppender(), "message");
+        }
+
+        List<Entry> entries = readEntries(path);
+        assertEquals(1, entries.size());
+        assertEquals("msg", entries.get(0).eventName);
+        assertEquals("message", entries.get(0).value);
+    }
+
     // =====================================================================================
     // Q1 : consecutive double-buffered writes - the flush must clear the buffer wire, not the
     // mapped wire the listener notification reassigned context.wire to

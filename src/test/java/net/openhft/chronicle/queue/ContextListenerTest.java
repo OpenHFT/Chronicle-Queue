@@ -377,6 +377,42 @@ public class ContextListenerTest extends QueueTestCommon {
     }
 
     @Test
+    public void listenerDocumentClosesOnlyWithOutermostContext() {
+        File path = getTmpDir();
+        AtomicBoolean outerContextRemainedOpen = new AtomicBoolean();
+
+        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+                .contextListener(DocumentContextEvents.class, writer -> {
+                    try (DocumentContext outer = writer.writingDocument()) {
+                        writer.context("queue");
+                        outerContextRemainedOpen.set(outer.isNotComplete());
+                    }
+                })
+                .build()) {
+            writeMessage(queue.createAppender(), "one");
+        }
+
+        assertTrue("an inner method-writer close must not commit its outer document context",
+                outerContextRemainedOpen.get());
+        assertEvents(readEntries(path), "context:queue", "msg:one");
+    }
+
+    @Test
+    public void chainedListenerMethodsShareOneDocument() {
+        File path = getTmpDir();
+
+        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+                .contextListener(ChainedContextStart.class,
+                        writer -> writer.start("queue").end("ready"))
+                .build()) {
+            writeMessage(queue.createAppender(), "one");
+        }
+
+        assertEquals(Arrays.asList("start:queue", "end:ready", "msg:one"),
+                readAllEvents(path));
+    }
+
+    @Test
     public void appenderUsesCachedMethodWriterForEachNewRollFile() {
         File path = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
@@ -579,6 +615,17 @@ public class ContextListenerTest extends QueueTestCommon {
 
     interface ContextEvents {
         void context(String source);
+    }
+
+    interface DocumentContextEvents extends ContextEvents, DocumentWritten {
+    }
+
+    interface ChainedContextStart {
+        ChainedContextEnd start(String source);
+    }
+
+    interface ChainedContextEnd {
+        void end(String state);
     }
 
     interface HistoryEvents extends ContextEvents {
