@@ -55,17 +55,18 @@ final class ContextListenerConfiguration {
     }
 
     @Nullable
-    Class<?> writerType() {
-        return writerType;
-    }
-
-    @Nullable
     MarshallableOut.ContextListener<?> listener() {
         return listener;
     }
 
     @NotNull
-    MarshallableOut.ContextListener<?> newListener() {
+    ContextListenerBinding resolve() {
+        MarshallableOut.ContextListener<?> resolvedListener = newListener();
+        return ContextListenerBinding.of(requireNonNull(writerType), resolvedListener);
+    }
+
+    @NotNull
+    private MarshallableOut.ContextListener<?> newListener() {
         if (!configured())
             throw new IllegalStateException("No context listener is configured");
         return listenerSupplier == null

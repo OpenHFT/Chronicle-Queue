@@ -31,8 +31,8 @@ import org.jetbrains.annotations.Nullable;
  * writer. Combining the output and document-context roles avoids allocating a delegating wrapper
  * for every listener document.</p>
  *
- * <p>This bridge remains separate from {@link ActiveAppenderContextListenerLifecycle}: the
- * lifecycle decides <em>when</em> to notify and owns the listener, while this object is the stable
+ * <p>This bridge remains separate from {@link ActiveContextListenerLifecycle}: the
+ * lifecycle decides <em>when</em> to notify and holds its binding, while this object is the stable
  * {@code MarshallableOut} captured by the cached method writer and defines <em>how</em> that writer
  * uses the already-held appender lock. Using the appender itself as the writer target would try to
  * acquire its non-reentrant lock again.</p>

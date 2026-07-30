@@ -22,7 +22,7 @@ import static org.junit.Assert.assertSame;
  * object. The recording implementation deliberately avoids listener mechanics so these tests fail
  * when a write path bypasses the lifecycle abstraction.
  */
-public class AppenderContextListenerLifecycleTest extends QueueTestCommon {
+public class ContextListenerLifecycleTest extends QueueTestCommon {
 
     @Test
     public void defaultBuilderHasNonNullSharedConfiguration() {
@@ -115,7 +115,7 @@ public class AppenderContextListenerLifecycleTest extends QueueTestCommon {
      * Test-only lifecycle implementation that records every appender entry point without creating
      * a method writer or writing a synthetic context document.
      */
-    private static final class RecordingLifecycle implements AppenderContextListenerLifecycle {
+    private static final class RecordingLifecycle implements ContextListenerLifecycle {
         private int writeAttempts;
         private int documentCalls;
         private int rawDocumentCalls;
@@ -146,7 +146,7 @@ public class AppenderContextListenerLifecycleTest extends QueueTestCommon {
         }
 
         @Override
-        public AppenderContextListenerLifecycle configure(
+        public ContextListenerLifecycle configure(
                 Class<?> writerType, MarshallableOut.ContextListener<?> listener) {
             return this;
         }

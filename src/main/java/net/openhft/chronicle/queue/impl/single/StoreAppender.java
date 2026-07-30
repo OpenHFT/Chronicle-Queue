@@ -77,7 +77,7 @@ class StoreAppender extends AbstractCloseable
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
     @Nullable
-    private AppenderContextListenerLifecycle contextListenerLifecycle;
+    private ContextListenerLifecycle contextListenerLifecycle;
     private int count = 0;
 
     /**
@@ -97,7 +97,7 @@ class StoreAppender extends AbstractCloseable
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
         this.context = new StoreAppenderContext();
-        this.contextListenerLifecycle = queue.newAppenderContextListenerLifecycle(this, context);
+        this.contextListenerLifecycle = queue.newContextListenerLifecycle(this, context);
         this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
 
         try {
@@ -247,10 +247,10 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     protected void performClose() {
-        AppenderContextListenerLifecycle lifecycle = contextListenerLifecycle;
+        ContextListenerLifecycle lifecycle = contextListenerLifecycle;
         if (lifecycle != null)
             lifecycle.close();
-        contextListenerLifecycle = AppenderContextListenerLifecycle.NO_OP;
+        contextListenerLifecycle = ContextListenerLifecycle.NO_OP;
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
@@ -526,10 +526,13 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         Objects.requireNonNull(writerType);
         Objects.requireNonNull(listener);
-        AppenderContextListenerLifecycle lifecycle = contextListenerLifecycle;
+        ContextListenerLifecycle lifecycle = contextListenerLifecycle;
         if (lifecycle == null) {
-            lifecycle = AppenderContextListenerLifecycle.active(
-                    this, context, queue.activeContextListenerLifecycle(), writerType, listener);
+            lifecycle = ContextListenerLifecycle.active(
+                    this,
+                    context,
+                    queue.activeContextListenerCoordinator(),
+                    ContextListenerBinding.of(writerType, listener));
         } else {
             lifecycle = lifecycle.configure(writerType, listener);
         }
@@ -558,7 +561,7 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
-        AppenderContextListenerLifecycle listenerLifecycle = startContextListenerWriteAttempt();
+        ContextListenerLifecycle listenerLifecycle = startContextListenerWriteAttempt();
         count++;
         try {
             return prepareAndReturnWriteContext(metaData, listenerLifecycle);
@@ -571,11 +574,11 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private AppenderContextListenerLifecycle startContextListenerWriteAttempt() {
-        AppenderContextListenerLifecycle lifecycle = contextListenerLifecycle;
+    private ContextListenerLifecycle startContextListenerWriteAttempt() {
+        ContextListenerLifecycle lifecycle = contextListenerLifecycle;
         if (lifecycle == null) {
-            contextListenerLifecycle = lifecycle = AppenderContextListenerLifecycle.NO_OP;
-        } else if (lifecycle != AppenderContextListenerLifecycle.NO_OP) {
+            contextListenerLifecycle = lifecycle = ContextListenerLifecycle.NO_OP;
+        } else if (lifecycle != ContextListenerLifecycle.NO_OP) {
             lifecycle.onWriteAttempt();
         }
         return lifecycle;
@@ -590,7 +593,7 @@ class StoreAppender extends AbstractCloseable
      * @return the prepared {@link StoreAppenderContext} ready for writing
      */
     private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(
-            boolean metaData, AppenderContextListenerLifecycle listenerLifecycle) {
+            boolean metaData, ContextListenerLifecycle listenerLifecycle) {
         if (count > 1) {
             assert metaData == context.metaData;
             return context;
@@ -613,7 +616,7 @@ class StoreAppender extends AbstractCloseable
 
                 long safeLength = queue.overlapSize();
                 resetPosition();
-                if (listenerLifecycle != AppenderContextListenerLifecycle.NO_OP &&
+                if (listenerLifecycle != ContextListenerLifecycle.NO_OP &&
                         listenerLifecycle.beforeDocument(metaData, safeLength))
                     resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -797,7 +800,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     /** Package-private injection point for lifecycle integration tests. */
-    void contextListenerLifecycle(AppenderContextListenerLifecycle lifecycle) {
+    void contextListenerLifecycle(ContextListenerLifecycle lifecycle) {
         contextListenerLifecycle = Objects.requireNonNull(lifecycle);
     }
 
@@ -871,7 +874,7 @@ class StoreAppender extends AbstractCloseable
     public void writeBytes(@NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
         checkAppendLock();
-        AppenderContextListenerLifecycle listenerLifecycle = startContextListenerWriteAttempt();
+        ContextListenerLifecycle listenerLifecycle = startContextListenerWriteAttempt();
         writeLock.lock();
         try {
             int cycle = queue.cycle();
@@ -882,7 +885,7 @@ class StoreAppender extends AbstractCloseable
                 rollCycleTo(cycle);
 
             long safeLength = queue.overlapSize();
-            if (listenerLifecycle != AppenderContextListenerLifecycle.NO_OP &&
+            if (listenerLifecycle != ContextListenerLifecycle.NO_OP &&
                     listenerLifecycle.beforeRawDocument(safeLength))
                 resetPosition();
 

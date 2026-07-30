@@ -127,7 +127,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     final AppenderListener appenderListener;
-    private volatile QueueContextListenerLifecycle contextListenerLifecycle = QueueContextListenerLifecycle.NO_OP;
+    @NotNull
+    private volatile ContextListenerCoordinator contextListenerCoordinator = ContextListenerCoordinator.NONE;
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -186,7 +187,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
-            contextListenerLifecycle = QueueContextListenerLifecycle.from(builder.contextListenerConfiguration());
+            contextListenerCoordinator = ContextListenerCoordinator.from(builder.contextListenerConfiguration());
 
             if (metaStore.readOnly()) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
@@ -632,22 +633,21 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     @Nullable
-    AppenderContextListenerLifecycle newAppenderContextListenerLifecycle(
+    ContextListenerLifecycle newContextListenerLifecycle(
             StoreAppender appender, StoreAppender.StoreAppenderContext context) {
-        QueueContextListenerLifecycle lifecycle = contextListenerLifecycle;
-        if (lifecycle == QueueContextListenerLifecycle.NO_OP)
+        ContextListenerCoordinator coordinator = contextListenerCoordinator;
+        if (coordinator == ContextListenerCoordinator.NONE)
             return null;
-        Class<?> writerType = lifecycle.writerType();
-        MarshallableOut.ContextListener<?> listener = lifecycle.listener();
-        return writerType == null || listener == null
+        ContextListenerBinding binding = coordinator.defaultBinding();
+        return binding == null
                 ? null
-                : AppenderContextListenerLifecycle.active(appender, context, lifecycle, writerType, listener);
+                : ContextListenerLifecycle.active(appender, context, coordinator, binding);
     }
 
-    synchronized QueueContextListenerLifecycle activeContextListenerLifecycle() {
-        if (contextListenerLifecycle == QueueContextListenerLifecycle.NO_OP)
-            contextListenerLifecycle = QueueContextListenerLifecycle.activeWithoutQueueListener();
-        return contextListenerLifecycle;
+    synchronized ContextListenerCoordinator activeContextListenerCoordinator() {
+        if (contextListenerCoordinator == ContextListenerCoordinator.NONE)
+            contextListenerCoordinator = ContextListenerCoordinator.activeWithoutQueueListener();
+        return contextListenerCoordinator;
     }
 
     // used by enterprise CQ
@@ -1001,7 +1001,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             metaStoreMap.clear();
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
-            contextListenerLifecycle.close();
+            contextListenerCoordinator.close();
 
             // must be closed after closers.
             closeQuietly(
