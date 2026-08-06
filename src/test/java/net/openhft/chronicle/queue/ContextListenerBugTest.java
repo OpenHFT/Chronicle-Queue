@@ -5,17 +5,18 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
-import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.StringWriter;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,13 +24,24 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
 /** Regression tests for the MarshallableOut.ContextListener adoption in Queue. */
 public class ContextListenerBugTest extends QueueTestCommon {
+    private final SetTimeProvider timeProvider = new SetTimeProvider();
+
+    @Before
+    public void useDeterministicSystemTimeProvider() {
+        timeProvider.currentTimeNanos(1_000_000_000L);
+        SystemTimeProvider.CLOCK = timeProvider;
+    }
+
+    @After
+    public void resetSystemTimeProvider() {
+        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+    }
 
     // =====================================================================================
     // T-P0-23 : an Error thrown by onNewContext leaks the write lock
@@ -38,9 +50,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
     public void listenerErrorDoesNotLeakWriteLock() throws Exception {
         finishedNormally = false;
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
-
-        ChronicleQueue queue = builder(path, timeProvider)
+        ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> {
                     throw new AssertionError("boom");
                 })
@@ -48,14 +58,14 @@ public class ContextListenerBugTest extends QueueTestCommon {
         ExcerptAppender appender = queue.createAppender();
 
         // The Error must propagate on the first write.
-        assertThrows(AssertionError.class, () -> writeMessage(appender, "one"));
+        assertThrows(AssertionError.class, () -> appender.writeMessage("msg", "one"));
 
         // On another thread, a SECOND queue on the same path must still be able to write.
         // If the write lock leaked, this write blocks until the lock times out (well beyond 2s).
         ExecutorService es = Executors.newSingleThreadExecutor();
         Future<?> future = es.submit(() -> {
-            try (ChronicleQueue q2 = builder(path, timeProvider).build()) {
-                writeMessage(q2.createAppender(), "two");
+            try (ChronicleQueue q2 = builder(path).build()) {
+                q2.createAppender().writeMessage("msg", "two");
             }
         });
         try {
@@ -83,7 +93,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
         File path = getTmpDir();
         AtomicInteger attempts = new AtomicInteger();
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> {
                     if (attempts.getAndIncrement() == 0)
                         throw new AssertionError("boom");
@@ -92,15 +102,18 @@ public class ContextListenerBugTest extends QueueTestCommon {
                 .build()) {
             ExcerptAppender appender = queue.createAppender();
 
-            assertThrows(AssertionError.class, () -> writeMessage(appender, "one"));
+            assertThrows(AssertionError.class, () -> appender.writeMessage("msg", "one"));
             // the SAME appender must still be usable after the Error
-            writeMessage(appender, "two");
+            appender.writeMessage("msg", "two");
         }
 
-        List<String> events = readEntries(path).stream()
-                .map(e -> e.eventName + ':' + e.value)
-                .collect(Collectors.toList());
-        assertEquals(java.util.Arrays.asList("context:retry", "msg:two"), events);
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: retry\n" +
+                "# index: 100000001\n" +
+                "msg: two\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     // =====================================================================================
@@ -115,7 +128,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
         File path = getTmpDir();
         ExcerptAppender[] holder = new ExcerptAppender[1];
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> {
                     net.openhft.chronicle.bytes.Bytes<?> b = net.openhft.chronicle.bytes.Bytes.from("x");
                     try {
@@ -131,7 +144,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
             long start = System.currentTimeMillis();
             Throwable thrown = null;
             try {
-                writeMessage(appender, "one");
+                appender.writeMessage("msg", "one");
             } catch (Throwable t) {
                 thrown = t;
             }
@@ -158,7 +171,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
         File path = getTmpDir();
         AtomicInteger attempts = new AtomicInteger();
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, (ContextEvents writer) -> {
                     writer.context("a");
                     if (attempts.getAndIncrement() == 0)
@@ -169,19 +182,20 @@ public class ContextListenerBugTest extends QueueTestCommon {
             ExcerptAppender appender = queue.createAppender();
 
             // the listener failure is surfaced, not swallowed
-            assertThrows(IllegalStateException.class, () -> writeMessage(appender, "one"));
+            assertThrows(IllegalStateException.class, () -> appender.writeMessage("msg", "one"));
             // the append proceeds on retry ...
-            writeMessage(appender, "one");
+            appender.writeMessage("msg", "one");
         }
 
-        List<String> events = readEntries(path).stream()
-                .map(e -> e.eventName + ':' + e.value)
-                .collect(Collectors.toList());
-        // ... the data was written, and the context record the failed listener committed is present
+        // The data was written, and the context record the failed listener committed is present
         // exactly once (no duplicate from a silent re-run).
-        assertTrue("the retried append must be written: " + events, events.contains("msg:one"));
-        assertEquals("the committed context record must not be duplicated on retry: " + events,
-                1, events.stream().filter("context:a"::equals).count());
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: a\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     // =====================================================================================
@@ -192,7 +206,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
         finishedNormally = false;
         CountingContextListener listener = new CountingContextListener("shared");
 
-        try (ChronicleQueue queue = builder(getTmpDir(), new SetTimeProvider(1_000_000_000L)).build()) {
+        try (ChronicleQueue queue = builder(getTmpDir()).build()) {
             ExcerptAppender a1 = queue.createAppender();
             ExcerptAppender a2 = queue.createAppender();
             a1.contextListener(ContextEvents.class, listener);
@@ -219,7 +233,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
         ExcerptAppender[] holder = new ExcerptAppender[1];
 
         Throwable thrown = null;
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L)).build()) {
+        try (ChronicleQueue queue = builder(path).build()) {
             ExcerptAppender appender = queue.createAppender();
             holder[0] = appender;
             appender.contextListener(ContextEvents.class, (ContextEvents writer) -> {
@@ -229,7 +243,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
                 }
             });
             try {
-                writeMessage(appender, "one");
+                appender.writeMessage("msg", "one");
             } catch (Throwable t) {
                 thrown = t;
             }
@@ -254,22 +268,22 @@ public class ContextListenerBugTest extends QueueTestCommon {
         // queue-valid binary-family type, BINARY_LIGHT, and confirm the record round-trips.
         finishedNormally = false;
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
-
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(path, WireType.BINARY_LIGHT)
                 .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
-                .timeProvider(timeProvider)
                 .contextListener(ContextEvents.class, writer -> writer.context("queue"))
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-            writeMessage(appender, "one");
+            appender.writeMessage("msg", "one");
         }
 
-        List<String> events = readEntriesWith(path, WireType.BINARY_LIGHT).stream()
-                .map(e -> e.eventName + ':' + e.value)
-                .collect(Collectors.toList());
-        assertEquals(java.util.Arrays.asList("context:queue", "msg:one"), events);
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: queue\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path, WireType.BINARY_LIGHT));
     }
 
     // =====================================================================================
@@ -306,13 +320,11 @@ public class ContextListenerBugTest extends QueueTestCommon {
         finishedNormally = false;
         final int iterations = Integer.getInteger("contextListener.stress.iterations", 300);
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
-
         // Each appender must stay pinned to a single thread (single-threaded check), so use one
         // dedicated executor per appender and create each appender on its own thread.
         ExecutorService esA = Executors.newSingleThreadExecutor();
         ExecutorService esB = Executors.newSingleThreadExecutor();
-        try (ChronicleQueue queue = builder(path, timeProvider)
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> writer.context("ctx"))
                 .build()) {
 
@@ -332,8 +344,7 @@ public class ContextListenerBugTest extends QueueTestCommon {
             esB.shutdownNow();
         }
 
-        List<Entry> entries = readEntries(path);
-        long contextRecords = entries.stream().filter(e -> e.eventName.equals("context")).count();
+        long contextRecords = countOccurrences(readEventsAsString(path), "context: ctx\n");
 
         // Every iteration advances the clock by one roll and writes two messages into that fresh cycle,
         // so there are exactly `iterations` rolls and there must be exactly one context record per roll.
@@ -348,47 +359,41 @@ public class ContextListenerBugTest extends QueueTestCommon {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        writeMessage(appender, tag);
+        appender.writeMessage("msg", tag);
     }
 
     // ---------------------------------------------------------------------------------------
     // helpers (copied from ContextListenerTest)
     // ---------------------------------------------------------------------------------------
-    private static SingleChronicleQueueBuilder builder(File path, SetTimeProvider timeProvider) {
+    private static SingleChronicleQueueBuilder builder(File path) {
         return SingleChronicleQueueBuilder.builder(path, WireType.BINARY)
                 .testBlockSize()
-                .rollCycle(TEST_SECONDLY)
-                .timeProvider(timeProvider);
+                .rollCycle(TEST_SECONDLY);
     }
 
-    private static void writeMessage(ExcerptAppender appender, String value) {
-        try (DocumentContext dc = appender.writingDocument()) {
-            dc.wire().write("msg").text(value);
-        }
+    private static String readEventsAsString(File path) {
+        return readEventsAsString(path, WireType.BINARY);
     }
 
-    private static List<Entry> readEntries(File path) {
-        return readEntriesWith(path, WireType.BINARY);
-    }
-
-    private static List<Entry> readEntriesWith(File path, WireType wireType) {
+    private static String readEventsAsString(File path, WireType wireType) {
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(path, wireType)
                 .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
-            ExcerptTailer tailer = queue.createTailer();
-            List<Entry> entries = new ArrayList<>();
-            while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent())
-                        break;
-                    StringBuilder eventName = new StringBuilder();
-                    ValueIn valueIn = dc.wire().readEventName(eventName);
-                    entries.add(new Entry(eventName.toString(), valueIn.text(), queue.rollCycle().toSequenceNumber(dc.index())));
-                }
-            }
-            return entries;
+            StringWriter writer = new StringWriter();
+            queue.dump(writer, 0, Long.MAX_VALUE);
+            return writer.toString();
         }
+    }
+
+    private static int countOccurrences(String text, String occurrence) {
+        int count = 0;
+        for (int index = text.indexOf(occurrence);
+             index >= 0;
+             index = text.indexOf(occurrence, index + occurrence.length())) {
+            count++;
+        }
+        return count;
     }
 
     interface ContextEvents {
@@ -397,7 +402,6 @@ public class ContextListenerBugTest extends QueueTestCommon {
 
     private static final class CountingContextListener implements MarshallableOut.ContextListener<ContextEvents>, AutoCloseable {
         private final String source;
-        private final AtomicInteger invocationCount = new AtomicInteger();
         private final AtomicInteger closeCount = new AtomicInteger();
 
         private CountingContextListener(String source) {
@@ -406,25 +410,12 @@ public class ContextListenerBugTest extends QueueTestCommon {
 
         @Override
         public void onNewContext(ContextEvents writer) {
-            invocationCount.incrementAndGet();
             writer.context(source);
         }
 
         @Override
         public void close() {
             closeCount.incrementAndGet();
-        }
-    }
-
-    private static final class Entry {
-        private final String eventName;
-        private final String value;
-        private final long sequence;
-
-        private Entry(String eventName, String value, long sequence) {
-            this.eventName = eventName;
-            this.value = value;
-            this.sequence = sequence;
         }
     }
 }
