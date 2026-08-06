@@ -3,62 +3,81 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.DocumentWritten;
 import net.openhft.chronicle.wire.MarshallableOut;
-import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.MessageHistory;
+import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
 public class ContextListenerTest extends QueueTestCommon {
+    private final SetTimeProvider timeProvider = new SetTimeProvider();
+
+    @Before
+    public void useDeterministicSystemTimeProvider() {
+        timeProvider.currentTimeNanos(1_000_000_000L);
+        SystemTimeProvider.CLOCK = timeProvider;
+    }
+
+    @After
+    public void resetSystemTimeProvider() {
+        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+    }
 
     @Test
     public void builderListenerWritesBeforeFirstDocumentOnFirstUseAndAfterRoll() {
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
         CountingContextListener listener = new CountingContextListener("queue");
 
-        try (ChronicleQueue queue = builder(path, timeProvider)
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, listener)
                 .build()) {
             ExcerptAppender appender = queue.createAppender();
 
-            writeMessage(appender, "one");
+            appender.writeMessage("msg", "one");
             timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
-            writeMessage(appender, "two");
+            appender.writeMessage("msg", "two");
         }
         assertEquals("listener should be called on first use and after the first roll", 2,
                 listener.invocationCount.get());
 
-        List<Entry> entries = readEntries(path);
-        assertEvents(entries,
-                "context:queue", "msg:one",
-                "context:queue", "msg:two");
-        assertEquals(Arrays.asList(0L, 1L, 0L, 1L), sequences(entries));
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: queue\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# index: 200000000\n" +
+                "context: queue\n" +
+                "# index: 200000001\n" +
+                "msg: two\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
     public void documentContextCountIsQueueRollCycleForWritesAndReads() {
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
         List<Long> writeCounts = new ArrayList<>();
 
-        try (ChronicleQueue queue = builder(path, timeProvider).build()) {
+        try (ChronicleQueue queue = builder(path).build()) {
             ExcerptAppender appender = queue.createAppender();
             writeCounts.add(writeMessageAndContextCount(queue, appender, "one"));
             timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
@@ -73,13 +92,12 @@ public class ContextListenerTest extends QueueTestCommon {
     @Test
     public void bigDtoIsWrittenOncePerRollUsingTransientLastRollCycle() {
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
         BigDto bigDto = new BigDto("static");
         long firstRollCycle;
         long sameRollCycle;
         long secondRollCycle;
 
-        try (ChronicleQueue queue = builder(path, timeProvider).build()) {
+        try (ChronicleQueue queue = builder(path).build()) {
             BigDtoEvents out = queue.createAppender().methodWriter(BigDtoEvents.class);
 
             firstRollCycle = writeMessageAssumingContext(out, bigDto, "one");
@@ -92,8 +110,52 @@ public class ContextListenerTest extends QueueTestCommon {
         assertNotEquals(firstRollCycle, secondRollCycle);
         assertEquals(secondRollCycle, bigDto.lastRollCycleWrittenTo);
         assertEquals(2, bigDto.writeCount);
-        assertEquals(Arrays.asList("bigDto:static", "msg:one", "msg:two", "bigDto:static", "msg:three"),
-                readAllEvents(path));
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "bigDto: {\n" +
+                "  value: static\n" +
+                "}\n" +
+                "msg: one\n" +
+                "# index: 100000001\n" +
+                "msg: two\n" +
+                "# index: 200000000\n" +
+                "bigDto: {\n" +
+                "  value: static\n" +
+                "}\n" +
+                "msg: three\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
+    }
+
+    @Test
+    public void progressiveContextIsWrittenInsideHeldDocumentOnlyWhenMissingForRoll() {
+        File path = getTmpDir();
+        BigDto bigDto = new BigDto("static");
+
+        try (ChronicleQueue queue = builder(path).build()) {
+            BigDtoEvents out = queue.createAppender().methodWriter(BigDtoEvents.class);
+
+            writeMessageAssumingContext(out, bigDto, "one");
+            writeMessageAssumingContext(out, bigDto, "two");
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
+            writeMessageAssumingContext(out, bigDto, "three");
+        }
+
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "bigDto: {\n" +
+                "  value: static\n" +
+                "}\n" +
+                "msg: one\n" +
+                "# index: 100000001\n" +
+                "msg: two\n" +
+                "# index: 200000000\n" +
+                "bigDto: {\n" +
+                "  value: static\n" +
+                "}\n" +
+                "msg: three\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
@@ -101,28 +163,36 @@ public class ContextListenerTest extends QueueTestCommon {
         File path = getTmpDir();
         AtomicInteger invocations = new AtomicInteger();
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> invocations.incrementAndGet())
                 .build()) {
             ExcerptAppender appender = queue.createAppender();
 
-            writeMessage(appender, "one");
-            writeMessage(appender, "two");
+            appender.writeMessage("msg", "one");
+            appender.writeMessage("msg", "two");
         }
 
         assertEquals("no-op listener should be called once on first use", 1, invocations.get());
-        List<Entry> entries = readEntries(path);
-        assertEvents(entries, "msg:one", "msg:two");
-        assertEquals(Arrays.asList(0L, 1L), sequences(entries));
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "msg: one\n" +
+                "# index: 100000001\n" +
+                "msg: two\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
     public void messageHistoryIsOnlyWrittenForNaturallyTriggeredMessages() {
         ignoreException("Overriding sourceId from existing metadata, was 0, overriding to 1");
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
 
-        try (ChronicleQueue queue = builder(path, timeProvider)
+        final MessageHistory previousHistory = MessageHistory.get();
+        final VanillaMessageHistory messageHistory = new VanillaMessageHistory();
+        messageHistory.addSourceDetails(true);
+        messageHistory.historyWallClock(true);
+        MessageHistory.set(messageHistory);
+        try (ChronicleQueue queue = builder(path)
                 .sourceId(1)
                 .contextListener(HistoryEvents.class, writer -> writer.context("queue"))
                 .build()) {
@@ -131,15 +201,33 @@ public class ContextListenerTest extends QueueTestCommon {
             writer.msg("one");
             timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
             writer.msg("two");
+        } finally {
+            MessageHistory.set(previousHistory);
         }
 
-        List<DocumentEntry> entries = readDocumentEntries(path);
-        assertDocumentEvents(entries,
-                "context:queue", "msg:one",
-                "context:queue", "msg:two");
-        assertEquals(Arrays.asList(false, true, false, true), entries.stream()
-                .map(entry -> entry.hasHistory)
-                .collect(Collectors.toList()));
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: queue\n" +
+                "# index: 100000001\n" +
+                "history: {\n" +
+                "  sources: [ ],\n" +
+                "  timings: [\n" +
+                "    1000000000\n" +
+                "  ]\n" +
+                "}\n" +
+                "msg: one\n" +
+                "# index: 200000000\n" +
+                "context: queue\n" +
+                "# index: 200000001\n" +
+                "history: {\n" +
+                "  sources: [ ],\n" +
+                "  timings: [\n" +
+                "    2000000000\n" +
+                "  ]\n" +
+                "}\n" +
+                "msg: two\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
@@ -147,11 +235,10 @@ public class ContextListenerTest extends QueueTestCommon {
         File root = getTmpDir();
         File firstPath = new File(root, "first");
         File secondPath = new File(root, "second");
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
         List<CountingContextListener> listeners = new ArrayList<>();
         AtomicInteger listenerIds = new AtomicInteger();
 
-        SingleChronicleQueueBuilder baseBuilder = builder(firstPath, timeProvider)
+        SingleChronicleQueueBuilder baseBuilder = builder(firstPath)
                 .contextListenerSupplier(ContextEvents.class, () -> {
                     CountingContextListener listener = new CountingContextListener("listener-" + listenerIds.getAndIncrement());
                     listeners.add(listener);
@@ -160,8 +247,10 @@ public class ContextListenerTest extends QueueTestCommon {
 
         try (ChronicleQueue firstQueue = baseBuilder.clone().path(firstPath).build();
              ChronicleQueue secondQueue = baseBuilder.clone().path(secondPath).build()) {
-            writeMessage(firstQueue.createAppender(), "one");
-            writeMessage(secondQueue.createAppender(), "two");
+            ExcerptAppender appender1 = firstQueue.createAppender();
+            appender1.writeMessage("msg", "one");
+            ExcerptAppender appender = secondQueue.createAppender();
+            appender.writeMessage("msg", "two");
         }
 
         assertEquals(2, listeners.size());
@@ -170,52 +259,77 @@ public class ContextListenerTest extends QueueTestCommon {
         assertEquals(1, listeners.get(1).invocationCount.get());
         assertEquals(1, listeners.get(0).closeCount.get());
         assertEquals(1, listeners.get(1).closeCount.get());
-        assertEvents(readEntries(firstPath), "context:listener-0", "msg:one");
-        assertEvents(readEntries(secondPath), "context:listener-1", "msg:two");
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: listener-0\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(firstPath));
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: listener-1\n" +
+                "# index: 100000001\n" +
+                "msg: two\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(secondPath));
     }
 
     @Test
     public void reopeningExistingRollDoesNotWriteDuplicateContextRecord() {
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
 
-        try (ChronicleQueue queue = builder(path, timeProvider)
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> writer.context("first"))
                 .build()) {
-            writeMessage(queue.createAppender(), "one");
+            ExcerptAppender appender = queue.createAppender();
+            appender.writeMessage("msg", "one");
         }
 
-        try (ChronicleQueue queue = builder(path, timeProvider)
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> writer.context("second"))
                 .build()) {
-            writeMessage(queue.createAppender(), "two");
+            ExcerptAppender appender = queue.createAppender();
+            appender.writeMessage("msg", "two");
         }
 
-        assertEvents(readEntries(path),
-                "context:first", "msg:one", "msg:two");
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: first\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# index: 100000002\n" +
+                "msg: two\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
     public void appenderListenerOverridesBuilderListener() {
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
         CountingContextListener builderListener = new CountingContextListener("builder");
         CountingContextListener appenderListener = new CountingContextListener("appender");
 
-        ChronicleQueue queue = builder(path, timeProvider)
+        ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, builderListener)
                 .build();
         ExcerptAppender appender = queue.createAppender();
         appender.contextListener(ContextEvents.class, appenderListener);
 
-        writeMessage(appender, "one");
+        appender.writeMessage("msg", "one");
         appender.close();
         assertEquals(0, builderListener.closeCount.get());
         assertEquals(1, appenderListener.closeCount.get());
         queue.close();
         assertEquals(1, builderListener.closeCount.get());
 
-        assertEvents(readEntries(path), "context:appender", "msg:one");
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: appender\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
         assertEquals(0, builderListener.invocationCount.get());
         assertEquals(1, appenderListener.invocationCount.get());
     }
@@ -225,7 +339,7 @@ public class ContextListenerTest extends QueueTestCommon {
         File path = getTmpDir();
         CountingContextListener listener = new CountingContextListener("shared");
 
-        ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, listener)
                 .build();
         ExcerptAppender appender = queue.createAppender();
@@ -240,7 +354,7 @@ public class ContextListenerTest extends QueueTestCommon {
     @Test
     public void builderListenerIsClosedByQueueWithNoAppenders() {
         CountingContextListener listener = new CountingContextListener("builder");
-        ChronicleQueue queue = builder(getTmpDir(), new SetTimeProvider(1_000_000_000L))
+        ChronicleQueue queue = builder(getTmpDir())
                 .contextListener(ContextEvents.class, listener)
                 .build();
 
@@ -254,7 +368,7 @@ public class ContextListenerTest extends QueueTestCommon {
         CountingContextListener first = new CountingContextListener("first");
         CountingContextListener second = new CountingContextListener("second");
 
-        try (ChronicleQueue queue = builder(getTmpDir(), new SetTimeProvider(1_000_000_000L)).build()) {
+        try (ChronicleQueue queue = builder(getTmpDir()).build()) {
             ExcerptAppender appender = queue.createAppender();
             appender.contextListener(ContextEvents.class, first);
             appender.contextListener(ContextEvents.class, second);
@@ -272,7 +386,7 @@ public class ContextListenerTest extends QueueTestCommon {
         CountingContextListener first = new CountingContextListener("first");
         CountingContextListener second = new CountingContextListener("second");
 
-        try (ChronicleQueue queue = builder(getTmpDir(), new SetTimeProvider(1_000_000_000L)).build()) {
+        try (ChronicleQueue queue = builder(getTmpDir()).build()) {
             ExcerptAppender appender = queue.createAppender();
             appender.contextListener(ContextEvents.class, first);
 
@@ -290,9 +404,9 @@ public class ContextListenerTest extends QueueTestCommon {
 
     @Test
     public void appenderListenerCannotBeChangedAfterFirstWrite() {
-        try (ChronicleQueue queue = builder(getTmpDir(), new SetTimeProvider(1_000_000_000L)).build()) {
+        try (ChronicleQueue queue = builder(getTmpDir()).build()) {
             ExcerptAppender appender = queue.createAppender();
-            writeMessage(appender, "one");
+            appender.writeMessage("msg", "one");
 
             assertThrows(IllegalStateException.class,
                     () -> appender.contextListener(ContextEvents.class, writer -> writer.context("late")));
@@ -304,7 +418,7 @@ public class ContextListenerTest extends QueueTestCommon {
         File path = getTmpDir();
         AtomicInteger attempts = new AtomicInteger();
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> {
                     if (attempts.getAndIncrement() == 0)
                         throw new IllegalStateException("boom");
@@ -313,46 +427,66 @@ public class ContextListenerTest extends QueueTestCommon {
                 .build()) {
             ExcerptAppender appender = queue.createAppender();
 
-            assertThrows(IllegalStateException.class, () -> writeMessage(appender, "one"));
-            writeMessage(appender, "one");
+            assertThrows(IllegalStateException.class, () -> appender.writeMessage("msg", "one"));
+            appender.writeMessage("msg", "one");
         }
 
         assertEquals(2, attempts.get());
-        assertEvents(readEntries(path), "context:retry", "msg:one");
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: retry\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
     public void interleavingQueuesOnSharedStoreWriteOneContextRecordPerRoll() {
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
 
-        try (ChronicleQueue queueA = builder(path, timeProvider)
+        try (ChronicleQueue queueA = builder(path)
                 .contextListener(ContextEvents.class, writer -> writer.context("A"))
                 .build();
-             ChronicleQueue queueB = builder(path, timeProvider)
+             ChronicleQueue queueB = builder(path)
                      .contextListener(ContextEvents.class, writer -> writer.context("B"))
                      .build()) {
             ExcerptAppender appenderA = queueA.createAppender();
             ExcerptAppender appenderB = queueB.createAppender();
 
-            writeMessage(appenderA, "A0");
-            writeMessage(appenderB, "B0");
+            appenderA.writeMessage("msg", "A0");
+            appenderB.writeMessage("msg", "B0");
 
             timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
-            writeMessage(appenderB, "B1");
-            writeMessage(appenderA, "A1");
+            appenderB.writeMessage("msg", "B1");
+            appenderA.writeMessage("msg", "A1");
 
             timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
-            writeMessage(appenderA, "A2");
-            writeMessage(appenderB, "B2");
+            appenderA.writeMessage("msg", "A2");
+            appenderB.writeMessage("msg", "B2");
         }
 
-        List<Entry> entries = readEntries(path);
-        assertEvents(entries,
-                "context:A", "msg:A0", "msg:B0",
-                "context:B", "msg:B1", "msg:A1",
-                "context:A", "msg:A2", "msg:B2");
-        assertEquals(Arrays.asList(0L, 1L, 2L, 0L, 1L, 2L, 0L, 1L, 2L), sequences(entries));
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: A\n" +
+                "# index: 100000001\n" +
+                "msg: A0\n" +
+                "# index: 100000002\n" +
+                "msg: B0\n" +
+                "# index: 200000000\n" +
+                "context: B\n" +
+                "# index: 200000001\n" +
+                "msg: B1\n" +
+                "# index: 200000002\n" +
+                "msg: A1\n" +
+                "# index: 300000000\n" +
+                "context: A\n" +
+                "# index: 300000001\n" +
+                "msg: A2\n" +
+                "# index: 300000002\n" +
+                "msg: B2\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
@@ -360,7 +494,7 @@ public class ContextListenerTest extends QueueTestCommon {
         File path = getTmpDir();
         AtomicReference<ContextEvents> retainedWriter = new AtomicReference<>();
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> {
                     retainedWriter.set(writer);
                     writer.context("queue");
@@ -368,12 +502,20 @@ public class ContextListenerTest extends QueueTestCommon {
                 .build()) {
             ExcerptAppender appender = queue.createAppender();
 
-            writeMessage(appender, "one");
+            appender.writeMessage("msg", "one");
             assertThrows(IllegalStateException.class, () -> retainedWriter.get().context("late"));
-            writeMessage(appender, "two");
+            appender.writeMessage("msg", "two");
         }
 
-        assertEvents(readEntries(path), "context:queue", "msg:one", "msg:two");
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: queue\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# index: 100000002\n" +
+                "msg: two\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
@@ -381,7 +523,7 @@ public class ContextListenerTest extends QueueTestCommon {
         File path = getTmpDir();
         AtomicBoolean outerContextRemainedOpen = new AtomicBoolean();
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(DocumentContextEvents.class, writer -> {
                     try (DocumentContext outer = writer.writingDocument()) {
                         writer.context("queue");
@@ -389,36 +531,49 @@ public class ContextListenerTest extends QueueTestCommon {
                     }
                 })
                 .build()) {
-            writeMessage(queue.createAppender(), "one");
+            ExcerptAppender appender = queue.createAppender();
+            appender.writeMessage("msg", "one");
         }
 
         assertTrue("an inner method-writer close must not commit its outer document context",
                 outerContextRemainedOpen.get());
-        assertEvents(readEntries(path), "context:queue", "msg:one");
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: queue\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
     public void chainedListenerMethodsShareOneDocument() {
         File path = getTmpDir();
 
-        try (ChronicleQueue queue = builder(path, new SetTimeProvider(1_000_000_000L))
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ChainedContextStart.class,
                         writer -> writer.start("queue").end("ready"))
                 .build()) {
-            writeMessage(queue.createAppender(), "one");
+            ExcerptAppender appender = queue.createAppender();
+            appender.writeMessage("msg", "one");
         }
 
-        assertEquals(Arrays.asList("start:queue", "end:ready", "msg:one"),
-                readAllEvents(path));
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "start: queue\n" +
+                "end: ready\n" +
+                "# index: 100000001\n" +
+                "msg: one\n" +
+                "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }
 
     @Test
     public void appenderUsesCachedMethodWriterForEachNewRollFile() {
         File path = getTmpDir();
-        SetTimeProvider timeProvider = new SetTimeProvider(1_000_000_000L);
         List<ContextEvents> suppliedWriters = new ArrayList<>();
 
-        try (ChronicleQueue queue = builder(path, timeProvider)
+        try (ChronicleQueue queue = builder(path)
                 .contextListener(ContextEvents.class, writer -> {
                     suppliedWriters.add(writer);
                     writer.context("queue");
@@ -427,11 +582,11 @@ public class ContextListenerTest extends QueueTestCommon {
             ExcerptAppender first = queue.createAppender();
             ExcerptAppender second = queue.createAppender();
 
-            writeMessage(first, "one");
+            first.writeMessage("msg", "one");
             timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
-            writeMessage(second, "two");
+            second.writeMessage("msg", "two");
             timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
-            writeMessage(first, "three");
+            first.writeMessage("msg", "three");
         }
 
         assertEquals(3, suppliedWriters.size());
@@ -454,7 +609,7 @@ public class ContextListenerTest extends QueueTestCommon {
             }
         };
 
-        ChronicleQueue queue = builder(getTmpDir(), new SetTimeProvider(1_000_000_000L))
+        ChronicleQueue queue = builder(getTmpDir())
                 .contextListener(ContextEvents.class, listener)
                 .build();
         appenderRef.set(queue.createAppender());
@@ -465,17 +620,10 @@ public class ContextListenerTest extends QueueTestCommon {
         assertTrue("queue-owned listener should close after queue appenders", appenderWasClosedBeforeListener.get());
     }
 
-    private static SingleChronicleQueueBuilder builder(File path, SetTimeProvider timeProvider) {
+    private static SingleChronicleQueueBuilder builder(File path) {
         return SingleChronicleQueueBuilder.builder(path, WireType.BINARY)
                 .testBlockSize()
-                .rollCycle(TEST_SECONDLY)
-                .timeProvider(timeProvider);
-    }
-
-    private static void writeMessage(ExcerptAppender appender, String value) {
-        try (DocumentContext dc = appender.writingDocument()) {
-            dc.wire().write("msg").text(value);
-        }
+                .rollCycle(TEST_SECONDLY);
     }
 
     private static long writeMessageAndContextCount(ChronicleQueue queue, ExcerptAppender appender, String value) {
@@ -489,18 +637,16 @@ public class ContextListenerTest extends QueueTestCommon {
 
     private static long writeMessageAssumingContext(BigDtoEvents out, BigDto bigDto, String value) {
         try (DocumentContext dc = out.writingDocument()) {
-            long rollCycle = dc.contextCount();
-            bigDto.writeIfNeeded(out, rollCycle);
+            if (bigDto.needsToBeWritten(dc.contextCount()))
+                out.bigDto(bigDto);
             out.msg(value);
-            return rollCycle;
+            // The sibling test asserts the roll cycle observed while the document is held open.
+            return dc.contextCount();
         }
     }
 
     private static List<Long> readContextCounts(File path) {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(path, WireType.BINARY)
-                .testBlockSize()
-                .rollCycle(TEST_SECONDLY)
-                .build()) {
+        try (ChronicleQueue queue = builder(path).build()) {
             ExcerptTailer tailer = queue.createTailer();
             List<Long> contextCounts = new ArrayList<>();
             while (true) {
@@ -509,8 +655,6 @@ public class ContextListenerTest extends QueueTestCommon {
                         break;
                     long contextCount = dc.contextCount();
                     assertEquals(queue.rollCycle().toCycle(dc.index()), contextCount);
-                    StringBuilder eventName = new StringBuilder();
-                    dc.wire().readEventName(eventName).skipValue();
                     contextCounts.add(contextCount);
                 }
             }
@@ -518,100 +662,14 @@ public class ContextListenerTest extends QueueTestCommon {
         }
     }
 
-    private static List<String> readAllEvents(File path) {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(path, WireType.BINARY)
-                .testBlockSize()
-                .rollCycle(TEST_SECONDLY)
-                .build()) {
-            ExcerptTailer tailer = queue.createTailer();
-            List<String> events = new ArrayList<>();
-            while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent())
-                        break;
-                    while (dc.wire().hasMore()) {
-                        StringBuilder eventName = new StringBuilder();
-                        ValueIn valueIn = dc.wire().readEventName(eventName);
-                        events.add(eventName + ":" + valueIn.text());
-                    }
-                }
-            }
-            return events;
+    private static String readEventsAsString(File path) {
+        try (ChronicleQueue queue = builder(path).build()) {
+            StringWriter writer = new StringWriter();
+            queue.dump(writer, 0, Long.MAX_VALUE);
+            return writer.toString();
         }
     }
 
-    private static List<DocumentEntry> readDocumentEntries(File path) {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(path, WireType.BINARY)
-                .testBlockSize()
-                .rollCycle(TEST_SECONDLY)
-                .build()) {
-            ExcerptTailer tailer = queue.createTailer();
-            List<DocumentEntry> entries = new ArrayList<>();
-            while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent())
-                        break;
-                    boolean hasHistory = false;
-                    String eventName = null;
-                    String value = null;
-                    while (dc.wire().hasMore()) {
-                        StringBuilder fieldName = new StringBuilder();
-                        ValueIn valueIn = dc.wire().readEventName(fieldName);
-                        String field = fieldName.toString();
-                        if (MethodReader.HISTORY.equals(field)) {
-                            hasHistory = true;
-                            valueIn.skipValue();
-                        } else {
-                            assertNull("document should contain only one non-history event", eventName);
-                            eventName = field;
-                            value = valueIn.text();
-                        }
-                    }
-                    assertNotNull("document should contain a non-history event", eventName);
-                    entries.add(new DocumentEntry(eventName, value, hasHistory));
-                }
-            }
-            return entries;
-        }
-    }
-
-    private static List<Entry> readEntries(File path) {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder(path, WireType.BINARY)
-                .testBlockSize()
-                .rollCycle(TEST_SECONDLY)
-                .build()) {
-            ExcerptTailer tailer = queue.createTailer();
-            List<Entry> entries = new ArrayList<>();
-            while (true) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent())
-                        break;
-                    StringBuilder eventName = new StringBuilder();
-                    ValueIn valueIn = dc.wire().readEventName(eventName);
-                    entries.add(new Entry(eventName.toString(), valueIn.text(), queue.rollCycle().toSequenceNumber(dc.index())));
-                }
-            }
-            return entries;
-        }
-    }
-
-    private static void assertEvents(List<Entry> entries, String... expected) {
-        assertEquals(Arrays.asList(expected), entries.stream()
-                .map(entry -> entry.eventName + ':' + entry.value)
-                .collect(Collectors.toList()));
-    }
-
-    private static void assertDocumentEvents(List<DocumentEntry> entries, String... expected) {
-        assertEquals(Arrays.asList(expected), entries.stream()
-                .map(entry -> entry.eventName + ':' + entry.value)
-                .collect(Collectors.toList()));
-    }
-
-    private static List<Long> sequences(List<Entry> entries) {
-        return entries.stream()
-                .map(entry -> entry.sequence)
-                .collect(Collectors.toList());
-    }
 
     interface ContextEvents {
         void context(String source);
@@ -633,26 +691,30 @@ public class ContextListenerTest extends QueueTestCommon {
     }
 
     interface BigDtoEvents extends DocumentWritten {
-        void bigDto(String value);
+        void bigDto(BigDto bigDto);
 
         void msg(String value);
     }
 
-    private static final class BigDto {
+    static final class BigDto extends SelfDescribingMarshallable {
         private final String value;
         private transient long lastRollCycleWrittenTo = Long.MIN_VALUE;
-        private int writeCount;
+        private transient int writeCount;
 
         private BigDto(String value) {
             this.value = value;
         }
 
-        private void writeIfNeeded(BigDtoEvents out, long rollCycle) {
+        public String value() {
+            return value;
+        }
+
+        private boolean needsToBeWritten(long rollCycle) {
             if (lastRollCycleWrittenTo == rollCycle)
-                return;
+                return false;
             lastRollCycleWrittenTo = rollCycle;
             writeCount++;
-            out.bigDto(value);
+            return true;
         }
     }
 
@@ -677,27 +739,4 @@ public class ContextListenerTest extends QueueTestCommon {
         }
     }
 
-    private static final class Entry {
-        private final String eventName;
-        private final String value;
-        private final long sequence;
-
-        private Entry(String eventName, String value, long sequence) {
-            this.eventName = eventName;
-            this.value = value;
-            this.sequence = sequence;
-        }
-    }
-
-    private static final class DocumentEntry {
-        private final String eventName;
-        private final String value;
-        private final boolean hasHistory;
-
-        private DocumentEntry(String eventName, String value, boolean hasHistory) {
-            this.eventName = eventName;
-            this.value = value;
-            this.hasHistory = hasHistory;
-        }
-    }
 }
