@@ -712,11 +712,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * provided ID to track its position, and the preconditions for creating a tailer
      * are verified before initialization.
      * <p>
-     * Ids ending in {@code .lock} or {@code .version} are rejected: a named tailer keeps its state
-     * in the queue metadata under the keys {@code index.<id>}, {@code index.<id>.lock} and
-     * {@code index.<id>.version}, so a tailer named {@code a.lock} or {@code a.version} would write
-     * its position into the very keys that hold tailer {@code a}'s lock and version metadata, and
-     * the two tailers would silently corrupt each other's state.
+     * Ids ending in {@code .lock} or {@code .version}, ignoring case, are rejected. Every named
+     * tailer uses {@code index.<id>}; versioned named tailers additionally use
+     * {@code index.<id>.lock} and {@code index.<id>.version}. Reserving those suffixes prevents one
+     * tailer's primary index from overlapping another tailer's version metadata.
      * <p>
      * This is a deliberate breaking change: earlier releases accepted such ids, but the overlap in
      * the metadata key namespace made their state ambiguous, so they are now rejected to guarantee
@@ -725,15 +724,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for the tailer
      * @return a new ExcerptTailer
-     * @throws IllegalArgumentException         if {@code id} ends with the reserved suffix
+     * @throws IllegalArgumentException         if {@code id} ends, ignoring case, with the reserved suffix
      *                                          {@code .lock} or {@code .version}
      * @throws NamedTailerNotAvailableException if the tailer is not available due to replication locks
      */
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
-        if (isReservedNamedTailerId(id))
-            throw reservedNamedTailerIdException(id);
+        validateNamedTailerId(id);
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this); // NOSONAR
 
@@ -770,10 +768,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for which to acquire the index
      * @return a LongValue representing the index for the given ID
+     * @throws IllegalArgumentException if the id has a reserved suffix
      */
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
+        validateNamedTailerId(id);
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
     }
 
@@ -782,9 +782,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for which to acquire the version index
      * @return a LongValue representing the version index for the given ID
+     * @throws IllegalArgumentException if the id has a reserved suffix
      */
     @NotNull
     public LongValue indexVersionForId(@NotNull String id) {
+        validateNamedTailerId(id);
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(String.format(INDEX_VERSION_FORMAT, id), -1L));
     }
 
@@ -793,9 +795,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for which to create the write lock
      * @return a new TableStoreWriteLock for the version index
+     * @throws IllegalArgumentException if the id has a reserved suffix
      */
     @NotNull
     public TableStoreWriteLock versionIndexLockForId(@NotNull String id) {
+        validateNamedTailerId(id);
         return new TableStoreWriteLock(
                 metaStore,
                 pauserSupplier,
@@ -1294,6 +1298,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * interpreted as a real roll-cycle position.
      *
      * @return a name-ordered map of named-tailer id to its committed index (empty if none)
+     * @throws UnsupportedOperationException if the metadata store does not support locked key scans
      */
     public NavigableMap<String, Long> namedTailerIndexes() {
         return metaStore.doWithExclusiveLock(tableStore -> {
@@ -1312,10 +1317,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     /**
      * Returns the roll file backing the given cycle, or {@code null} if that cycle is not present.
-     * The path is resolved from the cycle number alone and only the file's existence is checked, so
-     * no store is acquired and nothing is memory-mapped - a caller may safely delete the returned
-     * file (a mapping held by this process would make that fail on Windows and defer the space
-     * reclaim on Linux).
+     * The path is resolved from the cycle number alone and only the file's existence is checked; this
+     * method does not acquire or memory-map the store. The file may disappear or be opened after this
+     * method returns, so callers remain responsible for coordinating archival or deletion.
      *
      * @param cycle the roll cycle
      * @return the cycle's {@code .cq4} file, or {@code null} if absent
@@ -1330,9 +1334,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * same value a freshly created, never-read tailer has - so retention by named-tailer position
      * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free
      * disk matters more than its unread backlog: the registration remains (there is no clean way to
-     * delete a table-store entry), but it stops blocking removal. If that consumer is ever restarted
-     * it simply resumes from the oldest roll still available - losing only what retention has since
-     * removed, never everything - which makes this a self-adjusting, minimal-loss retirement.
+     * delete a table-store entry), but it stops blocking removal. On restart the persisted index
+     * remains {@code 0}; the queue does not infer a new resume point, so the application must
+     * explicitly reinitialise that consumer.
      * <p>
      * Replicated named tailers (those whose id starts with {@link #REPLICATED_NAMED_TAILER_PREFIX})
      * are refused, returning {@code false} without change: their position is coordinated with sinks
@@ -1342,14 +1346,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @param name the named-tailer id to park
      * @return {@code true} if the tailer existed and was parked; {@code false} if it is unknown or
      * {@code null}, or if it is a replicated named tailer (which is never parked)
-     * @throws IllegalArgumentException if {@code name} ends with the reserved suffix {@code .lock} or
-     *                                  {@code .version}
+     * @throws IllegalArgumentException if {@code name} ends, ignoring case, with the reserved
+     *                                  suffix {@code .lock} or {@code .version}
      */
     public boolean parkNamedTailer(String name) {
         if (name == null)
             return false;
-        if (isReservedNamedTailerId(name))
-            throw reservedNamedTailerIdException(name);
+        validateNamedTailerId(name);
         if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
             return false;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
@@ -1362,12 +1365,23 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static boolean isReservedNamedTailerId(String id) {
-        return id != null && (id.endsWith(".lock") || id.endsWith(".version"));
+        return endsWithIgnoreCase(id, ".lock") || endsWithIgnoreCase(id, ".version");
+    }
+
+    private static boolean endsWithIgnoreCase(String value, String suffix) {
+        return value != null
+                && value.length() >= suffix.length()
+                && value.regionMatches(true, value.length() - suffix.length(), suffix, 0, suffix.length());
+    }
+
+    private static void validateNamedTailerId(String id) {
+        if (isReservedNamedTailerId(id))
+            throw reservedNamedTailerIdException(id);
     }
 
     private static IllegalArgumentException reservedNamedTailerIdException(String id) {
         return new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
-                + "'.lock' and '.version' are reserved. Tailer state is kept under the metadata "
+                + "'.lock' and '.version' are reserved regardless of case. Tailer state is kept under the metadata "
                 + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
                 + "would collide with the metadata of the tailer named '"
                 + id.substring(0, id.lastIndexOf('.')) + "'");
@@ -1419,7 +1433,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
                     if (longValue == null || longValue.isClosed()) {
-                        longValue = metaStore.acquireOrGetValueFor(key, defaultValue, createIfAbsent);
+                        longValue = createIfAbsent
+                                ? metaStore.acquireValueFor(key, defaultValue)
+                                : metaStore.getValueFor(key);
                         if (longValue == null) {
                             return null;
                         }

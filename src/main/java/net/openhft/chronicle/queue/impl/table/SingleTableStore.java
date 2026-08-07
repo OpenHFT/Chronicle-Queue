@@ -266,12 +266,16 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * @return The acquired {@link LongValue}.
      */
     @Override
-    public LongValue acquireValueFor(CharSequence key, final long defaultValue) {
+    public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
         return acquireOrGetValueFor(key, defaultValue, true);
     }
 
     @Override
-    public synchronized LongValue acquireOrGetValueFor(CharSequence key, final long defaultValue, boolean createIfAbsent) {
+    public synchronized LongValue getValueFor(CharSequence key) {
+        return acquireOrGetValueFor(key, 0, false);
+    }
+
+    private LongValue acquireOrGetValueFor(CharSequence key, final long defaultValue, boolean createIfAbsent) {
 
         if (mappedBytes.isClosed())
             throw new ClosedIllegalStateException("Closed");

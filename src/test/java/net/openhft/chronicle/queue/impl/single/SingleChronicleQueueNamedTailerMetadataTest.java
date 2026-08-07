@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -11,30 +12,47 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.NavigableMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
 public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon {
 
-    private static SingleChronicleQueueBuilder builder(File dir, SetTimeProvider time) {
-        return SingleChronicleQueueBuilder.single(dir)
-                .rollCycle(TestRollCycles.TEST_DAILY)
-                .timeProvider(time);
+    private final SetTimeProvider timeProvider = new SetTimeProvider();
+
+    @Before
+    public void useDeterministicSystemTimeProvider() {
+        SystemTimeProvider.CLOCK = timeProvider;
     }
 
-    private static void writeDailyExcerpts(File dir, SetTimeProvider time, int days) {
-        try (ChronicleQueue queue = builder(dir, time).build();
+    @After
+    public void resetSystemTimeProvider() {
+        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+    }
+
+    private static SingleChronicleQueueBuilder builder(File dir) {
+        return SingleChronicleQueueBuilder.single(dir)
+                .rollCycle(TestRollCycles.TEST_DAILY);
+    }
+
+    private void writeDailyExcerpts(File dir, int days) {
+        try (ChronicleQueue queue = builder(dir).build();
              ExcerptAppender appender = queue.createAppender()) {
             for (int d = 0; d < days; d++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("n").int32(d);
                 }
-                time.advanceMillis(TimeUnit.DAYS.toMillis(1));
+                timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
             }
         }
     }
@@ -42,10 +60,10 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void namedTailerIndexesReturnsCommittedTailerPositionsOnly() {
         File dir = getTmpDir();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(10_000));
-        writeDailyExcerpts(dir, time, 2);
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(10_000));
+        writeDailyExcerpts(dir, 2);
 
-        try (SingleChronicleQueue q = builder(dir, time).build()) {
+        try (SingleChronicleQueue q = builder(dir).build()) {
             long gatewayIndex = q.rollCycle().toIndex(q.firstCycle(), 0);
             try (ExcerptTailer gateway = q.createTailer("gateway")) {
                 assertTrue(gateway.moveToIndex(gatewayIndex));
@@ -66,10 +84,10 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void parkNamedTailerResetsExistingNonReplicatedTailer() {
         File dir = getTmpDir();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(20_000));
-        writeDailyExcerpts(dir, time, 3);
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(20_000));
+        writeDailyExcerpts(dir, 3);
 
-        try (SingleChronicleQueue q = builder(dir, time).build()) {
+        try (SingleChronicleQueue q = builder(dir).build()) {
             long pinned = q.rollCycle().toIndex(q.firstCycle(), 0);
             try (ExcerptTailer dead = q.createTailer("dead")) {
                 assertTrue(dead.moveToIndex(pinned));
@@ -83,10 +101,10 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void parkNamedTailerDoesNotCreateMissingTailer() {
         File dir = getTmpDir();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(30_000));
-        writeDailyExcerpts(dir, time, 1);
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(30_000));
+        writeDailyExcerpts(dir, 1);
 
-        try (SingleChronicleQueue q = builder(dir, time).build()) {
+        try (SingleChronicleQueue q = builder(dir).build()) {
             assertFalse(q.parkNamedTailer("missing"));
             assertFalse(q.namedTailerIndexes().containsKey("missing"));
         }
@@ -95,10 +113,10 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void parkNamedTailerRejectsReservedSuffixesWithoutMutatingMetadata() {
         File dir = getTmpDir();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(40_000));
-        writeDailyExcerpts(dir, time, 1);
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(40_000));
+        writeDailyExcerpts(dir, 1);
 
-        try (SingleChronicleQueue q = builder(dir, time).build();
+        try (SingleChronicleQueue q = builder(dir).build();
              LongValue version = q.indexVersionForId("gateway");
              TableStoreWriteLock lock = q.versionIndexLockForId("gateway")) {
             version.setValue(42L);
@@ -110,6 +128,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
                 assertEquals(42L, version.getValue());
 
                 assertThrows(IllegalArgumentException.class, () -> q.parkNamedTailer("gateway.lock"));
+                assertThrows(IllegalArgumentException.class, () -> q.parkNamedTailer("gateway.LOCK"));
                 assertEquals(lockBefore, q.tableStoreGet("index.gateway.lock"));
             } finally {
                 lock.unlock();
@@ -120,10 +139,10 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void replicatedNamedTailersCannotBeParked() {
         File dir = getTmpDir();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(50_000));
-        writeDailyExcerpts(dir, time, 2);
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(50_000));
+        writeDailyExcerpts(dir, 2);
 
-        try (SingleChronicleQueue q = builder(dir, time).build()) {
+        try (SingleChronicleQueue q = builder(dir).build()) {
             String name = SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX + "sink";
             long pinned = q.rollCycle().toIndex(q.firstCycle(), 0);
             try (ExcerptTailer sink = q.createTailer(name)) {
@@ -142,26 +161,107 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void createTailerRejectsLockAndVersionSuffixes() {
         File dir = getTmpDir();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(60_000));
-        writeDailyExcerpts(dir, time, 1);
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(60_000));
+        writeDailyExcerpts(dir, 1);
 
-        try (SingleChronicleQueue q = builder(dir, time).build()) {
-            assertThrows(IllegalArgumentException.class, () -> q.createTailer("gateway.lock"));
-            assertThrows(IllegalArgumentException.class, () -> q.createTailer("gateway.version"));
+        try (SingleChronicleQueue q = builder(dir).build()) {
+            for (String name : new String[]{"gateway.lock", "gateway.LOCK", "gateway.version", "gateway.Version"})
+                assertThrows(IllegalArgumentException.class, () -> q.createTailer(name));
         }
     }
 
     @Test
     public void fileForCycleReturnsExistingRollFileOnly() {
         File dir = getTmpDir();
-        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(70_000));
-        writeDailyExcerpts(dir, time, 1);
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(70_000));
+        writeDailyExcerpts(dir, 1);
 
-        try (SingleChronicleQueue q = builder(dir, time).build()) {
+        try (SingleChronicleQueue q = builder(dir).build()) {
             File first = q.fileForCycle(q.firstCycle());
             assertNotNull(first);
             assertTrue(first.exists());
             assertNull(q.fileForCycle(q.firstCycle() - 1));
+        }
+    }
+
+    @Test
+    public void namedTailerMetadataApisRejectReservedSuffixes() {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(80_000));
+        writeDailyExcerpts(dir, 1);
+
+        try (SingleChronicleQueue q = builder(dir).build()) {
+            assertThrows(IllegalArgumentException.class, () -> q.indexForId("gateway.LOCK"));
+            assertThrows(IllegalArgumentException.class, () -> q.indexVersionForId("gateway.version"));
+            assertThrows(IllegalArgumentException.class, () -> q.versionIndexLockForId("gateway.Version"));
+        }
+    }
+
+    @Test
+    public void namedTailerIndexesSupportsConcurrentRegistration() throws Exception {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(90_000));
+        writeDailyExcerpts(dir, 1);
+
+        try (SingleChronicleQueue registeringQueue = builder(dir).build();
+             SingleChronicleQueue scanningQueue = builder(dir).build()) {
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            CountDownLatch start = new CountDownLatch(1);
+            try {
+                Future<?> registrations = executor.submit(() -> {
+                    await(start);
+                    for (int i = 0; i < 32; i++) {
+                        try (ExcerptTailer tailer = registeringQueue.createTailer("concurrent-" + i)) {
+                            assertEquals(0, tailer.index());
+                        }
+                    }
+                });
+                Future<?> scans = executor.submit(() -> {
+                    await(start);
+                    for (int i = 0; i < 64; i++)
+                        scanningQueue.namedTailerIndexes();
+                });
+
+                start.countDown();
+                registrations.get(30, TimeUnit.SECONDS);
+                scans.get(30, TimeUnit.SECONDS);
+            } finally {
+                executor.shutdownNow();
+                assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+            }
+
+            NavigableMap<String, Long> indexes = scanningQueue.namedTailerIndexes();
+            for (int i = 0; i < 32; i++)
+                assertEquals(Long.valueOf(0), indexes.get("concurrent-" + i));
+        }
+    }
+
+    @Test
+    public void parkedNamedTailerRemainsParkedAfterQueueRestart() {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(100_000));
+        writeDailyExcerpts(dir, 3);
+
+        try (SingleChronicleQueue q = builder(dir).build()) {
+            long firstIndex = q.rollCycle().toIndex(q.firstCycle(), 0);
+            try (ExcerptTailer tailer = q.createTailer("parked")) {
+                assertTrue(tailer.moveToIndex(firstIndex));
+            }
+            assertTrue(q.parkNamedTailer("parked"));
+        }
+
+        try (SingleChronicleQueue q = builder(dir).build();
+             ExcerptTailer tailer = q.createTailer("parked")) {
+            assertEquals(0, tailer.index());
+        }
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError(e);
         }
     }
 }
