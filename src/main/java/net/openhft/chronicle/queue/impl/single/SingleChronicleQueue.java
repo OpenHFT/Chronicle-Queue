@@ -711,14 +711,29 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Creates an {@link ExcerptTailer} with a specific ID. The tailer will use the
      * provided ID to track its position, and the preconditions for creating a tailer
      * are verified before initialization.
+     * <p>
+     * Ids ending in {@code .lock} or {@code .version} are rejected: a named tailer keeps its state
+     * in the queue metadata under the keys {@code index.<id>}, {@code index.<id>.lock} and
+     * {@code index.<id>.version}, so a tailer named {@code a.lock} or {@code a.version} would write
+     * its position into the very keys that hold tailer {@code a}'s lock and version metadata, and
+     * the two tailers would silently corrupt each other's state.
+     * <p>
+     * This is a deliberate breaking change: earlier releases accepted such ids, but the overlap in
+     * the metadata key namespace made their state ambiguous, so they are now rejected to guarantee
+     * every tailer's keys are non-overlapping. Rename any existing tailer using a reserved suffix
+     * before upgrading.
      *
      * @param id the identifier for the tailer
      * @return a new ExcerptTailer
+     * @throws IllegalArgumentException         if {@code id} ends with the reserved suffix
+     *                                          {@code .lock} or {@code .version}
      * @throws NamedTailerNotAvailableException if the tailer is not available due to replication locks
      */
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
+        if (isReservedNamedTailerId(id))
+            throw reservedNamedTailerIdException(id);
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this); // NOSONAR
 
@@ -1266,6 +1281,97 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Returns the committed index of every named tailer registered against this queue, keyed by
+     * tailer name. Positions are read directly during a single scan of the metadata keys; no tailer
+     * is opened or advanced, so on a queue opened read-write this is safe to call from any process
+     * while the owning consumers run. (A queue opened {@code readOnly} may fall back to a read-only
+     * metadata store that does not support this scan.)
+     * <p>
+     * This exposes what retention by named-tailer position and consumer-lag monitoring need: the
+     * cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}. Internal lock and version
+     * metadata entries are excluded; replicated named tailers are returned under their persisted ids.
+     * An index of {@code 0} means the tailer has never read, or has been parked, and should not be
+     * interpreted as a real roll-cycle position.
+     *
+     * @return a name-ordered map of named-tailer id to its committed index (empty if none)
+     */
+    public NavigableMap<String, Long> namedTailerIndexes() {
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        metaStore.forEachKey(result, (acc, key, value) -> {
+            final String k = key.toString();
+            if (k.startsWith("index.")) {
+                String namedTailer = k.substring("index.".length());
+                if (!isReservedNamedTailerId(namedTailer))
+                    acc.put(namedTailer, value.int64());
+            }
+        });
+        return result;
+    }
+
+    /**
+     * Returns the roll file backing the given cycle, or {@code null} if that cycle is not present.
+     * The path is resolved from the cycle number alone and only the file's existence is checked, so
+     * no store is acquired and nothing is memory-mapped - a caller may safely delete the returned
+     * file (a mapping held by this process would make that fail on Windows and defer the space
+     * reclaim on Linux).
+     *
+     * @param cycle the roll cycle
+     * @return the cycle's {@code .cq4} file, or {@code null} if absent
+     */
+    public File fileForCycle(int cycle) {
+        final File file = dateCache.resourceFor(cycle).path;
+        return file.exists() ? file : null;
+    }
+
+    /**
+     * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
+     * same value a freshly created, never-read tailer has - so retention by named-tailer position
+     * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free
+     * disk matters more than its unread backlog: the registration remains (there is no clean way to
+     * delete a table-store entry), but it stops blocking removal. If that consumer is ever restarted
+     * it simply resumes from the oldest roll still available - losing only what retention has since
+     * removed, never everything - which makes this a self-adjusting, minimal-loss retirement.
+     * <p>
+     * Replicated named tailers (those whose id starts with {@link #REPLICATED_NAMED_TAILER_PREFIX})
+     * are refused, returning {@code false} without change: their position is coordinated with sinks
+     * through version metadata, and a backward reset here would not bump that version, so parking one
+     * could desynchronise replication.
+     *
+     * @param name the named-tailer id to park
+     * @return {@code true} if the tailer existed and was parked; {@code false} if it is unknown or
+     * {@code null}, or if it is a replicated named tailer (which is never parked)
+     * @throws IllegalArgumentException if {@code name} ends with the reserved suffix {@code .lock} or
+     *                                  {@code .version}
+     */
+    public boolean parkNamedTailer(String name) {
+        if (name == null)
+            return false;
+        if (isReservedNamedTailerId(name))
+            throw reservedNamedTailerIdException(name);
+        if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+            return false;
+        try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
+            Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
+            LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
+            if (longValue == null) return false;
+            longValue.setOrderedValue(0);
+            return true;
+        }
+    }
+
+    private static boolean isReservedNamedTailerId(String id) {
+        return id != null && (id.endsWith(".lock") || id.endsWith(".version"));
+    }
+
+    private static IllegalArgumentException reservedNamedTailerIdException(String id) {
+        return new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
+                + "'.lock' and '.version' are reserved. Tailer state is kept under the metadata "
+                + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
+                + "would collide with the metadata of the tailer named '"
+                + id.substring(0, id.lastIndexOf('.')) + "'");
+    }
+
+    /**
      * Puts a new value in the table store for the given key and index. If the index is Long.MIN_VALUE,
      * it sets the value as volatile, otherwise, it sets the max value.
      *
@@ -1291,14 +1397,30 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
+        return tableStoreAcquireOrGet(key, defaultValue, true);
+    }
+
+    /**
+     * Acquires or reads a {@link LongValue} from the queue metadata table.
+     *
+     * @param key            the table-store key
+     * @param defaultValue   the default value to use when creating a missing key
+     * @param createIfAbsent whether a missing key should be created
+     * @return the existing or newly-created {@link LongValue}, or {@code null} when the key is missing
+     * and {@code createIfAbsent} is {@code false}
+     */
+    protected LongValue tableStoreAcquireOrGet(CharSequence key, long defaultValue, boolean createIfAbsent) {
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null) {
+            if (longValue == null || longValue.isClosed()) {
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null) {
-                        longValue = metaStore.acquireValueFor(key, defaultValue);
+                    if (longValue == null || longValue.isClosed()) {
+                        longValue = metaStore.acquireOrGetValueFor(key, defaultValue, createIfAbsent);
+                        if (longValue == null) {
+                            return null;
+                        }
                         int length = key.length();
                         HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
                         key2.write(0, keyBytes, 0, length);
@@ -1314,12 +1436,19 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     /**
      * Gets the value for the given key from the table store. If the key does not exist,
      * returns Long.MIN_VALUE.
+     * <p>
+     * This is a pure read: a missing key is never created or cached, because a matching entry (for
+     * example a named tailer's index) may legitimately appear later - a named tailer can be
+     * registered by another process at any time without notice. A miss is therefore always
+     * expensive (a scan of the table store on every call, not just the first); callers polling a
+     * key that may not exist yet should expect that cost. Use
+     * {@link #tableStoreAcquire(CharSequence, long)} for get-or-create semantics.
      *
      * @param key the key for the entry in the table store
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
     public long tableStoreGet(CharSequence key) {
-        LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
+        LongValue longValue = tableStoreAcquireOrGet(key, Long.MIN_VALUE, false);
         if (longValue == null) return Long.MIN_VALUE;
         return longValue.getVolatileValue();
     }
