@@ -82,10 +82,9 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * For Queue, the output context is a newly-created roll file.
      * <p>
      * The listener receives a preset method writer for {@code writerType}. Calls made on that
-     * writer are appended before the write that triggered creation of that context. The listener
-     * must write only through that supplied writer and must not re-enter the appender (for example
-     * by opening its own writing document) during the callback. The supplied writer is scoped to the
-     * callback; retaining it or using it after the callback returns is unsupported.
+     * writer are appended before the write that triggered creation of that context. During the
+     * callback, the listener must use that writer rather than open another appender document. The
+     * writer is not callback-scoped and may be retained for normal use.
      * <p>
      * The listener fires only before the first ordinary data append into a new, empty roll file,
      * including first use of an empty queue; it is not limited to later clock-driven rolls.

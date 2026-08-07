@@ -490,7 +490,7 @@ public class ContextListenerTest extends QueueTestCommon {
     }
 
     @Test
-    public void suppliedWriterCannotBeUsedAfterCallbackReturns() {
+    public void suppliedWriterCanBeUsedAfterCallbackReturns() {
         File path = getTmpDir();
         AtomicReference<ContextEvents> retainedWriter = new AtomicReference<>();
 
@@ -503,7 +503,7 @@ public class ContextListenerTest extends QueueTestCommon {
             ExcerptAppender appender = queue.createAppender();
 
             appender.writeMessage("msg", "one");
-            assertThrows(IllegalStateException.class, () -> retainedWriter.get().context("late"));
+            retainedWriter.get().context("late");
             appender.writeMessage("msg", "two");
         }
 
@@ -514,6 +514,8 @@ public class ContextListenerTest extends QueueTestCommon {
                 "# index: 100000001\n" +
                 "msg: one\n" +
                 "# index: 100000002\n" +
+                "context: late\n" +
+                "# index: 100000003\n" +
                 "msg: two\n" +
                 "# no more messages at 8000000000000000\n", readEventsAsString(path));
     }

@@ -16,8 +16,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A callback-scoped {@link MarshallableOut} that writes through an already-locked
- * {@link StoreAppender}.
+ * A {@link MarshallableOut} that writes through an already-locked {@link StoreAppender}
+ * during listener notification and delegates to the appender at other times.
  *
  * <p>{@link StoreAppender} invokes a context listener while holding its non-reentrant write lock.
  * Using the appender's public write methods from that callback would attempt to acquire the same
@@ -25,11 +25,10 @@ import org.jetbrains.annotations.Nullable;
  * as their {@link WriteDocumentContext}, committing them without unlocking the appender.</p>
  *
  * <p>One adapter and method writer are created per configured appender, outside the write lock.
- * {@link #beginCallback(long)} activates that writer for the callback thread and
- * {@link #endCallback()} invalidates it again. A retained writer therefore cannot write between
- * callbacks or from another thread, while later roll callbacks avoid reconstructing the method
- * writer. Combining the output and document-context roles avoids allocating a delegating wrapper
- * for every listener document.</p>
+ * {@link #beginCallback(long)} selects the already-locked path for the callback thread and
+ * {@link #endCallback()} returns the writer to the normal appender path. Later roll callbacks avoid
+ * reconstructing the method writer. Combining the output and document-context roles avoids
+ * allocating a delegating wrapper for every listener document.</p>
  *
  * <p>This bridge remains separate from {@link ActiveContextListenerLifecycle}: the
  * lifecycle decides <em>when</em> to notify and holds its binding, while this object is the stable
@@ -69,12 +68,16 @@ final class LockedContextListenerMarshallableOut implements MarshallableOut, Wri
 
     @Override
     public DocumentContext writingDocument(boolean metaData) {
-        return acquireWritingDocument(metaData);
+        return isCallbackThread()
+                ? acquireWritingDocument(metaData)
+                : appender.writingDocument(metaData);
     }
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
-        requireCallbackThread();
+        if (!isCallbackThread())
+            return appender.acquireWritingDocument(metaData);
+
         if (nesting > 0 && context.wire() != null && context.isOpen()) {
             if (!context.chainedElement()) {
                 assert metaData == context.isMetaData();
@@ -102,7 +105,10 @@ final class LockedContextListenerMarshallableOut implements MarshallableOut, Wri
 
     @Override
     public void rollbackIfNotComplete() {
-        requireCallbackThread();
+        if (!isCallbackThread()) {
+            appender.rollbackIfNotComplete();
+            return;
+        }
         if (nesting == 0 || !context.isOpen())
             return;
         context.chainedElement(false);
@@ -113,8 +119,9 @@ final class LockedContextListenerMarshallableOut implements MarshallableOut, Wri
 
     @Override
     public boolean writingIsComplete() {
-        requireCallbackThread();
-        return context.writingIsComplete();
+        return isCallbackThread()
+                ? context.writingIsComplete()
+                : appender.writingIsComplete();
     }
 
     /**
@@ -131,7 +138,7 @@ final class LockedContextListenerMarshallableOut implements MarshallableOut, Wri
     }
 
     /**
-     * Ends the callback scope, rolling back an unclosed document before invalidating the writer.
+     * Ends the callback scope, rolling back an unclosed document before restoring normal appender use.
      */
     void endCallback() {
         try {
@@ -226,6 +233,10 @@ final class LockedContextListenerMarshallableOut implements MarshallableOut, Wri
     @Override
     public long contextCount() {
         return context.contextCount();
+    }
+
+    private boolean isCallbackThread() {
+        return callbackThread == Thread.currentThread();
     }
 
     private void requireCallbackThread() {
