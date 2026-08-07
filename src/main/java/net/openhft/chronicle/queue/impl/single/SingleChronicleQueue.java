@@ -1296,16 +1296,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return a name-ordered map of named-tailer id to its committed index (empty if none)
      */
     public NavigableMap<String, Long> namedTailerIndexes() {
-        final NavigableMap<String, Long> result = new TreeMap<>();
-        metaStore.forEachKey(result, (acc, key, value) -> {
-            final String k = key.toString();
-            if (k.startsWith("index.")) {
-                String namedTailer = k.substring("index.".length());
-                if (!isReservedNamedTailerId(namedTailer))
-                    acc.put(namedTailer, value.int64());
-            }
+        return metaStore.doWithExclusiveLock(tableStore -> {
+            final NavigableMap<String, Long> result = new TreeMap<>();
+            tableStore.forEachKey(result, (acc, key, value) -> {
+                final String k = key.toString();
+                if (k.startsWith("index.")) {
+                    String namedTailer = k.substring("index.".length());
+                    if (!isReservedNamedTailerId(namedTailer))
+                        acc.put(namedTailer, value.int64());
+                }
+            });
+            return result;
         });
-        return result;
     }
 
     /**
