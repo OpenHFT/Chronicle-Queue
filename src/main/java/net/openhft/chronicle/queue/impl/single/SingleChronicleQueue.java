@@ -127,6 +127,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     final AppenderListener appenderListener;
+    @NotNull
+    private volatile ContextListenerCoordinator contextListenerCoordinator = ContextListenerCoordinator.NONE;
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -185,6 +187,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
+            contextListenerCoordinator = ContextListenerCoordinator.from(builder.contextListenerConfiguration());
 
             if (metaStore.readOnly()) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
@@ -629,6 +632,24 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return storeFileListener;
     }
 
+    @Nullable
+    ContextListenerLifecycle newContextListenerLifecycle(
+            StoreAppender appender, StoreAppender.StoreAppenderContext context) {
+        ContextListenerCoordinator coordinator = contextListenerCoordinator;
+        if (coordinator == ContextListenerCoordinator.NONE)
+            return null;
+        ContextListenerBinding binding = coordinator.defaultBinding();
+        return binding == null
+                ? null
+                : ContextListenerLifecycle.active(appender, context, coordinator, binding);
+    }
+
+    synchronized ContextListenerCoordinator activeContextListenerCoordinator() {
+        if (contextListenerCoordinator == ContextListenerCoordinator.NONE)
+            contextListenerCoordinator = ContextListenerCoordinator.activeWithoutQueueListener();
+        return contextListenerCoordinator;
+    }
+
     // used by enterprise CQ
     WireStoreSupplier storeSupplier() {
         return storeSupplier;
@@ -980,6 +1001,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             metaStoreMap.clear();
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
+            contextListenerCoordinator.close();
 
             // must be closed after closers.
             closeQuietly(
