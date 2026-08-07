@@ -136,6 +136,9 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * Ownership coordination is queue-local, so a closeable listener instance must not be shared
      * between appenders belonging to different queues.
      * <p>
+     * Configure the listener on the appender only. Combining it with a listener on a {@link Wire}
+     * obtained from the appender's document context is unsupported.
+     * <p>
      * If different listeners are configured on appenders of the same queue, the first appender to
      * write into an empty roll cycle supplies that cycle's context; the other listeners are not
      * called for that cycle.
