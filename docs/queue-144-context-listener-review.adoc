@@ -1,0 +1,302 @@
+= QUEUE-144 Context Listener Review Guide
+:toc:
+:toclevels: 3
+:css-signature: demo
+
+This guide defines the contract and evidence to review across Chronicle Wire, Chronicle Queue and
+the downstream integrations. It deliberately reviews the whole serialized result, including
+ordering and lifecycle details, rather than checking only selected fields.
+
+== Pull Request Order
+
+Review and merge the Wire prerequisites in this order:
+
+. https://github.com/OpenHFT/Chronicle-Wire/pull/1270[Wire #1270: document context count]
+. https://github.com/OpenHFT/Chronicle-Wire/pull/1271[Wire #1271: context listener API]
+. https://github.com/OpenHFT/Chronicle-Wire/pull/1272[Wire #1272: listener lifecycle]
+. https://github.com/OpenHFT/Chronicle-Wire/pull/1273[Wire #1273: MarshallableOut implementations]
+. https://github.com/OpenHFT/Chronicle-Wire/pull/1274[Wire #1274: contract documentation]
+
+Review and merge the Queue stack in this order:
+
+. https://github.com/OpenHFT/Chronicle-Queue/pull/1724[Queue #1724: QUEUE-143 integration points]
+. https://github.com/OpenHFT/Chronicle-Queue/pull/1729[Queue #1729: default time provider]
+. https://github.com/OpenHFT/Chronicle-Queue/pull/1725[Queue #1725: Queue listener core]
+. https://github.com/OpenHFT/Chronicle-Queue/pull/1726[Queue #1726: behavior and regression tests]
+. https://github.com/OpenHFT/Chronicle-Queue/pull/1727[Queue #1727: named-tailer recovery]
+. https://github.com/OpenHFT/Chronicle-Queue/pull/1728[Queue #1728: this review guide]
+
+QUEUE-143 must merge before the default-time-provider change, which must merge before the Queue
+listener core. The Wire stack must also be available before Queue #1725 is merged. The older Queue
+documentation PR
+https://github.com/OpenHFT/Chronicle-Queue/pull/1723[#1723] is superseded by #1728 and is not part of
+this stack.
+
+Downstream QUEUE-144 work is reviewed after the relevant Wire and Queue contracts are stable:
+
+* `Chronicle-Queue-Enterprise` forwards or explicitly rejects listener configuration in its
+  appender wrappers.
+* `Chronicle-FIX` checks the method-writer monitor queue; the raw FIX store is out of scope.
+* `Chronicle-Services-Enterprise` contains both the idempotent-store integration and the
+  `wire-channel` connection lifecycle integration.
+
+== Final Wire Contract
+
+`MarshallableOut.ContextListener<T>` is an output-context hook. A context is defined by the output,
+not by the listener.
+
+* One notification attempt is made before the first application data document in a context.
+  Metadata may precede it.
+* The listener may write zero or more normal method-writer documents.
+* Listener documents do not acquire `MessageHistory` unless the application writes it explicitly.
+* A listener exception is propagated and is not retried in the same context. A listener should
+  therefore be complete-or-nothing.
+* The supplied method writer may be retained. During a callback, writes must use that writer rather
+  than re-entering the outer `MarshallableOut` or Queue appender.
+* Configure the listener on the outermost output before first application use. Installing listeners
+  on both a wrapper and its underlying Wire is unsupported.
+
+Wire implementations define context boundaries as follows:
+
+* A new Wire starts at context count `1`.
+* `Wire.reset()` starts a new context and increases the count.
+* `Wire.clear()` retains the current context and count.
+* Append-mode file and string-consumer outputs retain their context while clearing their buffers.
+* Every HTTP POST is a new context; a successful POST resets the underlying Wire before the next
+  application document.
+* Supported connection-oriented outputs use a one-based connection generation. Reconnect must
+  increase the count and trigger a fresh context dump.
+
+== Context Count Contract
+
+`DocumentContext.contextCount()` is a non-decreasing identifier for the context containing the
+document. Callers should resend progressive context only when the current value is greater than the
+last value they observed.
+
+[source,java]
+----
+long current = documentContext.contextCount();
+if (current > dto.lastContextWrittenTo()) {
+    writer.context(dto);
+    dto.lastContextWrittenTo(current);
+}
+----
+
+Starting the previous count at `0` or `-1` needs no special case: a returned `-1` is not an increase
+and therefore does not cause a write.
+
+The implementations under review must preserve these values:
+
+* Wire starts at `1` and increases on `reset()`.
+* Queue write and read documents return their roll cycle.
+* `DocumentContextHolder` returns `-1` when closed.
+* `NoDocumentContext` always returns `-1`.
+* HTTP counts POST contexts; connection outputs count connection generations.
+* Queue double-buffered writes reject `contextCount()` because the destination cycle is selected
+  later, when the buffer is flushed.
+
+The value need not increase for every document. The useful guarantee is that it does not move
+backwards while a caller is deciding whether static context has already been written.
+
+== Queue Contract
+
+Queue maps an output context to a roll cycle.
+
+* The listener runs on the first application write made by the configured queue in a new cycle.
+* Context records are committed before that application record and are visible to ordinary tailers,
+  method readers and replication as normal data records.
+* Metadata writes and indexed writes do not create context records.
+* Context records consume queue indexes, cycle message capacity and storage.
+* Coordination across appenders and processes must emit at most one context preamble for a cycle.
+* Re-entrant writes through the public appender fail fast. Callback writes use the supplied writer,
+  which operates under the already-held Queue write lock.
+* Builder listener suppliers create a listener per built queue. Listener close ownership must remain
+  correct when builders are cloned, appenders override listeners, or one listener is shared.
+* Appender-level listener configuration and a listener on the appender's underlying Wire are not a
+  supported combination. Configure the appender only.
+* Encoded, encrypted and asynchronous Enterprise output modes must either preserve exactly the same
+  stream or reject listener configuration explicitly.
+
+This is a method-writer preamble mechanism, not universal Queue metadata. Fixed-format raw queues
+must not install it unless every reader understands the extra records.
+
+== Progressive Serialization
+
+The principal progressive use case holds the application document, compares its context count with
+transient state in a serializable DTO, and writes that DTO only when it has not yet been written in
+the current roll.
+
+[source,java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    long current = dc.contextCount();
+    if (current > referenceData.lastContextWrittenTo()) {
+        dc.wire().write("referenceData").object(referenceData);
+        referenceData.lastContextWrittenTo(current);
+    }
+    dc.wire().write("event").object(event);
+}
+----
+
+Tests must include representative serializable objects, not only `String` payloads. The production
+case depends on marshalling object fields, excluding transient tracking state, and preserving the
+relationship between context and events in one held document.
+
+The Queue fixtures intentionally compare the complete `dump()` output with literal expected text.
+This makes the tests deliberately brittle, but simpler to inspect and update: accepting a behavior
+change means reviewing the actual output and replacing the expected text. The full comparison also
+catches field shape, document boundaries, indexes, ordering and accidental duplicate writes.
+
+== Named Tailer Recovery
+
+A named tailer can restart in the middle of a cycle after the context preamble. `TailerContextRecovery`
+uses a temporary unnamed tailer to replay records from the start of that cycle up to, but not
+including, the named tailer's persisted index.
+
+The replay handlers must rebuild context without business side effects. The real named tailer must
+remain at its persisted position. See `docs/named-tailer-context-recovery.adoc` for the usage pattern
+and result statuses.
+
+Review these failure distinctions carefully:
+
+* index `0` means no named position, including a fresh or parked tailer;
+* sequence `0` normally means no earlier same-cycle records need replay;
+* an unavailable roll file is a recovery failure, not successful recovery;
+* stopping before the named index is a recovery failure when context is required.
+
+== Evidence Matrix
+
+[cols="2,3",options="header"]
+|===
+|Area
+|Required evidence
+
+|Wire lifecycle
+|First data notification, metadata skip, repeated documents, `reset()` notification, `clear()`
+ stability, exception behavior and listener replacement rejection.
+
+|Context counts
+|Wire monotonicity, closed holder `-1`, `NoDocumentContext` `-1`, wrapper delegation, Queue write and
+ read roll cycles, backwards-clock behavior and double-buffer rejection.
+
+|Queue ordering
+|First use, roll transition, no-op listener, reopen without duplication, multiple appenders and
+ multiple queue instances on one path.
+
+|Serialization
+|A representative marshallable DTO, transient last-context tracking, progressive writes inside a
+ held document and exact dumped output.
+
+|Failure and locking
+|Listener `RuntimeException` and `Error`, no leaked cross-process lock, appender remains usable,
+ re-entrant public writes fail promptly, and partial committed context is not duplicated.
+
+|Ownership
+|Builder supplier instances, appender override, listener replacement, shared listener references and
+ queue/appender close order.
+
+|Tailer recovery
+|Mid-cycle restart, context-only replay, named index unchanged, fresh/parked index, sequence-zero
+ behavior, unavailable cycle and early stop.
+
+|Transport and wrappers
+|HTTP POST reset, Wire Channel reconnect, outermost-listener rule, supported forwarding wrappers and
+ explicit rejection by incompatible outputs.
+|===
+
+Primary Queue tests are:
+
+* `ContextListenerTest`
+* `ContextListenerBugTest`
+* `ContextListenerLifecycleTest`
+* `ContextListenerWhiteBoxBugTest`
+* `TailerContextRecoveryTest`
+
+Primary Wire tests are:
+
+* `DocumentContextLifecycleTest`
+* `WireContextListenerLifecycleTest`
+* `MarshallableOutContextListenerTest`
+* the format-specific `BinaryWire2Test` and `YamlWireTest` coverage
+
+== Current Review Blockers
+
+The following points must be resolved before the Queue stack is merge ready:
+
+* Queue #1725 currently treats the supplied writer as callback-scoped, while the final Wire contract
+  permits retaining it. The Queue adapter and `suppliedWriterCannotBeUsedAfterCallbackReturns` test
+  must be aligned with the Wire contract.
+* Queue currently retries a listener in the same roll when it failed before committing output. The
+  final Wire contract makes one notification attempt per context. The coordinator behavior and
+  `listenerFailureBeforeWritingRetriesOnNextWrite` test must be aligned.
+* Queue #1727 returns the sequence-zero success status before proving that the referenced cycle is
+  still available. It needs an unavailable-cycle regression so missing retention data is not
+  reported as successful recovery.
+* Wire Channel production and unit coverage exists on the downstream
+  `feature/QUEUE-144-wire-channel-context-listener` branch, but its integration test does not force
+  a reconnect. Add that regression and link the downstream PR so it proves that reconnect increases
+  `contextCount()` and causes a new notification.
+
+These are contract mismatches, not optional test refinements. The guide should not be used to infer
+merge readiness until they are resolved in their owning PRs.
+
+== Downstream Review
+
+=== Chronicle Queue Enterprise
+
+Confirm every appender wrapper either forwards `contextListener(...)` or rejects it with a clear
+exception. In particular, encoded/encrypted output and asynchronous ring-buffer output must not
+produce a file stream that differs from what their consumers observe. Reconcile QUEUE-143 roll-file
+maintenance with the existing Enterprise archive utility rather than introducing a second competing
+retention implementation.
+
+=== Chronicle FIX
+
+Limit integration to method-writer monitoring queues. Do not add context documents to the raw FIX
+message store. The monitor test must read the complete context and event sequence through its normal
+reader rather than only proving that bytes were appended.
+
+=== Chronicle Services Enterprise
+
+The idempotent store is a representative progressive-context integration because it already writes
+serializable checkpoint state. Check startup replay, read-only use, batching and builder cloning.
+
+Wire Channel owns connection generations. Its output must configure the listener on the outermost
+channel output, report a non-decreasing one-based context count, and notify again after reconnect.
+
+== Verification
+
+Run focused tests on the top of each stack, then run full module verification against the same Wire
+and Queue dependency versions.
+
+[source,bash]
+----
+# Chronicle Wire
+mvn -q -Dtest=DocumentContextLifecycleTest,WireContextListenerLifecycleTest,MarshallableOutContextListenerTest,BinaryWire2Test,YamlWireTest test
+
+# Chronicle Queue
+mvn -q -Dtest=AppenderReleasesParkedStoreTest,ContextListenerTest,ContextListenerBugTest,ContextListenerLifecycleTest,ContextListenerWhiteBoxBugTest,TailerContextRecoveryTest test
+
+# Full repository gate
+mvn verify -l target/queue-144-verify.log
+
+# Diff hygiene
+git diff --check
+----
+
+Downstream modules require the matching Wire and Queue snapshots to be installed first. Record any
+skipped Enterprise, transport or multi-JVM suites in the PR rather than treating focused tests as a
+substitute for them.
+
+== Approval Criteria
+
+Approve only when:
+
+* the Wire and Queue contracts agree on writer lifetime, failure attempts and context counts;
+* tests prove representative object serialization and compare complete output where ordering is the
+  behavior under review;
+* Queue locking, ownership and multi-appender coordination are covered;
+* named-tailer recovery distinguishes missing data from successful no-op recovery;
+* unsupported raw, encrypted, encoded and asynchronous outputs fail explicitly;
+* HTTP and Wire Channel start a new context at the documented transport boundary; and
+* the stacked PR bases and cross-repository links match the actual merge order.
