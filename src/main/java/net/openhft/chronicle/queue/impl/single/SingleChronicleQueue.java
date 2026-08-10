@@ -127,6 +127,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     final AppenderListener appenderListener;
+    @NotNull
+    private final ContextListenerState contextListenerState;
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -185,6 +187,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
+            contextListenerState = builder.contextListenerState();
 
             if (metaStore.readOnly()) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
@@ -627,6 +630,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     protected StoreFileListener storeFileListener() {
         return storeFileListener;
+    }
+
+    @NotNull
+    ContextListenerState newContextListenerState(
+            StoreAppender appender, StoreAppender.StoreAppenderContext context) {
+        return contextListenerState.forAppender(appender, context);
     }
 
     // used by enterprise CQ
@@ -1535,7 +1544,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         /**
          * Acquires a {@link SingleChronicleQueueStore} for the specified cycle.
-         * If the store doesn't exist and the strategy is {@link CreateStrategy.CREATE}, it will create a new store.
+         * If the store doesn't exist and the strategy is {@code CreateStrategy.CREATE}, it will create a new store.
          *
          * @param cycle          the cycle to acquire the store for
          * @param createStrategy the strategy for creating or reading the store
