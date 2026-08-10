@@ -1433,6 +1433,16 @@ class StoreAppender extends AbstractCloseable
             }
         }
 
+        @Override
+        public long contextCount() {
+            // Reject on any double-buffered queue, not just when this write happened to hit lock
+            // contention: otherwise the same code works or throws depending on runtime contention.
+            // Progressive contextCount usage and double buffering are an unsupported combination.
+            if (queue.doubleBuffer)
+                throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
+            return isClosed ? -1 : StoreAppender.this.cycle();
+        }
+
         /**
          * Returns the index of the current context. If the context is using double buffering, an
          * {@link IndexNotAvailableException} will be thrown as the index is not available in this case.
