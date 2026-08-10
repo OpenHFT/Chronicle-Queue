@@ -570,12 +570,11 @@ class StoreAppender extends AbstractCloseable
                 if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
-                long safeLength = queue.overlapSize();
                 resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
-                // sets the writeLimit based on the safeLength
-                openContext(metaData, safeLength);
+                // sets the writeLimit based on the overlap size
+                openContext(metaData, queue.overlapSize());
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
@@ -787,7 +786,7 @@ class StoreAppender extends AbstractCloseable
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
 
-            this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
+            this.positionOfHeader = writeHeader(wire, queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
@@ -885,9 +884,8 @@ class StoreAppender extends AbstractCloseable
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
         assert writeLock.locked();
         try {
-            int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            openContext(metadata, safeLength);
+            openContext(metadata, queue.overlapSize());
 
             try {
                 final Bytes<?> bytes0 = context.wire().bytes();
