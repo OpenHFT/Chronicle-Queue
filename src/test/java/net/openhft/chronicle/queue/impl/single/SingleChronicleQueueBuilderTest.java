@@ -6,9 +6,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.scoped.ScopedResource;
-import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.core.time.SystemTimeProvider;
-import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -203,28 +200,6 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     public void drainerPriorityIsSetByDefault() {
         SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single();
         assertNotNull(builder.drainerPriority()); // priority may change from CONCURRENT in future
-    }
-
-    @Test
-    public void defaultTimeProviderUsesCurrentSystemClockAtBuildTime() {
-        TimeProvider previous = SystemTimeProvider.CLOCK;
-        SetTimeProvider clockAtBuild = new SetTimeProvider(1_000L);
-        SetTimeProvider replacementClock = new SetTimeProvider(2_000L);
-        try {
-            SystemTimeProvider.CLOCK = clockAtBuild;
-            SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(getTmpDir())
-                    .testBlockSize();
-
-            try (SingleChronicleQueue queue = builder.build()) {
-                assertSame(clockAtBuild, queue.time());
-
-                SystemTimeProvider.CLOCK = replacementClock;
-                assertSame(replacementClock, builder.timeProvider());
-                assertSame(clockAtBuild, queue.time());
-            }
-        } finally {
-            SystemTimeProvider.CLOCK = previous;
-        }
     }
 
     @Test

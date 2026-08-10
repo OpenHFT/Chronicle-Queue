@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.annotation.SingleThreaded;
 import net.openhft.chronicle.wire.MarshallableOut;
+import net.openhft.chronicle.wire.MessageHistory;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import net.openhft.chronicle.wire.Wire;
@@ -77,12 +78,75 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * {@inheritDoc}
+     * Sets a listener to be called before this appender writes to a newly-created output context.
+     * For Queue, the output context is a newly-created roll file.
      * <p>
-     * For Queue, an output context is a new, empty roll file. The listener runs under the queue
-     * write lock before its first data document. It is not called for metadata, explicit-index
-     * writes, append-locked queues or existing non-empty roll files. Context listeners are not
-     * supported with double buffering, and the caller retains ownership of the listener.
+     * The listener receives a preset method writer for {@code writerType}. Calls made on that
+     * writer are appended before the write that triggered creation of that context. The listener
+     * must write only through that supplied writer and must not re-enter the appender (for example
+     * by opening its own writing document) during the callback. The supplied writer is scoped to the
+     * callback; retaining it or using it after the callback returns is unsupported.
+     * <p>
+     * The listener fires only before the first ordinary data append into a new, empty roll file,
+     * including first use of an empty queue; it is not limited to later clock-driven rolls.
+     * It is not fired for metadata writes, for an append-locked (replication sink) queue, or for explicit
+     * index writes ({@code writeBytes(index, ...)}) - injecting records there would bypass the
+     * append lock or shift the caller's index.
+     * <p>
+     * With double buffering enabled, the callback may run when the buffered write is flushed; the
+     * context records still precede the buffered data in the queue. A caller that uses
+     * {@link net.openhft.chronicle.wire.DocumentContext#contextCount()} for progressive
+     * context resends must not use double buffering; the final target cycle is selected when
+     * the buffer is flushed, so buffered contexts reject context-count access.
+     * <p>
+     * The callback runs while the queue write lock is held. It must be allocation-light, must not
+     * block, and must not perform slow I/O. Each configured appender constructs its method-writer
+     * proxy before its first write and reuses that proxy for later roll callbacks.
+     * <p>
+     * The supplied writer emits normal method-writer documents. Do not enable this listener on a
+     * queue whose readers require one fixed raw payload format unless those readers explicitly
+     * tolerate the context records.
+     * <p>
+     * A context record is advisory, not guaranteed session state: it is not written when appending
+     * to an existing non-empty roll file, for example after restart or failover into the middle of a
+     * roll.
+     * <p>
+     * Context records are synthetic and do not record {@link MessageHistory} by default. A listener
+     * may write history explicitly if that context has a real causal history, but normal usage
+     * assumes no history is written.
+     * <p>
+     * Context that must exist before the first appender write is application state and must be
+     * written by the application as it is built; this listener is not a construction-time callback.
+     * On first use, and on later new-roll callbacks, the listener can dump the current state and
+     * resend any previously written context that new readers may rely on. If there is no context to
+     * write for that callback, it may return without writing anything; Queue treats the context as
+     * handled and does not write a placeholder record.
+     * <p>
+     * A low-latency resend can clear any local "already sent" assumptions first, then write the
+     * missing context while one {@link net.openhft.chronicle.wire.DocumentContext} is held if the
+     * supplied writer also exposes {@link net.openhft.chronicle.wire.DocumentWritten}. This is the
+     * same method-writer pattern as creating a writer with
+     * {@code methodWriter(EventType.class, DocumentWritten.class)} and making several writer calls
+     * before closing the document.
+     * <p>
+     * This method must be called before the appender's first write attempt. If the listener also implements
+     * {@link java.lang.AutoCloseable}, it is closed when this appender is closed, unless the same
+     * instance is configured on the queue builder (then the queue owns it) or is shared with another
+     * appender on the same queue (then it is closed once, by the last appender to release it).
+     * Ownership coordination is queue-local, so a closeable listener instance must not be shared
+     * between appenders belonging to different queues.
+     * <p>
+     * If different listeners are configured on appenders of the same queue, the first appender to
+     * write into an empty roll cycle supplies that cycle's context; the other listeners are not
+     * called for that cycle.
+     *
+     * @param writerType event interface type for the supplied method writer
+     * @param listener   listener to call for new output contexts
+     * @param <T>        event interface type
+     * @return this appender
+     * @throws IllegalStateException         if called after this appender has written
+     * @throws UnsupportedOperationException from the default implementation - only appenders that
+     *                                       support context listeners override this method
      */
     @NotNull
     @Override

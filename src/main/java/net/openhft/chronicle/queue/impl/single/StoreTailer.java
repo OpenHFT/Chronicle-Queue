@@ -1816,7 +1816,10 @@ class StoreTailer extends AbstractCloseable
 
         @Override
         public long contextCount() {
-            return queue.rollCycle().toCycle(index());
+            // negative = no known context (absent document, or queried after close); a valid
+            // count is always positive and never 0
+            long index = index();
+            return isPresent() && index != Long.MIN_VALUE ? queue.rollCycle().toCycle(index) : -1;
         }
 
         /**
