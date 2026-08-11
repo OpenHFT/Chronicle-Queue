@@ -1285,19 +1285,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the committed index of every named tailer registered against this queue, keyed by
-     * tailer name. Positions are read directly during a single scan of the metadata keys; no tailer
-     * is opened or advanced, so on a queue opened read-write this is safe to call from any process
-     * while the owning consumers run. (A queue opened {@code readOnly} may fall back to a read-only
-     * metadata store that does not support this scan.)
+     * Returns a detached snapshot of committed named-tailer indexes collected by a single metadata
+     * scan. The result is not live: subsequent registrations and index changes are not reflected.
+     * This method allocates and takes the metadata-store exclusive lock, so it is intended for
+     * periodic, off-critical-path maintenance or diagnostics rather than application polling.
      * <p>
-     * This exposes what retention by named-tailer position and consumer-lag monitoring need: the
-     * cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}. Internal lock and version
-     * metadata entries are excluded; replicated named tailers are returned under their persisted ids.
-     * An index of {@code 0} means the tailer has never read, or has been parked, and should not be
-     * interpreted as a real roll-cycle position.
+     * For retention, the cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}. Internal
+     * lock and version metadata entries are excluded; replicated named tailers are returned under
+     * their persisted ids. An index of {@code 0} means the tailer has never read, or has been parked,
+     * and should not be interpreted as a real roll-cycle position.
      *
-     * @return a name-ordered map of named-tailer id to its committed index (empty if none)
+     * @return a name-ordered snapshot of named-tailer id to committed index (empty if none)
      * @throws UnsupportedOperationException if the metadata store does not support locked key scans
      */
     public NavigableMap<String, Long> namedTailerIndexes() {

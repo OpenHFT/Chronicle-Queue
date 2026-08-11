@@ -82,6 +82,34 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     }
 
     @Test
+    public void namedTailerIndexesReturnsDetachedSnapshot() {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(15_000));
+        writeDailyExcerpts(dir, 2);
+
+        try (SingleChronicleQueue q = builder(dir).build();
+             ExcerptTailer existing = q.createTailer("existing")) {
+            long firstIndex = q.rollCycle().toIndex(q.firstCycle(), 0);
+            long lastIndex = q.rollCycle().toIndex(q.lastCycle(), 0);
+            assertTrue(existing.moveToIndex(firstIndex));
+
+            NavigableMap<String, Long> snapshot = q.namedTailerIndexes();
+
+            assertTrue(existing.moveToIndex(lastIndex));
+            try (ExcerptTailer later = q.createTailer("later")) {
+                assertTrue(later.moveToIndex(lastIndex));
+            }
+
+            assertEquals(Long.valueOf(firstIndex), snapshot.get("existing"));
+            assertFalse(snapshot.containsKey("later"));
+
+            NavigableMap<String, Long> current = q.namedTailerIndexes();
+            assertEquals(Long.valueOf(lastIndex), current.get("existing"));
+            assertEquals(Long.valueOf(lastIndex), current.get("later"));
+        }
+    }
+
+    @Test
     public void parkNamedTailerResetsExistingNonReplicatedTailer() {
         File dir = getTmpDir();
         timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(20_000));
