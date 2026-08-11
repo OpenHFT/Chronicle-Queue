@@ -345,7 +345,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
             mappedBytes.readPosition(0);
-            mappedBytes.readLimit(mappedBytes.realCapacity());
+            // The mapped write limit can temporarily trail realCapacity while another table-store
+            // instance appends a key. Reading only to the lower bound avoids an invalid read limit.
+            mappedBytes.readLimit(Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity()));
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
