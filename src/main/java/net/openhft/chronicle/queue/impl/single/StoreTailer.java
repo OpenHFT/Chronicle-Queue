@@ -1817,6 +1817,11 @@ class StoreTailer extends AbstractCloseable
             return StoreTailer.this.sourceId();
         }
 
+        @Override
+        public int contextCount() {
+            return queue.rollCycle().toCycle(index());
+        }
+
         /**
          * Closes the context, and if necessary, increments the index after reading a document.
          */
