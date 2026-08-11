@@ -77,6 +77,22 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
+     * {@inheritDoc}
+     * <p>
+     * For Queue, an output context is a roll cycle. Each appender's listener runs under the queue
+     * write lock before that appender's first data document in a cycle. It is not called for
+     * metadata, explicit-index writes or append-locked queues. A restarted appender can therefore
+     * write context again in an existing cycle. Context listeners are not supported with double
+     * buffering, and the caller retains ownership of the listener.
+     */
+    @NotNull
+    @Override
+    default <T> ExcerptAppender contextListener(@NotNull Class<T> writerType,
+                                                @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * Creates and returns a new writer proxy for the given interface {@code tclass} and the given {@code additional }
      * interfaces.
      * <p>
