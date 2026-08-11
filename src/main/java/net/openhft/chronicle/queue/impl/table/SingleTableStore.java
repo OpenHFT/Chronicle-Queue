@@ -267,6 +267,15 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
+        return acquireOrGetValueFor(key, defaultValue, true);
+    }
+
+    @Override
+    public synchronized LongValue getValueFor(CharSequence key) {
+        return acquireOrGetValueFor(key, 0, false);
+    }
+
+    private LongValue acquireOrGetValueFor(CharSequence key, final long defaultValue, boolean createIfAbsent) {
 
         if (mappedBytes.isClosed())
             throw new ClosedIllegalStateException("Closed");
@@ -288,6 +297,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     return valueIn.int64ForBinding(null);
                 }
                 mappedBytes.readPosition(readPosition + length);
+            }
+            if (!createIfAbsent) {
+                return null;
             }
             if (mappedBytes.isBackingFileReadOnly())
                 throw new IllegalStateException("key " + key + " does not exist in readOnly TableStore and cannot be created");
