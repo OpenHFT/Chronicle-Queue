@@ -1393,8 +1393,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free
      * disk matters more than its unread backlog: the registration remains (there is no clean way to
      * delete a table-store entry), but it stops blocking removal. On restart the persisted index
-     * remains {@code 0}; the queue does not infer a new resume point, so the application must
-     * explicitly reinitialise that consumer.
+     * remains {@code 0}; a tailer whose stored index is {@code 0} resumes from {@code firstIndex()}
+     * at its next read - the oldest roll still present - exactly as a freshly created, never-read
+     * tailer does. Consequently rolls deleted below that surviving floor are never replayed to the
+     * parked consumer: parking declares its unread backlog, up to the oldest surviving roll at next
+     * read, discardable.
      * <p>
      * Replicated named tailers (those whose id starts with {@link #REPLICATED_NAMED_TAILER_PREFIX})
      * are refused, returning {@code false} without change: their position is coordinated with sinks
