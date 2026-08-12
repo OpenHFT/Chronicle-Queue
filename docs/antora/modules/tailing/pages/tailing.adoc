@@ -194,6 +194,12 @@ NOTE: The `direction()` is not preserved across restarts, only the next index to
 NOTE: The index of a tailer is only progressed when the `DocumentContext.close()` is called.
 If this is prevented by an error, the same message will be read on each restart.
 
+WARNING: Named tailer ids ending in `.lock` or `.version`, ignoring case, are reserved by current
+releases and are rejected. Before upgrading a queue created by an older release, create a replacement
+tailer with a legal id, move it to the old tailer's committed index, and confirm that the replacement
+position has been persisted before retiring the old id. Maintenance snapshots continue to report
+distinguishable legacy entries so that roll-file retention remains conservative during migration.
+
 == Command Line Tools - Reading and Writing a Chronicle Queue
 
 Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
