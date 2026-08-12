@@ -376,4 +376,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public T metadata() {
         return metadata;
     }
+
+    @Override
+    public boolean readOnly() {
+        return mappedBytes.isBackingFileReadOnly();
+    }
 }
