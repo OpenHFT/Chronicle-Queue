@@ -98,17 +98,24 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
 
             q.tableStorePut("index.gateway.LOCK", index);
             q.tableStorePut("index." + replicated + ".lock", index);
-            q.tableStorePut("index." + replicated + ".lock.lock", Long.MIN_VALUE);
-            q.tableStorePut("index." + replicated + ".lock.version", 1);
+            q.tableStorePut("index." + replicated + ".LOCK.lock", Long.MIN_VALUE);
+            q.tableStorePut("index." + replicated + ".LOCK.version", 1);
+            q.tableStorePut("index." + replicated + ".Version", index);
+            q.tableStorePut("index." + replicated + ".Version.lock", Long.MIN_VALUE);
+            q.tableStorePut("index." + replicated + ".Version.version", 1);
 
             expectException("Legacy named tailer id 'gateway.LOCK'");
-            expectException("Legacy named tailer id '" + replicated + ".lock'");
+            expectException("Legacy named tailer id '" + replicated + ".LOCK'");
+            expectException("Legacy named tailer id '" + replicated + ".Version'");
             NavigableMap<String, Long> indexes = q.namedTailerIndexes();
 
             assertEquals(Long.valueOf(index), indexes.get("gateway.LOCK"));
-            assertEquals(Long.valueOf(index), indexes.get(replicated + ".lock"));
-            assertFalse(indexes.containsKey(replicated + ".lock.lock"));
-            assertFalse(indexes.containsKey(replicated + ".lock.version"));
+            assertEquals(Long.valueOf(index), indexes.get(replicated + ".LOCK"));
+            assertEquals(Long.valueOf(index), indexes.get(replicated + ".Version"));
+            assertFalse(indexes.containsKey(replicated + ".LOCK.lock"));
+            assertFalse(indexes.containsKey(replicated + ".LOCK.version"));
+            assertFalse(indexes.containsKey(replicated + ".Version.lock"));
+            assertFalse(indexes.containsKey(replicated + ".Version.version"));
         }
     }
 
