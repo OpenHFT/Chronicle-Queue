@@ -1305,6 +1305,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * lock and version metadata entries are excluded; replicated named tailers are returned under
      * their persisted ids. An index of {@code 0} means the tailer has never read, or has been parked,
      * and should not be interpreted as a real roll-cycle position.
+     * Legacy tailer ids ending in the now-reserved suffix {@code .lock} or {@code .version} are
+     * retained in the result when they can be distinguished from internal metadata, and a warning
+     * identifies each id that must be migrated. This is deliberately conservative for retention.
      *
      * @return a name-ordered snapshot of named-tailer id to committed index (empty if none)
      * @throws UnsupportedOperationException if the metadata store does not support locked key scans
@@ -1320,16 +1323,45 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
-        final NavigableMap<String, Long> result = new TreeMap<>();
-        tableStore.forEachKey(result, (acc, key, value) -> {
+        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
             final String k = key.toString();
-            if (k.startsWith("index.")) {
-                String namedTailer = k.substring("index.".length());
-                if (!isReservedNamedTailerId(namedTailer))
-                    acc.put(namedTailer, value.int64());
-            }
+            if (k.startsWith("index."))
+                acc.put(k.substring("index.".length()), value.int64());
+        });
+
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        metadataIndexes.forEach((namedTailer, index) -> {
+            if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
+                return;
+            result.put(namedTailer, index);
+            if (isReservedNamedTailerId(namedTailer))
+                Jvm.warn().on(SingleChronicleQueue.class,
+                        "Legacy named tailer id '" + namedTailer + "' uses the now-reserved suffix "
+                                + "'.lock' or '.version'. It remains in this snapshot for safe retention; "
+                                + "migrate its committed position to a new id before using it again.");
         });
         return result;
+    }
+
+    private static boolean isInternalNamedTailerMetadata(Map<String, Long> metadataIndexes,
+                                                          String candidate) {
+        final String suffix;
+        if (candidate.endsWith(".lock"))
+            suffix = ".lock";
+        else if (candidate.endsWith(".version"))
+            suffix = ".version";
+        else
+            return false;
+
+        final String owner = candidate.substring(0, candidate.length() - suffix.length());
+        if (!owner.startsWith(REPLICATED_NAMED_TAILER_PREFIX) || !metadataIndexes.containsKey(owner))
+            return false;
+
+        // Older releases allowed a replicated tailer whose primary id collided with this record.
+        // Its own lock and version records make that legacy registration distinguishable.
+        return !metadataIndexes.containsKey(candidate + ".lock")
+                || !metadataIndexes.containsKey(candidate + ".version");
     }
 
     /**

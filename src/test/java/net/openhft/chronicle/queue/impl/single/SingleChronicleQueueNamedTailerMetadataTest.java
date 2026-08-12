@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -23,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -78,6 +80,35 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             assertEquals(Long.valueOf(gatewayIndex), indexes.get("gateway"));
             assertEquals(Long.valueOf(q.rollCycle().toIndex(q.lastCycle(), 0)), indexes.get(replicated));
             assertTrue(indexes.keySet().stream().noneMatch(k -> k.endsWith(".lock") || k.endsWith(".version")));
+        }
+    }
+
+    @Test
+    public void namedTailerIndexesRetainsDistinguishableLegacyReservedIds() {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(12_000));
+        writeDailyExcerpts(dir, 1);
+
+        try (SingleChronicleQueue q = builder(dir).build()) {
+            long index = q.firstIndex();
+            String replicated = SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX + "sink";
+            try (ExcerptTailer tailer = q.createTailer(replicated)) {
+                assertEquals(0, tailer.index());
+            }
+
+            q.tableStorePut("index.gateway.LOCK", index);
+            q.tableStorePut("index." + replicated + ".lock", index);
+            q.tableStorePut("index." + replicated + ".lock.lock", Long.MIN_VALUE);
+            q.tableStorePut("index." + replicated + ".lock.version", 1);
+
+            expectException("Legacy named tailer id 'gateway.LOCK'");
+            expectException("Legacy named tailer id '" + replicated + ".lock'");
+            NavigableMap<String, Long> indexes = q.namedTailerIndexes();
+
+            assertEquals(Long.valueOf(index), indexes.get("gateway.LOCK"));
+            assertEquals(Long.valueOf(index), indexes.get(replicated + ".lock"));
+            assertFalse(indexes.containsKey(replicated + ".lock.lock"));
+            assertFalse(indexes.containsKey(replicated + ".lock.version"));
         }
     }
 
@@ -226,6 +257,16 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     }
 
     @Test
+    public void namedTailerRegistrationWaitsForExclusiveMetadataLock() throws Exception {
+        assertNamedTailerRegistrationWaitsForMetadataLock(false);
+    }
+
+    @Test
+    public void namedTailerRegistrationWaitsForSharedMetadataLock() throws Exception {
+        assertNamedTailerRegistrationWaitsForMetadataLock(true);
+    }
+
+    @Test
     public void namedTailerIndexesSupportsConcurrentRegistration() throws Exception {
         File dir = getTmpDir();
         timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(90_000));
@@ -291,5 +332,51 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             Thread.currentThread().interrupt();
             throw new AssertionError(e);
         }
+    }
+
+    private void assertNamedTailerRegistrationWaitsForMetadataLock(boolean shared) throws Exception {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(shared ? 85_000 : 84_000));
+        writeDailyExcerpts(dir, 1);
+
+        File metadataFile = new File(dir, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        CountDownLatch lockAcquired = new CountDownLatch(1);
+        CountDownLatch releaseLock = new CountDownLatch(1);
+        CountDownLatch registrationStarted = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try (SingleChronicleQueue queue = builder(dir).build()) {
+            Future<?> lockHolder = executor.submit(() -> {
+                if (shared)
+                    return SingleTableStore.doWithSharedLock(metadataFile,
+                            ignored -> holdLock(lockAcquired, releaseLock), Object::new);
+                return SingleTableStore.doWithExclusiveLock(metadataFile,
+                        ignored -> holdLock(lockAcquired, releaseLock), Object::new);
+            });
+            assertTrue(lockAcquired.await(5, TimeUnit.SECONDS));
+
+            Future<?> registration = executor.submit(() -> {
+                registrationStarted.countDown();
+                try (ExcerptTailer tailer = queue.createTailer("blocked-registration")) {
+                    assertEquals(0, tailer.index());
+                }
+            });
+            assertTrue(registrationStarted.await(5, TimeUnit.SECONDS));
+            assertThrows(TimeoutException.class, () -> registration.get(100, TimeUnit.MILLISECONDS));
+
+            releaseLock.countDown();
+            registration.get(5, TimeUnit.SECONDS);
+            lockHolder.get(5, TimeUnit.SECONDS);
+            assertTrue(queue.namedTailerIndexes().containsKey("blocked-registration"));
+        } finally {
+            releaseLock.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+    }
+
+    private static Object holdLock(CountDownLatch lockAcquired, CountDownLatch releaseLock) {
+        lockAcquired.countDown();
+        await(releaseLock);
+        return null;
     }
 }
