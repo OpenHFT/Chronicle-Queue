@@ -44,16 +44,23 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
 
     private static SingleChronicleQueueBuilder builder(File dir) {
         return SingleChronicleQueueBuilder.single(dir)
-                .rollCycle(TestRollCycles.TEST_DAILY);
+                .rollCycle(TestRollCycles.TEST_DAILY)
+                .timeProvider(SystemTimeProvider.CLOCK);
     }
 
     private void writeDailyExcerpts(File dir, int days) {
         try (ChronicleQueue queue = builder(dir).build();
              ExcerptAppender appender = queue.createAppender()) {
+            int firstCycle = Integer.MIN_VALUE;
             for (int d = 0; d < days; d++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("n").int32(d);
                 }
+                int cycle = queue.rollCycle().toCycle(appender.lastIndexAppended());
+                if (d == 0)
+                    firstCycle = cycle;
+                assertEquals("each simulated day must use a distinct roll cycle",
+                        firstCycle + d, cycle);
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(1));
             }
         }
@@ -253,7 +260,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void namedTailerMetadataApisRejectReservedSuffixes() {
         File dir = getTmpDir();
-        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(80_000));
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(62_000));
         writeDailyExcerpts(dir, 1);
 
         try (SingleChronicleQueue q = builder(dir).build()) {
@@ -276,7 +283,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void namedTailerIndexesSupportsConcurrentRegistration() throws Exception {
         File dir = getTmpDir();
-        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(90_000));
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(68_000));
         writeDailyExcerpts(dir, 1);
 
         try (SingleChronicleQueue registeringQueue = builder(dir).build();
@@ -315,7 +322,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     @Test
     public void parkedNamedTailerRemainsParkedAfterQueueRestart() {
         File dir = getTmpDir();
-        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(100_000));
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(72_000));
         writeDailyExcerpts(dir, 3);
 
         try (SingleChronicleQueue q = builder(dir).build()) {
@@ -343,7 +350,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
 
     private void assertNamedTailerRegistrationWaitsForMetadataLock(boolean shared) throws Exception {
         File dir = getTmpDir();
-        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(shared ? 85_000 : 84_000));
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(shared ? 66_000 : 65_000));
         writeDailyExcerpts(dir, 1);
 
         File metadataFile = new File(dir, SingleChronicleQueue.QUEUE_METADATA_FILE);
