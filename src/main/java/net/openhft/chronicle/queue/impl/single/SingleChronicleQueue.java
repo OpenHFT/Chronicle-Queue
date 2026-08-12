@@ -1374,7 +1374,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
-        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
             final String k = key.toString();
             if (k.startsWith("index."))
@@ -1385,10 +1385,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         metadataIndexes.forEach((namedTailer, index) -> {
             if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
                 return;
-            result.put(namedTailer, index);
-            if (isReservedNamedTailerId(namedTailer))
+            final String persistedId = persistedNamedTailerId(metadataIndexes, namedTailer);
+            result.put(persistedId, index);
+            if (isReservedNamedTailerId(persistedId))
                 Jvm.warn().on(SingleChronicleQueue.class,
-                        "Legacy named tailer id '" + namedTailer + "' uses the now-reserved suffix "
+                        "Legacy named tailer id '" + persistedId + "' uses the now-reserved suffix "
                                 + "'.lock' or '.version'. It remains in this snapshot for safe retention; "
                                 + "migrate its committed position to a new id before using it again.");
         });
@@ -1413,6 +1414,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // Its own lock and version records make that legacy registration distinguishable.
         return !metadataIndexes.containsKey(candidate + ".lock")
                 || !metadataIndexes.containsKey(candidate + ".version");
+    }
+
+    private static String persistedNamedTailerId(NavigableMap<String, Long> metadataIndexes,
+                                                   String candidate) {
+        final String nestedLock = candidate + ".lock";
+        final String persistedNestedLock = metadataIndexes.ceilingKey(nestedLock);
+        if (persistedNestedLock != null && persistedNestedLock.equalsIgnoreCase(nestedLock))
+            return persistedNestedLock.substring(0, persistedNestedLock.length() - ".lock".length());
+        return candidate;
     }
 
     /**
