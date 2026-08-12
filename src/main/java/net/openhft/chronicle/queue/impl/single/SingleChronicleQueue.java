@@ -1296,8 +1296,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     /**
      * Returns a detached snapshot of committed named-tailer indexes collected by a single metadata
      * scan. The result is not live: subsequent registrations and index changes are not reflected.
-     * This method allocates and takes the metadata-store exclusive lock, so it is intended for
-     * periodic, off-critical-path maintenance or diagnostics rather than application polling.
+     * This method allocates and locks the metadata file for one scan: writable stores take an
+     * exclusive lock and read-only stores take a shared lock. It is intended for periodic,
+     * off-critical-path maintenance or diagnostics rather than application polling. A read-only
+     * queue with no metadata file has no persisted named tailers and returns an empty snapshot.
      * <p>
      * For retention, the cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}. Internal
      * lock and version metadata entries are excluded; replicated named tailers are returned under
@@ -1308,18 +1310,26 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @throws UnsupportedOperationException if the metadata store does not support locked key scans
      */
     public NavigableMap<String, Long> namedTailerIndexes() {
-        return metaStore.doWithExclusiveLock(tableStore -> {
-            final NavigableMap<String, Long> result = new TreeMap<>();
-            tableStore.forEachKey(result, (acc, key, value) -> {
-                final String k = key.toString();
-                if (k.startsWith("index.")) {
-                    String namedTailer = k.substring("index.".length());
-                    if (!isReservedNamedTailerId(namedTailer))
-                        acc.put(namedTailer, value.int64());
-                }
-            });
-            return result;
+        if (!metaStore.readOnly())
+            return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
+        if (!(metaStore instanceof SingleTableStore))
+            return new TreeMap<>();
+        File metadataFile = new File(path, QUEUE_METADATA_FILE);
+        return SingleTableStore.doWithSharedLock(metadataFile,
+                SingleChronicleQueue::scanNamedTailerIndexes, () -> metaStore);
+    }
+
+    private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        tableStore.forEachKey(result, (acc, key, value) -> {
+            final String k = key.toString();
+            if (k.startsWith("index.")) {
+                String namedTailer = k.substring("index.".length());
+                if (!isReservedNamedTailerId(namedTailer))
+                    acc.put(namedTailer, value.int64());
+            }
         });
+        return result;
     }
 
     /**
