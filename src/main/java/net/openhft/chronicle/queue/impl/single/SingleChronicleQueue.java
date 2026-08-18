@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
@@ -186,7 +187,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
 
-            if (metaStore.readOnly()) {
+            // ReadonlyTableStore is the no-metadata fallback. A SingleTableStore can also be
+            // read-only, but still contains the persisted cycle listing that a read-only queue
+            // must retain rather than replacing with a filesystem rescan.
+            if (metaStore instanceof ReadonlyTableStore) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
             } else {
                 this.directoryListing = readOnly
@@ -346,6 +350,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         throwExceptionIfClosed();
 
         directoryListing.refresh(true);
+    }
+
+    @NotNull
+    DirectoryListing directoryListing() {
+        return directoryListing;
     }
 
     /**
@@ -1408,8 +1417,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * desynchronise replication. The case-insensitive check is deliberately as broad as the
      * historical table-store lookup that follows it. The result distinguishes this safety refusal
      * from an unknown name so operators can diagnose the outcome without duplicating Queue's
-     * metadata rules. A {@code null} name or a reserved metadata suffix is a caller error rather
-     * than an operational outcome.
+     * metadata rules. Refusal is evaluated before metadata existence, so an unregistered id with a
+     * replicated-looking prefix also returns {@link NamedTailerParkResult#REFUSED_REPLICATED}. A
+     * {@code null} name or a reserved metadata suffix is a caller error rather than an operational
+     * outcome.
      *
      * @param name the named-tailer id to park
      * @return the outcome of the parking attempt
