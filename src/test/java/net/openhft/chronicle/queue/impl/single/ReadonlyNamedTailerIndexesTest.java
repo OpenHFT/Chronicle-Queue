@@ -37,10 +37,26 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
                 .readOnly(true)
                 .build()) {
             assertTrue(queue.metaStore().readOnly());
+            assertTrue(queue.directoryListing() instanceof FileSystemDirectoryListing);
             assertTrue(queue.namedTailerIndexes().isEmpty());
         }
 
         assertFalse(Files.exists(metadata));
+    }
+
+    @Test
+    public void readOnlyQueueWithMetadataUsesPersistedDirectoryListing() {
+        File directory = getTmpDir();
+        try (ChronicleQueue queue = ChronicleQueue.singleBuilder(directory).build()) {
+            queue.createAppender().writeText("one");
+        }
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(directory)
+                .readOnly(true)
+                .build()) {
+            assertTrue(queue.metaStore().readOnly());
+            assertTrue(queue.directoryListing() instanceof TableDirectoryListingReadOnly);
+        }
     }
 
     @Test

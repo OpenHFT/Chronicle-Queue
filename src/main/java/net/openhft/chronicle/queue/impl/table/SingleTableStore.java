@@ -304,7 +304,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             }
             if (mappedBytes.isBackingFileReadOnly())
                 throw new IllegalStateException("key " + key + " does not exist in readOnly TableStore and cannot be created");
-            restoreScanState = false;
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             long start = mappedBytes.readPosition();
             mappedBytes.writePosition(start);
@@ -319,6 +318,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
             if (end >= endOfChunk + overlapSize)
                 throw new IllegalStateException("Misaligned write");
+            // Failed creation must restore the caller's scan state; only a complete entry keeps
+            // the post-write positions and limits used by subsequent acquire calls.
+            restoreScanState = false;
             return longValue;
 
         } catch (StreamCorruptedException | EOFException e) {
