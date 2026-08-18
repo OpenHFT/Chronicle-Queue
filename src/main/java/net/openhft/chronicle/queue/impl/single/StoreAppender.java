@@ -2373,7 +2373,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         @Override
-        public int contextCount() {
+        public long contextCount() {
             // Reject on any double-buffered queue, not just when this write happened to hit lock
             // contention: otherwise the same code works or throws depending on runtime contention.
             // Progressive contextCount usage and double buffering are an unsupported combination.

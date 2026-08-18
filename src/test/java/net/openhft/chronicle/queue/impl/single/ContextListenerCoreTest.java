@@ -13,7 +13,6 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.DocumentWritten;
 import net.openhft.chronicle.wire.MarshallableOut;
-import net.openhft.chronicle.wire.ProgressiveContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -25,6 +24,7 @@ import java.io.File;
 import java.io.StringWriter;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
@@ -362,7 +362,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     @Test
     public void listenerCanHoldOneDocumentWhileWritingContext() {
         AtomicBoolean outerDocumentRemainedOpen = new AtomicBoolean();
-        AtomicInteger contextCount = new AtomicInteger();
+        AtomicLong contextCount = new AtomicLong();
 
         try (ChronicleQueue queue = builder(getTmpDir())
                 .contextListener(ProgressiveEvents.class, writer -> {
@@ -482,12 +482,13 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                                           ServiceContext context,
                                           String message) {
         try (DocumentContext document = events.writingDocument()) {
-            int contextCount = document.contextCount();
+            long contextCount = document.contextCount();
             assertEquals(queue.rollCycle().toCycle(document.index()), contextCount);
-            if (context.needsResending(contextCount))
+            final int cycle = Math.toIntExact(contextCount);
+            if (context.needsResending(cycle))
                 events.context(context);
             events.message(new Message(message));
-            return contextCount;
+            return cycle;
         }
     }
 
@@ -546,7 +547,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     interface ProgressiveEvents extends Events, DocumentWritten {
     }
 
-    static final class ServiceContext extends SelfDescribingMarshallable implements ProgressiveContext {
+    static final class ServiceContext extends SelfDescribingMarshallable {
         private final String name;
         private transient int lastContextCount = -1;
 
@@ -554,7 +555,6 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             this.name = name;
         }
 
-        @Override
         public boolean needsResending(int contextCount) {
             if (contextCount <= lastContextCount)
                 return false;
