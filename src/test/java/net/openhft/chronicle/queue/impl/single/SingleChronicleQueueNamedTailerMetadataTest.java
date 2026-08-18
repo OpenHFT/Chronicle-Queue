@@ -166,7 +166,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
                 assertTrue(dead.moveToIndex(pinned));
             }
 
-            assertTrue(q.parkNamedTailer("dead"));
+            assertEquals(NamedTailerParkResult.PARKED, q.parkNamedTailer("dead"));
             assertEquals(Long.valueOf(0L), q.namedTailerIndexes().get("dead"));
         }
     }
@@ -178,7 +178,8 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         writeDailyExcerpts(dir, 1);
 
         try (SingleChronicleQueue q = builder(dir).build()) {
-            assertFalse(q.parkNamedTailer("missing"));
+            assertEquals(NamedTailerParkResult.NOT_FOUND, q.parkNamedTailer("missing"));
+            assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer(null));
             assertFalse(q.namedTailerIndexes().containsKey("missing"));
         }
     }
@@ -197,11 +198,11 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             try {
                 long lockBefore = q.tableStoreGet("index.gateway.lock");
 
-                assertThrows(IllegalArgumentException.class, () -> q.parkNamedTailer("gateway.version"));
+                assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer("gateway.version"));
                 assertEquals(42L, version.getValue());
 
-                assertThrows(IllegalArgumentException.class, () -> q.parkNamedTailer("gateway.lock"));
-                assertThrows(IllegalArgumentException.class, () -> q.parkNamedTailer("gateway.LOCK"));
+                assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer("gateway.lock"));
+                assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer("gateway.LOCK"));
                 assertEquals(lockBefore, q.tableStoreGet("index.gateway.lock"));
             } finally {
                 lock.unlock();
@@ -224,7 +225,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             try (LongValue version = q.indexVersionForId(name)) {
                 long versionBefore = version.getValue();
 
-                assertFalse(q.parkNamedTailer(name));
+                assertEquals(NamedTailerParkResult.REFUSED_REPLICATED, q.parkNamedTailer(name));
                 assertEquals(Long.valueOf(pinned), q.namedTailerIndexes().get(name));
                 assertEquals(versionBefore, version.getValue());
             }
@@ -330,7 +331,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             try (ExcerptTailer tailer = q.createTailer("parked")) {
                 assertTrue(tailer.moveToIndex(firstIndex));
             }
-            assertTrue(q.parkNamedTailer("parked"));
+            assertEquals(NamedTailerParkResult.PARKED, q.parkNamedTailer("parked"));
         }
 
         try (SingleChronicleQueue q = builder(dir).build();

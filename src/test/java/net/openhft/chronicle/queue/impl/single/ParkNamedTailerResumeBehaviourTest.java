@@ -90,7 +90,7 @@ public class ParkNamedTailerResumeBehaviourTest extends QueueTestCommon {
             assertNotNull(stored);
             assertTrue(stored > 0);
 
-            assertTrue(q.parkNamedTailer("consumer"));
+            assertEquals(NamedTailerParkResult.PARKED, q.parkNamedTailer("consumer"));
             assertEquals(Long.valueOf(0L), q.namedTailerIndexes().get("consumer"));
         }
 
@@ -116,7 +116,7 @@ public class ParkNamedTailerResumeBehaviourTest extends QueueTestCommon {
             try (ExcerptTailer consumer = q.createTailer("consumer")) {
                 assertEquals(0, readNext(consumer, q.firstIndex()));
             }
-            assertTrue(q.parkNamedTailer("consumer"));
+            assertEquals(NamedTailerParkResult.PARKED, q.parkNamedTailer("consumer"));
         }
 
         try (SingleChronicleQueue q = builder(dir).build();
