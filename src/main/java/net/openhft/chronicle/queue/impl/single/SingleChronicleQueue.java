@@ -1373,13 +1373,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
-        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
         tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
             final String k = key.toString();
             if (k.startsWith("index."))
                 acc.put(k.substring("index.".length()), value.int64());
         });
 
+        return selectNamedTailerIndexes(metadataIndexes);
+    }
+
+    static NavigableMap<String, Long> selectNamedTailerIndexes(Map<String, Long> metadataIndexes) {
         final NavigableMap<String, Long> result = new TreeMap<>();
         metadataIndexes.forEach((namedTailer, index) -> {
             if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
@@ -1406,22 +1410,32 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return false;
 
         final String owner = candidate.substring(0, candidate.length() - suffix.length());
-        if (!owner.startsWith(REPLICATED_NAMED_TAILER_PREFIX) || !metadataIndexes.containsKey(owner))
+        if (!owner.startsWith(REPLICATED_NAMED_TAILER_PREFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, owner))
             return false;
 
         // Older releases allowed a replicated tailer whose primary id collided with this record.
         // Its own lock and version records make that legacy registration distinguishable.
-        return !metadataIndexes.containsKey(candidate + ".lock")
-                || !metadataIndexes.containsKey(candidate + ".version");
+        return !containsKeyIgnoreCase(metadataIndexes, candidate + ".lock")
+                || !containsKeyIgnoreCase(metadataIndexes, candidate + ".version");
     }
 
-    private static String persistedNamedTailerId(NavigableMap<String, Long> metadataIndexes,
-                                                   String candidate) {
+    private static String persistedNamedTailerId(Map<String, Long> metadataIndexes,
+                                                  String candidate) {
         final String nestedLock = candidate + ".lock";
-        final String persistedNestedLock = metadataIndexes.ceilingKey(nestedLock);
-        if (persistedNestedLock != null && persistedNestedLock.equalsIgnoreCase(nestedLock))
-            return persistedNestedLock.substring(0, persistedNestedLock.length() - ".lock".length());
+        for (String persistedKey : metadataIndexes.keySet()) {
+            if (persistedKey.equalsIgnoreCase(nestedLock))
+                return persistedKey.substring(0, persistedKey.length() - ".lock".length());
+        }
         return candidate;
+    }
+
+    private static boolean containsKeyIgnoreCase(Map<String, Long> metadataIndexes, String candidate) {
+        for (String persistedKey : metadataIndexes.keySet()) {
+            if (persistedKey.equalsIgnoreCase(candidate))
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -1453,17 +1467,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Replicated named tailers (those whose id starts with {@link #REPLICATED_NAMED_TAILER_PREFIX})
      * are refused without change: their position is coordinated with sinks through version metadata,
      * and a backward reset here would not bump that version, so parking one could desynchronise
-     * replication. The result distinguishes this safety refusal from an unknown or invalid name so
-     * operators can diagnose the outcome without duplicating Queue's metadata rules.
+     * replication. The result distinguishes this safety refusal from an unknown name so operators
+     * can diagnose the outcome without duplicating Queue's metadata rules. A {@code null} name or a
+     * reserved metadata suffix is a caller error rather than an operational outcome.
      *
      * @param name the named-tailer id to park
      * @return the outcome of the parking attempt
+     * @throws NullPointerException     if {@code name} is {@code null}
+     * @throws IllegalArgumentException if {@code name} has a reserved metadata suffix
      */
     public NamedTailerParkResult parkNamedTailer(String name) {
-        if (name == null)
-            return NamedTailerParkResult.INVALID_NAME;
-        if (isReservedNamedTailerId(name))
-            return NamedTailerParkResult.INVALID_NAME;
+        Objects.requireNonNull(name, "name");
+        validateNamedTailerId(name);
         if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
             return NamedTailerParkResult.REFUSED_REPLICATED;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {

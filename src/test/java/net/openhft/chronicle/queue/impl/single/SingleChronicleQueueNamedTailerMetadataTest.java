@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,6 +89,19 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             assertEquals(Long.valueOf(q.rollCycle().toIndex(q.lastCycle(), 0)), indexes.get(replicated));
             assertTrue(indexes.keySet().stream().noneMatch(k -> k.endsWith(".lock") || k.endsWith(".version")));
         }
+    }
+
+    @Test
+    public void namedTailerIndexesKeepCaseVariantIdsSeparate() {
+        NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        metadataIndexes.put("Gateway", 1L);
+        metadataIndexes.put("gateway", 2L);
+
+        NavigableMap<String, Long> indexes = SingleChronicleQueue.selectNamedTailerIndexes(metadataIndexes);
+
+        assertEquals(2, indexes.size());
+        assertEquals(Long.valueOf(1L), indexes.get("Gateway"));
+        assertEquals(Long.valueOf(2L), indexes.get("gateway"));
     }
 
     @Test
@@ -179,7 +193,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
 
         try (SingleChronicleQueue q = builder(dir).build()) {
             assertEquals(NamedTailerParkResult.NOT_FOUND, q.parkNamedTailer("missing"));
-            assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer(null));
+            assertThrows(NullPointerException.class, () -> q.parkNamedTailer(null));
             assertFalse(q.namedTailerIndexes().containsKey("missing"));
         }
     }
@@ -198,10 +212,14 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             try {
                 long lockBefore = q.tableStoreGet("index.gateway.lock");
 
-                assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer("gateway.version"));
+                IllegalArgumentException versionException = assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.version"));
+                assertTrue(versionException.getMessage().contains("would collide with the metadata"));
                 assertEquals(42L, version.getValue());
 
-                assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer("gateway.lock"));
+                IllegalArgumentException lockException = assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.lock"));
+                assertTrue(lockException.getMessage().contains("would collide with the metadata"));
                 assertEquals(lockBefore, q.tableStoreGet("index.gateway.lock"));
             } finally {
                 lock.unlock();

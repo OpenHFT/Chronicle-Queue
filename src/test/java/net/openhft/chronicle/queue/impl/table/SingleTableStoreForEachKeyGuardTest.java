@@ -64,6 +64,7 @@ public class SingleTableStoreForEachKeyGuardTest extends QueueTestCommon {
                     assertNotNull(value);
                     assertEquals(2, value.getValue());
                 }
+                assertEquals(staleWriteLimit, scannerBytes.writeLimit());
 
                 scannerBytes.writePosition(staleWriteLimit);
                 scannerBytes.writeLimit(staleWriteLimit);
@@ -73,6 +74,7 @@ public class SingleTableStoreForEachKeyGuardTest extends QueueTestCommon {
                     value.int64();
                 });
                 assertTrue(keys.contains(latestKey));
+                assertEquals(staleWriteLimit, scannerBytes.writeLimit());
             }
         }
     }
