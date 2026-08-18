@@ -1392,28 +1392,28 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * read, discardable.
      * <p>
      * Replicated named tailers (those whose id starts with {@link #REPLICATED_NAMED_TAILER_PREFIX})
-     * are refused, returning {@code false} without change: their position is coordinated with sinks
-     * through version metadata, and a backward reset here would not bump that version, so parking one
-     * could desynchronise replication.
+     * are refused without change: their position is coordinated with sinks through version metadata,
+     * and a backward reset here would not bump that version, so parking one could desynchronise
+     * replication. The result distinguishes this safety refusal from an unknown or invalid name so
+     * operators can diagnose the outcome without duplicating Queue's metadata rules.
      *
      * @param name the named-tailer id to park
-     * @return {@code true} if the tailer existed and was parked; {@code false} if it is unknown or
-     * {@code null}, or if it is a replicated named tailer (which is never parked)
-     * @throws IllegalArgumentException if {@code name} ends, ignoring case, with the reserved
-     *                                  suffix {@code .lock} or {@code .version}
+     * @return the outcome of the parking attempt
      */
-    public boolean parkNamedTailer(String name) {
+    public NamedTailerParkResult parkNamedTailer(String name) {
         if (name == null)
-            return false;
-        validateNamedTailerId(name);
+            return NamedTailerParkResult.INVALID_NAME;
+        if (isReservedNamedTailerId(name))
+            return NamedTailerParkResult.INVALID_NAME;
         if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
-            return false;
+            return NamedTailerParkResult.REFUSED_REPLICATED;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
             LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
-            if (longValue == null) return false;
+            if (longValue == null)
+                return NamedTailerParkResult.NOT_FOUND;
             longValue.setOrderedValue(0);
-            return true;
+            return NamedTailerParkResult.PARKED;
         }
     }
 
