@@ -13,6 +13,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.DocumentWritten;
 import net.openhft.chronicle.wire.MarshallableOut;
+import net.openhft.chronicle.wire.ProgressiveContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -545,7 +546,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     interface ProgressiveEvents extends Events, DocumentWritten {
     }
 
-    static final class ServiceContext extends SelfDescribingMarshallable {
+    static final class ServiceContext extends SelfDescribingMarshallable implements ProgressiveContext {
         private final String name;
         private transient int lastContextCount = -1;
 
@@ -553,6 +554,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             this.name = name;
         }
 
+        @Override
         public boolean needsResending(int contextCount) {
             if (contextCount <= lastContextCount)
                 return false;
