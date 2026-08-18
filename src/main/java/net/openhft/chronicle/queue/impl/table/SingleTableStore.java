@@ -281,6 +281,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new ClosedIllegalStateException("Closed");
 
         mappedBytes.reserve(this);
+        final long previousReadPosition = mappedBytes.readPosition();
+        final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWriteLimit = mappedBytes.writeLimit();
+        boolean restoreScanState = true;
         try {
             prepareForTableScan();
             while (mappedWire.readDataHeader()) {
@@ -300,6 +304,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             }
             if (mappedBytes.isBackingFileReadOnly())
                 throw new IllegalStateException("key " + key + " does not exist in readOnly TableStore and cannot be created");
+            restoreScanState = false;
             mappedBytes.writeLimit(mappedBytes.realCapacity());
             long start = mappedBytes.readPosition();
             mappedBytes.writePosition(start);
@@ -320,6 +325,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new IORuntimeException(e);
 
         } finally {
+            if (restoreScanState)
+                restoreAfterTableScan(previousReadPosition, previousReadLimit, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -339,6 +346,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
         mappedBytes.reserve(this);
+        final long previousReadPosition = mappedBytes.readPosition();
+        final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWriteLimit = mappedBytes.writeLimit();
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
             prepareForTableScan();
@@ -357,6 +367,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new IORuntimeException(e);
 
         } finally {
+            restoreAfterTableScan(previousReadPosition, previousReadLimit, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -384,5 +395,12 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         // bound; entries appended later are visible on a later scan.
         mappedBytes.writeLimit(mappedBytes.capacity());
         mappedBytes.readLimit(scanLimit);
+    }
+
+    private void restoreAfterTableScan(long readPosition, long readLimit, long writeLimit) {
+        mappedBytes.readPosition(0);
+        mappedBytes.readLimit(readLimit);
+        mappedBytes.writeLimit(writeLimit);
+        mappedBytes.readPosition(readPosition);
     }
 }
