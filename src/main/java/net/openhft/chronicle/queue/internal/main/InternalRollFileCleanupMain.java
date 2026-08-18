@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.queue.impl.single.NamedTailerParkResult;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.internal.util.InternalRollFileCleanup;
@@ -169,11 +170,6 @@ public final class InternalRollFileCleanupMain {
         SingleChronicleQueue build(File queueDir);
     }
 
-    /** A replicated named tailer's position is coordinated with its sinks and cannot be parked. */
-    private static boolean isReplicated(String name) {
-        return name != null && name.startsWith(SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX);
-    }
-
     /** Tells the operator that a replicated park was refused. */
     private static void warnRefusedPark(File queueDir, String name) {
         Jvm.warn().on(InternalRollFileCleanupMain.class,
@@ -220,7 +216,7 @@ public final class InternalRollFileCleanupMain {
                     + ", " + sweepMode(delete, park) + ")");
         final List<File> queues = discoverQueues(root);
         warned |= warnNestedQueueDirs(queues);
-        final Set<String> parkedNames = new HashSet<>();
+        final Set<String> handledParkNames = new HashSet<>();
         for (File queueDir : queues) {
             final InternalRollFileCleanup.Analysis a;
             try (SingleChronicleQueue q = queueFactory.build(queueDir)) {
@@ -228,7 +224,7 @@ public final class InternalRollFileCleanupMain {
                     // Preflight before mutating metadata; a failed analysis must not partially park.
                     InternalRollFileCleanup.analyse(q, keep);
                 }
-                warned |= parkTailers(q, queueDir, park, parkedNames);
+                warned |= parkTailers(q, queueDir, park, handledParkNames);
                 a = InternalRollFileCleanup.analyse(q, keep);
                 if (verbose)
                     traceQueue(q, a);
@@ -279,7 +275,7 @@ public final class InternalRollFileCleanupMain {
         // queue was skipped, absence cannot be proven, so do not emit a misleading typo warning.
         if (!queues.isEmpty() && !skippedQueue)
             for (String name : park)
-                if (!isReplicated(name) && !parkedNames.contains(name)) {
+                if (!handledParkNames.contains(name)) {
                     warned = true;
                     Jvm.warn().on(InternalRollFileCleanupMain.class,
                             "no such named tailer " + name + " under " + root);
@@ -302,20 +298,35 @@ public final class InternalRollFileCleanupMain {
     /**
      * Applies the one-shot {@code --park} action to one queue: retire named consumers (reset to
      * index 0) so they stop pinning rolls; a restarted consumer then resumes from the oldest
-     * available roll. Successfully parked names are added to {@code parkedNames} so the sweep can
-     * warn about names found in no queue at all. Returns whether a replicated park was refused.
+     * available roll. Names with a definitive outcome are added to {@code handledParkNames} so the
+     * sweep can warn about names found in no queue at all. Returns whether any park was refused.
      */
     private static boolean parkTailers(SingleChronicleQueue q, File queueDir, List<String> park,
-                                       Set<String> parkedNames) {
+                                       Set<String> handledParkNames) {
         boolean warned = false;
         for (String name : park) {
-            if (isReplicated(name)) {
-                warned = true;
-                warnRefusedPark(queueDir, name);
-            } else if (q.parkNamedTailer(name)) {
-                parkedNames.add(name);
-                Jvm.debug().on(InternalRollFileCleanupMain.class,
-                        "RETENTION_PARKED " + queueDir.getName() + " " + name);
+            final NamedTailerParkResult result = q.parkNamedTailer(name);
+            switch (result) {
+                case PARKED:
+                    handledParkNames.add(name);
+                    Jvm.debug().on(InternalRollFileCleanupMain.class,
+                            "RETENTION_PARKED " + queueDir.getName() + " " + name);
+                    break;
+                case REFUSED_REPLICATED:
+                    handledParkNames.add(name);
+                    warned = true;
+                    warnRefusedPark(queueDir, name);
+                    break;
+                case INVALID_NAME:
+                    handledParkNames.add(name);
+                    warned = true;
+                    Jvm.warn().on(InternalRollFileCleanupMain.class,
+                            "refusing to park invalid named tailer " + name + " in " + queueDir.getName());
+                    break;
+                case NOT_FOUND:
+                    break;
+                default:
+                    throw new AssertionError("Unhandled named-tailer park result: " + result);
             }
         }
         return warned;
