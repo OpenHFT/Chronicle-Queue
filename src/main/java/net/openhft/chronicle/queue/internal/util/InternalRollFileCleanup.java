@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue.internal.util;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -128,33 +127,6 @@ public final class InternalRollFileCleanup {
         public boolean lagWarning() {
             return !laggingTailers.isEmpty();
         }
-    }
-
-    /**
-     * Analyses a queue directory, opening and closing it around the analysis.
-     * <p>
-     * The directory must already look like a queue (hold a roll file or the queue metadata file).
-     * Opening a queue creates its directory and metadata if missing, so without this guard a typo'd
-     * path would silently gain a queue skeleton that later sweeps discover as a real, empty queue.
-     *
-     * @param baseDir        the queue directory
-     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept ({@code >= 1})
-     * @return the retention verdict
-     * @throws IllegalArgumentException if {@code baseDir} is not an existing queue directory
-     */
-    public static Analysis analyse(File baseDir, int keepLastCycles) {
-        if (!isQueueDir(baseDir))
-            throw new IllegalArgumentException("not a Chronicle Queue directory: " + baseDir);
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.single(baseDir).build()) {
-            return analyse(q, keepLastCycles);
-        }
-    }
-
-    /** A directory is a queue if it holds any roll file or the queue metadata file. */
-    private static boolean isQueueDir(File dir) {
-        final File[] files = dir.listFiles((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX)
-                || name.equals(SingleChronicleQueue.QUEUE_METADATA_FILE));
-        return files != null && files.length > 0;
     }
 
     /**

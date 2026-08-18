@@ -254,23 +254,16 @@ Exit codes from `main()`:
 Combine `--fail-on-warn` with `--interval` with care: the first warning of any sweep exits the process, permanently stopping the loop - a single transient condition (disk momentarily below `--min-free`, one busy queue) ends retention until someone restarts the tool. Use the combination only under a supervisor that restarts on exit and alerts on the exit code. For unsupervised periodic cleanup, prefer cron with `--fail-on-warn` (each sweep is its own process), or `--interval` without `--fail-on-warn` (warnings are logged and the loop continues).
 ====
 
-== API entry points
+== Queue integration points
 
-The tool is built on a small API that can be used directly:
-
-[source,java]
-----
-List<File> removable = FileUtil
-        .removableRollFileCandidatesByTailerPosition(queueDir, 48)
-        .collect(Collectors.toList());
-----
-
-For lower-level diagnostics:
+The tool uses the following low-level integration points. Callers must open the queue with its real
+configuration; rebuilding a queue from its directory with default settings can interpret custom roll
+cycles incorrectly.
 
 [source,java]
 ----
 NavigableMap<String, Long> indexes = queue.namedTailerIndexes();
-boolean parked = queue.parkNamedTailer("old-gateway");
+NamedTailerParkResult parked = queue.parkNamedTailer("old-gateway");
 File rollFile = queue.fileForCycle(cycle);
 ----
 
