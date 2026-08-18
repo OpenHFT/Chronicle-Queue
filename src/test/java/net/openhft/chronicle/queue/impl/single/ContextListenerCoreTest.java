@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.StringWriter;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
@@ -362,7 +361,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     @Test
     public void listenerCanHoldOneDocumentWhileWritingContext() {
         AtomicBoolean outerDocumentRemainedOpen = new AtomicBoolean();
-        AtomicLong contextCount = new AtomicLong();
+        AtomicInteger contextCount = new AtomicInteger();
 
         try (ChronicleQueue queue = builder(getTmpDir())
                 .contextListener(ProgressiveEvents.class, writer -> {
@@ -482,13 +481,12 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                                           ServiceContext context,
                                           String message) {
         try (DocumentContext document = events.writingDocument()) {
-            long contextCount = document.contextCount();
+            int contextCount = document.contextCount();
             assertEquals(queue.rollCycle().toCycle(document.index()), contextCount);
-            final int cycle = Math.toIntExact(contextCount);
-            if (context.needsResending(cycle))
+            if (context.needsResending(contextCount))
                 events.context(context);
             events.message(new Message(message));
-            return cycle;
+            return contextCount;
         }
     }
 
