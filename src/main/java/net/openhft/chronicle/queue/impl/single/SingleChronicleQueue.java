@@ -717,19 +717,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * provided ID to track its position, and the preconditions for creating a tailer
      * are verified before initialization.
      * <p>
-     * Ids ending in {@code .lock} or {@code .version}, ignoring case, are rejected. Every named
-     * tailer uses {@code index.<id>}; versioned named tailers additionally use
+     * Ids ending in the exact lowercase suffix {@code .lock} or {@code .version} are rejected. Every
+     * named tailer uses {@code index.<id>}; versioned named tailers additionally use
      * {@code index.<id>.lock} and {@code index.<id>.version}. Reserving those suffixes prevents one
      * tailer's primary index from overlapping another tailer's version metadata.
      * <p>
-     * This is a deliberate breaking change: earlier releases accepted such ids, but the overlap in
-     * the metadata key namespace made their state ambiguous, so they are now rejected to guarantee
-     * every tailer's keys are non-overlapping. Rename any existing tailer using a reserved suffix
-     * before upgrading.
+     * Mixed-case variants remain accepted for compatibility with existing queues. Maintenance scans
+     * therefore continue to recognise their metadata conservatively.
      *
      * @param id the identifier for the tailer
      * @return a new ExcerptTailer
-     * @throws IllegalArgumentException         if {@code id} ends, ignoring case, with the reserved suffix
+     * @throws IllegalArgumentException         if {@code id} ends with the exact lowercase reserved suffix
      *                                          {@code .lock} or {@code .version}
      * @throws NamedTailerNotAvailableException if the tailer is not available due to replication locks
      */
@@ -1356,9 +1354,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * lock and version metadata entries are excluded; replicated named tailers are returned under
      * their persisted ids. An index of {@code 0} means the tailer has never read, or has been parked,
      * and should not be interpreted as a real roll-cycle position.
-     * Legacy tailer ids ending in the now-reserved suffix {@code .lock} or {@code .version} are
+     * Tailer ids ending in a metadata-shaped variant of {@code .lock} or {@code .version} are
      * retained in the result when they can be distinguished from internal metadata, and a warning
-     * identifies each id that must be migrated. This is deliberately conservative for retention.
+     * identifies each id that should be considered for migration. This is deliberately conservative
+     * for retention.
      *
      * @return a name-ordered snapshot of named-tailer id to committed index (empty if none)
      * @throws UnsupportedOperationException if the metadata store does not support locked key scans
@@ -1387,11 +1386,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 return;
             final String persistedId = persistedNamedTailerId(metadataIndexes, namedTailer);
             result.put(persistedId, index);
-            if (isReservedNamedTailerId(persistedId))
+            if (hasMetadataShapedSuffix(persistedId))
                 Jvm.warn().on(SingleChronicleQueue.class,
-                        "Legacy named tailer id '" + persistedId + "' uses the now-reserved suffix "
+                        "Named tailer id '" + persistedId + "' uses a metadata-shaped suffix "
                                 + "'.lock' or '.version'. It remains in this snapshot for safe retention; "
-                                + "migrate its committed position to a new id before using it again.");
+                                + "consider migrating its committed position to an unambiguous id.");
         });
         return result;
     }
@@ -1478,7 +1477,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static boolean isReservedNamedTailerId(String id) {
-        return endsWithIgnoreCase(id, ".lock") || endsWithIgnoreCase(id, ".version");
+        return id != null && (id.endsWith(".lock") || id.endsWith(".version"));
+    }
+
+    private static boolean hasMetadataShapedSuffix(String value) {
+        return endsWithIgnoreCase(value, ".lock") || endsWithIgnoreCase(value, ".version");
     }
 
     private static boolean endsWithIgnoreCase(String value, String suffix) {
@@ -1494,7 +1497,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private static IllegalArgumentException reservedNamedTailerIdException(String id) {
         return new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
-                + "'.lock' and '.version' are reserved regardless of case. Tailer state is kept under the metadata "
+                + "'.lock' and '.version' are reserved in exact lowercase. Tailer state is kept under the metadata "
                 + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
                 + "would collide with the metadata of the tailer named '"
                 + id.substring(0, id.lastIndexOf('.')) + "'");
