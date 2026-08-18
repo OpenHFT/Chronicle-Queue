@@ -282,10 +282,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
         mappedBytes.reserve(this);
         try {
-            mappedBytes.readPosition(0);
-            // if we set readLimit to realCapacity then we can run into DecoratedBufferUnderflowException: readLimit failed. Limit: xx > writeLimit: yy
-            // while reading from a TableStore which is being written to
-            mappedBytes.readLimit(Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity()));
+            prepareForTableScan();
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
@@ -344,10 +341,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedBytes.reserve(this);
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
-            mappedBytes.readPosition(0);
-            // The mapped write limit can temporarily trail realCapacity while another table-store
-            // instance appends a key. Reading only to the lower bound avoids an invalid read limit.
-            mappedBytes.readLimit(Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity()));
+            prepareForTableScan();
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
@@ -380,5 +374,15 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public boolean readOnly() {
         return mappedBytes.isBackingFileReadOnly();
+    }
+
+    private void prepareForTableScan() {
+        mappedBytes.readPosition(0);
+        final long scanLimit = mappedBytes.realCapacity();
+        // writeLimit is local to this MappedBytes instance and is not updated when another
+        // table-store instance grows the file. Snapshot realCapacity() as this scan's upper
+        // bound; entries appended later are visible on a later scan.
+        mappedBytes.writeLimit(mappedBytes.capacity());
+        mappedBytes.readLimit(scanLimit);
     }
 }
