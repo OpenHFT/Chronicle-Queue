@@ -1818,7 +1818,7 @@ class StoreTailer extends AbstractCloseable
         }
 
         @Override
-        public int contextCount() {
+        public long contextCount() {
             return queue.rollCycle().toCycle(index());
         }
 
