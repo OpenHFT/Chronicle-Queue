@@ -951,6 +951,12 @@ class StoreTailer extends AbstractCloseable
                 state = FOUND_IN_CYCLE;
             else if (store != null)
                 throw new MissingStoreFileException("Missing first store file cycle=" + firstCycle);
+        } else if (store != null && !store.file().exists()) {
+            // The tailer is already positioned on this cycle, so the block above short-circuits,
+            // but the store file backing it has been deleted from under us and the cached directory
+            // listing still reports it as the first cycle. Signal the caller (toStart) to refresh the
+            // directory listing and re-resolve the target. See https://github.com/OpenHFT/Chronicle-Queue/issues/1151
+            throw new MissingStoreFileException("First store file deleted cycle=" + firstCycle);
         }
         index(queue.rollCycle().toIndex(cycle, 0));
 
@@ -1247,6 +1253,15 @@ class StoreTailer extends AbstractCloseable
                     lastCycle, queue.epoch(), false, this.store);
             if (wireStore == null)
                 throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
+            if (!wireStore.file().exists()) {
+                // The directory listing still reports this as the last cycle, but its backing file has
+                // been deleted from under us (the store may still be memory-mapped). Signal the caller
+                // (callOptimizedToEnd) to refresh the directory listing and re-resolve via originalToEnd.
+                // See https://github.com/OpenHFT/Chronicle-Queue/issues/1151
+                if (wireStore != this.store)
+                    storePool.closeStore(wireStore);
+                throw new MissingStoreFileException("Last store file deleted cycle=" + Long.toHexString(lastCycle) + " queue=" + queue.fileAbsolutePath());
+            }
             this.setCycle(lastCycle);
 
             if (this.store != wireStore) {
