@@ -226,6 +226,25 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
+    public void shouldFilterByMultipleInclusionRegexMethodReader() {
+        // #1150 also names shouldFilterByMultipleInclusionRegex for method readers. Multiple inclusion
+        // patterns must ALL match for a message to pass (the same PatternFilterMessageConsumer used by
+        // the plain text reader), applied against the method reader's rendered multi-line DTO. Here only
+        // the "goodbye" excerpts contain "bye" as well as an "o", so exactly those 12 of 24 survive.
+        basicReaderMethodReader()
+                .withInclusionRegex(".*bye.*")
+                .withInclusionRegex(".*o.*")
+                .execute();
+
+        long remaining = capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count();
+        assertEquals(12L, remaining);
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
+                .forEach(msg -> assertThat(msg, containsString("goodbye")));
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
+                .forEach(msg -> assertThat(msg, not(containsString("hello"))));
+    }
+
+    @Test
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {
         basicReaderMethodReader().historyRecords(5).execute();
 
