@@ -65,6 +65,8 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
+            <!-- Remove once the BOM includes the QUEUE-143 Wire EOF recovery. -->
+            <version>2026.9-SNAPSHOT</version>
         </dependency>
 
         <dependency>
