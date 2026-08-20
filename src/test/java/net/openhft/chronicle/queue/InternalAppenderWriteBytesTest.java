@@ -8,8 +8,8 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.*;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -23,7 +23,6 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 
 public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
@@ -238,30 +237,52 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void cannotAppendToPreviousCycle() {
+    public void canBackfillPreviousCycleAfterEOF() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build();
-             ExcerptAppender appender = q.createAppender()) {
-            appender.writeBytes(test);
-            long nextIndexInFirstCycle = appender.lastIndexAppended() + 1;
-            int firstCycle = q.rollCycle().toCycle(nextIndexInFirstCycle);
+             ExcerptTailer tailer = q.createTailer()) {
+            final int firstCycle;
+            try (ExcerptAppender appender = q.createAppender()) {
+                appender.writeBytes(test);
+                long nextIndexInFirstCycle = appender.lastIndexAppended() + 1;
+                firstCycle = q.rollCycle().toCycle(nextIndexInFirstCycle);
 
-            timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
-            appender.writeBytes(test2);
+                timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
+                appender.writeBytes(test2);
 
+                Assert.assertTrue(hasEOF(q, firstCycle));
+                expectException("Overwriting an end-of-data marker");
+                ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
+            }
+
+            Assert.assertFalse(hasEOF(q, firstCycle));
+            try (ExcerptAppender normalisingAppender = q.createAppender();
+                 DocumentContext metadata = normalisingAppender.writingDocument(true)) {
+                // Starting a document on the current cycle restores EOF to older cycles.
+                metadata.wire().write("backfillComplete").bool(true);
+            }
             Assert.assertTrue(hasEOF(q, firstCycle));
-            // here we try and write to previous cycle file
-            assertThrows(WriteAfterEOFException.class, () -> ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1));
+
+            assertNextBytes(tailer, result, test);
+            assertNextBytes(tailer, result, test1);
+            assertNextBytes(tailer, result, test2);
+            Assert.assertFalse(tailer.readBytes(result));
         }
+    }
+
+    private static void assertNextBytes(ExcerptTailer tailer, Bytes<?> result, Bytes<?> expected) {
+        result.clear();
+        Assert.assertTrue(tailer.readBytes(result));
+        assertEquals(expected, result);
     }
 
     private boolean hasEOF(SingleChronicleQueue q, int cycle) {
         try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
             String dump = store.dump(WireType.BINARY_LIGHT);
-            System.out.println(dump);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }
     }

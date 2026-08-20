@@ -33,6 +33,14 @@ At startup, replication locks the `source` queue, and waits for the `sink`(s) to
 If the `sink` has more records, they are replayed back to `source` (this is also known as "back filling") before it is unlocked and made usable again.
 This is done to provide automatic data re-synchronisation after a failover to the `sink`.
 
+Back-fill can legitimately reopen a roll that the receiving node has already
+sealed. For example, leader A can fail after C received entries that B did not.
+If B is elected leader, time can advance and cause B to seal the incomplete
+older roll before C returns the missing entries. The end-of-data marker records
+B's incomplete local observation; it is not a cluster-wide decision that C's
+data may be discarded. Exact-index back-fill therefore replaces that marker
+and emits a warning so the recovery remains visible to operators.
+
 The set of hosts onto which the queue is replicated, is defined as a `cluster`.
 The configuration for a cluster is as follows:
 

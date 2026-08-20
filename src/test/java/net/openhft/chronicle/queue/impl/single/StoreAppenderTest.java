@@ -10,7 +10,6 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -22,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -62,7 +60,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
+    public void testCanContinueWritingAfterEOFIsOverwritten() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
         clock.addAndGet(-clock.get() % ONE_DAY);
@@ -79,17 +77,17 @@ public class StoreAppenderTest extends QueueTestCommon {
             // Write to a new cycle:
             appender.writingDocument().close();
 
-            // The code now throws WriteAfterEOFException for the old cycle:
+            // Return to the old cycle after it has been sealed.
             clock.addAndGet(-1); // One millisecond earlier
 
-            assertThrows(WriteAfterEOFException.class, // is this a race?
-                    () -> appender.writingDocument().close());
+            expectException("Overwriting an end-of-data marker");
+            appender.writingDocument().close();
 
             // advance back to the latest cycle and write
             clock.addAndGet(2);
             appender.writingDocument().close();
 
-            assertEquals(3, queue.entryCount());
+            assertEquals(4, queue.entryCount());
         }
     }
 
