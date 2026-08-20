@@ -41,6 +41,12 @@ B's incomplete local observation; it is not a cluster-wide decision that C's
 data may be discarded. Exact-index back-fill therefore replaces that marker
 and emits a warning so the recovery remains visible to operators.
 
+This recovery does not rewind consumers that have already advanced beyond the
+reopened cycle. Enterprise back-fill completes before the replacement source is
+unlocked for normal use. Other callers must provide equivalent coordination,
+and external archival or cleanup tools must not treat an end-of-data marker as
+proof that a roll can never be reopened.
+
 The set of hosts onto which the queue is replicated, is defined as a `cluster`.
 The configuration for a cluster is as follows:
 

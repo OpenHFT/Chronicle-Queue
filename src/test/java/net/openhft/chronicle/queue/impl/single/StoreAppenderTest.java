@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -88,6 +90,16 @@ public class StoreAppenderTest extends QueueTestCommon {
             appender.writingDocument().close();
 
             assertEquals(4, queue.entryCount());
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                for (int i = 0; i < 4; i++) {
+                    try (DocumentContext document = tailer.readingDocument()) {
+                        assertTrue("entry " + i + " should be readable", document.isPresent());
+                    }
+                }
+                try (DocumentContext document = tailer.readingDocument()) {
+                    assertFalse("queue should contain exactly four entries", document.isPresent());
+                }
+            }
         }
     }
 

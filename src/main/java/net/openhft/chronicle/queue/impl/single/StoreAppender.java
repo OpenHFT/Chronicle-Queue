@@ -621,17 +621,18 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Ensures that EOF markers are properly added to all cycles, normalizing older cycles to ensure they are complete.
-     * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
+     * Ensures that EOF markers are present on every cycle before the last existing cycle.
+     * Indexed back-fill can reopen a cycle and move this appender behind the queue's last cycle;
+     * normalisation therefore uses the queue's cycle range rather than the appender's current cycle.
      */
     public void normaliseEOFs() {
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            // use the getter, not the raw field: after the construction-time back-scan releases its
-            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
-            normaliseEOFs0(cycle());
+            // An indexed back-fill can leave this appender parked on an older cycle. Normalise to
+            // the last existing cycle so the reopened cycle is sealed again before readers cross it.
+            normaliseEOFs0(queue.lastCycle());
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -641,10 +642,10 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Internal method to normalize EOFs for all cycles up to the specified cycle.
-     * Adds EOF markers where necessary and ensures all earlier cycles are finalized.
+     * Internal method to normalise EOFs for all cycles up to the specified cycle.
+     * Adds EOF markers where necessary and ensures all earlier cycles are finalised.
      *
-     * @param cycle the target cycle up to which EOF normalization should occur
+     * @param cycle the target cycle up to which EOF normalisation should occur
      */
     private void normaliseEOFs0(int cycle) {
         int first = queue.firstCycle();
@@ -879,6 +880,13 @@ class StoreAppender extends AbstractCloseable
         boolean isIndex = index == headerNumber;
         if (!isIndex) {
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
+        }
+
+        // Exact-index back-fill can replace EOF in a cycle that was already covered by the
+        // persisted normalisation high-water mark. Make the reopened cycle eligible again.
+        if (cycle < queue.lastCycle()) {
+            final int firstCycle = queue.firstCycle();
+            queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, firstCycle).setMinValue(cycle);
         }
     }
 
