@@ -1,7 +1,7 @@
 # Chronicle-Queue #924 — sub-minute directory-change detection: scope decision & design
 
 Branch: `feat/Chronicle-Queue-924-confirm-a-current-user-needs-sub-i`
-Date: 2026-08-19 · worktree `/home/peter/Build-All/2022-PRs/Chronicle-Queue`
+Date: 2026-08-19
 
 ## Corrected scope (roadmap B6 — WatchService is an OPTIMISATION, not the source of truth)
 The original #924 framing ("replace the periodic directory scan with WatchService") is wrong: the
