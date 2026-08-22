@@ -12,7 +12,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -48,31 +47,35 @@ public class JunkAfterShorterWriteTest extends QueueTestCommon {
             // First (complete) message.
             appender.writeText("hi");
 
-            final int cycle = queue.cycle();
-            final long junkSlot;
-            try (final SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), false, null)) {
-                // store.writePosition() is the start of the last (first) record's header.
-                final long firstHeader = store.writePosition();
-                try (final MappedBytes mb = MappedBytes.mappedBytes(store.file(), OS.pageSize())) {
-                    final int header = mb.readVolatileInt(firstHeader);
-                    final long firstEnd = firstHeader + Wires.SPB_HEADER_SIZE + Wires.lengthOf(header);
-                    // Where the second record's header will go (padding-aligned).
-                    final long secondSlot = firstEnd + BytesUtil.padOffset(firstEnd);
-                    // A short second message ("x") occupies header(4)+payload(2)+pad = 8 bytes, so the
-                    // slot that follows it is 8 bytes on. That is where leftover junk from an aborted
-                    // longer write would sit and be misread as the next header.
-                    junkSlot = secondSlot + 8;
-
-                    // Plant junk that looks like a small, complete data header.
-                    mb.writeInt(junkSlot, 8);
-                    // sanity: the junk must be readable as a non-zero header before the shorter write commits
-                    assertTrue("planted junk should be non-zero", mb.readVolatileInt(junkSlot) != 0);
-                }
+            // Start a longer write and roll it back, reproducing the dirty payload
+            // left by an incomplete writer before the shorter retry.
+            try (final DocumentContext dc = appender.writingDocument()) {
+                dc.wire().getValueOut().text("a considerably longer incomplete value");
+                dc.rollbackOnClose();
             }
 
-            // Second (complete) message, shorter than the aborted write whose tail we simulated.
-            // Committing this write must zero the following slot, clearing the planted junk.
-            appender.writeText("x");
+            final int cycle = queue.cycle();
+            final long junkSlot;
+            try (final DocumentContext dc = appender.writingDocument()) {
+                dc.wire().getValueOut().text("x");
+                final long committedRecordEnd = dc.wire().bytes().writePosition();
+                final long padding = BytesUtil.padOffset(committedRecordEnd);
+                assertEquals("the regression requires two bytes of alignment padding", 2, padding);
+                junkSlot = committedRecordEnd + padding;
+
+                // Little-endian bytes are 08 00 20 6c. The old four-byte clear starts
+                // two bytes before junkSlot, clearing 08 00 but leaving 20 6c. The
+                // fixed eight-byte clear removes the complete following header.
+                dc.wire().bytes().writeInt(junkSlot, 0x6c20_0008);
+                assertTrue("planted following header should be non-zero",
+                        dc.wire().bytes().readVolatileInt(junkSlot) != 0);
+            }
+
+            try (final SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), false, null);
+                 final MappedBytes mb = MappedBytes.mappedBytes(store.file(), OS.pageSize())) {
+                assertEquals("commit must clear the complete aligned following header",
+                        0, mb.readVolatileInt(junkSlot));
+            }
 
             // A fresh tailer must read exactly the two written messages and then reach end-of-queue,
             // never seeing the planted junk as a message.
