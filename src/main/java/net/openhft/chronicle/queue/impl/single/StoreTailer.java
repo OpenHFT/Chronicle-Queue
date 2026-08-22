@@ -941,7 +941,7 @@ class StoreTailer extends AbstractCloseable
         assert direction != BACKWARD;
         final int firstCycle = queue.firstCycle();
         if (firstCycle == Integer.MAX_VALUE) {
-            state = UNINITIALISED;
+            resetToEmptyQueue();
             return this;
         }
         if (firstCycle != this.cycle) {
@@ -983,6 +983,10 @@ class StoreTailer extends AbstractCloseable
             return doToStart();
         } catch (MissingStoreFileException e) {
             queue.refreshDirectoryListing();
+            if (!queueHasRollFiles()) {
+                resetToEmptyQueue();
+                return this;
+            }
             return doToStart();
         }
     }
@@ -1181,6 +1185,10 @@ class StoreTailer extends AbstractCloseable
             return optimizedToEnd();
         } catch (MissingStoreFileException e) {
             queue.refreshDirectoryListing();
+            if (!queueHasRollFiles()) {
+                resetToEmptyQueue();
+                return this;
+            }
             return originalToEnd();
         }
     }
@@ -1244,8 +1252,7 @@ class StoreTailer extends AbstractCloseable
         final int lastCycle = queue.lastCycle();
         try {
             if (lastCycle == Integer.MIN_VALUE) {
-                if (state() == TailerState.CYCLE_NOT_FOUND)
-                    state = UNINITIALISED;
+                resetToEmptyQueue();
                 return this;
             }
 
@@ -1310,8 +1317,7 @@ class StoreTailer extends AbstractCloseable
         long index = approximateLastIndex;
 
         if (index == Long.MIN_VALUE) {
-            if (state() == TailerState.CYCLE_NOT_FOUND)
-                state = UNINITIALISED;
+            resetToEmptyQueue();
             return this;
         }
         ScanResult scanResult = moveToIndexResult(index);
@@ -1573,6 +1579,28 @@ class StoreTailer extends AbstractCloseable
             store = null;
         }
         state = UNINITIALISED;
+    }
+
+    private void resetToEmptyQueue() {
+        context.wire(null);
+        final Wire indexWire = wireForIndex;
+        if (indexWire != null)
+            indexWire.bytes().release(INIT);
+        wireForIndex = null;
+        releaseStore();
+        setCycle(Integer.MIN_VALUE);
+        index0(Long.MIN_VALUE);
+        lastReadIndex = 0;
+        indexAtCreation = Long.MIN_VALUE;
+        readingDocumentFound = false;
+        moveToState.reset();
+        state = UNINITIALISED;
+    }
+
+    private boolean queueHasRollFiles() {
+        final String[] rollFiles = queue.file().list(
+                (directory, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+        return rollFiles == null || rollFiles.length > 0;
     }
 
     /**
