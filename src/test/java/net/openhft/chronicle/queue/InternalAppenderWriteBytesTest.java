@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.*;
 import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -22,6 +23,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
@@ -253,19 +255,32 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                 timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
                 appender.writeBytes(test2);
 
+                assertNextBytes(tailer, result, test);
+                assertNextBytes(tailer, result, test2);
+                Assert.assertFalse(tailer.readBytes(result.clear()));
+
                 Assert.assertTrue(hasEOF(q, firstCycle));
-                expectException("Overwriting an end-of-data marker");
-                ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
+                assertThrows(WriteAfterEOFException.class,
+                        () -> ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1));
+                Assert.assertTrue(hasEOF(q, firstCycle));
+
+                expectException("remotePeer=C");
+                Assert.assertTrue(((InternalAppender) appender).writeBytesForRecovery(
+                        nextIndexInFirstCycle, test1, "source=replication-test, remotePeer=C"));
 
                 Assert.assertFalse(hasEOF(q, firstCycle));
                 appender.normaliseEOFs();
             }
             Assert.assertTrue(hasEOF(q, firstCycle));
+            Assert.assertFalse("a live tailer that crossed the roll must not rewind implicitly",
+                    tailer.readBytes(result.clear()));
 
-            assertNextBytes(tailer, result, test);
-            assertNextBytes(tailer, result, test1);
-            assertNextBytes(tailer, result, test2);
-            Assert.assertFalse(tailer.readBytes(result));
+            try (ExcerptTailer restartedTailer = q.createTailer()) {
+                assertNextBytes(restartedTailer, result, test);
+                assertNextBytes(restartedTailer, result, test1);
+                assertNextBytes(restartedTailer, result, test2);
+                Assert.assertFalse(restartedTailer.readBytes(result.clear()));
+            }
         }
     }
 
@@ -298,8 +313,10 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             appender.writeBytes(cycle3);
             appender.normaliseEOFs();
 
-            expectException("Overwriting an end-of-data marker");
-            ((InternalAppender) appender).writeBytes(recoveredIndex, recovered);
+            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            Assert.assertTrue(((InternalAppender) appender).writeBytesForRecovery(
+                    recoveredIndex, recovered, "source=replication-test, remotePeer=C"));
 
             Assert.assertFalse(hasEOF(q, firstCycle));
             appender.normaliseEOFs();

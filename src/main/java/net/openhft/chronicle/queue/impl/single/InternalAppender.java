@@ -33,4 +33,18 @@ public interface InternalAppender extends ExcerptAppender {
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
 
+    /**
+     * Appends replicated data at an exact index, explicitly allowing an
+     * optimistic end-of-data marker to be replaced.
+     *
+     * @param index           exact recovery index
+     * @param bytes           contents of the excerpt
+     * @param recoveryContext replication source and peer context for diagnostics
+     * @return {@code true} if this write replaced an end-of-data marker
+     */
+    default boolean writeBytesForRecovery(long index, BytesStore<?, ?> bytes, String recoveryContext) {
+        writeBytes(index, bytes);
+        return false;
+    }
+
 }

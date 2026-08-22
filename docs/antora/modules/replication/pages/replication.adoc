@@ -38,14 +38,21 @@ sealed. For example, leader A can fail after C received entries that B did not.
 If B is elected leader, time can advance and cause B to seal the incomplete
 older roll before C returns the missing entries. The end-of-data marker records
 B's incomplete local observation; it is not a cluster-wide decision that C's
-data may be discarded. Exact-index back-fill therefore replaces that marker
-and emits a warning so the recovery remains visible to operators.
+data may be discarded. Only the locked, exact-index back-fill path may replace
+that marker. Ordinary appenders continue to reject writes after end-of-data.
+The recovery warning includes queue path, cycle, index and, when supplied by
+replication, source and peer host context.
 
 This recovery does not rewind consumers that have already advanced beyond the
 reopened cycle. Enterprise back-fill completes before the replacement source is
 unlocked for normal use. Other callers must provide equivalent coordination,
 and external archival or cleanup tools must not treat an end-of-data marker as
 proof that a roll can never be reopened.
+
+Wire, Queue and Queue Enterprise must be validated as one supported combination.
+Release Wire first, then Queue and Queue Enterprise, and update the BOM only after
+the cross-repository recovery tests pass. An older Queue does not invoke Wire's
+explicit recovery operation and therefore retains strict end-of-data behaviour.
 
 The set of hosts onto which the queue is replicated, is defined as a `cluster`.
 The configuration for a cluster is as follows:

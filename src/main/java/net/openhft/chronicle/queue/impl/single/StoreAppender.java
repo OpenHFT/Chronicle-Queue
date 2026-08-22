@@ -30,6 +30,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.util.Iterator;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
@@ -76,6 +79,9 @@ class StoreAppender extends AbstractCloseable
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
     private int count = 0;
+    private final NavigableSet<Integer> reopenedCycles = new TreeSet<>();
+    private boolean recoveredEndOfData;
+    private int eofNormalisationCycleProbes;
 
     /**
      * Constructor for StoreAppender. Initializes the appender by finding the first open cycle
@@ -630,8 +636,7 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            // An indexed back-fill can leave this appender parked on an older cycle. Normalise to
-            // the last existing cycle so the reopened cycle is sealed again before readers cross it.
+            normaliseReopenedCycles();
             normaliseEOFs0(queue.lastCycle());
         } finally {
             writeLock.unlock();
@@ -639,6 +644,24 @@ class StoreAppender extends AbstractCloseable
             if (tookMillis > WARN_SLOW_APPENDER_MS)
                 Jvm.perf().on(getClass(), "Took " + tookMillis + "ms to normaliseEOFs");
         }
+    }
+
+    private void normaliseReopenedCycles() {
+        for (Iterator<Integer> iterator = reopenedCycles.iterator(); iterator.hasNext(); ) {
+            final int reopenedCycle = iterator.next();
+            eofNormalisationCycleProbes++;
+            setCycle2(reopenedCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
+            if (wire == null || store.writeEOF(wire, timeoutMS()))
+                iterator.remove();
+        }
+    }
+
+    int pendingEOFNormalisationCount() {
+        return reopenedCycles.size();
+    }
+
+    int eofNormalisationCycleProbes() {
+        return eofNormalisationCycleProbes;
     }
 
     /**
@@ -660,6 +683,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         for (; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
+            eofNormalisationCycleProbes++;
             setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
             if (wire != null) {
                 assert queue.writeLock().locked();
@@ -690,6 +714,11 @@ class StoreAppender extends AbstractCloseable
      * @return the position of the written header
      */
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
+        return writeHeader(wire, safeLength, Long.MIN_VALUE, "");
+    }
+
+    private long writeHeader(@NotNull final Wire wire, final long safeLength,
+                             final long recoveryIndex, final String callerRecoveryContext) {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
         long pos = positionOfHeader;
@@ -707,6 +736,23 @@ class StoreAppender extends AbstractCloseable
         assert header != NOT_INITIALIZED;
         lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
+        if (recoveryIndex == Long.MIN_VALUE)
+            return wire.enterHeader(safeLength);
+
+        assert writeLock.locked();
+        final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+        final long recoveredPosition = ((InternalWire) wire).recoverFromEndOfData();
+        if (recoveredPosition >= 0) {
+            recoveredEndOfData = true;
+            reopenedCycles.add(recoveryCycle);
+            Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
+                    + queue.fileAbsolutePath()
+                    + ", cycle=" + recoveryCycle
+                    + ", index=0x" + Long.toHexString(recoveryIndex)
+                    + ", position=" + recoveredPosition
+                    + (callerRecoveryContext == null || callerRecoveryContext.isEmpty()
+                    ? "" : ", " + callerRecoveryContext));
+        }
         return wire.enterHeader(safeLength);
     }
 
@@ -718,8 +764,13 @@ class StoreAppender extends AbstractCloseable
      * @param safeLength the maximum length of data that can be safely written
      */
     private void openContext(final boolean metaData, final long safeLength) {
+        openContext(metaData, safeLength, Long.MIN_VALUE, "");
+    }
+
+    private void openContext(final boolean metaData, final long safeLength,
+                             final long recoveryIndex, final String recoveryContext) {
         assert wire != null;
-        this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
+        this.positionOfHeader = writeHeader(wire, safeLength, recoveryIndex, recoveryContext);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
@@ -836,6 +887,21 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
+    @Override
+    public boolean writeBytesForRecovery(final long index, @NotNull final BytesStore<?, ?> bytes,
+                                         final String recoveryContext) {
+        throwExceptionIfClosed();
+        checkAppendLock();
+        writeLock.lock();
+        try {
+            recoveredEndOfData = false;
+            writeBytesInternal(index, bytes, recoveryContext);
+            return recoveredEndOfData;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
     /**
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
      * the queue file and cause data loss.
@@ -845,6 +911,16 @@ class StoreAppender extends AbstractCloseable
      * @throws IndexOutOfBoundsException when the index specified is not after the end of the queue
      */
     protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
+        writeBytesInternal(index, bytes, Long.MIN_VALUE, "");
+    }
+
+    private void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes,
+                                    final String recoveryContext) {
+        writeBytesInternal(index, bytes, index, recoveryContext);
+    }
+
+    private void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes,
+                                    final long recoveryIndex, final String recoveryContext) {
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
@@ -873,7 +949,7 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        writeBytesInternal(bytes, false);
+        writeBytesInternal(bytes, false, recoveryIndex, recoveryContext);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
@@ -881,21 +957,19 @@ class StoreAppender extends AbstractCloseable
         if (!isIndex) {
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
-
-        // Exact-index back-fill can replace EOF in a cycle that was already covered by the
-        // persisted normalisation high-water mark. Make the reopened cycle eligible again.
-        if (cycle < queue.lastCycle()) {
-            final int firstCycle = queue.firstCycle();
-            queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, firstCycle).setMinValue(cycle);
-        }
     }
 
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
+        writeBytesInternal(bytes, metadata, Long.MIN_VALUE, "");
+    }
+
+    private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata,
+                                    long recoveryIndex, String recoveryContext) {
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            openContext(metadata, safeLength);
+            openContext(metadata, safeLength, recoveryIndex, recoveryContext);
 
             try {
                 final Bytes<?> bytes0 = context.wire().bytes();

@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -10,6 +11,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -21,8 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -62,7 +63,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCanContinueWritingAfterEOFIsOverwritten() throws IOException {
+    public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
         clock.addAndGet(-clock.get() % ONE_DAY);
@@ -79,27 +80,40 @@ public class StoreAppenderTest extends QueueTestCommon {
             // Write to a new cycle:
             appender.writingDocument().close();
 
-            // Return to the old cycle after it has been sealed.
+            // The code rejects an ordinary write to the sealed old cycle.
             clock.addAndGet(-1); // One millisecond earlier
 
-            expectException("Overwriting an end-of-data marker");
-            appender.writingDocument().close();
+            assertThrows(WriteAfterEOFException.class,
+                    () -> appender.writingDocument().close());
 
             // advance back to the latest cycle and write
             clock.addAndGet(2);
             appender.writingDocument().close();
 
-            assertEquals(4, queue.entryCount());
-            try (ExcerptTailer tailer = queue.createTailer()) {
-                for (int i = 0; i < 4; i++) {
-                    try (DocumentContext document = tailer.readingDocument()) {
-                        assertTrue("entry " + i + " should be readable", document.isPresent());
-                    }
-                }
-                try (DocumentContext document = tailer.readingDocument()) {
-                    assertFalse("queue should contain exactly four entries", document.isPresent());
-                }
-            }
+            assertEquals(3, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void sequentialWriteBytesCannotReopenEOF() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("old-cycle"));
+            clock.addAndGet(ONE_DAY);
+            appender.writeBytes(Bytes.from("new-cycle"));
+
+            clock.addAndGet(-1);
+            assertThrows(WriteAfterEOFException.class,
+                    () -> appender.writeBytes(Bytes.from("must-not-reopen")));
+
+            clock.addAndGet(2);
+            appender.writeBytes(Bytes.from("still-writable"));
+            assertEquals(3, queue.entryCount());
         }
     }
 
