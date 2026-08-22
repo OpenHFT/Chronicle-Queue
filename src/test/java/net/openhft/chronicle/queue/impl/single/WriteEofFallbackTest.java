@@ -17,10 +17,15 @@ import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Regression test for https://github.com/OpenHFT/Chronicle-Queue/issues/1096
@@ -32,16 +37,31 @@ import static org.junit.Assume.assumeTrue;
  * As a consequence the EOF marker was written at an unpadded offset in the fallback path, so the byte
  * layout of the file depended purely on whether the reservation happened to succeed.
  * <p>
- * This test forces the fallback path (by passing a closed wire so {@code tryReserve} fails) and asserts
- * that the EOF marker lands at the padding-aligned position that the normal path produces.
+ * This test builds equivalent stores, exercises both branches, and compares their
+ * resulting positions, file lengths, EOF offsets, and surrounding bytes.
  */
 public class WriteEofFallbackTest extends QueueTestCommon {
 
     @Test
-    public void fallbackEofIsWrittenAtNormalPathPaddedPosition() throws java.io.FileNotFoundException {
+    public void fallbackAndNormalEofPathsProduceEquivalentStores() throws IOException {
         assumeFalse(OS.isWindows());
 
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        final EofOutcome normal = writeEof(getTmpDir(), false);
+        final EofOutcome fallback = writeEof(getTmpDir(), true);
+
+        assertTrue("record end must be unaligned to exercise the padding difference",
+                normal.paddedEnd != normal.recordEnd);
+        assertEquals(normal.recordEnd, fallback.recordEnd);
+        assertEquals(normal.paddedEnd, fallback.paddedEnd);
+        assertEquals("EOF offset", normal.eofOffset, fallback.eofOffset);
+        assertEquals("resulting write position", normal.resultingWritePosition,
+                fallback.resultingWritePosition);
+        assertEquals("truncated file length", normal.fileLength, fallback.fileLength);
+        assertArrayEquals("bytes around EOF", normal.bytesAroundEof, fallback.bytesAroundEof);
+    }
+
+    private EofOutcome writeEof(File directory, boolean forceFallback) throws IOException {
+        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
                 .rollCycle(RollCycles.FAST_DAILY)
                 .timeProvider(new SetTimeProvider())
                 .testBlockSize()
@@ -57,37 +77,63 @@ public class WriteEofFallbackTest extends QueueTestCommon {
 
             final int cycle = queue.cycle();
             try (final SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), false, null)) {
-
-                // store.writePosition() is the start of the last record's header
                 final long headerPosition = store.writePosition();
-
-                // Force the fallback branch: a closed wire makes wire.bytes().tryReserve(..) return false.
-                final Bytes<?> closedBytes = Bytes.allocateElasticOnHeap(64);
-                final Wire closedWire = WireType.BINARY.apply(closedBytes);
-                closedBytes.releaseLast(); // now closed -> tryReserve returns false
-                assertFalse(closedWire.bytes().tryReserve(store));
-
-                final boolean written = store.writeEOF(closedWire, 1_000);
-                assertTrue("fallback writeEOF should succeed", written);
+                if (forceFallback) {
+                    final Bytes<?> closedBytes = Bytes.allocateElasticOnHeap(64);
+                    final Wire closedWire = WireType.BINARY.apply(closedBytes);
+                    closedBytes.releaseLast();
+                    assertFalse(closedWire.bytes().tryReserve(store));
+                    assertTrue("fallback writeEOF should succeed", store.writeEOF(closedWire, 1_000));
+                } else {
+                    try (final MappedBytes normalBytes = MappedBytes.mappedBytes(store.file(), OS.pageSize())) {
+                        final Wire normalWire = WireType.BINARY.apply(normalBytes);
+                        normalWire.usePadding(store.dataVersion() > 0);
+                        assertTrue("normal writeEOF should succeed", store.writeEOF(normalWire, 1_000));
+                    }
+                }
 
                 try (final MappedBytes reader = MappedBytes.mappedBytes(store.file(), OS.pageSize())) {
                     final int header = reader.readVolatileInt(headerPosition);
                     final int len = Wires.lengthOf(header);
                     final long recordEnd = headerPosition + Wires.SPB_HEADER_SIZE + len;
                     final long paddedEnd = recordEnd + BytesUtil.padOffset(recordEnd);
+                    final long eofOffset = findEof(reader, recordEnd);
+                    final long windowStart = recordEnd - 8;
+                    final byte[] bytesAroundEof = new byte[32];
+                    for (int i = 0; i < bytesAroundEof.length; i++)
+                        bytesAroundEof[i] = reader.readByte(windowStart + i);
 
-                    // sanity: the record end must be unaligned for this test to be meaningful
-                    assumeTrue("record end must be unaligned to exercise the padding difference",
-                            paddedEnd != recordEnd);
-
-                    // The EOF marker must be at the padding-aligned position, matching the normal path,
-                    // and must NOT be at the unpadded record end (the pre-fix behaviour).
-                    assertTrue("EOF marker must be written at the padding-aligned position " + paddedEnd,
-                            Wires.isEndOfFile(reader.readVolatileInt(paddedEnd)));
-                    assertFalse("EOF marker must NOT be written at the unpadded record end " + recordEnd,
-                            Wires.isEndOfFile(reader.readVolatileInt(recordEnd)));
+                    return new EofOutcome(recordEnd, paddedEnd, eofOffset,
+                            eofOffset + Wires.SPB_HEADER_SIZE, store.file().length(), bytesAroundEof);
                 }
             }
+        }
+    }
+
+    private static long findEof(MappedBytes bytes, long recordEnd) {
+        for (long position = recordEnd; position < recordEnd + 16; position++) {
+            if (Wires.isEndOfFile(bytes.readVolatileInt(position)))
+                return position;
+        }
+        throw new AssertionError("EOF not found after record end " + recordEnd);
+    }
+
+    private static final class EofOutcome {
+        final long recordEnd;
+        final long paddedEnd;
+        final long eofOffset;
+        final long resultingWritePosition;
+        final long fileLength;
+        final byte[] bytesAroundEof;
+
+        EofOutcome(long recordEnd, long paddedEnd, long eofOffset,
+                   long resultingWritePosition, long fileLength, byte[] bytesAroundEof) {
+            this.recordEnd = recordEnd;
+            this.paddedEnd = paddedEnd;
+            this.eofOffset = eofOffset;
+            this.resultingWritePosition = resultingWritePosition;
+            this.fileLength = fileLength;
+            this.bytesAroundEof = Arrays.copyOf(bytesAroundEof, bytesAroundEof.length);
         }
     }
 }
