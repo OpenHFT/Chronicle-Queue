@@ -1,0 +1,171 @@
+= Named Tailer Context Recovery
+:toc:
+:toclevels: 3
+:css-signature: demo
+
+Named tailers persist their read position.
+After a restart, a named tailer may resume in the middle of a roll cycle.
+If records earlier in that same cycle carried context required by later records, a freshly started application needs a way to rebuild that context before it continues processing live data.
+
+`TailerContextRecovery` provides that pattern without advancing the named tailer.
+
+== When to use it
+
+Use this pattern when all of the following are true:
+
+* the queue contains normal method-writer records;
+* some records define context used by later records in the same roll cycle;
+* the reader uses a named tailer and can restart mid-cycle;
+* the application can rebuild the context by replaying records from the start of the current cycle.
+
+Typical examples include:
+
+* instrument definitions before market-data events that reference instruments by id;
+* static dictionaries before compact event records;
+* schema or routing context before small event messages;
+* roll-level snapshots written by `MarshallableOut.ContextListener`.
+
+Do not use this for raw fixed-format queues unless the replay handler understands every record format it may see.
+
+== Restart pattern
+
+On restart:
+
+. Open the real named tailer.
+. Capture its persisted resume index by calling `index()`.
+. Use `TailerContextRecovery.replayCurrentCycleContext(...)` with replay handlers that collectively cover the method stream.
+. Continue normal processing with the named tailer.
+
+[source,java]
+----
+try (ExcerptTailer namedTailer = queue.createTailer("risk-engine")) {
+    MarketProjection projection = new MarketProjection();
+
+    TailerContextRecovery.ReplayResult result =
+            TailerContextRecovery.replayCurrentCycleContext(
+                    namedTailer, projection, new NoOpMarketDataHandler());
+
+    if (!result.complete())
+        throw new IllegalStateException("Unable to rebuild context: " + result);
+
+    MethodReader reader = namedTailer.methodReader(new MarketEventHandler(projection));
+    while (reader.readOne()) {
+        // normal processing
+    }
+}
+----
+
+The helper opens a temporary unnamed tailer, moves it to the start of the named tailer's current cycle, replays records strictly before the named tailer's resume index, and closes the temporary tailer.
+It checks the actual document index again before invoking a replay handler, so recovery into a later available cycle cannot dispatch a later-cycle method.
+The named tailer's persisted position is not changed.
+
+== Replay handlers
+
+The replay handlers must collectively implement every method that may occur in the stream.
+Context methods should update the reconstructed projection, while ordinary data methods must be side-effect-free no-ops.
+The helper fails immediately on an unknown method, preventing a missing context handler from being reported as a successful replay.
+
+For example, a queue may contain both context and data methods:
+
+[source,java]
+----
+interface MarketContext {
+    void instrument(int symbolId, String name);
+}
+
+interface MarketData {
+    void trade(int symbolId, long quantity);
+}
+
+interface MarketEvents extends MarketContext, MarketData {
+}
+----
+
+The recovery replay can combine a context projection with a no-op data handler:
+
+[source,java]
+----
+final class MarketProjection implements MarketContext {
+    private final Map<Integer, String> symbolNames = new HashMap<>();
+
+    @Override
+    public void instrument(int symbolId, String name) {
+        symbolNames.put(symbolId, name);
+    }
+
+    String symbolName(int symbolId) {
+        return symbolNames.get(symbolId);
+    }
+}
+
+final class NoOpMarketDataHandler implements MarketData {
+    @Override
+    public void trade(int symbolId, long quantity) {
+        // Consume the method without repeating its business effect.
+    }
+}
+----
+
+Normal processing can then use a handler that depends on that projection:
+
+[source,java]
+----
+final class MarketEventHandler implements MarketEvents {
+    private final MarketProjection projection;
+
+    MarketEventHandler(MarketProjection projection) {
+        this.projection = projection;
+    }
+
+    @Override
+    public void instrument(int symbolId, String name) {
+        projection.instrument(symbolId, name);
+    }
+
+    @Override
+    public void trade(int symbolId, long quantity) {
+        String symbolName = projection.symbolName(symbolId);
+        if (symbolName == null)
+            throw new IllegalStateException("Missing instrument context for " + symbolId);
+        // process the trade
+    }
+}
+----
+
+== Result statuses
+
+`ReplayResult.status()` can return:
+
+* `NO_RESUME_POSITION`: the resume tailer has no real committed index. Fresh and parked named tailers use index `0`.
+* `RESUME_INDEX_AT_CYCLE_START`: the resume tailer is already at sequence `0`; there are no earlier same-cycle records to replay.
+* `REPLAYED_TO_RESUME_INDEX`: replay reached the resume index exactly.
+* `CYCLE_NOT_AVAILABLE`: the roll cycle containing the resume index could not be opened.
+* `REPLAY_INCOMPLETE`: replay stopped without reaching the resume index exactly, including when recovery encountered a document in another cycle.
+
+Treat `CYCLE_NOT_AVAILABLE` and `REPLAY_INCOMPLETE` as recovery failures when the application requires context before continuing.
+
+== Limits
+
+The utility reconstructs context from records in the current roll cycle only.
+It does not replay earlier cycles.
+Applications that require a longer-lived context should write enough context at roll boundaries, use progressive resend with `DocumentContext.contextCount()`, or load durable state from a separate store before reading.
+
+The replay is side-effect safe only if the supplied handlers are side-effect safe.
+Do not pass the normal business handler unless reprocessing earlier records is acceptable.
+
+The API accepts any forward tailer positioned at a trusted resume index.
+A restarted named tailer supplies that position in the normal use case, but the helper does not attempt to prove that the position was persisted.
+Backward tailers are rejected.
+For a read-only queue, a caller can obtain the persisted index separately and use the overload that accepts the queue and resume index directly:
+
+[source,java]
+----
+TailerContextRecovery.ReplayResult result =
+        TailerContextRecovery.replayCurrentCycleContext(
+                readOnlyQueue, persistedResumeIndex, replayHandlers);
+----
+
+The tailer overload does not mutate the supplied tailer.
+
+The helper is intended for method-writer streams.
+It is not a framing adapter for raw binary queues.
