@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -11,19 +12,20 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WriteAfterEOFException;
+import net.openhft.chronicle.wire.Wire;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -63,7 +65,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
+    public void writingDocumentIgnoresClockRollback() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
         clock.addAndGet(-clock.get() % ONE_DAY);
@@ -80,22 +82,24 @@ public class StoreAppenderTest extends QueueTestCommon {
             // Write to a new cycle:
             appender.writingDocument().close();
 
-            // The code rejects an ordinary write to the sealed old cycle.
+            final int latestCycle = queue.rollCycle().toCycle(appender.lastIndexAppended());
+
+            // A backwards clock must not move an ordinary writer into the sealed old cycle.
             clock.addAndGet(-1); // One millisecond earlier
 
-            assertThrows(WriteAfterEOFException.class,
-                    () -> appender.writingDocument().close());
+            appender.writingDocument().close();
+            assertEquals(latestCycle, queue.rollCycle().toCycle(appender.lastIndexAppended()));
 
             // advance back to the latest cycle and write
             clock.addAndGet(2);
             appender.writingDocument().close();
 
-            assertEquals(3, queue.entryCount());
+            assertEquals(4, queue.entryCount());
         }
     }
 
     @Test
-    public void sequentialWriteBytesCannotReopenEOF() throws IOException {
+    public void sequentialWriteBytesIgnoresClockRollback() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         clock.addAndGet(-clock.get() % ONE_DAY);
 
@@ -107,13 +111,145 @@ public class StoreAppenderTest extends QueueTestCommon {
             clock.addAndGet(ONE_DAY);
             appender.writeBytes(Bytes.from("new-cycle"));
 
+            final int latestCycle = queue.rollCycle().toCycle(appender.lastIndexAppended());
+
             clock.addAndGet(-1);
-            assertThrows(WriteAfterEOFException.class,
-                    () -> appender.writeBytes(Bytes.from("must-not-reopen")));
+            appender.writeBytes(Bytes.from("must-not-reopen"));
+            assertEquals(latestCycle, queue.rollCycle().toCycle(appender.lastIndexAppended()));
 
             clock.addAndGet(2);
             appender.writeBytes(Bytes.from("still-writable"));
+            assertEquals(4, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void stalledWriterFollowsAnotherWriterToLaterCycle() throws IOException {
+        final AtomicLong advancingClock = new AtomicLong(System.currentTimeMillis());
+        advancingClock.addAndGet(-advancingClock.get() % ONE_DAY);
+        final AtomicLong stalledClock = new AtomicLong(advancingClock.get());
+        final File directory = queueDirectory.newFolder();
+
+        try (SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.single(directory)
+                .timeProvider(advancingClock::get)
+                .build();
+             SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.single(directory)
+                     .timeProvider(stalledClock::get)
+                     .build();
+             ExcerptAppender advancingWriter = advancingQueue.createAppender();
+             ExcerptAppender stalledWriter = stalledQueue.createAppender()) {
+            stalledWriter.writeText("initial");
+
+            advancingClock.addAndGet(ONE_DAY);
+            advancingWriter.writeText("advanced");
+            final int latestCycle = advancingQueue.rollCycle().toCycle(advancingWriter.lastIndexAppended());
+
+            try (DocumentContext document = stalledWriter.writingDocument()) {
+                document.wire().write("message").text("followed-document");
+            }
+            assertEquals(latestCycle, stalledQueue.rollCycle().toCycle(stalledWriter.lastIndexAppended()));
+
+            stalledWriter.writeBytes(Bytes.from("followed-bytes"));
+            assertEquals(latestCycle, stalledQueue.rollCycle().toCycle(stalledWriter.lastIndexAppended()));
+            assertEquals(4, stalledQueue.entryCount());
+        }
+    }
+
+    @Test
+    public void ordinaryAppendPathsRollPastSealedCycle() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("initial");
+
+            int expectedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+            try (DocumentContext document = appender.writingDocument()) {
+                document.wire().write("message").text("document-path");
+            }
+            assertEquals(++expectedCycle, appender.cycle());
+
+            sealCurrentCycle(appender);
+            appender.writeBytes(Bytes.from("direct-bytes"));
+            assertEquals(++expectedCycle, appender.cycle());
             assertEquals(3, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void ordinaryAppenderRollsForwardAfterIndexedRecoveryWithUnchangedClock() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+        final long unchangedTime = clock.get();
+        final Bytes<?> result = Bytes.elasticHeapByteBuffer();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender();
+             ExcerptAppender secondAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("initial"));
+
+            final int sealedCycle = appender.cycle();
+            final long recoveredIndex = appender.lastIndexAppended() + 1;
+            sealCurrentCycle(appender);
+
+            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + sealedCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+            assertEquals("exact-index recovery belongs to the sealed cycle",
+                    sealedCycle, appender.cycle());
+
+            appender.writeBytes(Bytes.from("following ordinary entry"));
+            assertEquals("ordinary append must roll past the restored EOF",
+                    sealedCycle + 1, appender.cycle());
+            final long firstIndexInNewCycle = appender.lastIndexAppended();
+            assertEquals("the clock must remain unchanged throughout the test",
+                    unchangedTime, clock.get());
+
+            final long laterRecoveredIndex = recoveredIndex + 1;
+            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + sealedCycle
+                    + ", index=0x" + Long.toHexString(laterRecoveredIndex));
+            ((InternalAppender) appender).writeBytes(laterRecoveredIndex, Bytes.from("later recovered"));
+
+            secondAppender.writeBytes(Bytes.from("second appender entry"));
+            assertEquals("the appender created before the roll must join the latest cycle",
+                    sealedCycle + 1, secondAppender.cycle());
+            assertEquals("the second appender must follow the existing new-cycle entry",
+                    firstIndexInNewCycle + 1, secondAppender.lastIndexAppended());
+
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                assertNextBytes(tailer, result, "initial");
+                assertNextBytes(tailer, result, "recovered");
+                assertNextBytes(tailer, result, "later recovered");
+                assertNextBytes(tailer, result, "following ordinary entry");
+                assertNextBytes(tailer, result, "second appender entry");
+            }
+        }
+    }
+
+    private static void assertNextBytes(ExcerptTailer tailer, Bytes<?> result, String expected) {
+        result.clear();
+        assertTrue(tailer.readBytes(result));
+        assertEquals(expected, result.toString());
+    }
+
+    private static void sealCurrentCycle(StoreAppender appender) {
+        final SingleChronicleQueueStore store = appender.store;
+        if (store == null)
+            throw new AssertionError("Appender has no current store");
+
+        try (MappedBytes bytes = store.bytes()) {
+            final Wire wire = appender.queue().wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue("test precondition: current roll must be sealed",
+                    store.writeEOF(wire, appender.queue().timeoutMS));
         }
     }
 

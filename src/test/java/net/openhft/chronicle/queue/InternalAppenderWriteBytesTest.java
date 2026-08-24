@@ -9,7 +9,6 @@ import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.*;
 import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,9 +20,9 @@ import java.util.concurrent.TimeUnit;
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 
 public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
@@ -59,6 +58,39 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             tailer.readBytes(result);
             assertEquals(test2, result);
             result.clear();
+        }
+    }
+
+    @Test
+    public void ordinaryAppenderContinuesInCurrentCycleAfterIndexedWriteToUnsealedRoll() {
+        @NotNull Bytes<byte[]> first = Bytes.from("first ordinary entry");
+        @NotNull Bytes<byte[]> indexed = Bytes.from("indexed entry");
+        @NotNull Bytes<byte[]> following = Bytes.from("following ordinary entry");
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender();
+             ExcerptTailer tailer = q.createTailer()) {
+            appender.writeBytes(first);
+            final long indexedWriteIndex = appender.lastIndexAppended() + 1;
+            final int currentCycle = appender.cycle();
+
+            ((InternalAppender) appender).writeBytes(indexedWriteIndex, indexed);
+            Assert.assertEquals(currentCycle, appender.cycle());
+            Assert.assertFalse("an indexed write to an unsealed current roll must not add EOF",
+                    hasEOF(q, currentCycle));
+
+            appender.writeBytes(following);
+            Assert.assertEquals(currentCycle, appender.cycle());
+            Assert.assertEquals(indexedWriteIndex + 1, appender.lastIndexAppended());
+
+            assertNextBytes(tailer, result, first);
+            assertNextBytes(tailer, result, indexed);
+            assertNextBytes(tailer, result, following);
+            Assert.assertFalse(tailer.readBytes(result.clear()));
         }
     }
 
@@ -241,6 +273,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     public void canBackfillPreviousCycleAfterEOF() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
+        @NotNull Bytes<byte[]> test1b = Bytes.from("second recovered entry cycle1");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -260,15 +293,16 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                 Assert.assertFalse(tailer.readBytes(result.clear()));
 
                 Assert.assertTrue(hasEOF(q, firstCycle));
-                assertThrows(WriteAfterEOFException.class,
-                        () -> ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1));
-                Assert.assertTrue(hasEOF(q, firstCycle));
+                expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
+                        + ", index=0x" + Long.toHexString(nextIndexInFirstCycle));
+                ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
+                Assert.assertTrue("indexed recovery must immediately restore EOF", hasEOF(q, firstCycle));
 
-                expectException("remotePeer=C");
-                Assert.assertTrue(((InternalAppender) appender).writeBytesForRecovery(
-                        nextIndexInFirstCycle, test1, "source=replication-test, remotePeer=C"));
-
-                Assert.assertFalse(hasEOF(q, firstCycle));
+                final long secondRecoveryIndex = nextIndexInFirstCycle + 1;
+                expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
+                        + ", index=0x" + Long.toHexString(secondRecoveryIndex));
+                ((InternalAppender) appender).writeBytes(secondRecoveryIndex, test1b);
+                Assert.assertTrue("each indexed recovery must leave the roll sealed", hasEOF(q, firstCycle));
                 appender.normaliseEOFs();
             }
             Assert.assertTrue(hasEOF(q, firstCycle));
@@ -278,9 +312,75 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             try (ExcerptTailer restartedTailer = q.createTailer()) {
                 assertNextBytes(restartedTailer, result, test);
                 assertNextBytes(restartedTailer, result, test1);
+                assertNextBytes(restartedTailer, result, test1b);
                 assertNextBytes(restartedTailer, result, test2);
                 Assert.assertFalse(restartedTailer.readBytes(result.clear()));
             }
+        }
+    }
+
+    @Test
+    public void exactBackfillCanAddASecondaryIndexBeforeResealing() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+        final int entriesInFirstSecondaryIndex = TEST4_DAILY.defaultIndexCount()
+                * TEST4_DAILY.defaultIndexSpacing();
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(timeProvider)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            for (int i = 0; i < entriesInFirstSecondaryIndex; i++)
+                appender.writeText("entry-" + i);
+
+            final long recoveredIndex = appender.lastIndexAppended() + 1;
+            final int recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            Assert.assertTrue(cycleDump(q, recoveredCycle)
+                    .contains("index2index: [\n  # length: 32, used: 1\n"));
+
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(25));
+            appender.writeText("next-cycle");
+            Assert.assertTrue(hasEOF(q, recoveredCycle));
+
+            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + recoveredCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+
+            final String recoveredCycleDump = cycleDump(q, recoveredCycle);
+            Assert.assertTrue("backfill must add the second secondary index before resealing",
+                    recoveredCycleDump.contains("index2index: [\n  # length: 32, used: 2\n"));
+            Assert.assertTrue("backfill must leave the recovered cycle sealed",
+                    recoveredCycleDump.contains(" EOF")
+                            && recoveredCycleDump.contains("--- !!not-ready-meta-data"));
+        }
+    }
+
+    @Test
+    public void indexCapacityFailureStillResealsRecoveredCycle() {
+        SetTimeProvider timeProvider = new SetTimeProvider();
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            for (long i = 0; i < q.rollCycle().maxMessagesPerCycle(); i++)
+                appender.writeText("entry-" + i);
+
+            final long recoveredIndex = appender.lastIndexAppended() + 1;
+            final int recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(25));
+            appender.writeText("next-cycle");
+            Assert.assertTrue(hasEOF(q, recoveredCycle));
+
+            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + recoveredCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            IllegalStateException failure = Assert.assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered")));
+
+            Assert.assertTrue(failure.getMessage().contains("number of entries exceeds max number"));
+            Assert.assertTrue("index failure must not leave a recovered roll unsealed",
+                    hasEOF(q, recoveredCycle));
         }
     }
 
@@ -315,10 +415,9 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
             expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
                     + ", index=0x" + Long.toHexString(recoveredIndex));
-            Assert.assertTrue(((InternalAppender) appender).writeBytesForRecovery(
-                    recoveredIndex, recovered, "source=replication-test, remotePeer=C"));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, recovered);
 
-            Assert.assertFalse(hasEOF(q, firstCycle));
+            Assert.assertTrue("indexed recovery must immediately restore EOF", hasEOF(q, firstCycle));
             appender.normaliseEOFs();
             Assert.assertTrue(hasEOF(q, firstCycle));
 
@@ -344,9 +443,13 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     private boolean hasEOF(SingleChronicleQueue q, int cycle) {
+        String dump = cycleDump(q, cycle);
+        return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
+    }
+
+    private String cycleDump(SingleChronicleQueue q, int cycle) {
         try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
-            String dump = store.dump(WireType.BINARY_LIGHT);
-            return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
+            return store.dump(WireType.BINARY_LIGHT);
         }
     }
 }

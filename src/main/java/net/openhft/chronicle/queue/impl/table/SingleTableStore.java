@@ -307,6 +307,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 throw new IllegalStateException("Misaligned write");
             return longValue;
 
+        } catch (WriteAfterEOFException e) {
+            throw new IORuntimeException("Metadata table is sealed by end-of-data", e);
+
         } catch (StreamCorruptedException | EOFException e) {
             throw new IORuntimeException(e);
 

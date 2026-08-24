@@ -132,7 +132,7 @@ public class NormaliseEOFsTest extends QueueTestCommon {
     }
 
     @Test
-    public void sparseRecoveredCycleNormalisationIsBoundedByDirtyCycles() {
+    public void sparseRecoveredCycleIsResealedWithoutScanningTheGap() {
         final SetTimeProvider timeProvider = new SetTimeProvider(0);
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(QUEUE_PATH)
                 .timeProvider(timeProvider)
@@ -156,9 +156,9 @@ public class NormaliseEOFsTest extends QueueTestCommon {
                     .getVolatileValue();
 
             expectException("queue=" + queue.fileAbsolutePath());
-            assertTrue(appender.writeBytesForRecovery(
-                    recoveryIndex, Bytes.from("recovered"), "source=test, remotePeer=C"));
-            assertEquals(1, appender.pendingEOFNormalisationCount());
+            appender.writeBytes(recoveryIndex, Bytes.from("recovered"));
+            assertEquals(0, appender.pendingEOFNormalisationCount());
+            assertTrue(hasEOF(queue, recoveredCycle), "recovered roll must be resealed immediately");
             assertEquals("recovery must not lower the persisted high-water mark",
                     watermarkBefore,
                     queue.tableStoreAcquire("normalisedEOFsTo", recoveredCycle).getVolatileValue());
@@ -166,10 +166,10 @@ public class NormaliseEOFsTest extends QueueTestCommon {
             final int probesBefore = appender.eofNormalisationCycleProbes();
             appender.normaliseEOFs();
 
-            assertEquals("only the dirty existing roll should be probed",
-                    1, appender.eofNormalisationCycleProbes() - probesBefore);
+            assertEquals("an already resealed roll must not trigger a sparse cycle scan",
+                    0, appender.eofNormalisationCycleProbes() - probesBefore);
             assertEquals(0, appender.pendingEOFNormalisationCount());
-            assertTrue(hasEOF(queue, recoveredCycle), "recovered roll must be resealed");
+            assertTrue(hasEOF(queue, recoveredCycle), "recovered roll must remain sealed");
         }
     }
 

@@ -272,7 +272,15 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         Bytes<?> bytes = wire.bytes();
         bytes.writePosition(writePosition);
 
-        long position = wire.enterHeader(indexCount * 8L + 128);
+        final long position;
+        try {
+            position = wire.enterHeader(indexCount * 8L + 128);
+        } catch (WriteAfterEOFException e) {
+            final StreamCorruptedException corruption = new StreamCorruptedException(
+                    "Cannot allocate a queue index after end-of-data");
+            corruption.initCause(e);
+            throw corruption;
+        }
 
         WriteMarshallable writer = index2index ? index2IndexTemplate : indexTemplate;
         writer.writeMarshallable(wire);

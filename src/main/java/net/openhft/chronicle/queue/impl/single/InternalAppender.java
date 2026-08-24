@@ -17,6 +17,9 @@ public interface InternalAppender extends ExcerptAppender {
 
     /**
      * Append an excerpt at the specified index, if the index is a valid next index for the queue.
+     * This internal replication path can replace an end-of-data marker when restoring an exact
+     * missing index. Replacing the marker is logged as a warning and the cycle is resealed after the
+     * indexed entry is committed.
      * <p>
      * If the index is:
      * <dl>
@@ -32,19 +35,5 @@ public interface InternalAppender extends ExcerptAppender {
      * @throws IllegalIndexException if the index specified is larger than the valid next indices of the queue
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
-
-    /**
-     * Appends replicated data at an exact index, explicitly allowing an
-     * optimistic end-of-data marker to be replaced.
-     *
-     * @param index           exact recovery index
-     * @param bytes           contents of the excerpt
-     * @param recoveryContext replication source and peer context for diagnostics
-     * @return {@code true} if this write replaced an end-of-data marker
-     */
-    default boolean writeBytesForRecovery(long index, BytesStore<?, ?> bytes, String recoveryContext) {
-        writeBytes(index, bytes);
-        return false;
-    }
 
 }
