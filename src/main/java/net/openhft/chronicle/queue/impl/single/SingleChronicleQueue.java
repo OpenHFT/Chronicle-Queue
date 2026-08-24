@@ -1138,15 +1138,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the greatest cycle already published by a cooperating writer without refreshing the
-     * filesystem directory. This is suitable for append hot paths where another writer's roll must
-     * be observed without initiating directory reconciliation.
-     */
-    int lastAcknowledgedCycle() {
-        return directoryListing.getMaxCreatedCycle();
-    }
-
-    /**
      * Returns the consumer that handles {@link BytesRingBufferStats}.
      *
      * @return the consumer for ring buffer statistics

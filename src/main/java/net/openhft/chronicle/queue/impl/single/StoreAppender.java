@@ -30,9 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
-import java.util.Iterator;
-import java.util.NavigableSet;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
@@ -79,9 +76,7 @@ class StoreAppender extends AbstractCloseable
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
     private int count = 0;
-    private final NavigableSet<Integer> reopenedCycles = new TreeSet<>();
     private boolean recoveredEndOfData;
-    private int eofNormalisationCycleProbes;
 
     /**
      * Constructor for StoreAppender. Initializes the appender by finding the first open cycle
@@ -622,17 +617,17 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Ensures that EOF markers are present on every cycle before the last existing cycle.
-     * Indexed back-fill can reopen a cycle and move this appender behind the queue's last cycle;
-     * normalisation therefore uses the queue's cycle range rather than the appender's current cycle.
+     * Ensures that EOF markers are properly added to all cycles, normalizing older cycles to ensure they are complete.
+     * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
      */
     public void normaliseEOFs() {
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            normaliseReopenedCycles();
-            normaliseEOFs0(queue.lastCycle());
+            // use the getter, not the raw field: after the construction-time back-scan releases its
+            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
+            normaliseEOFs0(cycle());
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -641,29 +636,11 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void normaliseReopenedCycles() {
-        for (Iterator<Integer> iterator = reopenedCycles.iterator(); iterator.hasNext(); ) {
-            final int reopenedCycle = iterator.next();
-            eofNormalisationCycleProbes++;
-            setCycle2(reopenedCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
-            if (wire == null || store.writeEOF(wire, timeoutMS()))
-                iterator.remove();
-        }
-    }
-
-    int pendingEOFNormalisationCount() {
-        return reopenedCycles.size();
-    }
-
-    int eofNormalisationCycleProbes() {
-        return eofNormalisationCycleProbes;
-    }
-
     /**
-     * Internal method to normalise EOFs for all cycles up to the specified cycle.
-     * Adds EOF markers where necessary and ensures all earlier cycles are finalised.
+     * Internal method to normalize EOFs for all cycles up to the specified cycle.
+     * Adds EOF markers where necessary and ensures all earlier cycles are finalized.
      *
-     * @param cycle the target cycle up to which EOF normalisation should occur
+     * @param cycle the target cycle up to which EOF normalization should occur
      */
     private void normaliseEOFs0(int cycle) {
         int first = queue.firstCycle();
@@ -678,7 +655,6 @@ class StoreAppender extends AbstractCloseable
         }
 
         for (; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
-            eofNormalisationCycleProbes++;
             setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
             if (wire != null) {
                 assert queue.writeLock().locked();
@@ -705,32 +681,21 @@ class StoreAppender extends AbstractCloseable
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
-        final int lastExistingCycle = wire == null ? queue.lastCycle() : queue.lastAcknowledgedCycle();
+        final int lastExistingCycle = queue.lastCycle();
         final int targetCycle = Math.max(cycle, Math.max(queue.cycle(), lastExistingCycle));
         if (wire == null) {
             setWireIfNull(targetCycle);
             if (targetCycle == lastExistingCycle && lastExistingCycle >= 0) {
                 if (cycleHasEOF())
-                    rollCycleTo(nextCycleAfterSeal(targetCycle), true);
+                    rollCycleTo(Math.incrementExact(targetCycle), true);
                 else
                     resetPosition();
             }
-            recoveredEndOfData = false;
             return;
         }
 
         if (cycle < targetCycle)
             rollCycleTo(targetCycle);
-        else if (recoveredEndOfData && cycleHasEOF())
-            rollCycleTo(nextCycleAfterSeal(cycle), true);
-
-        recoveredEndOfData = false;
-    }
-
-    private int nextCycleAfterSeal(final int sealedCycle) {
-        if (sealedCycle == Integer.MAX_VALUE)
-            throw new IllegalStateException("Cannot append after the final roll cycle");
-        return sealedCycle + 1;
     }
 
     /**
@@ -744,20 +709,20 @@ class StoreAppender extends AbstractCloseable
     private long writeHeader(@NotNull final Wire wire, final long safeLength) {
         Wire currentWire = wire;
         for (; ; ) {
+            positionForNextHeader(currentWire);
             try {
-                return writeHeaderAtCurrentCycle(currentWire, safeLength, Long.MIN_VALUE);
+                return currentWire.enterHeader(safeLength);
             } catch (WriteAfterEOFException ignored) {
                 // EOF remains a hard seal. Ordinary writes continue in a later roll rather than
                 // replacing it; only exact-index recovery is allowed to remove the marker.
-                rollCycleTo(nextCycleAfterSeal(cycle), true);
+                rollCycleTo(Math.incrementExact(cycle), true);
                 resetPosition();
                 currentWire = this.wire;
             }
         }
     }
 
-    private long writeHeaderAtCurrentCycle(@NotNull final Wire wire, final long safeLength,
-                                           final long recoveryIndex) throws WriteAfterEOFException {
+    private long positionForNextHeader(@NotNull final Wire wire) {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
         long pos = positionOfHeader;
@@ -774,24 +739,28 @@ class StoreAppender extends AbstractCloseable
         final int header = bytes.readVolatileInt(lastPos);
         assert header != NOT_INITIALIZED;
         lastPos += lengthOf(header) + SPB_HEADER_SIZE;
-        if (wire.usePadding())
-            lastPos += BytesUtil.padOffset(lastPos);
         bytes.writePosition(lastPos);
-        if (recoveryIndex == Long.MIN_VALUE)
-            return wire.enterHeader(safeLength);
+        return lastPos;
+    }
 
+    private boolean recoverEndOfData(final long recoveryIndex) {
         assert writeLock.locked();
+        assert wire != null;
+        assert wire.usePadding();
+        final Bytes<?> bytes = wire.bytes();
+        final long unpaddedPosition = positionForNextHeader(wire);
+        final long recoveryPosition = unpaddedPosition + BytesUtil.padOffset(unpaddedPosition);
+        bytes.writePosition(recoveryPosition);
+        if (!bytes.compareAndSwapInt(recoveryPosition, END_OF_DATA, NOT_INITIALIZED))
+            return false;
+
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
-        if (bytes.compareAndSwapInt(lastPos, END_OF_DATA, NOT_INITIALIZED)) {
-            recoveredEndOfData = true;
-            reopenedCycles.add(recoveryCycle);
-            Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
-                    + queue.fileAbsolutePath()
-                    + ", cycle=" + recoveryCycle
-                    + ", index=0x" + Long.toHexString(recoveryIndex)
-                    + ", position=" + lastPos);
-        }
-        return wire.enterHeader(safeLength);
+        Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + recoveryCycle
+                + ", index=0x" + Long.toHexString(recoveryIndex)
+                + ", position=" + recoveryPosition);
+        return true;
     }
 
     /**
@@ -802,24 +771,8 @@ class StoreAppender extends AbstractCloseable
      * @param safeLength the maximum length of data that can be safely written
      */
     private void openContext(final boolean metaData, final long safeLength) {
-        openContext(metaData, safeLength, Long.MIN_VALUE);
-    }
-
-    private void openContext(final boolean metaData, final long safeLength,
-                             final long recoveryIndex) {
         assert wire != null;
-        if (recoveryIndex == Long.MIN_VALUE) {
-            this.positionOfHeader = writeHeader(wire, safeLength);
-        } else {
-            try {
-                this.positionOfHeader = writeHeaderAtCurrentCycle(wire, safeLength, recoveryIndex);
-            } catch (WriteAfterEOFException e) {
-                throw new IllegalStateException("End-of-data remained after exact-index recovery: queue="
-                        + queue.fileAbsolutePath()
-                        + ", cycle=" + queue.rollCycle().toCycle(recoveryIndex)
-                        + ", index=0x" + Long.toHexString(recoveryIndex), e);
-            }
-        }
+        this.positionOfHeader = writeHeader(wire, safeLength);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
@@ -934,6 +887,7 @@ class StoreAppender extends AbstractCloseable
                 resealRecoveredCycle(index);
             }
         } finally {
+            recoveredEndOfData = false;
             writeLock.unlock();
         }
     }
@@ -943,10 +897,8 @@ class StoreAppender extends AbstractCloseable
             return;
 
         final int recoveredCycle = queue.rollCycle().toCycle(index);
-        if (store.writeEOF(wire, timeoutMS())) {
-            reopenedCycles.remove(recoveredCycle);
+        if (store.writeEOF(wire, timeoutMS()))
             return;
-        }
 
         Jvm.warn().on(getClass(), "Unable to restore end-of-data after exact-index recovery: queue="
                 + queue.fileAbsolutePath()
@@ -991,7 +943,8 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        writeBytesInternal(bytes, false, index);
+        recoveredEndOfData = recoverEndOfData(index);
+        writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
@@ -1002,16 +955,11 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
-        writeBytesInternal(bytes, metadata, Long.MIN_VALUE);
-    }
-
-    private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata,
-                                    long recoveryIndex) {
         assert writeLock.locked();
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            openContext(metadata, safeLength, recoveryIndex);
+            openContext(metadata, safeLength);
 
             try {
                 final Bytes<?> bytes0 = context.wire().bytes();

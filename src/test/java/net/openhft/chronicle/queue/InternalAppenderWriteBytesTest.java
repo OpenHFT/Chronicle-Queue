@@ -384,58 +384,6 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void canNormaliseBackfillBelowPreviousEOFHighWaterMark() {
-        @NotNull Bytes<byte[]> original = Bytes.from("original cycle-0 entry");
-        @NotNull Bytes<byte[]> recovered = Bytes.from("recovered cycle-0 entry");
-        @NotNull Bytes<byte[]> cycle1 = Bytes.from("cycle-1 entry");
-        @NotNull Bytes<byte[]> cycle2 = Bytes.from("cycle-2 entry");
-        @NotNull Bytes<byte[]> cycle3 = Bytes.from("cycle-3 entry");
-        Bytes<?> result = Bytes.elasticHeapByteBuffer();
-        SetTimeProvider timeProvider = new SetTimeProvider();
-
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .timeProvider(timeProvider)
-                .rollCycle(TEST_HOURLY)
-                .build();
-             ExcerptAppender appender = q.createAppender()) {
-            appender.writeBytes(original);
-            long recoveredIndex = appender.lastIndexAppended() + 1;
-            int firstCycle = q.rollCycle().toCycle(recoveredIndex);
-
-            advanceOneCycle(timeProvider);
-            appender.writeBytes(cycle1);
-            appender.normaliseEOFs();
-            advanceOneCycle(timeProvider);
-            appender.writeBytes(cycle2);
-            appender.normaliseEOFs();
-            advanceOneCycle(timeProvider);
-            appender.writeBytes(cycle3);
-            appender.normaliseEOFs();
-
-            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
-                    + ", index=0x" + Long.toHexString(recoveredIndex));
-            ((InternalAppender) appender).writeBytes(recoveredIndex, recovered);
-
-            Assert.assertTrue("indexed recovery must immediately restore EOF", hasEOF(q, firstCycle));
-            appender.normaliseEOFs();
-            Assert.assertTrue(hasEOF(q, firstCycle));
-
-            try (ExcerptTailer tailer = q.createTailer()) {
-                assertNextBytes(tailer, result, original);
-                assertNextBytes(tailer, result, recovered);
-                assertNextBytes(tailer, result, cycle1);
-                assertNextBytes(tailer, result, cycle2);
-                assertNextBytes(tailer, result, cycle3);
-                Assert.assertFalse(tailer.readBytes(result));
-            }
-        }
-    }
-
-    private static void advanceOneCycle(SetTimeProvider timeProvider) {
-        timeProvider.advanceMillis(TimeUnit.MINUTES.toMillis(65));
-    }
-
     private static void assertNextBytes(ExcerptTailer tailer, Bytes<?> result, Bytes<?> expected) {
         result.clear();
         Assert.assertTrue(tailer.readBytes(result));

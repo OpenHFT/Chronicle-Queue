@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
@@ -14,11 +13,9 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.rollcycles.LegacyRollCycles;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WireType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,12 +24,10 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NormaliseEOFsTest extends QueueTestCommon {
@@ -128,54 +123,6 @@ public class NormaliseEOFsTest extends QueueTestCommon {
                         "normaliseEOFs on a never-written appender should have advanced the watermark past "
                                 + normalisedBefore + " but it stayed at " + normalisedAfter);
             }
-        }
-    }
-
-    @Test
-    public void sparseRecoveredCycleIsResealedWithoutScanningTheGap() {
-        final SetTimeProvider timeProvider = new SetTimeProvider(0);
-        try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(QUEUE_PATH)
-                .timeProvider(timeProvider)
-                .rollCycle(LegacyRollCycles.MINUTELY)
-                .build();
-             final ExcerptAppender excerptAppender = queue.createAppender()) {
-            final StoreAppender appender = (StoreAppender) excerptAppender;
-            appender.writeBytes(Bytes.from("cycle-zero"));
-            final long recoveryIndex = appender.lastIndexAppended() + 1;
-            final int recoveredCycle = queue.rollCycle().toCycle(recoveryIndex);
-
-            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(731));
-            appender.writeBytes(Bytes.from("two-years-later"));
-            final int laterCycle = queue.lastCycle();
-            assertTrue(laterCycle - recoveredCycle > 1_000_000,
-                    "test must contain a million-cycle sparse gap");
-
-            queue.tableStoreAcquire("normalisedEOFsTo", recoveredCycle)
-                    .setVolatileValue(laterCycle);
-            final long watermarkBefore = queue.tableStoreAcquire("normalisedEOFsTo", recoveredCycle)
-                    .getVolatileValue();
-
-            expectException("queue=" + queue.fileAbsolutePath());
-            appender.writeBytes(recoveryIndex, Bytes.from("recovered"));
-            assertEquals(0, appender.pendingEOFNormalisationCount());
-            assertTrue(hasEOF(queue, recoveredCycle), "recovered roll must be resealed immediately");
-            assertEquals("recovery must not lower the persisted high-water mark",
-                    watermarkBefore,
-                    queue.tableStoreAcquire("normalisedEOFsTo", recoveredCycle).getVolatileValue());
-
-            final int probesBefore = appender.eofNormalisationCycleProbes();
-            appender.normaliseEOFs();
-
-            assertEquals("an already resealed roll must not trigger a sparse cycle scan",
-                    0, appender.eofNormalisationCycleProbes() - probesBefore);
-            assertEquals(0, appender.pendingEOFNormalisationCount());
-            assertTrue(hasEOF(queue, recoveredCycle), "recovered roll must remain sealed");
-        }
-    }
-
-    private static boolean hasEOF(SingleChronicleQueue queue, int cycle) {
-        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null)) {
-            return store.dump(WireType.BINARY_LIGHT).contains(" EOF");
         }
     }
 
