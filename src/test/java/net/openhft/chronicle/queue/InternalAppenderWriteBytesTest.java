@@ -4,6 +4,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -22,6 +24,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
+import static net.openhft.chronicle.wire.Wires.*;
 import static org.junit.Assert.assertEquals;
 
 public class InternalAppenderWriteBytesTest extends QueueTestCommon {
@@ -380,6 +383,81 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             Assert.assertTrue(failure.getMessage().contains("number of entries exceeds max number"));
             Assert.assertTrue("index failure must not leave a recovered roll unsealed",
                     hasEOF(q, recoveredCycle));
+        }
+    }
+
+    @Test
+    public void normaliseAfterInterruptedEofRecoveryResealsHistoricalCycle() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(2));
+            appender.writeBytes(Bytes.from("later-cycle"));
+            Assert.assertTrue(hasEOF(q, recoveredCycle));
+
+            simulateInterruptedEofRecovery(q, recoveredCycle);
+            Assert.assertFalse(hasEOF(q, recoveredCycle));
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            Assert.assertFalse("restart must observe the interrupted unsealed cycle",
+                    hasEOF(q, recoveredCycle));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("retried"));
+            Assert.assertFalse("a retry that did not replace EOF must remain open until backfill completes",
+                    hasEOF(q, recoveredCycle));
+            appender.normaliseEOFs();
+            Assert.assertTrue("completed backfill must normalise its selected historical cycle",
+                    hasEOF(q, recoveredCycle));
+
+            // Also model death after the recovered entry committed but before replacement EOF.
+            simulateInterruptedEofRecovery(q, recoveredCycle);
+            Assert.assertFalse(hasEOF(q, recoveredCycle));
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender();
+             ExcerptTailer tailer = q.createTailer()) {
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("conflicting retry"));
+            Assert.assertFalse("a duplicate retry does not itself alter the roll",
+                    hasEOF(q, recoveredCycle));
+            appender.normaliseEOFs();
+            Assert.assertTrue("normalisation after a duplicate retry must reseal the historical cycle",
+                    hasEOF(q, recoveredCycle));
+
+            final Bytes<?> result = Bytes.elasticHeapByteBuffer();
+            assertNextBytes(tailer, result, Bytes.from("first-cycle"));
+            assertNextBytes(tailer, result, Bytes.from("retried"));
+            assertNextBytes(tailer, result, Bytes.from("later-cycle"));
+            Assert.assertFalse(tailer.readBytes(result.clear()));
+        }
+    }
+
+    private static void simulateInterruptedEofRecovery(SingleChronicleQueue q, int cycle) {
+        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null);
+             MappedBytes mappedBytes = store.bytes()) {
+            final long lastPosition = store.writePosition();
+            final int lastHeader = mappedBytes.readVolatileInt(lastPosition);
+            final long unpaddedEofPosition = lastPosition + lengthOf(lastHeader) + SPB_HEADER_SIZE;
+            final long eofPosition = unpaddedEofPosition + BytesUtil.padOffset(unpaddedEofPosition);
+            Assert.assertEquals(END_OF_DATA, mappedBytes.readVolatileInt(eofPosition));
+            Assert.assertTrue(mappedBytes.compareAndSwapInt(eofPosition, END_OF_DATA, NOT_INITIALIZED));
         }
     }
 

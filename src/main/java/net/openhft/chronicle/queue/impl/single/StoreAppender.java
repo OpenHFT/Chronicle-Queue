@@ -76,7 +76,6 @@ class StoreAppender extends AbstractCloseable
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
     private int count = 0;
-    private boolean recoveredEndOfData;
 
     /**
      * Constructor for StoreAppender. Initializes the appender by finding the first open cycle
@@ -627,7 +626,10 @@ class StoreAppender extends AbstractCloseable
         try {
             // use the getter, not the raw field: after the construction-time back-scan releases its
             // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
-            normaliseEOFs0(cycle());
+            final int appenderCycle = cycle();
+            // normaliseEOFs0 takes an exclusive upper bound. A restarted backfill can be parked on
+            // an unsealed historical cycle, so include that cycle when it is older than current time.
+            normaliseEOFs0(appenderCycle < queue.cycle() ? appenderCycle + 1 : appenderCycle);
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -715,7 +717,7 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private long positionForNextHeader(@NotNull final Wire wire) {
+    private void positionForNextHeader(@NotNull final Wire wire) {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
         long lastPos = store.writePosition();
@@ -732,27 +734,27 @@ class StoreAppender extends AbstractCloseable
         assert header != NOT_INITIALIZED;
         lastPos += lengthOf(header) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
-        return lastPos;
     }
 
-    private void recoverEndOfData(final long recoveryIndex) {
+    private boolean replaceEndOfDataForRecovery(final long recoveryIndex) {
         assert writeLock.locked();
         assert wire != null;
         assert wire.usePadding();
         final Bytes<?> bytes = wire.bytes();
-        final long unpaddedPosition = positionForNextHeader(wire);
+        positionForNextHeader(wire);
+        final long unpaddedPosition = bytes.writePosition();
         final long recoveryPosition = unpaddedPosition + BytesUtil.padOffset(unpaddedPosition);
         bytes.writePosition(recoveryPosition);
         if (!bytes.compareAndSwapInt(recoveryPosition, END_OF_DATA, NOT_INITIALIZED))
-            return;
+            return false;
 
-        recoveredEndOfData = true;
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
         Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
                 + queue.fileAbsolutePath()
                 + ", cycle=" + recoveryCycle
                 + ", index=0x" + Long.toHexString(recoveryIndex)
                 + ", position=" + recoveryPosition);
+        return true;
     }
 
     /**
@@ -870,24 +872,13 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock();
         writeLock.lock();
         try {
-            recoveredEndOfData = false;
-            try {
-                writeBytesInternal(index, bytes);
-            } finally {
-                // Index metadata is written while the recovered roll is open. If that update fails,
-                // preserve the more important invariant that an EOF reopened for recovery is resealed.
-                resealRecoveredCycle(index);
-            }
+            writeBytesInternal(index, bytes);
         } finally {
-            recoveredEndOfData = false;
             writeLock.unlock();
         }
     }
 
     private void resealRecoveredCycle(final long index) {
-        if (!recoveredEndOfData)
-            return;
-
         final int recoveredCycle = queue.rollCycle().toCycle(index);
         if (store.writeEOF(wire, timeoutMS()))
             return;
@@ -928,21 +919,29 @@ class StoreAppender extends AbstractCloseable
             if (index > headerNumber + 1)
                 throw new IllegalIndexException(index, headerNumber);
 
-            // this can happen when using queue replication when we are back filling from a number of sinks at them same time
-            // its normal behaviour in the is use case so should not be a WARN
+            // This can happen when queue replication backfills from several sinks concurrently.
+            // First committed value wins; later duplicates are intentionally ignored without a warning.
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
             return;
         }
 
-        recoverEndOfData(index);
-        writeBytesInternal(bytes, false);
-        //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+        final boolean resealRequired = replaceEndOfDataForRecovery(index);
+        try {
+            writeBytesInternal(bytes, false);
+            //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
-        headerNumber = wire.headerNumber();
-        boolean isIndex = index == headerNumber;
-        if (!isIndex) {
-            throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
+            headerNumber = wire.headerNumber();
+            boolean isIndex = index == headerNumber;
+            if (!isIndex) {
+                throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
+            }
+        } finally {
+            if (resealRequired) {
+                // Index metadata is written while the recovered roll is open. If that update fails,
+                // preserve the more important invariant that an EOF reopened for recovery is resealed.
+                resealRecoveredCycle(index);
+            }
         }
     }
 

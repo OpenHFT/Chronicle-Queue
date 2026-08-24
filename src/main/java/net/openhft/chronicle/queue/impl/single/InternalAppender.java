@@ -19,8 +19,10 @@ public interface InternalAppender extends ExcerptAppender {
      * Append an excerpt at the specified index, if the index is a valid next index for the queue.
      * This internal replication path can replace an end-of-data marker when restoring an exact
      * missing index. Replacing the marker is logged as a warning and the cycle is resealed after the
-     * indexed entry is committed. Queue serialises the mutation with its write lock; the replication
-     * layer is responsible for ensuring there is only one active backfill coordinator for the queue.
+     * indexed entry is committed. If a previous process already removed the marker, the restarted
+     * backfill must call {@link #normaliseEOFs()} when it completes. Queue serialises the mutation
+     * with its write lock; the replication layer is responsible for ensuring there is only one
+     * active backfill coordinator for the queue.
      * <p>
      * If the index is:
      * <dl>
@@ -28,7 +30,8 @@ public interface InternalAppender extends ExcerptAppender {
      *     <dd>An {@link IllegalIndexException} is thrown</dd>
      *
      *     <dt>Less than or equal to the last index in the queue</dt>
-     *     <dd>The method returns without modifying the queue</dd>
+     *     <dd>The method returns without modifying the queue. The first committed record remains
+     *     authoritative and the supplied duplicate bytes are not compared.</dd>
      * </dl>
      *
      * @param index index the index to append at
