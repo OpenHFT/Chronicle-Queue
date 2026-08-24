@@ -563,12 +563,7 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                int cycle = queue.cycle();
-                if (wire == null)
-                    setWireIfNull(cycle);
-
-                if (this.cycle != cycle)
-                    rollCycleTo(cycle);
+                moveToCycleForAppend();
 
                 long safeLength = queue.overlapSize();
                 resetPosition();
@@ -681,6 +676,24 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
+     * Moves an ordinary append to the latest cycle known by either time, this appender, or another
+     * writer. Time-provider rollback must not move an appender back into a historical roll.
+     */
+    private void moveToCycleForAppend() {
+        final int lastExistingCycle = wire == null ? queue.lastCycle() : queue.lastPublishedCycle();
+        // setCycle2 publishes this appender's cycle via queue.onRoll(), so lastCycle already
+        // includes it; taking the maximum with time prevents clock rollback.
+        final int targetCycle = Math.max(queue.cycle(), lastExistingCycle);
+        if (wire == null) {
+            setWireIfNull(targetCycle);
+            return;
+        }
+
+        if (cycle < targetCycle)
+            rollCycleTo(targetCycle);
+    }
+
+    /**
      * Writes a header for the current wire, ensuring the correct position and header number
      * is set for the next write operation.
      *
@@ -780,12 +793,7 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock();
         writeLock.lock();
         try {
-            int cycle = queue.cycle();
-            if (wire == null)
-                setWireIfNull(cycle);
-
-            if (this.cycle != cycle)
-                rollCycleTo(cycle);
+            moveToCycleForAppend();
 
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
