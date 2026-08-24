@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -10,19 +11,20 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -62,7 +64,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
+    public void writingDocumentIgnoresClockRollback() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
         clock.addAndGet(-clock.get() % ONE_DAY);
@@ -79,17 +81,103 @@ public class StoreAppenderTest extends QueueTestCommon {
             // Write to a new cycle:
             appender.writingDocument().close();
 
-            // The code now throws WriteAfterEOFException for the old cycle:
+            final int latestCycle = queue.rollCycle().toCycle(appender.lastIndexAppended());
+
+            // A backwards clock must not move an ordinary writer into the sealed old cycle.
             clock.addAndGet(-1); // One millisecond earlier
 
-            assertThrows(WriteAfterEOFException.class, // is this a race?
-                    () -> appender.writingDocument().close());
+            appender.writingDocument().close();
+            assertEquals(latestCycle, queue.rollCycle().toCycle(appender.lastIndexAppended()));
 
             // advance back to the latest cycle and write
             clock.addAndGet(2);
             appender.writingDocument().close();
 
-            assertEquals(3, queue.entryCount());
+            assertEquals(4, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void sequentialWriteBytesIgnoresClockRollback() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("old-cycle"));
+            clock.addAndGet(ONE_DAY);
+            appender.writeBytes(Bytes.from("new-cycle"));
+
+            final int latestCycle = queue.rollCycle().toCycle(appender.lastIndexAppended());
+
+            clock.addAndGet(-1);
+            appender.writeBytes(Bytes.from("must-not-reopen"));
+            assertEquals(latestCycle, queue.rollCycle().toCycle(appender.lastIndexAppended()));
+
+            clock.addAndGet(2);
+            appender.writeBytes(Bytes.from("still-writable"));
+            assertEquals(4, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void stalledWriterFollowsAnotherWriterToLaterCycle() throws IOException {
+        final AtomicLong advancingClock = new AtomicLong(System.currentTimeMillis());
+        advancingClock.addAndGet(-advancingClock.get() % ONE_DAY);
+        final AtomicLong stalledClock = new AtomicLong(advancingClock.get());
+        final File directory = queueDirectory.newFolder();
+
+        try (SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.single(directory)
+                .timeProvider(advancingClock::get)
+                .build();
+             SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.single(directory)
+                     .timeProvider(stalledClock::get)
+                     .build();
+             ExcerptAppender advancingWriter = advancingQueue.createAppender();
+             ExcerptAppender stalledWriter = stalledQueue.createAppender()) {
+            stalledWriter.writeText("initial");
+
+            advancingClock.addAndGet(3 * ONE_DAY);
+            advancingWriter.writeText("advanced");
+            final int latestCycle = advancingQueue.rollCycle().toCycle(advancingWriter.lastIndexAppended());
+
+            try (DocumentContext document = stalledWriter.writingDocument()) {
+                document.wire().write("message").text("followed-document");
+            }
+            assertEquals(latestCycle, stalledQueue.rollCycle().toCycle(stalledWriter.lastIndexAppended()));
+
+            stalledWriter.writeBytes(Bytes.from("followed-bytes"));
+            assertEquals(latestCycle, stalledQueue.rollCycle().toCycle(stalledWriter.lastIndexAppended()));
+            assertEquals(4, stalledQueue.entryCount());
+        }
+    }
+
+    @Test
+    public void ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing() throws IOException {
+        final AtomicLong clock = new AtomicLong();
+        final File directory = queueDirectory.newFolder();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(clock::get)
+                .rollCycle(TEST4_DAILY)
+                .forceDirectoryListingRefreshIntervalMs(1)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("initial");
+            assertEquals(0, appender.cycle());
+
+            // A valid later filename makes lastCycle() perform a directory refresh and publish 5.
+            // The append hot path must use only cycles published by cooperating writers, so it
+            // neither scans the directory nor jumps to an externally planted empty file.
+            assertTrue(new File(directory, "19700106T4" + SingleChronicleQueue.SUFFIX).createNewFile());
+            clock.incrementAndGet();
+
+            appender.writeText("still-cycle-zero");
+            assertEquals("ordinary append must not refresh the directory listing", 0, appender.cycle());
+            assertEquals("the planted filename must be discoverable by an explicit refresh",
+                    5, queue.lastCycle());
         }
     }
 
