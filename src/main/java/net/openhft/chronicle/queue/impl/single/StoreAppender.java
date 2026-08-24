@@ -681,7 +681,7 @@ class StoreAppender extends AbstractCloseable
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
-        final int lastExistingCycle = queue.lastCycle();
+        final int lastExistingCycle = wire == null ? queue.lastCycle() : queue.lastPublishedCycle();
         // setCycle2 publishes this appender's cycle via queue.onRoll(), so lastCycle already
         // includes it; taking the maximum with time prevents clock rollback.
         final int targetCycle = Math.max(queue.cycle(), lastExistingCycle);
