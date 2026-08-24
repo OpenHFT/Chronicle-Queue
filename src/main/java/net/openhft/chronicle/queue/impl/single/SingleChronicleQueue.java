@@ -1138,6 +1138,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Returns the latest cycle published by a cooperating writer without the periodic filesystem
+     * refresh performed by {@link #lastCycle()}. This distinction keeps the append hot path from
+     * scanning the queue directory.
+     */
+    int lastPublishedCycle() {
+        return directoryListing.getMaxCreatedCycle();
+    }
+
+    /**
      * Returns the consumer that handles {@link BytesRingBufferStats}.
      *
      * @return the consumer for ring buffer statistics
