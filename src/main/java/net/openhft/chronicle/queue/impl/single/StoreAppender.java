@@ -771,24 +771,25 @@ class StoreAppender extends AbstractCloseable
                 Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
             }
         }
-        int header = bytes.readVolatileInt(lastPos);
+        final int header = bytes.readVolatileInt(lastPos);
         assert header != NOT_INITIALIZED;
-        lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
+        lastPos += lengthOf(header) + SPB_HEADER_SIZE;
+        if (wire.usePadding())
+            lastPos += BytesUtil.padOffset(lastPos);
         bytes.writePosition(lastPos);
         if (recoveryIndex == Long.MIN_VALUE)
             return wire.enterHeader(safeLength);
 
         assert writeLock.locked();
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
-        final long recoveredPosition = ((InternalWire) wire).recoverFromEndOfData();
-        if (recoveredPosition >= 0) {
+        if (((InternalWire) wire).recoverFromEndOfData()) {
             recoveredEndOfData = true;
             reopenedCycles.add(recoveryCycle);
             Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
                     + queue.fileAbsolutePath()
                     + ", cycle=" + recoveryCycle
                     + ", index=0x" + Long.toHexString(recoveryIndex)
-                    + ", position=" + recoveredPosition);
+                    + ", position=" + lastPos);
         }
         return wire.enterHeader(safeLength);
     }

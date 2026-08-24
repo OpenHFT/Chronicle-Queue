@@ -19,7 +19,8 @@ public interface InternalAppender extends ExcerptAppender {
      * Append an excerpt at the specified index, if the index is a valid next index for the queue.
      * This internal replication path can replace an end-of-data marker when restoring an exact
      * missing index. Replacing the marker is logged as a warning and the cycle is resealed after the
-     * indexed entry is committed.
+     * indexed entry is committed. Queue serialises the mutation with its write lock; the replication
+     * layer is responsible for ensuring there is only one active backfill coordinator for the queue.
      * <p>
      * If the index is:
      * <dl>
