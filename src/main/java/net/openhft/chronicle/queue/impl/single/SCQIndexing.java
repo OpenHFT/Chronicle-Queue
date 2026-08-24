@@ -272,19 +272,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         Bytes<?> bytes = wire.bytes();
         bytes.writePosition(writePosition);
 
-        final long position;
-        try {
-            position = wire.enterHeader(indexCount * 8L + 128);
-        } catch (WriteAfterEOFException e) {
-            // Defensive only: supported append paths create index metadata before sealing the
-            // roll. Reaching EOF here means that internal ordering was violated or the stored
-            // indexing write position is stale/corrupt, so fail closed rather than reopen it.
-            final StreamCorruptedException corruption = new StreamCorruptedException(
-                    "Unexpected end-of-data while allocating a queue index; "
-                            + "index metadata must be written before the roll is sealed");
-            corruption.initCause(e);
-            throw corruption;
-        }
+        long position = wire.enterHeader(indexCount * 8L + 128);
 
         WriteMarshallable writer = index2index ? index2IndexTemplate : indexTemplate;
         writer.writeMarshallable(wire);
