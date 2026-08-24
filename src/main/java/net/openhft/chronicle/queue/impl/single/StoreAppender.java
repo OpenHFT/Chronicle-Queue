@@ -782,7 +782,7 @@ class StoreAppender extends AbstractCloseable
 
         assert writeLock.locked();
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
-        if (((InternalWire) wire).recoverFromEndOfData()) {
+        if (bytes.compareAndSwapInt(lastPos, END_OF_DATA, NOT_INITIALIZED)) {
             recoveredEndOfData = true;
             reopenedCycles.add(recoveryCycle);
             Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
