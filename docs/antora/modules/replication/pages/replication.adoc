@@ -41,8 +41,8 @@ B's incomplete local observation; it is not a cluster-wide decision that C's
 data may be discarded. Only the locked, exact-index back-fill path may replace
 that marker. Ordinary Queue appenders never replace it; if they encounter a
 sealed cycle, they roll forward to a writable cycle.
-The recovery warning includes queue path, cycle, index and, when supplied by
-replication, source and peer host context.
+The Queue recovery warning includes queue path, cycle and index. Replication
+should log its source and peer host context around this operation.
 
 This recovery does not rewind consumers that have already advanced beyond the
 reopened cycle. Enterprise back-fill completes before the replacement source is

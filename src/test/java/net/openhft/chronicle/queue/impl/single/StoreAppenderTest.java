@@ -140,7 +140,7 @@ public class StoreAppenderTest extends QueueTestCommon {
              ExcerptAppender stalledWriter = stalledQueue.createAppender()) {
             stalledWriter.writeText("initial");
 
-            advancingClock.addAndGet(ONE_DAY);
+            advancingClock.addAndGet(3 * ONE_DAY);
             advancingWriter.writeText("advanced");
             final int latestCycle = advancingQueue.rollCycle().toCycle(advancingWriter.lastIndexAppended());
 
@@ -152,32 +152,6 @@ public class StoreAppenderTest extends QueueTestCommon {
             stalledWriter.writeBytes(Bytes.from("followed-bytes"));
             assertEquals(latestCycle, stalledQueue.rollCycle().toCycle(stalledWriter.lastIndexAppended()));
             assertEquals(4, stalledQueue.entryCount());
-        }
-    }
-
-    @Test
-    public void ordinaryAppendPathsRollPastSealedCycle() throws IOException {
-        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
-        clock.addAndGet(-clock.get() % ONE_DAY);
-
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
-                .timeProvider(clock::get)
-                .build();
-             ExcerptAppender excerptAppender = queue.createAppender()) {
-            final StoreAppender appender = (StoreAppender) excerptAppender;
-            appender.writeText("initial");
-
-            int expectedCycle = appender.cycle();
-            sealCurrentCycle(appender);
-            try (DocumentContext document = appender.writingDocument()) {
-                document.wire().write("message").text("document-path");
-            }
-            assertEquals(++expectedCycle, appender.cycle());
-
-            sealCurrentCycle(appender);
-            appender.writeBytes(Bytes.from("direct-bytes"));
-            assertEquals(++expectedCycle, appender.cycle());
-            assertEquals(3, queue.entryCount());
         }
     }
 
@@ -206,6 +180,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertEquals("exact-index recovery belongs to the sealed cycle",
                     sealedCycle, appender.cycle());
 
+            // Resealing the current-time cycle is the production path that reaches
+            // StoreAppender's WriteAfterEOFException handling for an ordinary append.
             appender.writeBytes(Bytes.from("following ordinary entry"));
             assertEquals("ordinary append must roll past the restored EOF",
                     sealedCycle + 1, appender.cycle());

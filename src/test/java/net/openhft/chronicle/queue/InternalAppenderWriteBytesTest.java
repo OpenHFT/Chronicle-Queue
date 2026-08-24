@@ -303,7 +303,6 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                         + ", index=0x" + Long.toHexString(secondRecoveryIndex));
                 ((InternalAppender) appender).writeBytes(secondRecoveryIndex, test1b);
                 Assert.assertTrue("each indexed recovery must leave the roll sealed", hasEOF(q, firstCycle));
-                appender.normaliseEOFs();
             }
             Assert.assertTrue(hasEOF(q, firstCycle));
             Assert.assertFalse("a live tailer that crossed the roll must not rewind implicitly",

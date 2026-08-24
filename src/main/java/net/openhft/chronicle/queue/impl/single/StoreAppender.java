@@ -682,15 +682,11 @@ class StoreAppender extends AbstractCloseable
      */
     private void moveToCycleForAppend() {
         final int lastExistingCycle = queue.lastCycle();
-        final int targetCycle = Math.max(cycle, Math.max(queue.cycle(), lastExistingCycle));
+        // setCycle2 publishes this appender's cycle via queue.onRoll(), so lastCycle already
+        // includes it; taking the maximum with time prevents clock rollback.
+        final int targetCycle = Math.max(queue.cycle(), lastExistingCycle);
         if (wire == null) {
             setWireIfNull(targetCycle);
-            if (targetCycle == lastExistingCycle && lastExistingCycle >= 0) {
-                if (cycleHasEOF())
-                    rollCycleTo(Math.incrementExact(targetCycle), true);
-                else
-                    resetPosition();
-            }
             return;
         }
 
@@ -702,22 +698,19 @@ class StoreAppender extends AbstractCloseable
      * Writes a header for the current wire, ensuring the correct position and header number
      * is set for the next write operation.
      *
-     * @param wire       the {@link Wire} to write the header to
      * @param safeLength the safe length of data that can be written
      * @return the position of the written header
      */
-    private long writeHeader(@NotNull final Wire wire, final long safeLength) {
-        Wire currentWire = wire;
+    private long writeHeader(final long safeLength) {
+        assert wire != null;
         for (; ; ) {
-            positionForNextHeader(currentWire);
+            positionForNextHeader(wire);
             try {
-                return currentWire.enterHeader(safeLength);
+                return wire.enterHeader(safeLength);
             } catch (WriteAfterEOFException ignored) {
                 // EOF remains a hard seal. Ordinary writes continue in a later roll rather than
                 // replacing it; only exact-index recovery is allowed to remove the marker.
                 rollCycleTo(Math.incrementExact(cycle), true);
-                resetPosition();
-                currentWire = this.wire;
             }
         }
     }
@@ -725,9 +718,8 @@ class StoreAppender extends AbstractCloseable
     private long positionForNextHeader(@NotNull final Wire wire) {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
-        long pos = positionOfHeader;
         long lastPos = store.writePosition();
-        if (pos < lastPos) {
+        if (positionOfHeader < lastPos) {
             // queue moved since we last touched it - recalculate header number
 
             try {
@@ -743,7 +735,7 @@ class StoreAppender extends AbstractCloseable
         return lastPos;
     }
 
-    private boolean recoverEndOfData(final long recoveryIndex) {
+    private void recoverEndOfData(final long recoveryIndex) {
         assert writeLock.locked();
         assert wire != null;
         assert wire.usePadding();
@@ -752,15 +744,15 @@ class StoreAppender extends AbstractCloseable
         final long recoveryPosition = unpaddedPosition + BytesUtil.padOffset(unpaddedPosition);
         bytes.writePosition(recoveryPosition);
         if (!bytes.compareAndSwapInt(recoveryPosition, END_OF_DATA, NOT_INITIALIZED))
-            return false;
+            return;
 
+        recoveredEndOfData = true;
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
         Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
                 + queue.fileAbsolutePath()
                 + ", cycle=" + recoveryCycle
                 + ", index=0x" + Long.toHexString(recoveryIndex)
                 + ", position=" + recoveryPosition);
-        return true;
     }
 
     /**
@@ -772,7 +764,7 @@ class StoreAppender extends AbstractCloseable
      */
     private void openContext(final boolean metaData, final long safeLength) {
         assert wire != null;
-        this.positionOfHeader = writeHeader(wire, safeLength);
+        this.positionOfHeader = writeHeader(safeLength);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
@@ -836,7 +828,7 @@ class StoreAppender extends AbstractCloseable
         try {
             moveToCycleForAppend();
 
-            this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
+            this.positionOfHeader = writeHeader((int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
@@ -943,7 +935,7 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        recoveredEndOfData = recoverEndOfData(index);
+        recoverEndOfData(index);
         writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
