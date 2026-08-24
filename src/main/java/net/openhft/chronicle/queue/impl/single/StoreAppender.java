@@ -697,7 +697,6 @@ class StoreAppender extends AbstractCloseable
      * Writes a header for the current wire, ensuring the correct position and header number
      * is set for the next write operation.
      *
-     * @param wire       the {@link Wire} to write the header to
      * @param safeLength the safe length of data that can be written
      * @return the position of the written header
      */
@@ -721,9 +720,8 @@ class StoreAppender extends AbstractCloseable
     private void positionForNextHeader() {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
-        long pos = positionOfHeader;
         long lastPos = store.writePosition();
-        if (pos < lastPos) {
+        if (positionOfHeader < lastPos) {
             // queue moved since we last touched it - recalculate header number
 
             try {
@@ -732,10 +730,54 @@ class StoreAppender extends AbstractCloseable
                 Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
             }
         }
-        int header = bytes.readVolatileInt(lastPos);
+        final int header = bytes.readVolatileInt(lastPos);
         assert header != NOT_INITIALIZED;
-        lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
+        lastPos += lengthOf(header) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
+    }
+
+    private boolean replaceEndOfDataForRecovery(final long recoveryIndex) {
+        assert writeLock.locked();
+        assert wire != null;
+        if (!wire.usePadding())
+            throw new IllegalStateException("Exact-index EOF recovery is only supported for padded stores");
+
+        final Bytes<?> bytes = wire.bytes();
+        positionForNextHeader();
+        long recoveryPosition = bytes.writePosition();
+        for (; ; ) {
+            recoveryPosition += BytesUtil.padOffset(recoveryPosition);
+            final int header = bytes.readVolatileInt(recoveryPosition);
+            if (header == END_OF_DATA) {
+                bytes.writePosition(recoveryPosition);
+                replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
+
+                final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+                Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
+                        + queue.fileAbsolutePath()
+                        + ", cycle=" + recoveryCycle
+                        + ", index=0x" + Long.toHexString(recoveryIndex)
+                        + ", position=" + recoveryPosition);
+                return true;
+            }
+
+            if (isNotComplete(header)) {
+                bytes.writePosition(recoveryPosition);
+                return false;
+            }
+
+            recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
+        }
+    }
+
+    /**
+     * Performs the single atomic mutation that opens a sealed roll for exact-index recovery.
+     * Package visibility permits the failed-CAS invariant to be tested without reflection.
+     */
+    static void replaceEndOfDataMarkerForRecovery(Bytes<?> bytes, long recoveryPosition) {
+        if (!bytes.compareAndSwapInt(recoveryPosition, END_OF_DATA, NOT_INITIALIZED))
+            throw new IllegalStateException("End-of-data changed while starting exact-index recovery at "
+                    + recoveryPosition);
     }
 
     /**
@@ -862,6 +904,20 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
+    private void resealRecoveredCycle(final long index) {
+        final int recoveredCycle = queue.rollCycle().toCycle(index);
+        ensureEndOfData("Unable to restore end-of-data after exact-index recovery: queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + recoveredCycle
+                + ", index=0x" + Long.toHexString(index));
+    }
+
+    void ensureEndOfData(final String failureMessage) {
+        if (store.writeEOF(wire, timeoutMS()) || cycleHasEOF())
+            return;
+        throw new IllegalStateException(failureMessage);
+    }
+
     /**
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
      * the queue file and cause data loss.
@@ -874,6 +930,10 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
+        final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
+        if (sequenceNumber >= queue.rollCycle().maxMessagesPerCycle())
+            throw new IllegalStateException("Unable to index " + sequenceNumber
+                    + ", the number of entries exceeds max number for the current rollcycle");
 
         if (wire == null)
             setWireIfNull(cycle);
@@ -892,13 +952,14 @@ class StoreAppender extends AbstractCloseable
             if (index > headerNumber + 1)
                 throw new IllegalIndexException(index, headerNumber);
 
-            // this can happen when using queue replication when we are back filling from a number of sinks at them same time
-            // its normal behaviour in the is use case so should not be a WARN
+            // This can happen when queue replication backfills from several sinks concurrently.
+            // First committed value wins; later duplicates are intentionally ignored without a warning.
             if (Jvm.isDebugEnabled(getClass()))
                 Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
             return;
         }
 
+        final boolean resealRequired = replaceEndOfDataForRecovery(index);
         writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
@@ -907,6 +968,9 @@ class StoreAppender extends AbstractCloseable
         if (!isIndex) {
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
+
+        if (resealRequired)
+            resealRecoveredCycle(index);
     }
 
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
