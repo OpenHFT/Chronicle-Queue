@@ -33,6 +33,29 @@ At startup, replication locks the `source` queue, and waits for the `sink`(s) to
 If the `sink` has more records, they are replayed back to `source` (this is also known as "back filling") before it is unlocked and made usable again.
 This is done to provide automatic data re-synchronisation after a failover to the `sink`.
 
+Back-fill can legitimately reopen a roll that the receiving node has already
+sealed. For example, leader A can fail after C received entries that B did not.
+If B is elected leader, time can advance and cause B to seal the incomplete
+older roll before C returns the missing entries. The end-of-data marker records
+B's incomplete local observation; it is not a cluster-wide decision that C's
+data may be discarded. Only the locked, exact-index back-fill path may replace
+that marker. Ordinary Queue appenders never replace it; if they encounter a
+sealed cycle, they roll forward to a writable cycle.
+The Queue recovery warning includes queue path, cycle and index. Replication
+should log its source and peer host context around this operation.
+
+This recovery does not rewind consumers that have already advanced beyond the
+reopened cycle. Enterprise back-fill completes before the replacement source is
+unlocked for normal use. Other callers must provide equivalent coordination,
+and external archival or cleanup tools must not treat an end-of-data marker as
+proof that a roll can never be reopened.
+
+Exact-index recovery is supported only for padded stores. Queue scans complete
+data, user metadata and sparse-index metadata to locate EOF, replaces that word
+with one compare-and-swap, commits the data and required index entry, and then
+restores EOF. An existing index is authoritative: Queue does not overwrite it
+or compare the duplicate payload supplied by another sink.
+
 The set of hosts onto which the queue is replicated, is defined as a `cluster`.
 The configuration for a cluster is as follows:
 

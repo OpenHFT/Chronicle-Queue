@@ -14,7 +14,8 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WriteAfterEOFException;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
@@ -377,32 +378,157 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void secondConsecutiveEofIsPropagated() throws IOException {
-        final AtomicLong clock = new AtomicLong();
+    public void ordinaryAppenderRollsForwardAfterIndexedRecoveryWithUnchangedClock() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+        final long unchangedTime = clock.get();
+        final Bytes<?> result = Bytes.elasticHeapByteBuffer();
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
                 .timeProvider(clock::get)
-                .rollCycle(TEST_DAILY)
                 .build();
+             ExcerptAppender excerptAppender = queue.createAppender();
+             ExcerptAppender secondAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("initial"));
+
+            final int sealedCycle = appender.cycle();
+            final long recoveredIndex = appender.lastIndexAppended() + 1;
+            sealCurrentCycle(appender);
+
+            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + sealedCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+            assertEquals("exact-index recovery belongs to the sealed cycle",
+                    sealedCycle, appender.cycle());
+
+            appender.writeBytes(Bytes.from("following ordinary entry"));
+            assertEquals("ordinary append must roll past the restored EOF",
+                    sealedCycle + 1, appender.cycle());
+            final long firstIndexInNewCycle = appender.lastIndexAppended();
+            assertEquals("the clock must remain unchanged throughout the test",
+                    unchangedTime, clock.get());
+
+            final long laterRecoveredIndex = recoveredIndex + 1;
+            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + sealedCycle
+                    + ", index=0x" + Long.toHexString(laterRecoveredIndex));
+            ((InternalAppender) appender).writeBytes(laterRecoveredIndex, Bytes.from("later recovered"));
+
+            secondAppender.writeBytes(Bytes.from("second appender entry"));
+            assertEquals("the appender created before the roll must join the latest cycle",
+                    sealedCycle + 1, secondAppender.cycle());
+            assertEquals("the second appender must follow the existing new-cycle entry",
+                    firstIndexInNewCycle + 1, secondAppender.lastIndexAppended());
+
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                assertNextBytes(tailer, result, "initial");
+                assertNextBytes(tailer, result, "recovered");
+                assertNextBytes(tailer, result, "later recovered");
+                assertNextBytes(tailer, result, "following ordinary entry");
+                assertNextBytes(tailer, result, "second appender entry");
+            }
+        }
+    }
+
+    @Test
+    public void exactBackfillRejectsLegacyUnpaddedRollBeforeMutation() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong clock = new AtomicLong();
+        final long recoveredIndex;
+        final int recoveredCycle;
+        final long eofPosition;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(clock::get)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = queue.rollCycle().toCycle(recoveredIndex);
+
+            clock.addAndGet(TimeUnit.HOURS.toMillis(25));
+            appender.writeBytes(Bytes.from("later-cycle"));
+            eofPosition = endOfDataPosition(queue, recoveredCycle);
+        }
+
+        final File recoveredFile = firstQueueFile(directory);
+        setDataFormatToLegacyUnpadded(recoveredFile);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(clock::get)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            assertLegacyDataVersion(queue, recoveredCycle);
+            assertEquals(Wires.END_OF_DATA, readHeader(recoveredFile, eofPosition));
+            final IllegalStateException unsupported = org.junit.Assert.assertThrows(
+                    IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(
+                            recoveredIndex, Bytes.from("must-not-be-written")));
+            assertEquals("Exact-index EOF recovery is only supported for padded stores",
+                    unsupported.getMessage());
+            assertEquals("failed recovery must leave the existing seal unchanged",
+                    Wires.END_OF_DATA, readHeader(recoveredFile, eofPosition));
+
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                assertFalse("failed legacy recovery must not make its index visible",
+                        tailer.moveToIndex(recoveredIndex));
+            }
+        }
+    }
+
+    @Test
+    public void eofRestorationFailureIsNotReportedAsSuccess() throws IOException {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build();
              ExcerptAppender excerptAppender = queue.createAppender()) {
             final StoreAppender appender = (StoreAppender) excerptAppender;
-            appender.writeText("before seals");
-            final int sealedCycle = appender.cycle();
-            sealCurrentCycle(appender);
-            sealCycle(queue, sealedCycle + 1);
+            appender.writeBytes(Bytes.from("current unsealed cycle"));
+            final SingleChronicleQueueStore realStore = appender.store;
 
-            // Keep the first sealed roll as the selected active cycle. The ordinary append may
-            // advance once, but the unexpected second EOF must escape instead of looping.
-            queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
-                    .setVolatileValue(sealedCycle);
-            queue.tableStoreAcquire("listing.highestCycleWriteFloor", sealedCycle)
-                    .setVolatileValue(sealedCycle);
-
-            assertThrows(WriteAfterEOFException.class,
-                    () -> appender.writeText("must fail at second EOF"));
-            assertEquals(sealedCycle + 1, appender.cycle());
-            assertEquals(1, queue.entryCount());
+            try (MappedBytes fakeBytes = MappedBytes.mappedBytes(queueDirectory.newFile(), 64 << 10);
+                 SingleChronicleQueueStore failingStore = new FailingEofStore(fakeBytes)) {
+                appender.store = failingStore;
+                queue.writeLock().lock();
+                try {
+                    final IllegalStateException failure = org.junit.Assert.assertThrows(
+                            IllegalStateException.class,
+                            () -> appender.ensureEndOfData("simulated EOF restoration failure"));
+                    assertEquals("simulated EOF restoration failure", failure.getMessage());
+                } finally {
+                    queue.writeLock().unlock();
+                }
+            } finally {
+                appender.store = realStore;
+            }
         }
+    }
+
+    @Test
+    public void exactRecoveryFailsIfTheEofMarkerChangesBeforeCas() {
+        final Bytes<?> bytes = Bytes.allocateElasticDirect();
+        try {
+            bytes.writeInt(0, Wires.NOT_INITIALIZED);
+
+            final IllegalStateException changed = org.junit.Assert.assertThrows(
+                    IllegalStateException.class,
+                    () -> StoreAppender.replaceEndOfDataMarkerForRecovery(bytes, 0));
+
+            assertEquals("End-of-data changed while starting exact-index recovery at 0",
+                    changed.getMessage());
+            assertEquals("failed CAS must not change the word", Wires.NOT_INITIALIZED,
+                    bytes.readVolatileInt(0));
+        } finally {
+            bytes.releaseLast();
+        }
+    }
+
+    private static void assertNextBytes(ExcerptTailer tailer, Bytes<?> result, String expected) {
+        result.clear();
+        assertTrue(tailer.readBytes(result));
+        assertEquals(expected, result.toString());
     }
 
     private static void sealCurrentCycle(StoreAppender appender) {
@@ -418,13 +544,76 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
-    private static void sealCycle(SingleChronicleQueue queue, int cycle) {
-        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), true, null);
+    private static void assertLegacyDataVersion(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null)) {
+            assertEquals("legacy store precondition", 0, store.dataVersion());
+        }
+    }
+
+    private static long endOfDataPosition(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
              MappedBytes bytes = store.bytes()) {
-            final Wire wire = queue.wireType().apply(bytes);
-            wire.usePadding(store.dataVersion() > 0);
-            assertTrue("test precondition: next roll must be sealed",
-                    store.writeEOF(wire, queue.timeoutMS));
+            long position = store.writePosition();
+            position += Wires.lengthOf(bytes.readVolatileInt(position)) + Wires.SPB_HEADER_SIZE;
+            for (; ; ) {
+                if (store.dataVersion() > 0)
+                    position += net.openhft.chronicle.bytes.BytesUtil.padOffset(position);
+                final int header = bytes.readVolatileInt(position);
+                if (header == Wires.END_OF_DATA)
+                    return position;
+                if (Wires.isNotComplete(header))
+                    throw new AssertionError("Reached an incomplete header before EOF");
+                position += Wires.SPB_HEADER_SIZE + Wires.lengthOf(header);
+            }
+        }
+    }
+
+    private static int readHeader(File queueFile, long position) throws IOException {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(queueFile, 64 << 10)) {
+            return bytes.readVolatileInt(position);
+        }
+    }
+
+    private static File firstQueueFile(File directory) {
+        final File[] queueFiles = directory.listFiles((ignored, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+        if (queueFiles == null || queueFiles.length == 0)
+            throw new AssertionError("No queue files in " + directory);
+        java.util.Arrays.sort(queueFiles);
+        return queueFiles[0];
+    }
+
+    private static void setDataFormatToLegacyUnpadded(File queueFile) throws IOException {
+        final byte[] fieldName = "dataFormat".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+        try (MappedBytes bytes = MappedBytes.mappedBytes(queueFile, 64 << 10)) {
+            for (long position = 0; position < 1024; position++) {
+                int i = 0;
+                while (i < fieldName.length && bytes.readUnsignedByte(position + i) == (fieldName[i] & 0xff))
+                    i++;
+                if (i != fieldName.length)
+                    continue;
+
+                final long valuePosition = position + fieldName.length + 1;
+                assertEquals("dataFormat must initially be version 1", 1, bytes.readUnsignedByte(valuePosition));
+                bytes.writeByte(valuePosition, (byte) 0);
+                return;
+            }
+        }
+        throw new AssertionError("Unable to locate dataFormat in " + queueFile);
+    }
+
+    private static final class FailingEofStore extends SingleChronicleQueueStore {
+        FailingEofStore(MappedBytes bytes) {
+            super(TEST4_DAILY, WireType.BINARY, bytes, 8, 1);
+        }
+
+        @Override
+        public boolean writeEOF(Wire wire, long timeoutMS) {
+            return false;
+        }
+
+        @Override
+        public long writePosition() {
+            return 0;
         }
     }
 
