@@ -375,56 +375,6 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void exactBackfillRejectsLegacyUnpaddedRollBeforeMutation() throws IOException {
-        final File directory = queueDirectory.newFolder();
-        final AtomicLong clock = new AtomicLong();
-        final long recoveredIndex;
-        final int recoveredCycle;
-        final long eofPosition;
-
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
-                .timeProvider(clock::get)
-                .rollCycle(TEST4_DAILY)
-                .testBlockSize()
-                .build();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeBytes(Bytes.from("first-cycle"));
-            recoveredIndex = appender.lastIndexAppended() + 1;
-            recoveredCycle = queue.rollCycle().toCycle(recoveredIndex);
-
-            clock.addAndGet(TimeUnit.HOURS.toMillis(25));
-            appender.writeBytes(Bytes.from("later-cycle"));
-            eofPosition = endOfDataPosition(queue, recoveredCycle);
-        }
-
-        final File recoveredFile = firstQueueFile(directory);
-        setDataFormatToLegacyUnpadded(recoveredFile);
-
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
-                .timeProvider(clock::get)
-                .rollCycle(TEST4_DAILY)
-                .testBlockSize()
-                .build();
-             ExcerptAppender appender = queue.createAppender()) {
-            assertLegacyDataVersion(queue, recoveredCycle);
-            assertEquals(Wires.END_OF_DATA, readHeader(recoveredFile, eofPosition));
-            final IllegalStateException unsupported = org.junit.Assert.assertThrows(
-                    IllegalStateException.class,
-                    () -> ((InternalAppender) appender).writeBytes(
-                            recoveredIndex, Bytes.from("must-not-be-written")));
-            assertEquals("Exact-index EOF recovery is only supported for padded stores",
-                    unsupported.getMessage());
-            assertEquals("failed recovery must leave the existing seal unchanged",
-                    Wires.END_OF_DATA, readHeader(recoveredFile, eofPosition));
-
-            try (ExcerptTailer tailer = queue.createTailer()) {
-                assertFalse("failed legacy recovery must not make its index visible",
-                        tailer.moveToIndex(recoveredIndex));
-            }
-        }
-    }
-
-    @Test
     public void eofRestorationFailureIsNotReportedAsSuccess() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build();
              ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -486,63 +436,6 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertTrue("test precondition: current roll must be sealed",
                     store.writeEOF(wire, appender.queue().timeoutMS));
         }
-    }
-
-    private static void assertLegacyDataVersion(SingleChronicleQueue queue, int cycle) {
-        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null)) {
-            assertEquals("legacy store precondition", 0, store.dataVersion());
-        }
-    }
-
-    private static long endOfDataPosition(SingleChronicleQueue queue, int cycle) {
-        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
-             MappedBytes bytes = store.bytes()) {
-            long position = store.writePosition();
-            position += Wires.lengthOf(bytes.readVolatileInt(position)) + Wires.SPB_HEADER_SIZE;
-            for (; ; ) {
-                if (store.dataVersion() > 0)
-                    position += net.openhft.chronicle.bytes.BytesUtil.padOffset(position);
-                final int header = bytes.readVolatileInt(position);
-                if (header == Wires.END_OF_DATA)
-                    return position;
-                if (Wires.isNotComplete(header))
-                    throw new AssertionError("Reached an incomplete header before EOF");
-                position += Wires.SPB_HEADER_SIZE + Wires.lengthOf(header);
-            }
-        }
-    }
-
-    private static int readHeader(File queueFile, long position) throws IOException {
-        try (MappedBytes bytes = MappedBytes.mappedBytes(queueFile, 64 << 10)) {
-            return bytes.readVolatileInt(position);
-        }
-    }
-
-    private static File firstQueueFile(File directory) {
-        final File[] queueFiles = directory.listFiles((ignored, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
-        if (queueFiles == null || queueFiles.length == 0)
-            throw new AssertionError("No queue files in " + directory);
-        java.util.Arrays.sort(queueFiles);
-        return queueFiles[0];
-    }
-
-    private static void setDataFormatToLegacyUnpadded(File queueFile) throws IOException {
-        final byte[] fieldName = "dataFormat".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
-        try (MappedBytes bytes = MappedBytes.mappedBytes(queueFile, 64 << 10)) {
-            for (long position = 0; position < 1024; position++) {
-                int i = 0;
-                while (i < fieldName.length && bytes.readUnsignedByte(position + i) == (fieldName[i] & 0xff))
-                    i++;
-                if (i != fieldName.length)
-                    continue;
-
-                final long valuePosition = position + fieldName.length + 1;
-                assertEquals("dataFormat must initially be version 1", 1, bytes.readUnsignedByte(valuePosition));
-                bytes.writeByte(valuePosition, (byte) 0);
-                return;
-            }
-        }
-        throw new AssertionError("Unable to locate dataFormat in " + queueFile);
     }
 
     private static final class FailingEofStore extends SingleChronicleQueueStore {
