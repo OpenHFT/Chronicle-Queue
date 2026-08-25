@@ -518,6 +518,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         // If unable to reserve bytes, create a new instance of MappedBytes and try again
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
             Wire wire0 = WireType.valueOf(wire).apply(bytes);
+            wire0.usePadding(dataVersion > 0);
             return writeEOFAndShrink(wire0, timeoutMS);
 
         } catch (Exception e) {
