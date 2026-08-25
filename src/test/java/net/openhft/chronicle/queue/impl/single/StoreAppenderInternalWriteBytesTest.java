@@ -82,7 +82,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         try {
             List<Future<?>> copierFutures = new ArrayList<>();
             for (int i = 0; i < numCopiers; i++) {
-                copierFutures.add(es.submit(new QueueCopier(sourceDir, destinationDir, i)));
+                copierFutures.add(es.submit(new QueueCopier(sourceDir, destinationDir)));
             }
             copierFutures.forEach(future -> {
                 try {
@@ -121,9 +121,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     long destinationIndex = destinationTailer.index();
                     assert sourceTailer.readBytes(sourceBuffer) : "Source queue is shorter than expected";
                     assert destinationTailer.readBytes(destinationBuffer) : "Destination queue is shorter than expected";
-                    final String s = destinationBuffer.toString();
-                    assertEquals(format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s),
-                            sourceBuffer.toString(), s.replaceAll(" - .*", ""));
+                    assertEquals(format("Mismatch at index %s/%s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex)),
+                            sourceBuffer.toString(), destinationBuffer.toString());
                 }
             }
         }
@@ -133,12 +132,10 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         private final Path sourceDir;
         private final Path destinationDir;
-        private final int copyId;
 
-        QueueCopier(Path sourceDir, Path destinationDir, int copyId) {
+        QueueCopier(Path sourceDir, Path destinationDir) {
             this.sourceDir = sourceDir;
             this.destinationDir = destinationDir;
-            this.copyId = copyId;
         }
 
         @Override
@@ -162,7 +159,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
                         if (prev.contentEquals(buffer))
                             fail("duplicate " + buffer);
-                        buffer.append(" - ").append(copyId);
                         ((InternalAppender) destinationAppender).writeBytes(index, buffer);
                         try (@NotNull DocumentContext dc = destinationTailer.readingDocument()) {
                             if (!dc.isPresent()) {

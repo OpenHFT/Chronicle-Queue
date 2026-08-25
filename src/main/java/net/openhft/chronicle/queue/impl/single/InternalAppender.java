@@ -22,21 +22,22 @@ public interface InternalAppender extends ExcerptAppender {
      * the data record and its sparse-index metadata are committed.
      * <p>
      * Queue serialises concurrent backfill appenders with its write lock. The first committed value
-     * at an index wins; later duplicates return without comparing the supplied bytes.
+     * at an index wins. Later duplicates are compared with it; matching content returns silently,
+     * while different content produces a warning and leaves the committed value unchanged.
      * <p>
      * If the index is:
      * <dl>
-     *     <dt>Greater than the next valid indices for the queue</dt>
+     *     <dt>Greater than the next valid index for the queue</dt>
      *     <dd>An {@link IllegalIndexException} is thrown</dd>
      *
      *     <dt>Less than or equal to the last index in the queue</dt>
      *     <dd>The method returns without modifying the queue. The first committed record remains
-     *     authoritative and the supplied duplicate bytes are not compared.</dd>
+     *     authoritative; a warning is emitted if the supplied bytes differ.</dd>
      * </dl>
      *
-     * @param index index the index to append at
-     * @param bytes bytes the contents of the excerpt to write
-     * @throws IllegalIndexException if the index specified is larger than the valid next indices of the queue
+     * @param index the exact queue index to append at
+     * @param bytes the contents of the excerpt to write
+     * @throws IllegalIndexException if {@code index} is greater than the next valid queue index
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
 

@@ -76,11 +76,44 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             final long requestedIndex = appender.lastIndexAppended() + 1;
             putNextHeader(q, appender.cycle(), NOT_COMPLETE);
 
-            expectException("Incomplete header found at pos");
+            expectException("Exact-index recovery replaced incomplete header");
             ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("recovered"));
 
             assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
             assertNoDataAfter(q, requestedIndex);
+        }
+    }
+
+    @Test
+    public void exactWriteChecksRewoundEntriesAndWarnsOnlyForDifferentContent() {
+        final String[] values = {"original-0", "original-1", "original-2"};
+        final long[] indexes = new long[values.length];
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            for (int i = 0; i < values.length; i++) {
+                appender.writeBytes(Bytes.from(values[i]));
+                indexes[i] = appender.lastIndexAppended();
+            }
+
+            final InternalAppender internalAppender = (InternalAppender) appender;
+            for (int i = 0; i < values.length; i++)
+                internalAppender.writeBytes(indexes[i], Bytes.from(values[i]));
+
+            final long mismatchIndex = indexes[1];
+            expectException(exception -> exception.message().contains(
+                            "Exact-index recovery found different content for existing entry")
+                            && exception.message().contains("existing:\n")
+                            && exception.message().contains("supplied:\n"),
+                    "mismatch warning with readable existing and supplied content");
+            internalAppender.writeBytes(mismatchIndex, Bytes.from("different-1"));
+
+            Assert.assertEquals(values.length, q.entryCount());
+            for (int i = 0; i < values.length; i++)
+                assertBytesAtIndex(q, indexes[i], Bytes.from(values[i]));
         }
     }
 
@@ -155,6 +188,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             appender.writeBytes(originalBytes);
 
             // try to overwrite - will not overwrite
+            expectException("Exact-index recovery found different content for existing entry");
             ((InternalAppender) appender).writeBytes(0, overwriteBytes);
 
             ExcerptTailer tailer = q.createTailer();
@@ -250,7 +284,9 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         // has to be the same tmpDir
         try (SingleChronicleQueue q = createQueue(tmpDir);
              InternalAppender appender = (InternalAppender) q.createAppender()) {
+            expectException("index=0x0");
             appender.writeBytes(0, Bytes.from("HELLO WORLD"));
+            expectException("index=0x1");
             appender.writeBytes(1, Bytes.from("HELLO WORLD"));
 
             ExcerptTailer tailer = q.createTailer();
@@ -429,7 +465,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             try {
                 // Other focused tests assert the warning. Here the structural assertions must remain
                 // discriminating even when recovery fails before it reaches the warning site.
-                ignoreException("Reopened end-of-data for exact-index recovery");
+                ignoreException("Exact-index recovery reopened end-of-data");
                 ((InternalAppender) appender).writeBytes(recoveredIndex, recovered);
             } catch (Throwable t) {
                 failure = t;
