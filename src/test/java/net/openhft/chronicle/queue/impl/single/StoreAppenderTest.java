@@ -308,6 +308,20 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void recoveryClassifiesTheRequestedHeaderWithoutAdvancingItsIndex() {
+        assertEquals(StoreAppender.RecoveryAction.WRITE_AND_RESEAL,
+                StoreAppender.recoveryActionForHeader(Wires.END_OF_DATA));
+        assertEquals(StoreAppender.RecoveryAction.WRITE,
+                StoreAppender.recoveryActionForHeader(Wires.NOT_COMPLETE));
+        assertEquals(StoreAppender.RecoveryAction.WRITE,
+                StoreAppender.recoveryActionForHeader(Wires.NOT_INITIALIZED));
+        assertEquals(StoreAppender.RecoveryAction.ALREADY_PRESENT,
+                StoreAppender.recoveryActionForHeader(8));
+        assertEquals(StoreAppender.RecoveryAction.SKIP_METADATA,
+                StoreAppender.recoveryActionForHeader(Wires.META_DATA | 8));
+    }
+
+    @Test
     public void ordinaryAppenderRollsForwardAfterIndexedRecoveryWithUnchangedClock() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         clock.addAndGet(-clock.get() % ONE_DAY);
