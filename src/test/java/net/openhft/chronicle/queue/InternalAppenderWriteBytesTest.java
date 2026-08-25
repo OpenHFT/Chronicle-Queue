@@ -4,6 +4,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.onoes.LogLevel;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -36,7 +38,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void canWriteAtEndOfLastExistingRollCycle() {
+    public void exactWriteInitializesUnusedRequestedEntryWithoutWarning() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
         Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -60,6 +62,25 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             tailer.readBytes(result);
             assertEquals(test2, result);
             result.clear();
+        }
+    }
+
+    @Test
+    public void exactWriteReplacesAnIncompleteRequestedEntryWithAWarning() {
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first"));
+            final long requestedIndex = appender.lastIndexAppended() + 1;
+            putNextHeader(q, appender.cycle(), NOT_COMPLETE);
+
+            expectException("Incomplete header found at pos");
+            ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("recovered"));
+
+            assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
+            assertNoDataAfter(q, requestedIndex);
         }
     }
 
@@ -491,6 +512,17 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     private static long writePosition(SingleChronicleQueue q, int cycle) {
         try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
             return store.writePosition();
+        }
+    }
+
+    private static void putNextHeader(SingleChronicleQueue q, int cycle, int header) {
+        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null);
+             MappedBytes bytes = store.bytes()) {
+            long position = store.writePosition();
+            position += lengthOf(bytes.readVolatileInt(position)) + SPB_HEADER_SIZE;
+            position += BytesUtil.padOffset(position);
+            Assert.assertEquals(NOT_INITIALIZED, bytes.readVolatileInt(position));
+            bytes.writeVolatileInt(position, header);
         }
     }
 

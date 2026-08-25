@@ -736,7 +736,26 @@ class StoreAppender extends AbstractCloseable
         bytes.writePosition(lastPos);
     }
 
-    private boolean replaceEndOfDataForRecovery(final long recoveryIndex) {
+    enum RecoveryAction {
+        WRITE,
+        WRITE_AND_RESEAL,
+        ALREADY_PRESENT,
+        SKIP_METADATA
+    }
+
+    static RecoveryAction recoveryActionForHeader(final int header) {
+        if (header == END_OF_DATA)
+            return RecoveryAction.WRITE_AND_RESEAL;
+        if (isNotComplete(header))
+            return RecoveryAction.WRITE;
+        if (isReadyData(header))
+            return RecoveryAction.ALREADY_PRESENT;
+        if (isReadyMetaData(header))
+            return RecoveryAction.SKIP_METADATA;
+        throw new IllegalStateException("Unexpected recovery header 0x" + Integer.toHexString(header));
+    }
+
+    RecoveryAction replaceEndOfDataForRecovery(final long recoveryIndex) {
         assert writeLock.locked();
         assert wire != null;
         if (!wire.usePadding())
@@ -748,7 +767,8 @@ class StoreAppender extends AbstractCloseable
         for (; ; ) {
             recoveryPosition += BytesUtil.padOffset(recoveryPosition);
             final int header = bytes.readVolatileInt(recoveryPosition);
-            if (header == END_OF_DATA) {
+            final RecoveryAction action = recoveryActionForHeader(header);
+            if (action == RecoveryAction.WRITE_AND_RESEAL) {
                 bytes.writePosition(recoveryPosition);
                 replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
 
@@ -758,14 +778,21 @@ class StoreAppender extends AbstractCloseable
                         + ", cycle=" + recoveryCycle
                         + ", index=0x" + Long.toHexString(recoveryIndex)
                         + ", position=" + recoveryPosition);
-                return true;
+                return RecoveryAction.WRITE_AND_RESEAL;
             }
 
-            if (isNotComplete(header)) {
+            if (action == RecoveryAction.WRITE) {
                 bytes.writePosition(recoveryPosition);
-                return false;
+                // Wire.enterHeader distinguishes NOT_INITIALIZED (no warning) from a failed
+                // incomplete header (warning, then replacement) at this exact position.
+                return RecoveryAction.WRITE;
             }
 
+            if (action == RecoveryAction.ALREADY_PRESENT)
+                return RecoveryAction.ALREADY_PRESENT;
+
+            // Metadata does not consume an index. A ready data header does, so it must never be
+            // skipped: it is the requested index and first-writer-wins makes recovery a no-op.
             recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
         }
     }
@@ -959,7 +986,10 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        final boolean resealRequired = replaceEndOfDataForRecovery(index);
+        final RecoveryAction recoveryAction = replaceEndOfDataForRecovery(index);
+        if (recoveryAction == RecoveryAction.ALREADY_PRESENT)
+            return;
+
         writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
@@ -969,7 +999,7 @@ class StoreAppender extends AbstractCloseable
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
 
-        if (resealRequired)
+        if (recoveryAction == RecoveryAction.WRITE_AND_RESEAL)
             resealRecoveredCycle(index);
     }
 
