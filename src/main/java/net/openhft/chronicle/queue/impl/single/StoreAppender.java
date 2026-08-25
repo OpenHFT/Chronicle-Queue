@@ -573,7 +573,7 @@ class StoreAppender extends AbstractCloseable
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
                 // sets the writeLimit based on the safeLength
-                openContext(metaData, safeLength);
+                openContext(metaData, safeLength, true);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
@@ -751,7 +751,25 @@ class StoreAppender extends AbstractCloseable
      * @param safeLength the safe length of data that can be written
      * @return the position of the written header
      */
-    private long writeHeader(@NotNull final Wire wire, final long safeLength) {
+    private long writeHeaderForOrdinaryAppend(final long safeLength) {
+        assert wire != null;
+        for (; ; ) {
+            try {
+                return writeHeader(safeLength);
+            } catch (WriteAfterEOFException ignored) {
+                // EOF remains a hard seal. Ordinary writes continue in a later roll rather than
+                // replacing it; only exact-index recovery is allowed to remove the marker.
+                rollCycleTo(cycle + 1, true);
+            }
+        }
+    }
+
+    private long writeHeader(final long safeLength) {
+        positionForNextHeader();
+        return wire.enterHeader(safeLength);
+    }
+
+    private void positionForNextHeader() {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
         long pos = positionOfHeader;
@@ -769,7 +787,6 @@ class StoreAppender extends AbstractCloseable
         assert header != NOT_INITIALIZED;
         lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
-        return wire.enterHeader(safeLength);
     }
 
     /**
@@ -777,11 +794,14 @@ class StoreAppender extends AbstractCloseable
      * the header, write position, and metadata flag.
      *
      * @param metaData   indicates if the context is for metadata
-     * @param safeLength the maximum length of data that can be safely written
+     * @param safeLength       the maximum length of data that can be safely written
+     * @param rollAtEndOfData  whether an ordinary append should transparently roll past EOF
      */
-    private void openContext(final boolean metaData, final long safeLength) {
+    private void openContext(final boolean metaData, final long safeLength, final boolean rollAtEndOfData) {
         assert wire != null;
-        this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
+        this.positionOfHeader = rollAtEndOfData
+                ? writeHeaderForOrdinaryAppend(safeLength)
+                : writeHeader(safeLength);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
@@ -847,7 +867,7 @@ class StoreAppender extends AbstractCloseable
             //! selection: bytes would move backwards while writingDocument() follows the shared published maximum.
             moveToCycleForAppend();
 
-            this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
+            this.positionOfHeader = writeHeaderForOrdinaryAppend((int) queue.overlapSize());
 
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
@@ -949,7 +969,7 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            openContext(metadata, safeLength);
+            openContext(metadata, safeLength, false);
 
             try {
                 final Bytes<?> bytes0 = context.wire().bytes();
