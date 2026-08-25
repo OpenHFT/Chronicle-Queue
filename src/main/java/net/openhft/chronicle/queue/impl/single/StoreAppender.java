@@ -755,45 +755,49 @@ class StoreAppender extends AbstractCloseable
         throw new IllegalStateException("Unexpected recovery header 0x" + Integer.toHexString(header));
     }
 
-    RecoveryAction replaceEndOfDataForRecovery(final long recoveryIndex) {
+    /**
+     * Inspects the requested index, skipping metadata because it does not consume an index.
+     * If the slot is sealed, opens it for recovery; otherwise reports whether it can be written
+     * or is already occupied.
+     */
+    private RecoveryAction prepareExactIndexRecovery(final long recoveryIndex) {
         assert writeLock.locked();
-        assert wire != null;
-        if (!wire.usePadding())
-            throw new IllegalStateException("Exact-index EOF recovery is only supported for padded stores");
 
         final Bytes<?> bytes = wire.bytes();
+        final boolean usePadding = wire.usePadding();
         positionForNextHeader();
         long recoveryPosition = bytes.writePosition();
         for (; ; ) {
-            recoveryPosition += BytesUtil.padOffset(recoveryPosition);
+            if (usePadding)
+                recoveryPosition += BytesUtil.padOffset(recoveryPosition);
             final int header = bytes.readVolatileInt(recoveryPosition);
             final RecoveryAction action = recoveryActionForHeader(header);
-            if (action == RecoveryAction.WRITE_AND_RESEAL) {
-                bytes.writePosition(recoveryPosition);
-                replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
+            switch (action) {
+                case WRITE_AND_RESEAL:
+                    replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
+                    final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+                    Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
+                            + queue.fileAbsolutePath()
+                            + ", cycle=" + recoveryCycle
+                            + ", index=0x" + Long.toHexString(recoveryIndex)
+                            + ", position=" + recoveryPosition);
+                    return action;
 
-                final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
-                Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
-                        + queue.fileAbsolutePath()
-                        + ", cycle=" + recoveryCycle
-                        + ", index=0x" + Long.toHexString(recoveryIndex)
-                        + ", position=" + recoveryPosition);
-                return RecoveryAction.WRITE_AND_RESEAL;
+                case WRITE:
+                    // Wire.enterHeader warns before replacing an incomplete header, but writes an
+                    // uninitialised slot silently.
+                    return action;
+
+                case ALREADY_PRESENT:
+                    return action;
+
+                case SKIP_METADATA:
+                    recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
+                    break;
+
+                default:
+                    throw new AssertionError(action);
             }
-
-            if (action == RecoveryAction.WRITE) {
-                bytes.writePosition(recoveryPosition);
-                // Wire.enterHeader distinguishes NOT_INITIALIZED (no warning) from a failed
-                // incomplete header (warning, then replacement) at this exact position.
-                return RecoveryAction.WRITE;
-            }
-
-            if (action == RecoveryAction.ALREADY_PRESENT)
-                return RecoveryAction.ALREADY_PRESENT;
-
-            // Metadata does not consume an index. A ready data header does, so it must never be
-            // skipped: it is the requested index and first-writer-wins makes recovery a no-op.
-            recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
         }
     }
 
@@ -986,7 +990,7 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        final RecoveryAction recoveryAction = replaceEndOfDataForRecovery(index);
+        final RecoveryAction recoveryAction = prepareExactIndexRecovery(index);
         if (recoveryAction == RecoveryAction.ALREADY_PRESENT)
             return;
 
