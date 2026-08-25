@@ -752,16 +752,19 @@ class StoreAppender extends AbstractCloseable
 
     enum RecoveryAction {
         WRITE,
+        WARN_AND_WRITE,
         WRITE_AND_RESEAL,
         ALREADY_PRESENT,
         SKIP_METADATA
     }
 
     static RecoveryAction recoveryActionForHeader(final int header) {
+        if (header == NOT_INITIALIZED)
+            return RecoveryAction.WRITE;
         if (header == END_OF_DATA)
             return RecoveryAction.WRITE_AND_RESEAL;
-        if (isNotComplete(header))
-            return RecoveryAction.WRITE;
+        if ((header & NOT_COMPLETE) != 0)
+            return RecoveryAction.WARN_AND_WRITE;
         if (isReadyData(header))
             return RecoveryAction.ALREADY_PRESENT;
         if (isReadyMetaData(header))
@@ -788,21 +791,26 @@ class StoreAppender extends AbstractCloseable
             final RecoveryAction action = recoveryActionForHeader(header);
             switch (action) {
                 case WRITE_AND_RESEAL:
+                    bytes.writePosition(recoveryPosition);
                     replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
-                    final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
-                    Jvm.warn().on(getClass(), "Reopened end-of-data for exact-index recovery: queue="
-                            + queue.fileAbsolutePath()
-                            + ", cycle=" + recoveryCycle
-                            + ", index=0x" + Long.toHexString(recoveryIndex)
-                            + ", position=" + recoveryPosition);
+                    warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
+                            recoveryPosition, header);
                     return action;
 
                 case WRITE:
-                    // Wire.enterHeader warns before replacing an incomplete header, but writes an
-                    // uninitialised slot silently.
+                    bytes.writePosition(recoveryPosition);
+                    return action;
+
+                case WARN_AND_WRITE:
+                    bytes.writePosition(recoveryPosition);
+                    warnExactIndexRecovery("replaced incomplete header", recoveryIndex,
+                            recoveryPosition, header);
+                    // Clear the failed header here so Wire.enterHeader does not emit a second warning.
+                    bytes.writeVolatileInt(recoveryPosition, NOT_INITIALIZED);
                     return action;
 
                 case ALREADY_PRESENT:
+                    bytes.readPosition(recoveryPosition);
                     return action;
 
                 case SKIP_METADATA:
@@ -813,6 +821,17 @@ class StoreAppender extends AbstractCloseable
                     throw new AssertionError(action);
             }
         }
+    }
+
+    private void warnExactIndexRecovery(final String action, final long recoveryIndex,
+                                        final long recoveryPosition, final int header) {
+        final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+        Jvm.warn().on(getClass(), "Exact-index recovery " + action + ": queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + recoveryCycle
+                + ", index=0x" + Long.toHexString(recoveryIndex)
+                + ", position=" + recoveryPosition
+                + ", header=0x" + Integer.toHexString(header));
     }
 
     /**
@@ -992,21 +1011,19 @@ class StoreAppender extends AbstractCloseable
 
         long headerNumber = wire.headerNumber();
 
-        boolean isNextIndex = index == headerNumber + 1;
-        if (!isNextIndex) {
+        final RecoveryAction recoveryAction;
+        if (index != headerNumber + 1) {
             if (index > headerNumber + 1)
                 throw new IllegalIndexException(index, headerNumber);
-
-            // This can happen when queue replication backfills from several sinks concurrently.
-            // First committed value wins; later duplicates are intentionally ignored without a warning.
-            if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+            compareExistingEntryAtIndex(index, sequenceNumber, bytes);
             return;
         }
 
-        final RecoveryAction recoveryAction = prepareExactIndexRecovery(index);
-        if (recoveryAction == RecoveryAction.ALREADY_PRESENT)
+        recoveryAction = prepareExactIndexRecovery(index);
+        if (recoveryAction == RecoveryAction.ALREADY_PRESENT) {
+            compareExistingEntry(index, bytes);
             return;
+        }
 
         writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -1019,6 +1036,72 @@ class StoreAppender extends AbstractCloseable
 
         if (recoveryAction == RecoveryAction.WRITE_AND_RESEAL)
             resealRecoveredCycle(index);
+    }
+
+    private void compareExistingEntryAtIndex(final long index, final long sequenceNumber,
+                                             @NotNull final BytesStore<?, ?> suppliedBytes) {
+        final Bytes<?> wireBytes = wire.bytes();
+        final long savedReadPosition = wireBytes.readPosition();
+        final long savedReadLimit = wireBytes.readLimit();
+        final long savedWritePosition = wireBytes.writePosition();
+        try {
+            final ScanResult scanResult = store.moveToIndexForRead(this, sequenceNumber);
+            if (scanResult == ScanResult.FOUND)
+                compareExistingEntry(index, suppliedBytes);
+            else
+                warnUnableToCompareExistingEntry(index, suppliedBytes.readRemaining(), scanResult);
+        } finally {
+            wireBytes.readPosition(savedReadPosition);
+            wireBytes.readLimit(savedReadLimit);
+            // Restore this last so ChunkedMappedBytes is parked on the append mapping.
+            wireBytes.writePosition(savedWritePosition);
+        }
+    }
+
+    private void compareExistingEntry(final long index,
+                                      @NotNull final BytesStore<?, ?> suppliedBytes) {
+        final Bytes<?> existingBytes = wire.bytes();
+        final int header = existingBytes.readVolatileInt();
+        assert isReadyData(header);
+
+        final int existingLength = lengthOf(header);
+        final long suppliedLength = suppliedBytes.readRemaining();
+        if (existingLength == suppliedLength
+                && existingBytes.equalBytes(suppliedBytes, existingLength))
+            return;
+
+        Jvm.warn().on(getClass(), "Exact-index recovery found different content for existing entry: queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + queue.rollCycle().toCycle(index)
+                + ", index=0x" + Long.toHexString(index)
+                + ", existingLength=" + existingLength
+                + ", suppliedLength=" + suppliedLength
+                + "\nexisting:\n" + existingBytes.toHexString(existingLength)
+                + "\nsupplied:\n" + toHexDump(suppliedBytes, suppliedLength));
+    }
+
+    private static String toHexDump(final BytesStore<?, ?> bytesStore,
+                                    final long length) {
+        if (bytesStore instanceof Bytes)
+            return ((Bytes<?>) bytesStore).toHexString(length);
+
+        final Bytes<?> bytes = bytesStore.bytesForRead();
+        try {
+            bytes.readPosition(bytesStore.readPosition());
+            return bytes.toHexString(length);
+        } finally {
+            bytes.releaseLast();
+        }
+    }
+
+    private void warnUnableToCompareExistingEntry(final long index, final long suppliedLength,
+                                                  final ScanResult reason) {
+        Jvm.warn().on(getClass(), "Exact-index recovery could not compare existing entry: queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + queue.rollCycle().toCycle(index)
+                + ", index=0x" + Long.toHexString(index)
+                + ", suppliedLength=" + suppliedLength
+                + ", reason=" + reason);
     }
 
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {

@@ -311,7 +311,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     public void recoveryClassifiesTheRequestedHeaderWithoutAdvancingItsIndex() {
         assertEquals(StoreAppender.RecoveryAction.WRITE_AND_RESEAL,
                 StoreAppender.recoveryActionForHeader(Wires.END_OF_DATA));
-        assertEquals(StoreAppender.RecoveryAction.WRITE,
+        assertEquals(StoreAppender.RecoveryAction.WARN_AND_WRITE,
                 StoreAppender.recoveryActionForHeader(Wires.NOT_COMPLETE));
         assertEquals(StoreAppender.RecoveryAction.WRITE,
                 StoreAppender.recoveryActionForHeader(Wires.NOT_INITIALIZED));
