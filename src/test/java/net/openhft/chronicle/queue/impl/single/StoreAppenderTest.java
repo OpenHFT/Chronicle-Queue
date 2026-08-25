@@ -16,6 +16,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Before;
 import org.junit.Rule;
@@ -528,6 +529,61 @@ public class StoreAppenderTest extends QueueTestCommon {
                  ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText("published-by-child");
             }
+        }
+    }
+
+    @Test
+    public void ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("before seal");
+            final int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+
+            appender.writeText("after seal");
+
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(2, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void sequentialWriteBytesRollsForwardPastSealedCurrentCycle() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("before seal"));
+            final int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+
+            appender.writeBytes(Bytes.from("after seal"));
+
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(2, queue.entryCount());
+        }
+    }
+
+    private static void sealCurrentCycle(StoreAppender appender) {
+        final SingleChronicleQueueStore store = appender.store;
+        if (store == null)
+            throw new AssertionError("Appender has no current store");
+
+        try (MappedBytes bytes = store.bytes()) {
+            final Wire wire = appender.queue().wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue("test precondition: current roll must be sealed",
+                    store.writeEOF(wire, appender.queue().timeoutMS));
         }
     }
 
