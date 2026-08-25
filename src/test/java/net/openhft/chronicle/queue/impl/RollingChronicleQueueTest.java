@@ -65,7 +65,7 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
                     "listing.lowestCycle: 0\n" +
                     "# position: 232, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 10\n" +
+                    "listing.modCount: 8\n" +
                     "# position: 264, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +

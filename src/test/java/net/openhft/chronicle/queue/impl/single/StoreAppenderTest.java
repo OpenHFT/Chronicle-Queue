@@ -181,6 +181,45 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void stalledWriterRollsWithoutRefreshingDirectoryListing() throws IOException {
+        final AtomicLong advancingClock = new AtomicLong();
+        final AtomicLong stalledClock = new AtomicLong();
+        final File directory = queueDirectory.newFolder();
+
+        try (SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(advancingClock::get)
+                .rollCycle(TEST4_DAILY)
+                .forceDirectoryListingRefreshIntervalMs(1)
+                .build();
+             SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.binary(directory)
+                     .timeProvider(stalledClock::get)
+                     .rollCycle(TEST4_DAILY)
+                     .forceDirectoryListingRefreshIntervalMs(1)
+                     .build();
+             ExcerptAppender advancingWriter = advancingQueue.createAppender();
+             ExcerptAppender stalledWriter = stalledQueue.createAppender()) {
+            stalledWriter.writeText("initial");
+
+            advancingClock.set(3L * TEST4_DAILY.lengthInMillis());
+            advancingWriter.writeText("published-cycle-three");
+            assertEquals(3, stalledQueue.lastPublishedCycle());
+
+            // If the stalled appender calls lastCycle() while rolling, the elapsed refresh interval
+            // makes this external file visible and changes the published directory state to 5.
+            assertTrue(new File(directory, "19700106T4" + SingleChronicleQueue.SUFFIX).createNewFile());
+            stalledClock.set(2);
+
+            stalledWriter.writeText("follow-published-cycle");
+
+            assertEquals(3, stalledWriter.cycle());
+            assertEquals("rolling an initialised appender must not refresh the directory listing",
+                    3, stalledQueue.lastPublishedCycle());
+            assertEquals("an explicit refresh must still discover the externally planted file",
+                    5, stalledQueue.lastCycle());
+        }
+    }
+
     private void expectTestText(ChronicleQueue chronicleQueue, int times) {
         try (final ExcerptTailer tailer = chronicleQueue.createTailer()) {
             for (int i = 0; i < times; i++) {
