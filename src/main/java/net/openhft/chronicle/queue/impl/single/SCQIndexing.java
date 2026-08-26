@@ -306,18 +306,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      */
     @NotNull
     ScanResult moveToIndex(@NotNull final ExcerptContext ec, final long index) {
-        ScanResult value = moveToIndex0(ec, index);
-        if (value == null)
-            return moveToIndexFromTheStart(ec, index);
-        return value;
-    }
-
-    /**
-     * Locates an unindexed sequence by scanning from the final addressable sparse-index entry.
-     */
-    @NotNull
-    ScanResult moveToIndexFromLastIndexedEntry(@NotNull final ExcerptContext ec, final long index) {
-        ScanResult value = moveToIndex0(ec, index, lastIndexableSequence());
+        final long indexedSearchStart = index >= indexCapacity()
+                ? lastIndexableSequence()
+                : index & -indexSpacing;
+        ScanResult value = moveToIndex0(ec, index, indexedSearchStart);
         if (value == null)
             return moveToIndexFromTheStart(ec, index);
         return value;
@@ -355,11 +347,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @param index The index to move to.
      * @return A {@link ScanResult} indicating the result of the operation, or {@code null} if the index cannot be found.
      */
-    @Nullable
-    ScanResult moveToIndex0(@NotNull final ExcerptContext ec, final long index) {
-        return moveToIndex0(ec, index, index & -indexSpacing);
-    }
-
     @Nullable
     private ScanResult moveToIndex0(@NotNull final ExcerptContext ec,
                                     final long index,
