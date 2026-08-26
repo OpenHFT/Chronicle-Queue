@@ -48,6 +48,7 @@ class StoreAppender extends AbstractCloseable
      * This is the key in the table-store where we store that information
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
+    private static final long MAX_MISMATCH_DUMP_BYTES = 256;
 
     @NotNull
     private final SingleChronicleQueue queue;
@@ -781,12 +782,11 @@ class StoreAppender extends AbstractCloseable
         assert writeLock.locked();
 
         final Bytes<?> bytes = wire.bytes();
-        final boolean usePadding = wire.usePadding();
         positionForNextHeader();
         long recoveryPosition = bytes.writePosition();
         for (; ; ) {
-            if (usePadding)
-                recoveryPosition += BytesUtil.padOffset(recoveryPosition);
+            // Exact-index recovery has no unpadded mode; createWire establishes this invariant.
+            recoveryPosition += BytesUtil.padOffset(recoveryPosition);
             final int header = bytes.readVolatileInt(recoveryPosition);
             final RecoveryAction action = recoveryActionForHeader(header);
             switch (action) {
@@ -810,6 +810,10 @@ class StoreAppender extends AbstractCloseable
                     return action;
 
                 case ALREADY_PRESENT:
+                    positionOfHeader = recoveryPosition;
+                    // A ready header may have survived a failure before the store write position
+                    // was published. Expose exactly this complete record so it can be validated.
+                    bytes.writePosition(recoveryPosition + SPB_HEADER_SIZE + lengthOf(header));
                     bytes.readPosition(recoveryPosition);
                     return action;
 
@@ -927,10 +931,7 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> wireBytes = wire.bytes();
             wireBytes.write(bytes);
             wire.updateHeader(positionOfHeader, false, 0);
-            lastIndex(wire.headerNumber());
-            lastPosition = positionOfHeader;
-            store.writePosition(positionOfHeader);
-            writeIndexForPosition(lastIndex, positionOfHeader);
+            recordCommittedData(wire.headerNumber(), positionOfHeader);
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         } finally {
@@ -995,9 +996,6 @@ class StoreAppender extends AbstractCloseable
 
         final int cycle = queue.rollCycle().toCycle(index);
         final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-        if (sequenceNumber >= queue.rollCycle().maxMessagesPerCycle())
-            throw new IllegalStateException("Unable to index " + sequenceNumber
-                    + ", the number of entries exceeds max number for the current rollcycle");
 
         if (wire == null)
             setWireIfNull(cycle);
@@ -1022,6 +1020,7 @@ class StoreAppender extends AbstractCloseable
         recoveryAction = prepareExactIndexRecovery(index);
         if (recoveryAction == RecoveryAction.ALREADY_PRESENT) {
             compareExistingEntry(index, bytes);
+            adoptExistingEntry(index);
             return;
         }
 
@@ -1076,19 +1075,42 @@ class StoreAppender extends AbstractCloseable
                 + ", index=0x" + Long.toHexString(index)
                 + ", existingLength=" + existingLength
                 + ", suppliedLength=" + suppliedLength
-                + "\nexisting:\n" + existingBytes.toHexString(existingLength)
+                + "\nexisting:\n" + toHexDump(existingBytes, existingLength)
                 + "\nsupplied:\n" + toHexDump(suppliedBytes, suppliedLength));
+    }
+
+    private void adoptExistingEntry(final long index) {
+        try {
+            wire.bytes().writePosition(positionOfHeader);
+            wire.headerNumber(index);
+            recordCommittedData(index, positionOfHeader);
+        } catch (StreamCorruptedException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static String toHexDump(final BytesStore<?, ?> bytesStore,
                                     final long length) {
-        if (bytesStore instanceof Bytes)
-            return ((Bytes<?>) bytesStore).toHexString(length);
+        final long dumpLength = Math.min(length, MAX_MISMATCH_DUMP_BYTES);
+        final String suffix = length > dumpLength
+                ? "\n... " + (length - dumpLength) + " bytes omitted"
+                : "";
+        if (bytesStore instanceof Bytes) {
+            final Bytes<?> bytes = (Bytes<?>) bytesStore;
+            final long savedReadLimit = bytes.readLimit();
+            try {
+                bytes.readLimit(bytes.readPosition() + length);
+                return bytes.toHexString(dumpLength) + suffix;
+            } finally {
+                bytes.readLimit(savedReadLimit);
+            }
+        }
 
         final Bytes<?> bytes = bytesStore.bytesForRead();
         try {
             bytes.readPosition(bytesStore.readPosition());
-            return bytes.toHexString(length);
+            bytes.readLimit(bytes.readPosition() + length);
+            return bytes.toHexString(dumpLength) + suffix;
         } finally {
             bytes.releaseLast();
         }
@@ -1243,6 +1265,13 @@ class StoreAppender extends AbstractCloseable
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
+    }
+
+    private void recordCommittedData(final long index, final long position) throws StreamCorruptedException {
+        lastPosition = position;
+        lastIndex(index);
+        store.writePosition(position);
+        writeIndexForPosition(index, position);
     }
 
     /**
@@ -1577,17 +1606,13 @@ class StoreAppender extends AbstractCloseable
                 throw e;
             }
 
-            lastPosition = positionOfHeader;
-
             if (!metaData) {
-                lastIndex(wire.headerNumber());
-                store.writePosition(positionOfHeader);
-                if (lastIndex != Long.MIN_VALUE) {
-                    writeIndexForPosition(lastIndex, positionOfHeader);
-                    if (queue.appenderListener != null) {
-                        callAppenderListener();
-                    }
+                recordCommittedData(wire.headerNumber(), positionOfHeader);
+                if (queue.appenderListener != null) {
+                    callAppenderListener();
                 }
+            } else {
+                lastPosition = positionOfHeader;
             }
         }
 
