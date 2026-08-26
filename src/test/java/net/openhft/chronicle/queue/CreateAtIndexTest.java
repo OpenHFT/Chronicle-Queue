@@ -45,9 +45,10 @@ public class CreateAtIndexTest extends QueueTestCommon {
             String before = queue.dump();
             appender.writeBytes(0x421d00000000L, HELLO_WORLD);
             String after = queue.dump();
-            // the appender's first write normalises EOFs, adding a normalisedEOFsTo record;
-            // assert that delta explicitly, then require the dumps to match once it is masked out
-            assertFalse(before.contains("normalisedEOFsTo"));
+            // The first historical write records the lower bound. A duplicate must compare the
+            // existing payload without lowering it again; acquiring its store may update the
+            // listing's access modCount, which is unrelated to the recovery cursor or payload.
+            assertTrue(before.contains("normalisedEOFsTo"));
             assertTrue(after.contains("normalisedEOFsTo"));
             assertEquals(cleanDump(before), cleanDump(after));
         }
@@ -99,10 +100,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
     }
 
     private static String cleanDump(String dump) {
-        return dump
-                .replaceAll("# \\d+ bytes remaining", "# NN bytes remaining")
-                .replaceAll("modCount: (\\d+)", "modCount: 00")
-                .replaceAll("# position: \\d+, header: \\d+\\R--- !!data #binary\\RnormalisedEOFsTo: \\d+\\R", "");
+        return dump.replaceAll("modCount: (\\d+)", "modCount: 00");
     }
 
     @Test

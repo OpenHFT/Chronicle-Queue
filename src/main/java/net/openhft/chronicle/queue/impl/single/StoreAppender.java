@@ -113,7 +113,7 @@ class StoreAppender extends AbstractCloseable
                         if (cycleHasEOF()) {
                             // Make sure all older cycles have EOF marker
                             if (eofCycle > firstCycle)
-                                normaliseEOFs0(eofCycle - 1);
+                                normaliseEOFs0(eofCycle);
 
                             // If first non-EOF file is in the past, it's possible it will be replicated/backfilled to
                             if (eofCycle < lastExistingCycle)
@@ -625,9 +625,13 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            // use the getter, not the raw field: after the construction-time back-scan releases its
-            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
-            normaliseEOFs0(cycle());
+            // CQE retries failed backfills before completion. The shared cursor records the
+            // earliest cycle touched by those attempts; completion seals every such historical
+            // cycle while deliberately leaving the wall-clock roll cycle open.
+            final int currentCycle = queue.cycle();
+            final int lastPublishedCycle = queue.lastPublishedCycle();
+            final int normaliseTo = (int) Math.min((long) lastPublishedCycle + 1, currentCycle);
+            normaliseEOFs0(normaliseTo);
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -654,14 +658,31 @@ class StoreAppender extends AbstractCloseable
             Jvm.debug().on(StoreAppender.class, "Normalising from cycle " + eofCycle);
         }
 
-        for (; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
+        // Keep this cap in the private helper as well as the public entry point. Other callers can
+        // request a future cycle while positioning an appender; they must not seal or advance the
+        // cursor across the timestamp-current roll.
+        final int normaliseTo = Math.min(queue.cycle(), cycle);
+        for (; eofCycle < normaliseTo; ++eofCycle) {
             setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
             if (wire != null) {
                 assert queue.writeLock().locked();
-                store.writeEOF(wire, timeoutMS());
-                normalisedEOFsTo.setMaxValue(eofCycle);
+                ensureEndOfData("Unable to normalise end-of-data: queue="
+                        + queue.fileAbsolutePath() + ", cycle=" + eofCycle);
             }
+            // Missing cycles are complete by definition. Advance the shared cursor so gaps are
+            // not reopened and rescanned on every subsequent normalisation.
+            normalisedEOFsTo.setMaxValue((long) eofCycle + 1);
         }
+    }
+
+    private void recordBackfillNormalisation(final int recoveredCycle) {
+        // The timestamp-current cycle remains open. A successful CQE completion calls
+        // normaliseEOFs(), which establishes the cursor at firstCycle without sealing this cycle;
+        // a failed completion restarts the backfill instead of relying on pending-reseal state.
+        if (recoveredCycle >= queue.cycle())
+            return;
+        queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, recoveredCycle)
+                .setMinValue(recoveredCycle);
     }
 
     /**
@@ -767,16 +788,18 @@ class StoreAppender extends AbstractCloseable
     private RecoveryAction prepareExactIndexRecovery(final long recoveryIndex) {
         assert writeLock.locked();
 
+        final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
         final Bytes<?> bytes = wire.bytes();
         positionForNextHeader();
         long recoveryPosition = bytes.writePosition();
         for (; ; ) {
-            // Exact-index recovery has no unpadded mode; createWire establishes this invariant.
+            // Exact-index recovery is rejected for legacy unpadded stores before this method.
             recoveryPosition += BytesUtil.padOffset(recoveryPosition);
             final int header = bytes.readVolatileInt(recoveryPosition);
             final RecoveryAction action = recoveryActionForHeader(header);
             switch (action) {
                 case WRITE_AND_RESEAL:
+                    recordBackfillNormalisation(recoveryCycle);
                     bytes.writePosition(recoveryPosition);
                     replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
                     warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
@@ -784,10 +807,12 @@ class StoreAppender extends AbstractCloseable
                     return action;
 
                 case WRITE:
+                    recordBackfillNormalisation(recoveryCycle);
                     bytes.writePosition(recoveryPosition);
                     return action;
 
                 case WARN_AND_WRITE:
+                    recordBackfillNormalisation(recoveryCycle);
                     bytes.writePosition(recoveryPosition);
                     warnExactIndexRecovery("replaced incomplete header", recoveryIndex,
                             recoveryPosition, header);
@@ -796,9 +821,14 @@ class StoreAppender extends AbstractCloseable
                     return action;
 
                 case ALREADY_PRESENT:
+                    // Unlike a published duplicate, this ready record is at the exact next index:
+                    // it survived an interrupted write before the store write position and EOF
+                    // were published. Its retry must re-establish the historical EOF lower bound.
+                    recordBackfillNormalisation(recoveryCycle);
                     positionOfHeader = recoveryPosition;
                     // A ready header may have survived a failure before the store write position
-                    // was published. Expose exactly this complete record so it can be validated.
+                    // was published. Expose exactly this complete record so its payload can be
+                    // validated before the record is adopted.
                     bytes.writePosition(recoveryPosition + SPB_HEADER_SIZE + lengthOf(header));
                     bytes.readPosition(recoveryPosition);
                     return action;
@@ -983,12 +1013,19 @@ class StoreAppender extends AbstractCloseable
         final int cycle = queue.rollCycle().toCycle(index);
         final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
 
+        rejectLegacyUnpaddedExactRecovery(cycle);
+
         if (wire == null)
             setWireIfNull(cycle);
 
         /// if the header number has changed then we will have roll
         if (this.cycle != cycle)
             rollCycleTo(cycle, this.cycle > cycle);
+
+        if (store.dataVersion() == 0)
+            throw new UnsupportedOperationException("Exact-index recovery is not supported for "
+                    + "legacy unpadded queue stores: queue=" + queue.fileAbsolutePath()
+                    + ", cycle=" + cycle);
 
         // in case our cached headerNumber is incorrect.
         resetPosition();
@@ -1021,6 +1058,16 @@ class StoreAppender extends AbstractCloseable
 
         if (recoveryAction == RecoveryAction.WRITE_AND_RESEAL)
             resealRecoveredCycle(index);
+    }
+
+    private void rejectLegacyUnpaddedExactRecovery(final int cycle) {
+        try (SingleChronicleQueueStore targetStore =
+                     queue.storeForCycle(cycle, queue.epoch(), false, null)) {
+            if (targetStore != null && targetStore.dataVersion() == 0)
+                throw new UnsupportedOperationException("Exact-index recovery is not supported for "
+                        + "legacy unpadded queue stores: queue=" + queue.fileAbsolutePath()
+                        + ", cycle=" + cycle);
+        }
     }
 
     private void compareExistingEntryAtIndex(final long index, final long sequenceNumber,

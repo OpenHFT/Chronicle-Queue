@@ -4,8 +4,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -25,6 +27,10 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -34,6 +40,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
+import static net.openhft.chronicle.wire.Wires.*;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -394,6 +402,53 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void exactRecoveryRejectsLegacyUnpaddedStoreWithoutMutation() throws Exception {
+        ignoreException("reading control code as text");
+        ignoreException("Unable to copy TimedStoreRecovery safely");
+        ignoreException("Unexpected field lastAcknowledgedIndexReplicated");
+
+        final File directory = queueDirectory.newFolder("legacy-unpadded");
+        final Path source = Paths.get(StoreAppenderTest.class
+                .getResource("/tr2/20170320.cq4").toURI());
+        final Path legacyFile = directory.toPath().resolve(source.getFileName());
+        Files.copy(source, legacyFile, StandardCopyOption.REPLACE_EXISTING);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            final int legacyCycle = queue.lastCycle();
+            final long requestedIndex = queue.rollCycle().toIndex(legacyCycle, 0);
+            final long cursorBefore = queue.tableStoreGet("normalisedEOFsTo");
+            final long entryCountBefore = queue.entryCount();
+            final byte[] bytesBefore = Files.readAllBytes(legacyFile);
+            final long writePositionBefore;
+            try (SingleChronicleQueueStore store =
+                         queue.storeForCycle(legacyCycle, queue.epoch(), false, null)) {
+                assertEquals("test fixture must be a legacy unpadded store", 0, store.dataVersion());
+                writePositionBefore = store.writePosition();
+            }
+
+            final UnsupportedOperationException failure = org.junit.Assert.assertThrows(
+                    UnsupportedOperationException.class,
+                    () -> ((InternalAppender) appender).writeBytes(
+                            requestedIndex, Bytes.from("must-not-be-written")));
+
+            assertTrue(failure.getMessage().contains("legacy unpadded queue stores"));
+            assertEquals("legacy rejection must not move the normalization cursor",
+                    cursorBefore, queue.tableStoreGet("normalisedEOFsTo"));
+            assertEquals(entryCountBefore, queue.entryCount());
+            org.junit.Assert.assertArrayEquals("legacy cycle bytes must remain unchanged",
+                    bytesBefore, Files.readAllBytes(legacyFile));
+            try (SingleChronicleQueueStore store =
+                         queue.storeForCycle(legacyCycle, queue.epoch(), false, null)) {
+                assertEquals("legacy rejection must not move the write position",
+                        writePositionBefore, store.writePosition());
+            }
+        }
+    }
+
+    @Test
     public void ordinaryAppenderRollsForwardAfterIndexedRecoveryWithUnchangedClock() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         clock.addAndGet(-clock.get() % ONE_DAY);
@@ -489,6 +544,83 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void historicalRetryOfReadyInterruptedRecordLowersEofCursor() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final SetTimeProvider time = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("recovered"));
+            recoveredIndex = appender.lastIndexAppended();
+            recoveredCycle = appender.cycle();
+
+            // Simulate an already-advanced cursor, then a current-cycle sequence-zero recovery
+            // which publishes its ready header but crashes before its write position or EOF.
+            queue.tableStoreAcquire("normalisedEOFsTo", recoveredCycle + 1)
+                    .setValue(recoveredCycle + 1);
+            sealCurrentCycle(appender);
+            removeEndOfData(queue, recoveredCycle);
+            forceWritePosition(appender.store, 0);
+
+            assertTrue(queue.tableStoreGet("normalisedEOFsTo") > recoveredCycle);
+            assertFalse(hasEOF(queue, recoveredCycle));
+        }
+
+        time.advanceMillis(TimeUnit.MINUTES.toMillis(65));
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+
+            assertTrue("adopting an interrupted ready record must lower the historical EOF cursor",
+                    queue.tableStoreGet("normalisedEOFsTo") <= recoveredCycle);
+            assertFalse(hasEOF(queue, recoveredCycle));
+
+            appender.normaliseEOFs();
+            assertTrue("normalisation must reseal the adopted historical recovery",
+                    hasEOF(queue, recoveredCycle));
+        }
+    }
+
+    @Test
+    public void futureExactWriteDoesNotAdvanceEofCursorAcrossTimestampCurrentCycle() throws IOException {
+        final SetTimeProvider time = new SetTimeProvider();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(time)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build()) {
+            final int currentCycle;
+            try (ExcerptAppender writer = queue.createAppender()) {
+                writer.writeBytes(Bytes.from("timestamp-current"));
+                currentCycle = writer.cycle();
+            }
+            final int futureCycle = currentCycle + 2;
+
+            // A freshly created appender has released the store selected by its construction-time
+            // scan, so exact positioning reaches the private setWireIfNull normalization path.
+            try (ExcerptAppender freshAppender = queue.createAppender()) {
+                ((InternalAppender) freshAppender).writeBytes(
+                        queue.rollCycle().toIndex(futureCycle, 0), Bytes.from("future"));
+            }
+
+            assertTrue("positioning on a future cycle must not advance the EOF cursor past the "
+                            + "timestamp-current cycle",
+                    queue.tableStoreGet("normalisedEOFsTo") <= currentCycle);
+        }
+    }
+
+    @Test
     public void eofRestorationFailureIsNotReportedAsSuccess() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build();
              ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -559,6 +691,33 @@ public class StoreAppenderTest extends QueueTestCommon {
             ((LongValue) field.get(store)).setValue(newWritePosition);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to simulate interrupted write-position publication", e);
+        }
+    }
+
+    private static void removeEndOfData(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
+             MappedBytes bytes = store.bytes()) {
+            long position = store.writePosition();
+            position += lengthOf(bytes.readVolatileInt(position)) + SPB_HEADER_SIZE;
+            for (; ; ) {
+                if (store.dataVersion() > 0)
+                    position += BytesUtil.padOffset(position);
+                final int header = bytes.readVolatileInt(position);
+                if (header == END_OF_DATA) {
+                    assertTrue(bytes.compareAndSwapInt(position, END_OF_DATA, NOT_INITIALIZED));
+                    return;
+                }
+                assertTrue("expected metadata before EOF at position " + position,
+                        isReadyMetaData(header));
+                position += SPB_HEADER_SIZE + lengthOf(header);
+            }
+        }
+    }
+
+    private static boolean hasEOF(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null)) {
+            final String dump = store.dump(WireType.BINARY_LIGHT);
+            return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }
     }
 

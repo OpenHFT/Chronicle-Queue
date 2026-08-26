@@ -63,12 +63,10 @@ addressable sparse-index entry, and then restores EOF. An existing index remains
 authoritative: Queue compares a duplicate payload with it, returns silently
 when they match, and warns with bounded readable hex dumps when they differ.
 
-The Wire supplied to exact-index recovery cannot be unpadded. For queues that
-support this recovery path, `StoreAppender` establishes padding when it
-constructs the Wire, before recovery can use it; the recovery method has no
-unpadded mode. Padding therefore remains an invariant throughout recovery and
-keeps every header, including the end-of-data word, four-byte aligned for atomic
-replacement.
+Current queue files are padded, keeping every header—including end-of-data—
+four-byte aligned for atomic replacement. Legacy `dataVersion == 0` stores are
+unpadded and remain readable, but exact-index mutation rejects them before
+changing the recovery cursor, EOF, write position or payload.
 
 The duplicate check also permits a replication implementation to replay a
 small overlap of recent entries to verify that source and sink agree before
