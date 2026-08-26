@@ -52,12 +52,26 @@ proof that a roll can never be reopened.
 
 Queue inspects the requested exact index, skipping user and sparse-index
 metadata because metadata does not consume an index. If the slot contains EOF,
-Queue replaces that word with one compare-and-swap, commits the data and
-required index entry, and then restores EOF. An existing index remains
+Queue replaces that word with one compare-and-swap, commits the data and any
+addressable sparse-index entry, and then restores EOF. An existing index remains
 authoritative: Queue compares a duplicate payload with it, returns silently
-when they match, and warns with readable hex dumps when they differ. Enterprise
-back-fill can therefore replay a small overlap of recent entries to verify that
-the source and sink still agree before transferring missing data.
+when they match, and warns with bounded readable hex dumps when they differ.
+
+The Wire supplied to exact-index recovery cannot be unpadded. For queues that
+support this recovery path, `StoreAppender` establishes padding when it
+constructs the Wire, before recovery can use it; the recovery method has no
+unpadded mode. Padding therefore remains an invariant throughout recovery and
+keeps every header, including the end-of-data word, four-byte aligned for atomic
+replacement.
+
+The duplicate check also permits a replication implementation to replay a
+small overlap of recent entries to verify that source and sink agree before
+transferring missing data. Current callers need not use that optional check.
+
+Reaching a roll's sparse-index capacity does not prevent exact-index recovery.
+Queue warns when the first entry at the capacity boundary is written, leaves
+that entry and later entries unindexed, and locates them by scanning forward
+from the last addressable sparse-index entry.
 
 The set of hosts onto which the queue is replicated, is defined as a `cluster`.
 The configuration for a cluster is as follows:

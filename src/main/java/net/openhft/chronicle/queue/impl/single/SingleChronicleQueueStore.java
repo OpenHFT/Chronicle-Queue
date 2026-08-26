@@ -277,7 +277,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         throwExceptionIfClosed();
 
         try {
-            return indexing.moveToIndex(ec, index);
+            return index >= indexing.indexCapacity()
+                    ? indexing.moveToIndexFromLastIndexedEntry(ec, index)
+                    : indexing.moveToIndex(ec, index);
         } catch (@NotNull UnrecoverableTimeoutException e) {
             return ScanResult.NOT_REACHED;
         }
@@ -471,6 +473,17 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         long nextSequence = indexing.nextEntryToBeIndexed();
         if (nextSequence > sequenceNumber)
             return;
+
+        final long indexCapacity = indexing.indexCapacity();
+        if (sequenceNumber >= indexCapacity) {
+            if (sequenceNumber == indexCapacity)
+                Jvm.warn().on(getClass(), "Sparse index capacity reached for " + file()
+                        + " at sequence " + sequenceNumber
+                        + "; this entry and later entries in the cycle will be written without index entries"
+                        + " and located by linear scan from sequence " + indexing.lastIndexableSequence());
+            indexing.nextEntryToBeIndexed.setMaxValue(Long.MAX_VALUE);
+            return;
+        }
 
         indexing.setPositionForSequenceNumber(ec, sequenceNumber, position);
 

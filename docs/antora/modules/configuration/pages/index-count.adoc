@@ -17,6 +17,11 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("queue")
 
 NOTE: (Index count)^2^ is the maximum number of indexed queue entries.
 
+The sparse index can address `indexCount`^2^ × `indexSpacing` entry sequences
+in a roll. Reaching that boundary produces a warning but does not prevent later
+entries from being written. Those entries remain unindexed and random access
+locates them by scanning forward from the final addressable sparse-index entry.
+
 The default index count varies depending on the xref:configuration:roll-cycle.adoc[roll cycle], per the table below.
 
 |===

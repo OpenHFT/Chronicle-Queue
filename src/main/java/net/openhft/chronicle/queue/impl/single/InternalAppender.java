@@ -19,7 +19,11 @@ public interface InternalAppender extends ExcerptAppender {
      * Append an excerpt at the specified index, if the index is a valid next index for the queue.
      * This internal replication path can replace an end-of-data marker when restoring an exact
      * missing index. Replacing the marker is logged as a warning and the cycle is resealed only after
-     * the data record and its sparse-index metadata are committed.
+     * the data record and any addressable sparse-index metadata are committed. Entries beyond the
+     * sparse-index capacity remain valid and are found by scanning from the final indexed entry.
+     * <p>
+     * For queues that support this path, {@code StoreAppender} establishes padding when it
+     * constructs the Wire. Exact-index recovery has no unpadded mode.
      * <p>
      * Queue serialises concurrent backfill appenders with its write lock. The first committed value
      * at an index wins. Later duplicates are compared with it; matching content returns silently,
