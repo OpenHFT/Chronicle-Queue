@@ -116,6 +116,83 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    public void restartedHistoricalBackfillLowersEofNormalisationBound() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long requestedIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("cycle-0"));
+            requestedIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(requestedIndex);
+
+            for (int i = 1; i <= 3; i++) {
+                timeProvider.advanceMillis(TimeUnit.MINUTES.toMillis(65));
+                appender.writeText("cycle-" + i);
+                appender.normaliseEOFs();
+            }
+
+            Assert.assertTrue("test requires the EOF cursor to have advanced beyond the recovery cycle",
+                    q.tableStoreGet("normalisedEOFsTo") > recoveredCycle);
+            removeEndOfData(q, recoveredCycle);
+            Assert.assertFalse(hasEOF(q, recoveredCycle));
+        }
+
+        // Simulate a process restart while the recovered roll remains historical by timestamp.
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("recovered"));
+
+            Assert.assertTrue("every backfilled cycle must lower the shared EOF normalisation bound",
+                    q.tableStoreGet("normalisedEOFsTo") <= recoveredCycle);
+            Assert.assertFalse("a restarted write cannot infer that the failed attempt removed EOF",
+                    hasEOF(q, recoveredCycle));
+
+            appender.normaliseEOFs();
+
+            Assert.assertTrue("normalisation must reseal a cycle left open by failed backfill",
+                    hasEOF(q, recoveredCycle));
+            assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
+        }
+    }
+
+    @Test
+    public void currentTimestampBackfillIsNormalisedOnlyAfterItBecomesHistorical() {
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first"));
+            final long backfillIndex = appender.lastIndexAppended() + 1;
+            final int backfillCycle = q.rollCycle().toCycle(backfillIndex);
+
+            ((InternalAppender) appender).writeBytes(backfillIndex, Bytes.from("backfilled"));
+            Assert.assertTrue("every non-duplicate backfill must retain its normalization lower bound",
+                    q.tableStoreGet("normalisedEOFsTo") <= backfillCycle);
+
+            appender.normaliseEOFs();
+            Assert.assertFalse("normalisation must leave the wall-clock roll cycle open",
+                    hasEOF(q, backfillCycle));
+
+            timeProvider.advanceMillis(TimeUnit.MINUTES.toMillis(65));
+            appender.normaliseEOFs();
+            Assert.assertTrue("the retained lower bound must seal the cycle once it is historical",
+                    hasEOF(q, backfillCycle));
+        }
+    }
+
+    @Test
     public void exactWriteChecksRewoundEntriesAndWarnsOnlyForDifferentContent() {
         final String[] values = {"original-0", "original-1", "original-2"};
         final long[] indexes = new long[values.length];
@@ -647,6 +724,26 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             position += BytesUtil.padOffset(position);
             Assert.assertEquals(NOT_INITIALIZED, bytes.readVolatileInt(position));
             bytes.writeVolatileInt(position, header);
+        }
+    }
+
+    private static void removeEndOfData(SingleChronicleQueue q, int cycle) {
+        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null);
+             MappedBytes bytes = store.bytes()) {
+            long position = store.writePosition();
+            position += lengthOf(bytes.readVolatileInt(position)) + SPB_HEADER_SIZE;
+            for (; ; ) {
+                if (store.dataVersion() > 0)
+                    position += BytesUtil.padOffset(position);
+                final int header = bytes.readVolatileInt(position);
+                if (header == END_OF_DATA) {
+                    Assert.assertTrue(bytes.compareAndSwapInt(position, END_OF_DATA, NOT_INITIALIZED));
+                    return;
+                }
+                Assert.assertTrue("expected metadata before EOF at position " + position,
+                        isReadyMetaData(header));
+                position += SPB_HEADER_SIZE + lengthOf(header);
+            }
         }
     }
 
