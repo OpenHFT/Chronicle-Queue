@@ -28,6 +28,9 @@ public interface InternalAppender extends ExcerptAppender {
      * Queue serialises concurrent backfill appenders with its write lock. The first committed value
      * at an index wins. Later duplicates are compared with it; matching content returns silently,
      * while different content produces a warning and leaves the committed value unchanged.
+     * If an attempt leaves the requested header incomplete, a later exact-index call can replace it,
+     * including from a new Queue instance after restart. That retry does not infer whether the failed
+     * attempt opened an end-of-data marker, so restoring any missing marker is a separate completion step.
      * <p>
      * If the index is:
      * <dl>

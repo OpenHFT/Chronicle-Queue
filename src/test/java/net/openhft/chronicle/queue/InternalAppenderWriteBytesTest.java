@@ -86,6 +86,36 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    public void exactWriteReplacesAnIncompleteRequestedEntryAfterQueueRestart() {
+        final File directory = getTmpDir();
+        final long requestedIndex;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first"));
+            requestedIndex = appender.lastIndexAppended() + 1;
+            putNextHeader(q, appender.cycle(), NOT_COMPLETE);
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            Assert.assertEquals("CQE must replay the incomplete index after restart",
+                    requestedIndex, q.lastIndex() + 1);
+            expectException("Exact-index recovery replaced incomplete header");
+            ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("recovered"));
+
+            assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
+            assertNoDataAfter(q, requestedIndex);
+        }
+    }
+
+    @Test
     public void exactWriteChecksRewoundEntriesAndWarnsOnlyForDifferentContent() {
         final String[] values = {"original-0", "original-1", "original-2"};
         final long[] indexes = new long[values.length];
