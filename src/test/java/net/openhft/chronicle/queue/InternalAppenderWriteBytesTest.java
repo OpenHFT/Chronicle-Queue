@@ -18,6 +18,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
@@ -114,6 +115,64 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             Assert.assertEquals(values.length, q.entryCount());
             for (int i = 0; i < values.length; i++)
                 assertBytesAtIndex(q, indexes[i], Bytes.from(values[i]));
+        }
+    }
+
+    @Test
+    public void exactWriteBoundsMismatchDiagnostics() {
+        final byte[] existingPayload = new byte[300];
+        final byte[] suppliedPayload = new byte[300];
+        Arrays.fill(existingPayload, (byte) 'a');
+        Arrays.fill(suppliedPayload, (byte) 'b');
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.wrapForRead(existingPayload));
+            final long index = appender.lastIndexAppended();
+
+            expectException(exception -> exception.message().contains(
+                            "Exact-index recovery found different content for existing entry")
+                            && exception.message().contains("... 44 bytes omitted"),
+                    "mismatch diagnostics must omit payload beyond the bounded prefix");
+            ((InternalAppender) appender).writeBytes(index, Bytes.wrapForRead(suppliedPayload));
+
+            Assert.assertEquals(1, q.entryCount());
+            assertBytesAtIndex(q, index, Bytes.wrapForRead(existingPayload));
+        }
+    }
+
+    @Test
+    public void ordinaryAppendFollowsHistoricalComparisonAcrossMappedChunks() {
+        final Bytes<?> first = Bytes.from("first");
+        final Bytes<?> following = Bytes.from("following");
+        final byte[] filler = new byte[2048];
+        Arrays.fill(filler, (byte) 'x');
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(first);
+            final long firstIndex = appender.lastIndexAppended();
+            final int cycle = appender.cycle();
+
+            for (int i = 0; i < 96; i++)
+                appender.writeBytes(Bytes.wrapForRead(filler));
+            Assert.assertTrue("test precondition: writes must span mapped chunks",
+                    writePosition(q, cycle) > 2 * q.blockSize());
+
+            ((InternalAppender) appender).writeBytes(firstIndex, first);
+            final long lastIndexBeforeAppend = appender.lastIndexAppended();
+            appender.writeBytes(following);
+
+            Assert.assertEquals(lastIndexBeforeAppend + 1, appender.lastIndexAppended());
+            assertBytesAtIndex(q, firstIndex, first);
+            assertBytesAtIndex(q, appender.lastIndexAppended(), following);
         }
     }
 
@@ -483,7 +542,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void indexCapacityFailureDoesNotCommitOrReopenRecoveredCycle() {
+    public void exactRecoveryWritesAtAndBeyondSparseIndexCapacity() {
         SetTimeProvider timeProvider = new SetTimeProvider();
 
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
@@ -502,23 +561,22 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             final long writePositionBeforeRecovery = writePosition(q, recoveredCycle);
             Assert.assertTrue(hasEOF(q, recoveredCycle));
 
-            IllegalStateException failure = Assert.assertThrows(IllegalStateException.class,
-                    () -> ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered")));
+            expectException("Sparse index capacity reached");
+            expectException("Exact-index recovery reopened end-of-data");
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("at-capacity"));
 
-            Assert.assertTrue(failure.getMessage().contains("number of entries exceeds max number"));
-            Assert.assertEquals("failed recovery must not advance the recovered store write position",
-                    writePositionBeforeRecovery, writePosition(q, recoveredCycle));
-            Assert.assertEquals("failed recovery must not change the appender's last committed index",
-                    lastIndexBeforeRecovery, appender.lastIndexAppended());
+            final long beyondCapacityIndex = recoveredIndex + 1;
+            ((InternalAppender) appender).writeBytes(beyondCapacityIndex, Bytes.from("beyond-capacity"));
+
+            Assert.assertTrue("successful recovery must advance the recovered store write position",
+                    writePosition(q, recoveredCycle) > writePositionBeforeRecovery);
+            assertBytesAtIndex(q, recoveredIndex, Bytes.from("at-capacity"));
+            assertBytesAtIndex(q, beyondCapacityIndex, Bytes.from("beyond-capacity"));
             try (ExcerptTailer tailer = q.createTailer()) {
-                if (tailer.moveToIndex(recoveredIndex)) {
-                    final Bytes<?> result = Bytes.elasticHeapByteBuffer();
-                    Assert.assertTrue(tailer.readBytes(result));
-                    Assert.assertNotEquals("failed recovery payload must not become readable",
-                            Bytes.from("recovered"), result);
-                }
+                Assert.assertTrue(tailer.moveToIndex(lastIndexBeforeRecovery));
+                Assert.assertEquals("next-cycle", tailer.readText());
             }
-            Assert.assertTrue("prevalidation failure must leave the existing EOF unchanged",
+            Assert.assertTrue("each recovered write must leave the old cycle resealed",
                     hasEOF(q, recoveredCycle));
         }
     }

@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -23,6 +24,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -445,6 +447,48 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void exactWriteAdoptsReadyFirstRecordAfterInterruptedPublication() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final long firstIndex;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("first"));
+            firstIndex = appender.lastIndexAppended();
+
+            // Simulate termination after publishing the ready data header but before publishing
+            // the store write position. Sequence zero uses zero as its write-position sentinel.
+            forceWritePosition(appender.store, 0);
+        }
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            ((InternalAppender) appender).writeBytes(firstIndex, Bytes.from("first"));
+            assertEquals("the ready record must be adopted as the last committed index",
+                    firstIndex, appender.lastIndexAppended());
+
+            appender.writeBytes(Bytes.from("second"));
+            assertEquals(firstIndex + 1, appender.lastIndexAppended());
+            assertEquals(2, queue.entryCount());
+
+            final Bytes<?> result = Bytes.elasticHeapByteBuffer();
+            assertNextBytes(tailer, result, "first");
+            assertNextBytes(tailer, result, "second");
+            assertFalse(tailer.readBytes(result.clear()));
+        }
+    }
+
+    @Test
     public void eofRestorationFailureIsNotReportedAsSuccess() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build();
              ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -505,6 +549,16 @@ public class StoreAppenderTest extends QueueTestCommon {
             wire.usePadding(store.dataVersion() > 0);
             assertTrue("test precondition: current roll must be sealed",
                     store.writeEOF(wire, appender.queue().timeoutMS));
+        }
+    }
+
+    private static void forceWritePosition(SingleChronicleQueueStore store, long newWritePosition) {
+        try {
+            final Field field = store.getClass().getDeclaredField("writePosition");
+            field.setAccessible(true);
+            ((LongValue) field.get(store)).setValue(newWritePosition);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to simulate interrupted write-position publication", e);
         }
     }
 
