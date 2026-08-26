@@ -44,6 +44,12 @@ sealed cycle, they roll forward to a writable cycle.
 The Queue recovery warning includes queue path, cycle and index. Replication
 should log its source and peer host context around this operation.
 
+If a back-fill attempt leaves its requested entry incomplete, CQE restarts by
+replaying that same index. A new Queue instance can replace the incomplete
+header and complete the entry. The incomplete header does not retain whether
+the failed attempt opened an end-of-data marker, so resealing the roll remains
+a separate back-fill completion responsibility.
+
 This recovery does not rewind consumers that have already advanced beyond the
 reopened cycle. Enterprise back-fill completes before the replacement source is
 unlocked for normal use. Other callers must provide equivalent coordination,
