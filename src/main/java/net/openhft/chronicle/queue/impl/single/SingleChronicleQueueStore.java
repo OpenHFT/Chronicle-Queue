@@ -264,6 +264,11 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return this;
     }
 
+    /** Simulates process loss before write-position publication in package-local recovery tests. */
+    void writePositionForTesting(long position) {
+        writePosition.setVolatileValue(position);
+    }
+
     /**
      * Moves the excerpt context to the specified index for reading.
      *

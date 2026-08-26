@@ -20,6 +20,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
@@ -30,6 +31,9 @@ import static net.openhft.chronicle.wire.Wires.*;
 import static org.junit.Assert.assertEquals;
 
 public class InternalAppenderWriteBytesTest extends QueueTestCommon {
+
+    private static final String RECOVERY_IN_PROGRESS = "recoveryInProgress";
+    private static final String RECOVERY_INDEXED = "recoveryIndexed";
 
     @Before
     public void before() {
@@ -581,6 +585,421 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void normaliseResealsMarkerlessHistoricalCycle() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("intermediate-cycle"));
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("later-cycle"));
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            // Advance the persisted normalisation watermark beyond the cycle that recovery reopens.
+            appender.writeBytes(Bytes.from("later-cycle-2"));
+            Assert.assertTrue(hasEOF(q, recoveredCycle));
+
+            simulateInterruptedEofRecovery(q, recoveredCycle);
+            Assert.assertFalse(hasEOF(q, recoveredCycle));
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            Assert.assertFalse("restart must observe the interrupted unsealed cycle",
+                    hasEOF(q, recoveredCycle));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("retried"));
+            Assert.assertFalse("a retry that did not replace EOF must remain open until backfill completes",
+                    hasEOF(q, recoveredCycle));
+            appender.normaliseEOFs();
+            Assert.assertTrue("completed backfill must normalise its selected historical cycle",
+                    hasEOF(q, recoveredCycle));
+
+            // Also model death after the recovered entry committed but before replacement EOF.
+            simulateInterruptedEofRecovery(q, recoveredCycle);
+            Assert.assertFalse(hasEOF(q, recoveredCycle));
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender();
+             ExcerptTailer tailer = q.createTailer()) {
+            expectException("Exact-index recovery found different content for existing entry");
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("conflicting retry"));
+            Assert.assertFalse("a duplicate retry does not itself alter the roll",
+                    hasEOF(q, recoveredCycle));
+            appender.normaliseEOFs();
+            Assert.assertTrue("normalisation after a duplicate retry must reseal the historical cycle",
+                    hasEOF(q, recoveredCycle));
+
+            final Bytes<?> result = Bytes.elasticHeapByteBuffer();
+            assertNextBytes(tailer, result, Bytes.from("first-cycle"));
+            assertNextBytes(tailer, result, Bytes.from("retried"));
+            assertNextBytes(tailer, result, Bytes.from("intermediate-cycle"));
+            assertNextBytes(tailer, result, Bytes.from("later-cycle"));
+            assertNextBytes(tailer, result, Bytes.from("later-cycle-2"));
+            Assert.assertFalse(tailer.readBytes(result.clear()));
+        }
+    }
+
+    @Test
+    public void restartNormalisesCommittedRecoveryWithoutDuplicateRetry() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final AtomicBoolean failAfterIndexUpdate = new AtomicBoolean();
+        final long recoveredIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .appenderListener((wire, index) -> {
+                    if (failAfterIndexUpdate.get())
+                        throw new IllegalStateException("simulated failure after index update");
+                })
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("intermediate-cycle"));
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("later-cycle"));
+            appender.normaliseEOFs();
+
+            failAfterIndexUpdate.set(true);
+            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + recoveredCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            final IllegalStateException failure = Assert.assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered")));
+            Assert.assertEquals("simulated failure after index update", failure.getMessage());
+            Assert.assertFalse("failure after commit must leave recovery visibly incomplete",
+                    hasEOF(q, recoveredCycle));
+            assertBytesAtIndex(q, recoveredIndex, Bytes.from("recovered"));
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.normaliseEOFs();
+            Assert.assertTrue("restart must reseal committed recovery without relying on a duplicate retry",
+                    hasEOF(q, recoveredCycle));
+        }
+    }
+
+    @Test
+    public void restartReconcilesCommittedRecoveryWithoutIndexedPhaseMarker() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+        final long writePositionBeforeRecovery;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            writePositionBeforeRecovery = writePosition(q, recoveredCycle);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("later-cycle"));
+
+            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + recoveredCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+            modelCommittedRecoveryWithoutIndexedMarker(q, recoveredIndex, recoveredCycle);
+            setWritePosition(q, recoveredCycle, writePositionBeforeRecovery);
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.normaliseEOFs();
+
+            Assert.assertTrue("restart must reconstruct the missed indexed phase and restore EOF",
+                    hasEOF(q, recoveredCycle));
+            assertBytesAtIndex(q, recoveredIndex, Bytes.from("recovered"));
+            Assert.assertEquals(Long.MIN_VALUE, q.tableStoreGet(RECOVERY_IN_PROGRESS));
+            Assert.assertEquals(Long.MIN_VALUE, q.tableStoreGet(RECOVERY_INDEXED));
+        }
+    }
+
+    @Test
+    public void duplicateRetryReconcilesCommittedRecoveryWithoutIndexedPhaseMarker() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("later-cycle"));
+
+            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + recoveredCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("first-writer"));
+            modelCommittedRecoveryWithoutIndexedMarker(q, recoveredIndex, recoveredCycle);
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("ignored-duplicate"));
+
+            Assert.assertTrue("duplicate retry must reconcile and reseal the first committed record",
+                    hasEOF(q, recoveredCycle));
+            assertBytesAtIndex(q, recoveredIndex, Bytes.from("first-writer"));
+            Assert.assertEquals(Long.MIN_VALUE, q.tableStoreGet(RECOVERY_IN_PROGRESS));
+            Assert.assertEquals(Long.MIN_VALUE, q.tableStoreGet(RECOVERY_INDEXED));
+        }
+    }
+
+    @Test
+    public void retryCompletesAnInterruptedRecoveryHeader() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("later-cycle"));
+
+            q.tableStorePut(RECOVERY_IN_PROGRESS, recoveredIndex);
+            q.tableStorePut(RECOVERY_INDEXED, Long.MIN_VALUE);
+            simulateInterruptedRecoveryHeader(q, recoveredCycle);
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            expectException("Exact-index recovery replaced incomplete header");
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("retried"));
+
+            Assert.assertTrue("retry must complete the interrupted header and restore EOF",
+                    hasEOF(q, recoveredCycle));
+            assertBytesAtIndex(q, recoveredIndex, Bytes.from("retried"));
+        }
+    }
+
+    @Test
+    public void pendingRecoveryNormalisationDoesNotSealUnrelatedSparseCycle() {
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+        final int unrelatedCycle = 500;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(unrelatedCycle));
+            appender.writeBytes(Bytes.from("unrelated-middle-cycle"));
+            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + recoveredCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(500));
+            appender.writeBytes(Bytes.from("latest-cycle"));
+            modelCommittedRecoveryWithoutIndexedMarker(q, recoveredIndex, recoveredCycle);
+            simulateInterruptedEofRecovery(q, unrelatedCycle);
+            Assert.assertFalse(hasEOF(q, unrelatedCycle));
+
+            appender.normaliseEOFs();
+
+            Assert.assertTrue(hasEOF(q, recoveredCycle));
+            Assert.assertFalse("recovery completion must not scan and seal unrelated sparse cycles",
+                    hasEOF(q, unrelatedCycle));
+        }
+    }
+
+    @Test
+    public void interruptedRecoveryBeforeIndexingFailsClosedAndCanBeRetried() {
+        final File directory = getTmpDir();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        final long recoveredIndex;
+        final int recoveredCycle;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("later-cycle"));
+            Assert.assertTrue(hasEOF(q, recoveredCycle));
+
+            // Model process death after persisting intent and removing EOF, but before committing
+            // and indexing the recovered record.
+            q.tableStorePut(RECOVERY_IN_PROGRESS, recoveredIndex);
+            q.tableStorePut(RECOVERY_INDEXED, Long.MIN_VALUE);
+            simulateInterruptedEofRecovery(q, recoveredCycle);
+        }
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            final IllegalStateException incomplete = Assert.assertThrows(IllegalStateException.class,
+                    appender::normaliseEOFs);
+            Assert.assertTrue(incomplete.getMessage(),
+                    incomplete.getMessage().contains("recovery remains incomplete"));
+            Assert.assertFalse("an unindexed recovery must not be sealed as complete",
+                    hasEOF(q, recoveredCycle));
+
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("retried"));
+            Assert.assertTrue("retry must finish indexing before restoring EOF",
+                    hasEOF(q, recoveredCycle));
+            assertBytesAtIndex(q, recoveredIndex, Bytes.from("retried"));
+            Assert.assertEquals(Long.MIN_VALUE, q.tableStoreGet(RECOVERY_IN_PROGRESS));
+            Assert.assertEquals(Long.MIN_VALUE, q.tableStoreGet(RECOVERY_INDEXED));
+        }
+    }
+
+    @Test
+    public void aDifferentPersistedRecoveryMustCompleteBeforeReplacingEof() {
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(timeProvider)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first-cycle"));
+            final long recoveredIndex = appender.lastIndexAppended() + 1;
+            final int recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
+            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("later-cycle"));
+            Assert.assertTrue(hasEOF(q, recoveredCycle));
+
+            q.tableStorePut(RECOVERY_IN_PROGRESS, recoveredIndex + 1);
+            final IllegalStateException conflict = Assert.assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered")));
+            Assert.assertTrue(conflict.getMessage(), conflict.getMessage().contains(
+                    "must complete before index 0x" + Long.toHexString(recoveredIndex)));
+            Assert.assertTrue("a conflicting recovery must leave EOF untouched", hasEOF(q, recoveredCycle));
+
+            q.tableStorePut(RECOVERY_IN_PROGRESS, Long.MIN_VALUE);
+            q.tableStorePut(RECOVERY_INDEXED, Long.MIN_VALUE);
+        }
+    }
+
+    @Test
+    public void persistedRecoveryForUnavailableCycleFailsClosed() {
+        final int unavailableCycle = 7;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(() -> 0)
+                .rollCycle(TEST_HOURLY)
+                .build()) {
+            final long unavailableIndex = q.rollCycle().toIndex(unavailableCycle, 0);
+            q.tableStorePut(RECOVERY_IN_PROGRESS, unavailableIndex);
+            q.tableStorePut(RECOVERY_INDEXED, unavailableIndex);
+
+            try (ExcerptAppender appender = q.createAppender()) {
+                final IllegalStateException unavailable = Assert.assertThrows(IllegalStateException.class,
+                        appender::normaliseEOFs);
+                Assert.assertEquals("Recovery cycle " + unavailableCycle + " is not available",
+                        unavailable.getMessage());
+            } finally {
+                q.tableStorePut(RECOVERY_IN_PROGRESS, Long.MIN_VALUE);
+                q.tableStorePut(RECOVERY_INDEXED, Long.MIN_VALUE);
+            }
+        }
+    }
+
+    private static void simulateInterruptedEofRecovery(SingleChronicleQueue q, int cycle) {
+        replaceEndOfData(q, cycle, NOT_INITIALIZED);
+    }
+
+    private static void simulateInterruptedRecoveryHeader(SingleChronicleQueue q, int cycle) {
+        replaceEndOfData(q, cycle, NOT_COMPLETE);
+    }
+
+    private static void modelCommittedRecoveryWithoutIndexedMarker(SingleChronicleQueue q,
+                                                                    long recoveryIndex,
+                                                                    int recoveryCycle) {
+        q.tableStorePut(RECOVERY_IN_PROGRESS, recoveryIndex);
+        q.tableStorePut(RECOVERY_INDEXED, Long.MIN_VALUE);
+        simulateInterruptedEofRecovery(q, recoveryCycle);
+    }
+
+    private static void replaceEndOfData(SingleChronicleQueue q, int cycle, int replacement) {
+        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null);
+             MappedBytes mappedBytes = store.bytes()) {
+            long position = store.writePosition();
+            position += lengthOf(mappedBytes.readVolatileInt(position)) + SPB_HEADER_SIZE;
+            for (; ; ) {
+                if (store.dataVersion() > 0)
+                    position += BytesUtil.padOffset(position);
+                final int header = mappedBytes.readVolatileInt(position);
+                if (header == END_OF_DATA) {
+                    Assert.assertTrue(mappedBytes.compareAndSwapInt(position, END_OF_DATA, replacement));
+                    return;
+                }
+                Assert.assertNotEquals("reached an uninitialised header before EOF", NOT_INITIALIZED, header);
+                Assert.assertFalse("reached an incomplete header before EOF: " + Integer.toHexString(header),
+                        isNotComplete(header));
+                position += lengthOf(header) + SPB_HEADER_SIZE;
+            }
+        }
+    }
+
     private static void assertBytesAtIndex(SingleChronicleQueue q, long index, Bytes<?> expected) {
         try (ExcerptTailer tailer = q.createTailer()) {
             Assert.assertTrue("unable to move to index 0x" + Long.toHexString(index), tailer.moveToIndex(index));
@@ -617,6 +1036,12 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             position += BytesUtil.padOffset(position);
             Assert.assertEquals(NOT_INITIALIZED, bytes.readVolatileInt(position));
             bytes.writeVolatileInt(position, header);
+        }
+    }
+
+    private static void setWritePosition(SingleChronicleQueue q, int cycle, long position) {
+        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
+            store.writePosition(position);
         }
     }
 

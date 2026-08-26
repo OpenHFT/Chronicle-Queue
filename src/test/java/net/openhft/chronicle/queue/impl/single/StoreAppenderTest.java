@@ -7,11 +7,11 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
-import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -23,7 +23,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
+import java.io.StreamCorruptedException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -393,7 +393,7 @@ public class StoreAppenderTest extends QueueTestCommon {
 
             // Simulate termination after publishing the ready data header but before publishing
             // the store write position. Sequence zero uses zero as its write-position sentinel.
-            forceWritePosition(appender.store, 0);
+            appender.store.writePositionForTesting(0);
         }
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
@@ -463,6 +463,115 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void restartAdoptsReadyRecoveryBeyondAStaleWritePosition() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong clock = new AtomicLong();
+        final long recoveredIndex;
+        final int recoveredCycle;
+        final long writePositionBeforeRecovery;
+        final long recoveredWritePosition;
+        final long eofPosition;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(clock::get)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("first-cycle"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+            recoveredCycle = queue.rollCycle().toCycle(recoveredIndex);
+            writePositionBeforeRecovery = appender.store.writePosition();
+            try (DocumentContext metadata = appender.writingDocument(true)) {
+                metadata.wire().write("recovery-context").text("metadata-before-eof");
+            }
+
+            clock.addAndGet(TimeUnit.HOURS.toMillis(25));
+            appender.writeBytes(Bytes.from("later-cycle"));
+            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + recoveredCycle
+                    + ", index=0x" + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+            recoveredWritePosition = appender.store.writePosition();
+
+            queue.tableStorePut("recoveryInProgress", recoveredIndex);
+            queue.tableStorePut("recoveryIndexed", Long.MIN_VALUE);
+            eofPosition = endOfDataPosition(queue, recoveredCycle);
+            replaceEndOfData(queue, recoveredCycle, eofPosition);
+            try (SingleChronicleQueueStore store = queue.storeForCycle(recoveredCycle, 0, false, null)) {
+                store.writePositionForTesting(writePositionBeforeRecovery);
+            }
+        }
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(clock::get)
+                .rollCycle(TEST4_DAILY)
+                .build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            appender.normaliseEOFs();
+
+            assertEquals("restart must restore EOF after adopting the ready record",
+                    Wires.END_OF_DATA, readHeader(firstQueueFile(directory), eofPosition));
+            try (SingleChronicleQueueStore store = queue.storeForCycle(recoveredCycle, 0, false, null)) {
+                assertEquals("restart must publish the adopted record as the store write position",
+                        recoveredWritePosition, store.writePosition());
+            }
+            assertTrue(tailer.moveToIndex(recoveredIndex));
+            assertNextBytes(tailer, Bytes.elasticHeapByteBuffer(), "recovered");
+            assertEquals(Long.MIN_VALUE, queue.tableStoreGet("recoveryInProgress"));
+            assertEquals(Long.MIN_VALUE, queue.tableStoreGet("recoveryIndexed"));
+        }
+    }
+
+    @Test
+    public void recoveryInspectionFailureKeepsTheDurableIntent() throws IOException {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("existing"));
+            final long recoveryIndex = appender.lastIndexAppended() + 1;
+            queue.tableStorePut("recoveryInProgress", recoveryIndex);
+            queue.tableStorePut("recoveryIndexed", Long.MIN_VALUE);
+            final SingleChronicleQueueStore realStore = appender.store;
+
+            try (MappedBytes fakeBytes = MappedBytes.mappedBytes(queueDirectory.newFile(), 64 << 10);
+                 SingleChronicleQueueStore failingStore = new FailingSequenceStore(fakeBytes)) {
+                appender.store = failingStore;
+                final IllegalStateException failure = org.junit.Assert.assertThrows(
+                        IllegalStateException.class, appender::normaliseEOFs);
+                assertTrue(failure.getMessage().contains("Unable to reconcile persisted recovery"));
+                assertTrue(failure.getCause() instanceof StreamCorruptedException);
+                assertEquals("failed inspection must retain recovery intent",
+                        recoveryIndex, queue.tableStoreGet("recoveryInProgress"));
+            } finally {
+                appender.store = realStore;
+                queue.tableStorePut("recoveryInProgress", Long.MIN_VALUE);
+                queue.tableStorePut("recoveryIndexed", Long.MIN_VALUE);
+            }
+        }
+    }
+
+    @Test
+    public void normalisationDoesNotAdoptDataForANonNextPendingIndex() throws IOException {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("existing"));
+            final long nonNextRecoveryIndex = appender.lastIndexAppended() + 2;
+            queue.tableStorePut("recoveryInProgress", nonNextRecoveryIndex);
+            queue.tableStorePut("recoveryIndexed", Long.MIN_VALUE);
+
+            final IllegalStateException failure = org.junit.Assert.assertThrows(
+                    IllegalStateException.class, appender::normaliseEOFs);
+
+            assertTrue(failure.getMessage().contains("recovery remains incomplete"));
+            assertEquals(nonNextRecoveryIndex, queue.tableStoreGet("recoveryInProgress"));
+            queue.tableStorePut("recoveryInProgress", Long.MIN_VALUE);
+            queue.tableStorePut("recoveryIndexed", Long.MIN_VALUE);
+        }
+    }
+
     private static void assertNextBytes(ExcerptTailer tailer, Bytes<?> result, String expected) {
         result.clear();
         assertTrue(tailer.readBytes(result));
@@ -482,14 +591,43 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
-    private static void forceWritePosition(SingleChronicleQueueStore store, long newWritePosition) {
-        try {
-            final Field field = store.getClass().getDeclaredField("writePosition");
-            field.setAccessible(true);
-            ((LongValue) field.get(store)).setValue(newWritePosition);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Unable to simulate interrupted write-position publication", e);
+    private static void replaceEndOfData(SingleChronicleQueue queue, int cycle, long position) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
+             MappedBytes bytes = store.bytes()) {
+            assertTrue(bytes.compareAndSwapInt(position, Wires.END_OF_DATA, Wires.NOT_INITIALIZED));
         }
+    }
+
+    private static long endOfDataPosition(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
+             MappedBytes bytes = store.bytes()) {
+            long position = store.writePosition();
+            position += Wires.lengthOf(bytes.readVolatileInt(position)) + Wires.SPB_HEADER_SIZE;
+            for (; ; ) {
+                position += net.openhft.chronicle.bytes.BytesUtil.padOffset(position);
+                final int header = bytes.readVolatileInt(position);
+                if (header == Wires.END_OF_DATA)
+                    return position;
+                if (Wires.isNotComplete(header))
+                    throw new AssertionError("Reached an incomplete header before EOF");
+                position += Wires.SPB_HEADER_SIZE + Wires.lengthOf(header);
+            }
+        }
+    }
+
+    private static int readHeader(File queueFile, long position) throws IOException {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(queueFile, 64 << 10)) {
+            return bytes.readVolatileInt(position);
+        }
+    }
+
+    private static File firstQueueFile(File directory) {
+        final File[] queueFiles = directory.listFiles(
+                (ignored, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+        if (queueFiles == null || queueFiles.length == 0)
+            throw new AssertionError("No queue files in " + directory);
+        java.util.Arrays.sort(queueFiles);
+        return queueFiles[0];
     }
 
     private static final class FailingEofStore extends SingleChronicleQueueStore {
@@ -500,6 +638,23 @@ public class StoreAppenderTest extends QueueTestCommon {
         @Override
         public boolean writeEOF(Wire wire, long timeoutMS) {
             return false;
+        }
+
+        @Override
+        public long writePosition() {
+            return 0;
+        }
+    }
+
+    private static final class FailingSequenceStore extends SingleChronicleQueueStore {
+        FailingSequenceStore(MappedBytes bytes) {
+            super(TEST4_DAILY, WireType.BINARY, bytes, 8, 1);
+        }
+
+        @Override
+        public long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive)
+                throws StreamCorruptedException {
+            throw new StreamCorruptedException("simulated corrupt recovery position");
         }
 
         @Override
