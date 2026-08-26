@@ -49,6 +49,8 @@ class StoreAppender extends AbstractCloseable
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
     private static final long MAX_MISMATCH_DUMP_BYTES = 256;
+    private static final String RECOVERY_IN_PROGRESS_TABLESTORE_KEY = "recoveryInProgress";
+    private static final String RECOVERY_INDEXED_TABLESTORE_KEY = "recoveryIndexed";
 
     @NotNull
     private final SingleChronicleQueue queue;
@@ -72,6 +74,7 @@ class StoreAppender extends AbstractCloseable
     private Wire wireForIndex;
     private long positionOfHeader = 0;
     private long lastIndex = Long.MIN_VALUE;
+    private long activeRecoveryIndex = Long.MIN_VALUE;
     @Nullable
     private Pretoucher pretoucher = null;
     private MicroToucher microtoucher = null;
@@ -489,7 +492,11 @@ class StoreAppender extends AbstractCloseable
 
             bytes.writeLimit(bytes.capacity());
 
-            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+            // A durable recovery intent permits a ready record to exist beyond a stale persisted
+            // write position. Reconciliation adopts it before normal appends are accepted.
+            assert !QueueSystemProperties.CHECK_INDEX
+                    || existingTableStoreValue(RECOVERY_IN_PROGRESS_TABLESTORE_KEY) != Long.MIN_VALUE
+                    || checkWritePositionHeaderNumber();
             return originalHeaderNumber != wire.headerNumber();
 
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
@@ -625,9 +632,21 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            // use the getter, not the raw field: after the construction-time back-scan releases its
-            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
-            normaliseEOFs0(cycle());
+            // Preserve the caller's original completion bound: resolving a persisted recovery can
+            // temporarily select an older cycle.
+            final int appenderCycle = cycle();
+            normalisePendingRecovery();
+
+            // Recovery can select a cycle below the monotonic normalisation watermark. Seal that
+            // selected store directly rather than rewinding or scanning a sparse cycle range.
+            if (cycle != Integer.MIN_VALUE
+                    && cycle < queue.cycle()
+                    && wire != null) {
+                ensureEndOfData("Unable to normalise selected historical cycle " + cycle);
+                return;
+            }
+
+            normaliseEOFs0(appenderCycle);
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -658,7 +677,7 @@ class StoreAppender extends AbstractCloseable
             setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
             if (wire != null) {
                 assert queue.writeLock().locked();
-                store.writeEOF(wire, timeoutMS());
+                ensureEndOfData("Unable to normalise cycle " + eofCycle);
                 normalisedEOFsTo.setMaxValue(eofCycle);
             }
         }
@@ -792,6 +811,7 @@ class StoreAppender extends AbstractCloseable
             switch (action) {
                 case WRITE_AND_RESEAL:
                     bytes.writePosition(recoveryPosition);
+                    beginRecovery(recoveryIndex);
                     replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
                     warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
                             recoveryPosition, header);
@@ -799,10 +819,12 @@ class StoreAppender extends AbstractCloseable
 
                 case WRITE:
                     bytes.writePosition(recoveryPosition);
+                    resumeRecoveryIfPending(recoveryIndex);
                     return action;
 
                 case WARN_AND_WRITE:
                     bytes.writePosition(recoveryPosition);
+                    resumeRecoveryIfPending(recoveryIndex);
                     warnExactIndexRecovery("replaced incomplete header", recoveryIndex,
                             recoveryPosition, header);
                     // Clear the failed header here so Wire.enterHeader does not emit a second warning.
@@ -810,6 +832,7 @@ class StoreAppender extends AbstractCloseable
                     return action;
 
                 case ALREADY_PRESENT:
+                    resumeRecoveryIfPending(recoveryIndex);
                     positionOfHeader = recoveryPosition;
                     // A ready header may have survived a failure before the store write position
                     // was published. Expose exactly this complete record so it can be validated.
@@ -825,6 +848,11 @@ class StoreAppender extends AbstractCloseable
                     throw new AssertionError(action);
             }
         }
+    }
+
+    private void resumeRecoveryIfPending(final long recoveryIndex) {
+        if (existingTableStoreValue(RECOVERY_IN_PROGRESS_TABLESTORE_KEY) == recoveryIndex)
+            beginRecovery(recoveryIndex);
     }
 
     private void warnExactIndexRecovery(final String action, final long recoveryIndex,
@@ -975,12 +1003,139 @@ class StoreAppender extends AbstractCloseable
                 + queue.fileAbsolutePath()
                 + ", cycle=" + recoveredCycle
                 + ", index=0x" + Long.toHexString(index));
+        completeRecovery(index);
     }
 
     void ensureEndOfData(final String failureMessage) {
         if (store.writeEOF(wire, timeoutMS()) || cycleHasEOF())
             return;
         throw new IllegalStateException(failureMessage);
+    }
+
+    private void beginRecovery(final long index) {
+        final LongValue recoveryInProgress = queue.tableStoreAcquire(
+                RECOVERY_IN_PROGRESS_TABLESTORE_KEY, Long.MIN_VALUE);
+        final LongValue recoveryIndexed = queue.tableStoreAcquire(
+                RECOVERY_INDEXED_TABLESTORE_KEY, Long.MIN_VALUE);
+
+        final long existingIndex = recoveryInProgress.getVolatileValue();
+        if (existingIndex == Long.MIN_VALUE) {
+            recoveryIndexed.setVolatileValue(Long.MIN_VALUE);
+            recoveryInProgress.setVolatileValue(index);
+        } else if (existingIndex != index) {
+            throw new IllegalStateException("Recovery for index 0x" + Long.toHexString(existingIndex)
+                    + " must complete before index 0x" + Long.toHexString(index));
+        }
+        activeRecoveryIndex = index;
+    }
+
+    private void markRecoveryIndexed(final long index) {
+        if (activeRecoveryIndex != index)
+            return;
+        final LongValue recoveryIndexed = queue.tableStoreAcquire(
+                RECOVERY_INDEXED_TABLESTORE_KEY, Long.MIN_VALUE);
+        recoveryIndexed.setVolatileValue(index);
+    }
+
+    private void completeRecovery(final long index) {
+        final LongValue recoveryInProgress = queue.tableStoreAcquire(
+                RECOVERY_IN_PROGRESS_TABLESTORE_KEY, Long.MIN_VALUE);
+        final LongValue recoveryIndexed = queue.tableStoreAcquire(
+                RECOVERY_INDEXED_TABLESTORE_KEY, Long.MIN_VALUE);
+        if (recoveryInProgress.getVolatileValue() == index) {
+            recoveryInProgress.setVolatileValue(Long.MIN_VALUE);
+            recoveryIndexed.setVolatileValue(Long.MIN_VALUE);
+        }
+        if (activeRecoveryIndex == index)
+            activeRecoveryIndex = Long.MIN_VALUE;
+    }
+
+    private void normalisePendingRecovery() {
+        final long recoveryIndex = existingTableStoreValue(RECOVERY_IN_PROGRESS_TABLESTORE_KEY);
+        if (recoveryIndex == Long.MIN_VALUE)
+            return;
+        final long indexedRecovery = existingTableStoreValue(RECOVERY_INDEXED_TABLESTORE_KEY);
+        if (indexedRecovery == recoveryIndex) {
+            selectRecoveryCycle(recoveryIndex);
+            ensureEndOfData("Unable to normalise persisted recovery at index 0x"
+                    + Long.toHexString(recoveryIndex));
+            completeRecovery(recoveryIndex);
+            return;
+        }
+        if (!reconcilePendingRecovery(recoveryIndex))
+            throw new IllegalStateException("Exact-index recovery remains incomplete at index 0x"
+                    + Long.toHexString(recoveryIndex));
+
+    }
+
+    private boolean reconcilePendingRecovery(final long recoveryIndex) {
+        selectRecoveryCycle(recoveryIndex);
+
+        try {
+            final long recoveryPosition = committedRecoveryPosition(recoveryIndex);
+            if (recoveryPosition == Long.MIN_VALUE)
+                return false;
+
+            // A process can stop after publishing the data header or write position but before the
+            // sparse index and indexed phase. Repeating these monotonic updates adopts the first ready
+            // record and repairs whichever part of completion was missed.
+            activeRecoveryIndex = recoveryIndex;
+            lastPosition = recoveryPosition;
+            lastIndex(recoveryIndex);
+            store.writePosition(recoveryPosition);
+            writeIndexForPosition(recoveryIndex, recoveryPosition);
+        } catch (StreamCorruptedException e) {
+            throw new IllegalStateException("Unable to reconcile persisted recovery at index 0x"
+                    + Long.toHexString(recoveryIndex), e);
+        }
+        markRecoveryIndexed(recoveryIndex);
+        ensureEndOfData("Unable to normalise persisted recovery at index 0x"
+                + Long.toHexString(recoveryIndex));
+        completeRecovery(recoveryIndex);
+        return true;
+    }
+
+    private void selectRecoveryCycle(final long recoveryIndex) {
+        final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+        if (cycle != recoveryCycle)
+            setCycle2(recoveryCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
+        if (wire == null)
+            throw new IllegalStateException("Recovery cycle " + recoveryCycle + " is not available");
+    }
+
+    private long committedRecoveryPosition(final long recoveryIndex) throws StreamCorruptedException {
+        final long recoverySequence = queue.rollCycle().toSequenceNumber(recoveryIndex);
+        final long persistedPosition = store.writePosition();
+        final Bytes<?> bytes = wire.bytes();
+        final int persistedHeader = bytes.readVolatileInt(persistedPosition);
+        final long persistedSequence = store.sequenceForPosition(this, persistedPosition, true);
+
+        if (persistedSequence == recoverySequence
+                && !isNotComplete(persistedHeader)
+                && Wires.isData(persistedHeader))
+            return persistedPosition;
+        if (persistedSequence != recoverySequence - 1)
+            return Long.MIN_VALUE;
+
+        long position = persistedPosition + SPB_HEADER_SIZE + lengthOf(persistedHeader);
+        for (; ; ) {
+            position += BytesUtil.padOffset(position);
+            final int header = bytes.readVolatileInt(position);
+            if (header == END_OF_DATA || isNotComplete(header))
+                return Long.MIN_VALUE;
+            if (Wires.isData(header))
+                return position;
+            position += SPB_HEADER_SIZE + lengthOf(header);
+        }
+    }
+
+    private long existingTableStoreValue(final String expectedKey) {
+        final long[] result = {Long.MIN_VALUE};
+        queue.metaStore().forEachKey(result, (value, key, valueIn) -> {
+            if (expectedKey.contentEquals(key))
+                value[0] = valueIn.int64();
+        });
+        return result[0];
     }
 
     /**
@@ -1007,6 +1162,10 @@ class StoreAppender extends AbstractCloseable
         // in case our cached headerNumber is incorrect.
         resetPosition();
 
+        if (existingTableStoreValue(RECOVERY_IN_PROGRESS_TABLESTORE_KEY) == index
+                && reconcilePendingRecovery(index))
+            return;
+
         long headerNumber = wire.headerNumber();
 
         final RecoveryAction recoveryAction;
@@ -1021,6 +1180,8 @@ class StoreAppender extends AbstractCloseable
         if (recoveryAction == RecoveryAction.ALREADY_PRESENT) {
             compareExistingEntry(index, bytes);
             adoptExistingEntry(index);
+            if (activeRecoveryIndex == index)
+                resealRecoveredCycle(index);
             return;
         }
 
@@ -1033,7 +1194,7 @@ class StoreAppender extends AbstractCloseable
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
 
-        if (recoveryAction == RecoveryAction.WRITE_AND_RESEAL)
+        if (activeRecoveryIndex == index)
             resealRecoveredCycle(index);
     }
 
@@ -1272,6 +1433,7 @@ class StoreAppender extends AbstractCloseable
         lastIndex(index);
         store.writePosition(position);
         writeIndexForPosition(index, position);
+        markRecoveryIndexed(index);
     }
 
     /**

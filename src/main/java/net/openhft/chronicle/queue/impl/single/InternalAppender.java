@@ -21,6 +21,10 @@ public interface InternalAppender extends ExcerptAppender {
      * missing index. Replacing the marker is logged as a warning and the cycle is resealed only after
      * the data record and any addressable sparse-index metadata are committed. Entries beyond the
      * sparse-index capacity remain valid and are found by scanning from the final indexed entry.
+     * Queue records the recovery phase in its table store before replacing the marker, so
+     * {@link #normaliseEOFs()} can repeat monotonic completion updates and reseal a committed
+     * recovery after restart even when that index is not sent again. An incomplete recovery must
+     * be retried before normalisation can complete.
      * <p>
      * For queues that support this path, {@code StoreAppender} establishes padding when it
      * constructs the Wire. Exact-index recovery has no unpadded mode.
