@@ -52,10 +52,23 @@ proof that a roll can never be reopened.
 
 Queue inspects the requested exact index, skipping user and sparse-index
 metadata because metadata does not consume an index. If the slot contains EOF,
-Queue replaces that word with one compare-and-swap, commits the data and any
-addressable sparse-index entry, and then restores EOF. An existing index remains
-authoritative: Queue compares a duplicate payload with it, returns silently
-when they match, and warns with bounded readable hex dumps when they differ.
+Queue first records the exact recovery index in its table store, replaces that
+word with one compare-and-swap, commits the data and any addressable sparse-index
+entry, records the indexed phase, and then restores EOF and clears both markers.
+An existing index remains authoritative: Queue compares a duplicate payload
+with it, returns silently when they match, and warns with bounded readable hex
+dumps when they differ.
+
+If a process stops during recovery, back-fill retries an incomplete entry. At
+back-fill completion, `normaliseEOFs()` inspects the pending index. If the
+first-writer-wins data record is ready, Queue adopts a stale write position if
+necessary, repeats the monotonic sparse-index update, records the indexed phase,
+restores EOF, and clears the recovery markers. This also completes recovery when
+the process stopped after the data and index were durable but before the indexed
+phase was recorded, even if the peer does not send the index again. An incomplete
+record remains fail-closed until an exact retry completes it. Each replication
+handler normalises its own back-fill appender before publishing that sink as
+complete.
 
 The Wire supplied to exact-index recovery cannot be unpadded. For queues that
 support this recovery path, `StoreAppender` establishes padding when it
