@@ -260,8 +260,16 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
              ExcerptAppender appender = q.createAppender()) {
             appender.writeBytes(originalBytes);
 
-            Assert.assertThrows(IllegalStateException.class,
-                    () -> ((InternalAppender) appender).writeBytes(0, overwriteBytes));
+            ((InternalAppender) appender).writeBytes(0, Bytes.from("hello world"));
+
+            expectException(exception -> exception.message().contains(
+                            "Exact-index recovery found different content for existing entry")
+                            && exception.message().contains("existingLength=11")
+                            && exception.message().contains("suppliedLength=11")
+                            && !exception.message().contains("hello world")
+                            && !exception.message().contains("HELLO WORLD"),
+                    "mismatch warning with lengths but no payload content");
+            ((InternalAppender) appender).writeBytes(0, overwriteBytes);
 
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
