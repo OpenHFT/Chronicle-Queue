@@ -64,6 +64,16 @@ public interface DirectoryListing extends Closeable {
     int getMaxCreatedCycle();
 
     /**
+     * Returns the monotonic cycle floor used by ordinary writers. Implementations without
+     * persistent listing metadata use the current maximum as their floor.
+     *
+     * @return the highest cycle an ordinary writer must not move behind
+     */
+    default int getMaxCycleForWrite() {
+        return getMaxCreatedCycle();
+    }
+
+    /**
      * Returns the modification count, which represents the number of changes made to the directory
      * listing since it was last refreshed.
      *

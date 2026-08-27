@@ -1143,7 +1143,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * scanning the queue directory.
      */
     int lastPublishedCycle() {
-        return directoryListing.getMaxCreatedCycle();
+        return directoryListing.getMaxCycleForWrite();
     }
 
     /**

@@ -103,6 +103,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     public void deletingHighestRollDoesNotMoveActiveQueueBackwards() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong time = new AtomicLong();
+        final File highestRoll;
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
                 .timeProvider(time::get)
@@ -112,13 +113,22 @@ public class StoreAppenderTest extends QueueTestCommon {
             appender.writeBytes(Bytes.from("cycle-0"));
             time.set(TEST_DAILY.lengthInMillis());
             appender.writeBytes(Bytes.from("cycle-1"));
-            final File highestRoll = appender.currentFile();
+            highestRoll = appender.currentFile();
             assertEquals(1, queue.lastPublishedCycle());
-            assertTrue("test precondition: highest roll must be removed", highestRoll.delete());
+        }
 
-            time.set(0);
+        assertTrue("test precondition: highest roll must be removed after every handle is closed",
+                highestRoll.delete());
+        time.set(0);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
             appender.writeBytes(Bytes.from("must-not-move-back"));
-            assertEquals("the published high-water must survive partial deletion", 1, appender.cycle());
+            assertEquals("the persistent write floor must survive partial deletion and reopen",
+                    1, appender.cycle());
         }
     }
 
