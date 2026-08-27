@@ -106,31 +106,36 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
         File file1 = getTmpDir();
         file1.deleteOnExit();
+        final SetTimeProvider time = new SetTimeProvider(1_000_000_000L);
+        final int firstCycle = RollCycles.DEFAULT.current(time, 0);
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DEFAULT)
+                .timeProvider(time)
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             Bytes<byte[]> hello_world = Bytes.from("Hello World 1");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 0L), hello_world);
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(firstCycle, 0L), hello_world);
             hello_world.releaseLast();
             hello_world = Bytes.from("Hello World 2");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 1L), hello_world);
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(firstCycle, 1L), hello_world);
             hello_world.releaseLast();
 
             // Simulate the end of the day i.e the queue closes the day rolls
             // (note the change of index from 18264 to 18265)
         }
+        time.advanceMillis(RollCycles.DEFAULT.lengthInMillis());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DEFAULT)
+                .timeProvider(time)
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             // add a message for the new day
             Bytes<byte[]> hello_world = Bytes.from("Hello World 3");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18265, 0L), hello_world);
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(firstCycle + 1, 0L), hello_world);
             hello_world.releaseLast();
 
             final ExcerptTailer tailer = queue.createTailer();

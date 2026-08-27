@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.bytes.algo.BytesStoreHash;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -627,10 +626,10 @@ class StoreAppender extends AbstractCloseable
         try {
             // CQE retries failed backfills before completion. The shared cursor records the
             // earliest cycle touched by those attempts; completion seals every such historical
-            // cycle while deliberately leaving the wall-clock roll cycle open.
-            final int currentCycle = queue.cycle();
+            // cycle while deliberately leaving the active clock/high-water roll open.
             final int lastPublishedCycle = queue.lastPublishedCycle();
-            final int normaliseTo = (int) Math.min((long) lastPublishedCycle + 1, currentCycle);
+            final int activeCycle = Math.max(queue.cycle(), lastPublishedCycle);
+            final int normaliseTo = (int) Math.min((long) lastPublishedCycle + 1, activeCycle);
             normaliseEOFs0(normaliseTo);
         } finally {
             writeLock.unlock();
@@ -658,10 +657,10 @@ class StoreAppender extends AbstractCloseable
             Jvm.debug().on(StoreAppender.class, "Normalising from cycle " + eofCycle);
         }
 
-        // Keep this cap in the private helper as well as the public entry point. Other callers can
-        // request a future cycle while positioning an appender; they must not seal or advance the
-        // cursor across the timestamp-current roll.
-        final int normaliseTo = Math.min(queue.cycle(), cycle);
+        // Keep this cap in the private helper as well as the public entry point. A rolled-back
+        // clock must not leave cycles below the monotonic published high-water open.
+        final int activeCycle = Math.max(queue.cycle(), queue.lastPublishedCycle());
+        final int normaliseTo = Math.min(activeCycle, cycle);
         for (; eofCycle < normaliseTo; ++eofCycle) {
             setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
             if (wire != null) {
@@ -676,9 +675,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void recordBackfillNormalisation(final int recoveredCycle) {
-        // Lower the shared cursor even when clock rollback makes this cycle timestamp-current.
-        // normaliseEOFs0() still excludes the timestamp-current cycle; retaining the lower bound
-        // lets a later completion seal the cycle after it becomes historical again.
+        // Lower the shared cursor even when clock rollback makes this the active high-water cycle.
+        // normaliseEOFs0() excludes that active roll; retaining the lower bound lets a later
+        // completion seal it after a newer roll is published.
         queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, recoveredCycle)
                 .setMinValue(recoveredCycle);
     }
@@ -758,13 +757,16 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * Inspects the requested index, skipping metadata because it does not consume an index.
-     * If the slot is sealed, opens it for recovery and returns {@code true} so the caller reseals
-     * it after writing.
+     * Returns whether the caller must restore EOF after writing. Explicitly reopened EOF is always
+     * restored; otherwise any write below the active clock/published high-water is historical and
+     * must also return sealed.
      */
     private boolean prepareExactIndexRecovery(final long recoveryIndex) {
         assert writeLock.locked();
 
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+        final int activeCycle = Math.max(queue.cycle(), queue.lastPublishedCycle());
+        final boolean historical = recoveryCycle < activeCycle;
         final Bytes<?> bytes = wire.bytes();
         positionForNextHeader();
         long recoveryPosition = bytes.writePosition();
@@ -775,7 +777,7 @@ class StoreAppender extends AbstractCloseable
             if (header == NOT_INITIALIZED) {
                 recordBackfillNormalisation(recoveryCycle);
                 bytes.writePosition(recoveryPosition);
-                return false;
+                return historical;
             }
             if (header == END_OF_DATA) {
                 recordBackfillNormalisation(recoveryCycle);
@@ -792,7 +794,7 @@ class StoreAppender extends AbstractCloseable
                         recoveryPosition, header);
                 // Clear the failed header here so Wire.enterHeader does not emit a second warning.
                 bytes.writeVolatileInt(recoveryPosition, NOT_INITIALIZED);
-                return false;
+                return historical;
             }
             if (isReadyMetaData(header)) {
                 recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
@@ -975,7 +977,6 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock(true);
 
         final int cycle = queue.rollCycle().toCycle(index);
-        final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
 
         if (wire == null)
             setWireIfNull(cycle);
@@ -995,12 +996,12 @@ class StoreAppender extends AbstractCloseable
 
         long headerNumber = wire.headerNumber();
 
-        if (index != headerNumber + 1) {
-            if (index > headerNumber + 1)
-                throw new IllegalIndexException(index, headerNumber);
-            compareExistingEntryAtIndex(index, sequenceNumber, bytes);
-            return;
-        }
+        if (index > headerNumber + 1)
+            throw new IllegalIndexException(index, headerNumber);
+        if (index <= headerNumber)
+            throw new IllegalStateException("Exact-index write requires the next queue index: "
+                    + "provided index=0x" + Long.toHexString(index)
+                    + ", last index=0x" + Long.toHexString(headerNumber));
 
         final boolean reseal = prepareExactIndexRecovery(index);
 
@@ -1015,48 +1016,6 @@ class StoreAppender extends AbstractCloseable
 
         if (reseal)
             resealRecoveredCycle(index);
-    }
-
-    private void compareExistingEntryAtIndex(final long index, final long sequenceNumber,
-                                             @NotNull final BytesStore<?, ?> suppliedBytes) {
-        final Bytes<?> wireBytes = wire.bytes();
-        final long savedReadPosition = wireBytes.readPosition();
-        final long savedReadLimit = wireBytes.readLimit();
-        final long savedWritePosition = wireBytes.writePosition();
-        try {
-            final ScanResult scanResult = store.moveToIndexForRead(this, sequenceNumber);
-            if (scanResult == ScanResult.FOUND)
-                compareExistingEntry(index, suppliedBytes);
-            else
-                warnUnableToCompareExistingEntry(index, suppliedBytes.readRemaining(), scanResult);
-        } finally {
-            wireBytes.readPosition(savedReadPosition);
-            wireBytes.readLimit(savedReadLimit);
-            // Restore this last so ChunkedMappedBytes is parked on the append mapping.
-            wireBytes.writePosition(savedWritePosition);
-        }
-    }
-
-    private void compareExistingEntry(final long index,
-                                      @NotNull final BytesStore<?, ?> suppliedBytes) {
-        final Bytes<?> existingBytes = wire.bytes();
-        final int header = existingBytes.readVolatileInt();
-        assert isReadyData(header);
-
-        final int existingLength = lengthOf(header);
-        final long suppliedLength = suppliedBytes.readRemaining();
-        if (existingLength == suppliedLength
-                && existingBytes.equalBytes(suppliedBytes, existingLength))
-            return;
-
-        Jvm.warn().on(getClass(), "Exact-index recovery found different content for existing entry: queue="
-                + queue.fileAbsolutePath()
-                + ", cycle=" + queue.rollCycle().toCycle(index)
-                + ", index=0x" + Long.toHexString(index)
-                + ", existingLength=" + existingLength
-                + ", suppliedLength=" + suppliedLength
-                + ", existingHash=0x" + Long.toHexString(BytesStoreHash.hash(existingBytes, existingLength))
-                + ", suppliedHash=0x" + Long.toHexString(BytesStoreHash.hash(suppliedBytes, suppliedLength)));
     }
 
     /**
@@ -1098,16 +1057,6 @@ class StoreAppender extends AbstractCloseable
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         }
-    }
-
-    private void warnUnableToCompareExistingEntry(final long index, final long suppliedLength,
-                                                  final ScanResult reason) {
-        Jvm.warn().on(getClass(), "Exact-index recovery could not compare existing entry: queue="
-                + queue.fileAbsolutePath()
-                + ", cycle=" + queue.rollCycle().toCycle(index)
-                + ", index=0x" + Long.toHexString(index)
-                + ", suppliedLength=" + suppliedLength
-                + ", reason=" + reason);
     }
 
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {

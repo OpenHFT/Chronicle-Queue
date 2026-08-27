@@ -18,7 +18,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
@@ -152,12 +151,12 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
             Assert.assertTrue("every backfilled cycle must lower the shared EOF normalisation bound",
                     q.tableStoreGet("normalisedEOFsTo") <= recoveredCycle);
-            Assert.assertFalse("a restarted write cannot infer that the failed attempt removed EOF",
+            Assert.assertTrue("a successful historical write must return with EOF restored",
                     hasEOF(q, recoveredCycle));
 
             appender.normaliseEOFs();
 
-            Assert.assertTrue("normalisation must reseal a cycle left open by failed backfill",
+            Assert.assertTrue("normalisation must preserve the historical seal",
                     hasEOF(q, recoveredCycle));
             assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
         }
@@ -177,7 +176,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             final int backfillCycle = q.rollCycle().toCycle(backfillIndex);
 
             ((InternalAppender) appender).writeBytes(backfillIndex, Bytes.from("backfilled"));
-            Assert.assertTrue("every non-duplicate backfill must retain its normalization lower bound",
+            Assert.assertTrue("every backfill must retain its normalization lower bound",
                     q.tableStoreGet("normalisedEOFsTo") <= backfillCycle);
 
             appender.normaliseEOFs();
@@ -188,75 +187,6 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             appender.normaliseEOFs();
             Assert.assertTrue("the retained lower bound must seal the cycle once it is historical",
                     hasEOF(q, backfillCycle));
-        }
-    }
-
-    @Test
-    public void exactWriteChecksRewoundEntriesAndWarnsOnlyForDifferentContent() {
-        final String[] values = {"original-0", "original-1", "original-2"};
-        final long[] indexes = new long[values.length];
-
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .timeProvider(() -> 0)
-                .rollCycle(TEST4_DAILY)
-                .build();
-             ExcerptAppender appender = q.createAppender()) {
-            for (int i = 0; i < values.length; i++) {
-                appender.writeBytes(Bytes.from(values[i]));
-                indexes[i] = appender.lastIndexAppended();
-            }
-
-            final InternalAppender internalAppender = (InternalAppender) appender;
-            for (int i = 0; i < values.length; i++)
-                internalAppender.writeBytes(indexes[i], Bytes.from(values[i]));
-
-            final long mismatchIndex = indexes[1];
-            expectException(exception -> exception.message().contains(
-                            "Exact-index recovery found different content for existing entry")
-                            && exception.message().contains("existingLength=10")
-                            && exception.message().contains("suppliedLength=11")
-                            && exception.message().contains("existingHash=0x")
-                            && exception.message().contains("suppliedHash=0x")
-                            && !exception.message().contains("original-1")
-                            && !exception.message().contains("different-1"),
-                    "mismatch warning with hashes but no payload content");
-            internalAppender.writeBytes(mismatchIndex, Bytes.from("different-1"));
-
-            Assert.assertEquals(values.length, q.entryCount());
-            for (int i = 0; i < values.length; i++)
-                assertBytesAtIndex(q, indexes[i], Bytes.from(values[i]));
-        }
-    }
-
-    @Test
-    public void ordinaryAppendFollowsHistoricalComparisonAcrossMappedChunks() {
-        final Bytes<?> first = Bytes.from("first");
-        final Bytes<?> following = Bytes.from("following");
-        final byte[] filler = new byte[2048];
-        Arrays.fill(filler, (byte) 'x');
-
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .timeProvider(() -> 0)
-                .rollCycle(TEST4_DAILY)
-                .testBlockSize()
-                .build();
-             ExcerptAppender appender = q.createAppender()) {
-            appender.writeBytes(first);
-            final long firstIndex = appender.lastIndexAppended();
-            final int cycle = appender.cycle();
-
-            for (int i = 0; i < 96; i++)
-                appender.writeBytes(Bytes.wrapForRead(filler));
-            Assert.assertTrue("test precondition: writes must span mapped chunks",
-                    writePosition(q, cycle) > 2 * q.blockSize());
-
-            ((InternalAppender) appender).writeBytes(firstIndex, first);
-            final long lastIndexBeforeAppend = appender.lastIndexAppended();
-            appender.writeBytes(following);
-
-            Assert.assertEquals(lastIndexBeforeAppend + 1, appender.lastIndexAppended());
-            assertBytesAtIndex(q, firstIndex, first);
-            assertBytesAtIndex(q, appender.lastIndexAppended(), following);
         }
     }
 
@@ -330,118 +260,14 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
              ExcerptAppender appender = q.createAppender()) {
             appender.writeBytes(originalBytes);
 
-            // try to overwrite - will not overwrite
-            expectException("Exact-index recovery found different content for existing entry");
-            ((InternalAppender) appender).writeBytes(0, overwriteBytes);
+            Assert.assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(0, overwriteBytes));
 
             ExcerptTailer tailer = q.createTailer();
             tailer.readBytes(result);
             assertEquals(originalBytes, result);
             assertEquals(1, tailer.index());
         }
-    }
-
-    @Test
-    public void cannotOverwriteExistingEntries_DifferentQueueInstance() {
-        @NotNull Bytes<byte[]> test = Bytes.from("hello world");
-        @NotNull Bytes<byte[]> test2 = Bytes.from("hello world2");
-        Bytes<?> result = Bytes.elasticHeapByteBuffer();
-        long index;
-        final File tmpDir = getTmpDir();
-        final String expected = "" +
-                "--- !!meta-data #binary\n" +
-                "header: !STStore {\n" +
-                "  wireType: !WireType BINARY_LIGHT,\n" +
-                "  metadata: !SCQMeta {\n" +
-                "    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'T4', epoch: 0 },\n" +
-                "    sourceId: 0\n" +
-                "  }\n" +
-                "}\n" +
-                "# position: 176, header: 0\n" +
-                "--- !!data #binary\n" +
-                "listing.highestCycle: 0\n" +
-                "# position: 216, header: 1\n" +
-                "--- !!data #binary\n" +
-                "listing.lowestCycle: 0\n" +
-                "# position: 256, header: 2\n" +
-                "--- !!data #binary\n" +
-                "listing.modCount: 1\n" +
-                "# position: 288, header: 3\n" +
-                "--- !!data #binary\n" +
-                "chronicle.write.lock: -9223372036854775808\n" +
-                "# position: 328, header: 4\n" +
-                "--- !!data #binary\n" +
-                "chronicle.append.lock: -9223372036854775808\n" +
-                "# position: 368, header: 5\n" +
-                "--- !!data #binary\n" +
-                "chronicle.lastIndexReplicated: -1\n" +
-                "# position: 416, header: 6\n" +
-                "--- !!data #binary\n" +
-                "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                "...\n" +
-                "# 130596 bytes remaining\n" +
-                "--- !!meta-data #binary\n" +
-                "header: !SCQStore {\n" +
-                "  writePosition: [\n" +
-                "    792,\n" +
-                "    3401614098433\n" +
-                "  ],\n" +
-                "  indexing: !SCQSIndexing {\n" +
-                "    indexCount: 32,\n" +
-                "    indexSpacing: 4,\n" +
-                "    index2Index: 196,\n" +
-                "    lastIndex: 4\n" +
-                "  },\n" +
-                "  dataFormat: 1\n" +
-                "}\n" +
-                "# position: 196, header: -1\n" +
-                "--- !!meta-data #binary\n" +
-                "index2index: [\n" +
-                "  # length: 32, used: 1\n" +
-                "  488,\n" +
-                "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
-                "]\n" +
-                "# position: 488, header: -1\n" +
-                "--- !!meta-data #binary\n" +
-                "index: [\n" +
-                "  # length: 32, used: 1\n" +
-                "  776,\n" +
-                "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
-                "]\n" +
-                "# position: 776, header: 0\n" +
-                "--- !!data\n" +
-                "hello world\n" +
-                "# position: 792, header: 1\n" +
-                "--- !!data\n" +
-                "hello world2\n" +
-                "...\n" +
-                "# 130260 bytes remaining\n";
-        try (SingleChronicleQueue q = createQueue(tmpDir);
-             ExcerptAppender appender = q.createAppender()) {
-            appender.writeBytes(test);
-            appender.writeBytes(test2);
-            index = appender.lastIndexAppended();
-        }
-        assertEquals(1, index);
-
-        // has to be the same tmpDir
-        try (SingleChronicleQueue q = createQueue(tmpDir);
-             InternalAppender appender = (InternalAppender) q.createAppender()) {
-            expectException("index=0x0");
-            appender.writeBytes(0, Bytes.from("HELLO WORLD"));
-            expectException("index=0x1");
-            appender.writeBytes(1, Bytes.from("HELLO WORLD"));
-
-            ExcerptTailer tailer = q.createTailer();
-            tailer.readBytes(result);
-            assertEquals(test, result);
-            assertEquals(1, tailer.index());
-        }
-    }
-
-    @NotNull
-    private SingleChronicleQueue createQueue(File tmpDir) {
-        return SingleChronicleQueueBuilder.binary(tmpDir).timeProvider(() -> 0).testBlockSize().rollCycle(TEST4_DAILY).build();
     }
 
     @Test(expected = IllegalIndexException.class)
@@ -645,12 +471,6 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
         final File[] files = q.file().listFiles((directory, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
         Assert.assertNotNull(files);
         return files;
-    }
-
-    private static long writePosition(SingleChronicleQueue q, int cycle) {
-        try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
-            return store.writePosition();
-        }
     }
 
     private static void putNextHeader(SingleChronicleQueue q, int cycle, int header) {

@@ -76,18 +76,19 @@ Queue inspects the requested exact index, skipping user and sparse-index
 metadata because metadata does not consume an index. If the slot contains EOF,
 Queue replaces that word with one compare-and-swap, commits the data and any
 addressable sparse-index entry, and then restores EOF. An existing index remains
-authoritative: Queue compares a duplicate payload with it, returns silently
-when they match, and warns with the two lengths and deterministic hashes when
-they differ. The payload bytes are not included in the warning.
+authoritative and is not accepted by this recovery path. The requested index
+must be exactly the next unpublished index; an existing index or a gap is
+rejected.
 
 Current queue files are padded, keeping every header—including end-of-data—
 four-byte aligned for atomic replacement. Legacy `dataVersion == 0` stores are
 unpadded and remain readable, but exact-index mutation rejects them before
 changing the recovery cursor, EOF, write position or payload.
 
-The duplicate check also permits a replication implementation to replay a
-small overlap of recent entries to verify that source and sink agree before
-transferring missing data. Current callers need not use that optional check.
+Exact replication currently supports only indices within the roll cycle's
+declared `maxMessagesPerCycle()` range. Extending physical sequences beyond the
+sparse-index capacity, including non-indexed continuation and linear lookup,
+is separate future work.
 
 EOF recovery is implemented in Queue by validating the exact index and then
 performing the aligned header compare-and-swap while holding Queue's write

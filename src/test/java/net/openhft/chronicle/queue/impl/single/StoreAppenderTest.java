@@ -483,7 +483,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void exactWriteAdoptsReadyFirstRecordAfterInterruptedPublication() throws IOException {
+    public void exactWritePublishesReadyFirstRecordBeforeWritingNext() throws IOException {
         final File directory = queueDirectory.newFolder();
         final long firstIndex;
 
@@ -509,11 +509,7 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
-            ((InternalAppender) appender).writeBytes(firstIndex, Bytes.from("first"));
-            assertEquals("the ready record must be adopted as the last committed index",
-                    firstIndex, appender.lastIndexAppended());
-
-            appender.writeBytes(Bytes.from("second"));
+            ((InternalAppender) appender).writeBytes(firstIndex + 1, Bytes.from("second"));
             assertEquals(firstIndex + 1, appender.lastIndexAppended());
             assertEquals(2, queue.entryCount());
 
@@ -525,23 +521,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void replayOfUnpublishedReadyRecordThenNextWritePreservesBothEntries() throws IOException {
-        QueueSystemProperties.CHECK_INDEX = false;
-        final File directory = queueDirectory.newFolder();
-        final long firstIndex = writeFirstThenCommitSecondWithoutPublishing(directory);
-
-        try (SingleChronicleQueue queue = fixedTimeQueue(directory);
-             ExcerptAppender appender = queue.createAppender()) {
-            final InternalAppender internalAppender = (InternalAppender) appender;
-            internalAppender.writeBytes(firstIndex + 1, Bytes.from("second"));
-            internalAppender.writeBytes(firstIndex + 2, Bytes.from("third"));
-
-            assertQueueContents(queue, firstIndex, "first", "second", "third");
-        }
-    }
-
-    @Test
-    public void historicalRetryOfReadyInterruptedRecordLowersEofCursor() throws IOException {
+    public void historicalWriteAfterReadyInterruptedRecordReseals() throws IOException {
         final File directory = queueDirectory.newFolder();
         final SetTimeProvider time = new SetTimeProvider();
         final long recoveredIndex;
@@ -577,15 +557,13 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .testBlockSize()
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
+            ((InternalAppender) appender).writeBytes(recoveredIndex + 1, Bytes.from("following"));
 
             assertTrue("adopting an interrupted ready record must lower the historical EOF cursor",
                     queue.tableStoreGet("normalisedEOFsTo") <= recoveredCycle);
-            assertFalse(hasEOF(queue, recoveredCycle));
-
-            appender.normaliseEOFs();
-            assertTrue("normalisation must reseal the adopted historical recovery",
+            assertTrue("the successful historical write must reseal the adopted recovery",
                     hasEOF(queue, recoveredCycle));
+            assertQueueContents(queue, recoveredIndex, "recovered", "following");
         }
     }
 
@@ -618,7 +596,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void backfillIntoRolledBackCurrentCycleIsSealedOnceHistorical() throws IOException {
+    public void backfillBelowRolledBackHighWaterIsImmediatelySealed() throws IOException {
         final SetTimeProvider time = new SetTimeProvider();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
                 .timeProvider(time)
@@ -640,12 +618,7 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertEquals(recoveredCycle, queue.cycle());
             removeEndOfData(queue, recoveredCycle);
             ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("recovered"));
-            appender.normaliseEOFs();
-            assertFalse("timestamp-current cycle must remain open", hasEOF(queue, recoveredCycle));
-
-            time.advanceMillis(TimeUnit.HOURS.toMillis(1));
-            appender.normaliseEOFs();
-            assertTrue("backfilled cycle must be sealed once historical",
+            assertTrue("the published high-water makes the recovered cycle historical",
                     hasEOF(queue, recoveredCycle));
         }
     }
@@ -675,10 +648,10 @@ public class StoreAppenderTest extends QueueTestCommon {
             expectException("Exact-index recovery replaced incomplete header");
             ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("recovered-after-restart"));
 
-            assertFalse("the failed process left the recovered historical cycle open",
+            assertTrue("the successful historical retry must restore EOF before returning",
                     hasEOF(queue, 0));
             appender.normaliseEOFs();
-            assertTrue("completion must reseal every historical backfilled cycle",
+            assertTrue("completion must preserve every historical EOF",
                     hasEOF(queue, 0));
 
             assertEquals(3, queue.entryCount());
@@ -811,25 +784,6 @@ public class StoreAppenderTest extends QueueTestCommon {
         result.clear();
         assertTrue(tailer.readBytes(result));
         assertEquals(expected, result.toString());
-    }
-
-    private static SingleChronicleQueue fixedTimeQueue(File directory) {
-        return SingleChronicleQueueBuilder.binary(directory)
-                .timeProvider(() -> 0)
-                .rollCycle(TEST4_DAILY)
-                .testBlockSize()
-                .build();
-    }
-
-    private long writeFirstThenCommitSecondWithoutPublishing(File directory) {
-        try (SingleChronicleQueue queue = fixedTimeQueue(directory);
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeBytes(Bytes.from("first"));
-            final long firstIndex = appender.lastIndexAppended();
-            commitRecordWithoutPublishing(queue,
-                    queue.rollCycle().toCycle(firstIndex), Bytes.from("second"));
-            return firstIndex;
-        }
     }
 
     private static void commitRecordWithoutPublishing(SingleChronicleQueue queue,
