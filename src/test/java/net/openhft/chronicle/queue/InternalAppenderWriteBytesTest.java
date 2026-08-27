@@ -114,6 +114,38 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
+    public void exactWriteRecreatesDeletedRollWhenMetadataRetainsStaleBounds() {
+        final File directory = getTmpDir();
+        final long requestedIndex;
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("original"));
+            requestedIndex = appender.lastIndexAppended();
+        }
+
+        File[] rolls = directory.listFiles((ignored, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+        Assert.assertNotNull(rolls);
+        Assert.assertEquals(1, rolls.length);
+        Assert.assertTrue("test must delete the roll while retaining metadata", rolls[0].delete());
+
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST_HOURLY)
+                .build();
+             ExcerptAppender appender = q.createAppender()) {
+            ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("recreated"));
+
+            assertBytesAtIndex(q, requestedIndex, Bytes.from("recreated"));
+            Assert.assertEquals("exact recovery must not invent a later cycle",
+                    q.rollCycle().toCycle(requestedIndex), q.lastCycle());
+        }
+    }
+
+    @Test
     public void restartedHistoricalBackfillLowersEofNormalisationBound() {
         final File directory = getTmpDir();
         final SetTimeProvider timeProvider = new SetTimeProvider();

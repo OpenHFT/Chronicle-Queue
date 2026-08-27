@@ -705,6 +705,10 @@ class StoreAppender extends AbstractCloseable
      * @param cycle the target cycle up to which EOF normalization should occur
      */
     private void normaliseEOFs0(int cycle) {
+        // Maintenance or an operator may have removed every roll while retaining metadata.cq4t.
+        // Refresh before trusting the persisted min/max bounds; otherwise sparse enumeration asks
+        // for a now-absent lower boundary and prevents exact recovery from recreating the cycle.
+        queue.refreshDirectoryListing();
         int first = queue.firstCycle();
 
         if (first == Integer.MAX_VALUE)
