@@ -4,7 +4,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 /**
- * Outcome of an attempt to park a named tailer.
+ * Operational outcome of an attempt to park a named tailer. Invalid caller input is reported by
+ * {@link SingleChronicleQueue#parkNamedTailer(String)} as an exception rather than an outcome.
  */
 public enum NamedTailerParkResult {
     /** The named tailer existed and its persisted index was reset to zero. */
@@ -12,7 +13,5 @@ public enum NamedTailerParkResult {
     /** No persisted named tailer exists with the supplied name. */
     NOT_FOUND,
     /** The named tailer is replicated and cannot safely be parked locally. */
-    REFUSED_REPLICATED,
-    /** The supplied name is null or uses a reserved metadata suffix. */
-    INVALID_NAME
+    REFUSED_REPLICATED
 }

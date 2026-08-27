@@ -125,6 +125,29 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     /**
+     * Executes a code block with a shared structural lock, waiting for no longer than the
+     * supplied timeout. This overload is intended for off-critical-path metadata snapshots whose
+     * caller owns the timeout policy.
+     *
+     * @param file          the table-store file to lock
+     * @param timeoutMillis maximum time to wait in milliseconds; zero performs one attempt
+     * @param code          the function to execute while the lock is held
+     * @param target        supplier of the function target
+     * @param <T>           target type
+     * @param <R>           result type
+     * @return the result of applying {@code code}
+     * @throws IllegalArgumentException if {@code timeoutMillis} is negative
+     */
+    public static <T, R> R doWithSharedLock(@NotNull final File file,
+                                            final long timeoutMillis,
+                                            @NotNull final Function<T, ? extends R> code,
+                                            @NotNull final Supplier<T> target) {
+        if (timeoutMillis < 0)
+            throw new IllegalArgumentException("timeoutMillis must not be negative");
+        return doWithLock(file, code, target, true, timeoutMillis);
+    }
+
+    /**
      * Executes a code block with an exclusive lock on the specified file.
      *
      * @param file   The file to lock.
@@ -155,13 +178,22 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                                        @NotNull final Function<T, ? extends R> code,
                                        @NotNull final Supplier<T> target,
                                        final boolean shared) {
+        return doWithLock(file, code, target, shared, timeoutMS);
+    }
+
+    private static <T, R> R doWithLock(@NotNull final File file,
+                                       @NotNull final Function<T, ? extends R> code,
+                                       @NotNull final Supplier<T> target,
+                                       final boolean shared,
+                                       final long timeoutMillis) {
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
-        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
+        final long timeoutNanos = java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        final long startNanos = System.nanoTime();
         final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-            for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
+            for (int count = 1; ; count++) {
                 try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
@@ -176,6 +208,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                         }
                     }
                 }
+                if (System.nanoTime() - startNanos >= timeoutNanos)
+                    break;
                 int delay = Math.min(250, count * count);
                 Jvm.pause(delay);
             }
@@ -281,6 +315,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new ClosedIllegalStateException("Closed");
 
         mappedBytes.reserve(this);
+        final long previousReadPosition = mappedBytes.readPosition();
+        final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWriteLimit = mappedBytes.writeLimit();
+        boolean restoreScanState = true;
         try {
             prepareForTableScan();
             while (mappedWire.readDataHeader()) {
@@ -314,12 +352,17 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
             if (end >= endOfChunk + overlapSize)
                 throw new IllegalStateException("Misaligned write");
+            // Failed creation must restore the caller's scan state; only a complete entry keeps
+            // the post-write positions and limits used by subsequent acquire calls.
+            restoreScanState = false;
             return longValue;
 
         } catch (StreamCorruptedException | EOFException e) {
             throw new IORuntimeException(e);
 
         } finally {
+            if (restoreScanState)
+                restoreAfterTableScan(previousReadPosition, previousReadLimit, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -339,6 +382,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
         mappedBytes.reserve(this);
+        final long previousReadPosition = mappedBytes.readPosition();
+        final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWriteLimit = mappedBytes.writeLimit();
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
             prepareForTableScan();
@@ -357,6 +403,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new IORuntimeException(e);
 
         } finally {
+            restoreAfterTableScan(previousReadPosition, previousReadLimit, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -384,5 +431,12 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         // bound; entries appended later are visible on a later scan.
         mappedBytes.writeLimit(mappedBytes.capacity());
         mappedBytes.readLimit(scanLimit);
+    }
+
+    private void restoreAfterTableScan(long readPosition, long readLimit, long writeLimit) {
+        mappedBytes.readPosition(0);
+        mappedBytes.readLimit(readLimit);
+        mappedBytes.writeLimit(writeLimit);
+        mappedBytes.readPosition(readPosition);
     }
 }
