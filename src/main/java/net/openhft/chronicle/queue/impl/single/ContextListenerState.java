@@ -110,6 +110,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         int contextCount = appender.cycle();
         if (contextCount <= lastContextCount)
             return false;
+        // A failed notification is not retried in the same roll.
+        lastContextCount = contextCount;
 
         notifying = true;
         try {
