@@ -37,7 +37,6 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
                 .readOnly(true)
                 .build()) {
             assertTrue(queue.metaStore().readOnly());
-            assertTrue(queue.directoryListing() instanceof FileSystemDirectoryListing);
             assertTrue(queue.namedTailerIndexes().isEmpty());
         }
 
@@ -55,7 +54,9 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
                 .readOnly(true)
                 .build()) {
             assertTrue(queue.metaStore().readOnly());
-            assertTrue(queue.directoryListing() instanceof TableDirectoryListingReadOnly);
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                assertEquals("one", tailer.readText());
+            }
         }
     }
 

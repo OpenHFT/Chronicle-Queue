@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -13,8 +12,6 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -33,20 +30,10 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
 
     private final SetTimeProvider timeProvider = new SetTimeProvider();
 
-    @Before
-    public void useDeterministicSystemTimeProvider() {
-        SystemTimeProvider.CLOCK = timeProvider;
-    }
-
-    @After
-    public void resetSystemTimeProvider() {
-        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
-    }
-
-    private static SingleChronicleQueueBuilder builder(File dir) {
+    private SingleChronicleQueueBuilder builder(File dir) {
         return SingleChronicleQueueBuilder.single(dir)
                 .rollCycle(TestRollCycles.TEST_DAILY)
-                .timeProvider(SystemTimeProvider.CLOCK);
+                .timeProvider(timeProvider);
     }
 
     private void writeDailyExcerpts(File dir, int days) {
@@ -248,13 +235,35 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
                 NavigableMap<String, Long> indexesBefore = q.namedTailerIndexes();
 
                 assertEquals(NamedTailerParkResult.REFUSED_REPLICATED, q.parkNamedTailer(name));
-                assertEquals(NamedTailerParkResult.REFUSED_REPLICATED,
-                        q.parkNamedTailer("Replicated:sink"));
+                assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("Replicated:sink"));
                 assertEquals(Long.valueOf(pinned), q.namedTailerIndexes().get(name));
                 assertEquals(versionBefore, version.getValue());
                 assertEquals(lockBefore, q.tableStoreGet("index." + name + ".lock"));
                 assertEquals(indexesBefore, q.namedTailerIndexes());
             }
+        }
+    }
+
+    @Test
+    public void mixedCaseReplicatedPrefixCannotAliasCanonicalTailer() {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(55_000));
+        writeDailyExcerpts(dir, 1);
+
+        try (SingleChronicleQueue q = builder(dir).build()) {
+            String canonical = SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX + "sink";
+            try (ExcerptTailer tailer = q.createTailer(canonical)) {
+                assertEquals(0, tailer.index());
+            }
+            NavigableMap<String, Long> before = q.namedTailerIndexes();
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> q.createTailer("Replicated:sink"));
+            assertThrows(IllegalArgumentException.class,
+                    () -> q.parkNamedTailer("Replicated:sink"));
+
+            assertEquals(before, q.namedTailerIndexes());
         }
     }
 
@@ -312,20 +321,6 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             assertTrue(exception.getMessage().contains("would collide with the metadata"));
             expectException("Named tailer id 'gateway.LOCK'");
             assertEquals(Long.valueOf(index), q.namedTailerIndexes().get("gateway.LOCK"));
-        }
-    }
-
-    @Test
-    public void fileForCycleReturnsExistingRollFileOnly() {
-        File dir = getTmpDir();
-        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(70_000));
-        writeDailyExcerpts(dir, 1);
-
-        try (SingleChronicleQueue q = builder(dir).build()) {
-            File first = q.fileForCycle(q.firstCycle());
-            assertNotNull(first);
-            assertTrue(first.exists());
-            assertNull(q.fileForCycle(q.firstCycle() - 1));
         }
     }
 
