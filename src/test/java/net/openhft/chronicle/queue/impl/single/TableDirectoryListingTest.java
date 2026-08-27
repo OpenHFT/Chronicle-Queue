@@ -126,16 +126,66 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void legacyHighestCycleAlsoAdvancesWriteFloor() {
+    public void publishedHighestCycleIsTheWriteFloor() {
         listing.onFileCreated(tempFile, 7);
 
-        final LongValue legacyHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
+        final LongValue publishedHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
         try {
-            legacyHighestCycle.setOrderedValue(9);
+            publishedHighestCycle.setOrderedValue(9);
         } finally {
-            legacyHighestCycle.close();
+            publishedHighestCycle.close();
         }
 
         assertEquals(9, listing.getMaxCycleForWrite());
+    }
+
+    @Test
+    public void refreshNeverLowersPersistedWatermarks() throws IOException {
+        listing.onFileCreated(tempFile, 7);
+        listing.onFileCreated(tempFile, 9);
+
+        new File(testDirectory, 8 + SingleChronicleQueue.SUFFIX).createNewFile();
+        listing.refresh(true);
+        assertEquals(8, listing.getMinCreatedCycle());
+        assertEquals(8, listing.getMaxCreatedCycle());
+        assertEquals(9, listing.getMaxCycleForWrite());
+
+        new File(testDirectory, 6 + SingleChronicleQueue.SUFFIX).createNewFile();
+        listing.refresh(true);
+        assertEquals(6, listing.getMinCreatedCycle());
+        assertEquals(8, persistedCycle("listing.lowestCycle"));
+        assertEquals(9, listing.getMaxCycleForWrite());
+    }
+
+    @Test
+    public void publishedModificationRefreshesAnotherListingsCurrentBounds() throws IOException {
+        final TableDirectoryListing secondListing = new TableDirectoryListing(
+                tablestore,
+                testDirectory.toPath(),
+                f -> Integer.parseInt(f.split("\\.")[0]),
+                SystemTimeProvider.INSTANCE);
+        try {
+            secondListing.init();
+            secondListing.refresh(true);
+
+            final File cycleFile = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
+            cycleFile.createNewFile();
+            listing.onFileCreated(cycleFile, 7);
+
+            secondListing.refresh(false);
+            assertEquals(7, secondListing.getMinCreatedCycle());
+            assertEquals(7, secondListing.getMaxCreatedCycle());
+        } finally {
+            secondListing.close();
+        }
+    }
+
+    private int persistedCycle(final String key) {
+        final LongValue value = tablestore.acquireValueFor(key);
+        try {
+            return (int) value.getVolatileValue();
+        } finally {
+            value.close();
+        }
     }
 }
