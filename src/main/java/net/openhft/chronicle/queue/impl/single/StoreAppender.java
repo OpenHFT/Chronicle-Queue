@@ -759,22 +759,9 @@ class StoreAppender extends AbstractCloseable
             } catch (WriteAfterEOFException ignored) {
                 // EOF remains a hard seal. Ordinary writes continue in a later roll rather than
                 // replacing it; only exact-index recovery is allowed to remove the marker.
-                rollForwardAfterEOF();
+                rollCycleTo(cycle + 1, true);
             }
         }
-    }
-
-    /**
-     * Moves away from a sealed cycle without creating an unnecessary intermediate cycle. A
-     * cooperating writer may already have advanced by several cycles, for example across a
-     * weekend on a daily roll. Only when no later cycle has been published is the immediately
-     * following cycle created.
-     */
-    void rollForwardAfterEOF() {
-        assert queue.writeLock().locked();
-        final int lastPublishedCycle = queue.lastPublishedCycle();
-        final int nextCycle = Math.max(lastPublishedCycle, cycle + 1);
-        rollCycleTo(nextCycle, true);
     }
 
     private long writeHeader(final long safeLength) {
