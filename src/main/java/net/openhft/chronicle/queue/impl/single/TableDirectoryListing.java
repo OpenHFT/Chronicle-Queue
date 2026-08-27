@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -25,7 +24,6 @@ import java.util.function.ToIntFunction;
 class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
 
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
-    private static final String HIGHEST_CYCLE_WRITE_FLOOR = "listing.highestCycleWriteFloor";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String MOD_COUNT = "listing.modCount";
     static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
@@ -37,9 +35,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private final ToIntFunction<String> fileNameToCycleFunction;
     private final TimeProvider time;
     private volatile LongValue maxCycleValue;
-    private volatile LongValue maxCycleWriteFloorValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue modCount;
+    private volatile int maxCreatedCycle = UNSET_MAX_CYCLE;
+    private volatile int minCreatedCycle = UNSET_MIN_CYCLE;
+    private volatile long lastSeenModCount;
     private long lastRefreshTimeMS = 0;
 
     /**
@@ -83,12 +83,12 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
-            maxCycleWriteFloorValue = ts.acquireValueFor(
-                    HIGHEST_CYCLE_WRITE_FLOOR, UNSET_MAX_CYCLE);
+            maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MAX_CYCLE);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
             }
+            lastSeenModCount = modCount.getVolatileValue();
             return this;
         });
     }
@@ -111,23 +111,19 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     public void refresh(final boolean force) {
 
         if (!force) {
+            refreshPublishedBounds();
             return;
         }
 
         lastRefreshTimeMS = time.currentTimeMillis();
 
-        final long currentMin0 = minCycleValue.getVolatileValue();
-        final long currentMax0 = maxCycleValue.getVolatileValue();
-
-        while (true) {
+        tableStore.doWithExclusiveLock(ignored -> {
             throwExceptionIfClosed();
             tableStore.throwExceptionIfClosed();
-            Jvm.safepoint();
-            final long currentMax = maxCycleValue.getVolatileValue();
 
             final String[] fileNamesList = queuePath.toFile().list();
             if (fileNamesList == null)
-                return;
+                return null;
 
             String minFilename = INITIAL_MIN_FILENAME;
             String maxFilename = INITIAL_MAX_FILENAME;
@@ -149,20 +145,20 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             if (!INITIAL_MAX_FILENAME.equals(maxFilename))
                 max = fileNameToCycleFunction.applyAsInt(maxFilename);
 
-            if (currentMin0 == min && currentMax0 == max) {
-                updateWriteFloor(max);
-                modCount.addAtomicValue(1);
-                return;
-            }
+            minCreatedCycle = min;
+            maxCreatedCycle = max;
 
-            minCycleValue.setOrderedValue(min);
-            if (maxCycleValue.compareAndSwapValue(currentMax, max)) {
-                updateWriteFloor(max);
-                modCount.addAtomicValue(1);
-                break;
-            }
-            Jvm.nanoPause();
-        }
+            // Both persisted watermarks move only forward. Empty or stale directory listings
+            // cannot move ordinary writers back into an earlier generation.
+            if (min != UNSET_MIN_CYCLE &&
+                    !minCycleValue.compareAndSwapValue(UNSET_MIN_CYCLE, min))
+                minCycleValue.setMaxValue(min);
+            if (max != UNSET_MAX_CYCLE)
+                maxCycleValue.setMaxValue(max);
+            modCount.addAtomicValue(1);
+            lastSeenModCount = modCount.getVolatileValue();
+            return null;
+        });
     }
 
     /**
@@ -184,10 +180,12 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public void onRoll(int cycle) {
         tableStore.doWithExclusiveLock(ignored -> {
-            minCycleValue.setMinValue(cycle);
+            minCreatedCycle = Math.min(minCreatedCycle, cycle);
+            maxCreatedCycle = Math.max(maxCreatedCycle, cycle);
+            minCycleValue.compareAndSwapValue(UNSET_MIN_CYCLE, cycle);
             maxCycleValue.setMaxValue(cycle);
-            maxCycleWriteFloorValue.setMaxValue(cycle);
             modCount.addAtomicValue(1);
+            lastSeenModCount = modCount.getVolatileValue();
             return null;
         });
     }
@@ -209,13 +207,14 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     @Override
     public int getMaxCreatedCycle() {
-        return getMaxCycleValue();
+        throwExceptionIfClosed();
+        refreshPublishedBounds();
+        return maxCreatedCycle;
     }
 
     @Override
     public int getMaxCycleForWrite() {
-        return (int) Math.max(maxCycleWriteFloorValue.getVolatileValue(),
-                maxCycleValue.getVolatileValue());
+        return getMaxCycleValue();
     }
 
     /**
@@ -225,7 +224,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     @Override
     public int getMinCreatedCycle() {
-        return getMinCycleValue();
+        throwExceptionIfClosed();
+        refreshPublishedBounds();
+        return minCreatedCycle;
     }
 
     /**
@@ -252,21 +253,19 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Closes the directory listing by releasing resources associated with the LongValues.
      */
     protected void performClose() {
-        Closeable.closeQuietly(minCycleValue, maxCycleValue, maxCycleWriteFloorValue, modCount);
+        Closeable.closeQuietly(minCycleValue, maxCycleValue, modCount);
     }
 
-    private void updateWriteFloor(final int filesystemMaxCycle) {
-        tableStore.doWithExclusiveLock(ignored -> {
-            if (filesystemMaxCycle == UNSET_MAX_CYCLE) {
-                // Reset only while the current listing still proves that every roll is absent.
-                // A concurrent onRoll() uses the same lock and restores a monotonic floor.
-                if (maxCycleValue.getVolatileValue() == UNSET_MAX_CYCLE)
-                    maxCycleWriteFloorValue.setOrderedValue(UNSET_MAX_CYCLE);
-            } else {
-                maxCycleWriteFloorValue.setMaxValue(filesystemMaxCycle);
-            }
-            return null;
-        });
+    private void refreshPublishedBounds() {
+        final long publishedModCount = modCount.getVolatileValue();
+        if (lastSeenModCount == publishedModCount)
+            return;
+
+        // A cooperating writer already published these bounds through the table store. Observe
+        // them without scanning the directory from an append or tailer hot path.
+        minCreatedCycle = getMinCycleValue();
+        maxCreatedCycle = getMaxCycleValue();
+        lastSeenModCount = publishedModCount;
     }
 
     /**
@@ -274,7 +273,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      *
      * @return The maximum cycle value.
      */
-    private int getMaxCycleValue() {
+    protected int getMaxCycleValue() {
         return (int) maxCycleValue.getVolatileValue();
     }
 
@@ -283,7 +282,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      *
      * @return The minimum cycle value.
      */
-    private int getMinCycleValue() {
+    protected int getMinCycleValue() {
         return (int) minCycleValue.getVolatileValue();
     }
 }
