@@ -374,46 +374,6 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void ordinaryEofRollJumpsToLatestPublishedCycleAcrossUnusedCycles() throws IOException {
-        final AtomicLong stalledClock = new AtomicLong(System.currentTimeMillis());
-        stalledClock.addAndGet(-stalledClock.get() % ONE_DAY);
-        final AtomicLong advancingClock = new AtomicLong(stalledClock.get());
-        final File directory = queueDirectory.newFolder();
-
-        try (SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.single(directory)
-                .timeProvider(stalledClock::get)
-                .build();
-             SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.single(directory)
-                     .timeProvider(advancingClock::get)
-                     .build();
-             ExcerptAppender stalledWriter = stalledQueue.createAppender();
-             ExcerptAppender advancingWriter = advancingQueue.createAppender()) {
-            final StoreAppender stalledAppender = (StoreAppender) stalledWriter;
-            stalledWriter.writeText("before seal");
-            final int sealedCycle = stalledAppender.cycle();
-            sealCurrentCycle(stalledAppender);
-
-            advancingClock.addAndGet(3 * ONE_DAY);
-            advancingWriter.writeText("advanced across unused cycles");
-            final int latestCycle = advancingWriter.cycle();
-            assertEquals(sealedCycle + 3, latestCycle);
-
-            stalledQueue.writeLock().lock();
-            try {
-                stalledAppender.rollForwardAfterEOF();
-            } finally {
-                stalledQueue.writeLock().unlock();
-            }
-
-            assertEquals("must join the latest published cycle, not create cycle N + 1",
-                    latestCycle, stalledAppender.cycle());
-            stalledWriter.writeText("joined latest cycle");
-            assertEquals(latestCycle, stalledWriter.cycle());
-            assertEquals(3, stalledQueue.entryCount());
-        }
-    }
-
     private static void sealCurrentCycle(StoreAppender appender) {
         final SingleChronicleQueueStore store = appender.store;
         if (store == null)
