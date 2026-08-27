@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
@@ -104,5 +105,37 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         listing.onFileCreated(tempFile, 9);
         assertEquals(9, listing.getMaxCreatedCycle());
         assertEquals(9, listingReadOnly.getMaxCreatedCycle());
+    }
+
+    @Test
+    public void failedDirectoryListingDoesNotResetWriteFloor() {
+        listing.onFileCreated(tempFile, 7);
+
+        final TableDirectoryListing failedListing = new TableDirectoryListing(
+                tablestore,
+                tempFile.toPath(),
+                ignored -> 0,
+                SystemTimeProvider.INSTANCE);
+        try {
+            failedListing.init();
+            failedListing.refresh(true);
+            assertEquals(7, failedListing.getMaxCycleForWrite());
+        } finally {
+            failedListing.close();
+        }
+    }
+
+    @Test
+    public void legacyHighestCycleAlsoAdvancesWriteFloor() {
+        listing.onFileCreated(tempFile, 7);
+
+        final LongValue legacyHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
+        try {
+            legacyHighestCycle.setOrderedValue(9);
+        } finally {
+            legacyHighestCycle.close();
+        }
+
+        assertEquals(9, listing.getMaxCycleForWrite());
     }
 }
