@@ -430,10 +430,30 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void ordinaryAppenderRollsForwardAfterIndexedRecoveryWithUnchangedClock() throws IOException {
+    public void exactRecoveryRejectsUnsupportedSequenceBeforeCreatingRoll() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            final long unsupportedIndex = queue.rollCycle().toIndex(
+                    0, queue.rollCycle().maxMessagesPerCycle());
+
+            org.junit.Assert.assertThrows(IllegalArgumentException.class,
+                    () -> ((InternalAppender) appender).writeBytes(
+                            unsupportedIndex, Bytes.from("unsupported")));
+
+            assertEquals("unsupported exact recovery must not commit a payload", 0, queue.entryCount());
+            assertEquals("unsupported exact recovery must not create a roll", 0, countQueueFiles(directory));
+        }
+    }
+
+    @Test
+    public void ordinaryAppenderRollsForwardAfterHistoricalIndexedRecovery() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         clock.addAndGet(-clock.get() % ONE_DAY);
-        final long unchangedTime = clock.get();
         final Bytes<?> result = Bytes.elasticHeapByteBuffer();
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
@@ -453,18 +473,22 @@ public class StoreAppenderTest extends QueueTestCommon {
             ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
             assertEquals("exact-index recovery belongs to the sealed cycle",
                     sealedCycle, appender.cycle());
+            assertFalse("the recovered cycle stays open for the rest of the backfill",
+                    hasEOF(queue, sealedCycle));
+            clock.addAndGet(ONE_DAY);
+            appender.normaliseEOFs();
 
             appender.writeBytes(Bytes.from("following ordinary entry"));
-            assertEquals("ordinary append must roll past the restored EOF",
+            assertEquals("ordinary append must roll past completion's restored EOF",
                     sealedCycle + 1, appender.cycle());
             final long firstIndexInNewCycle = appender.lastIndexAppended();
-            assertEquals("the clock must remain unchanged throughout the test",
-                    unchangedTime, clock.get());
 
             final long laterRecoveredIndex = recoveredIndex + 1;
             expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + sealedCycle
                     + ", index=0x" + Long.toHexString(laterRecoveredIndex));
             ((InternalAppender) appender).writeBytes(laterRecoveredIndex, Bytes.from("later recovered"));
+            assertFalse(hasEOF(queue, sealedCycle));
+            appender.normaliseEOFs();
 
             secondAppender.writeBytes(Bytes.from("second appender entry"));
             assertEquals("the appender created before the roll must join the latest cycle",
@@ -483,7 +507,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void exactWritePublishesReadyFirstRecordBeforeWritingNext() throws IOException {
+    public void exactWriteAdoptsReadyFirstRecordRetryBeforeWritingNext() throws IOException {
         final File directory = queueDirectory.newFolder();
         final long firstIndex;
 
@@ -509,6 +533,10 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
+            ((InternalAppender) appender).writeBytes(firstIndex, Bytes.from("retry-not-overwrite"));
+            assertEquals(firstIndex, appender.lastIndexAppended());
+            assertEquals(1, queue.entryCount());
+
             ((InternalAppender) appender).writeBytes(firstIndex + 1, Bytes.from("second"));
             assertEquals(firstIndex + 1, appender.lastIndexAppended());
             assertEquals(2, queue.entryCount());
@@ -521,7 +549,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void historicalWriteAfterReadyInterruptedRecordReseals() throws IOException {
+    public void historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion() throws IOException {
         final File directory = queueDirectory.newFolder();
         final SetTimeProvider time = new SetTimeProvider();
         final long recoveredIndex;
@@ -561,7 +589,10 @@ public class StoreAppenderTest extends QueueTestCommon {
 
             assertTrue("adopting an interrupted ready record must lower the historical EOF cursor",
                     queue.tableStoreGet("normalisedEOFsTo") <= recoveredCycle);
-            assertTrue("the successful historical write must reseal the adopted recovery",
+            assertFalse("the adopted historical recovery stays open until completion",
+                    hasEOF(queue, recoveredCycle));
+            appender.normaliseEOFs();
+            assertTrue("completion must reseal the adopted historical recovery",
                     hasEOF(queue, recoveredCycle));
             assertQueueContents(queue, recoveredIndex, "recovered", "following");
         }
@@ -596,7 +627,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void backfillBelowRolledBackHighWaterIsImmediatelySealed() throws IOException {
+    public void backfillBelowRolledBackHighWaterIsNormalisedAtCompletion() throws IOException {
         final SetTimeProvider time = new SetTimeProvider();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
                 .timeProvider(time)
@@ -618,7 +649,10 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertEquals(recoveredCycle, queue.cycle());
             removeEndOfData(queue, recoveredCycle);
             ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("recovered"));
-            assertTrue("the published high-water makes the recovered cycle historical",
+            assertFalse("backfill remains open even below the published high-water",
+                    hasEOF(queue, recoveredCycle));
+            appender.normaliseEOFs();
+            assertTrue("completion uses the published high-water to seal the recovered cycle",
                     hasEOF(queue, recoveredCycle));
         }
     }
@@ -648,10 +682,10 @@ public class StoreAppenderTest extends QueueTestCommon {
             expectException("Exact-index recovery replaced incomplete header");
             ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("recovered-after-restart"));
 
-            assertTrue("the successful historical retry must restore EOF before returning",
+            assertFalse("the successful historical retry must stay open until completion",
                     hasEOF(queue, 0));
             appender.normaliseEOFs();
-            assertTrue("completion must preserve every historical EOF",
+            assertTrue("completion must restore every historical EOF",
                     hasEOF(queue, 0));
 
             assertEquals(3, queue.entryCount());
@@ -904,6 +938,12 @@ public class StoreAppenderTest extends QueueTestCommon {
             final String dump = store.dump(WireType.BINARY_LIGHT);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }
+    }
+
+    private static int countQueueFiles(File directory) {
+        final File[] queueFiles = directory.listFiles(
+                (ignored, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+        return queueFiles == null ? 0 : queueFiles.length;
     }
 
     private static final class FailingEofStore extends SingleChronicleQueueStore {

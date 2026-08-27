@@ -15,6 +15,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueSystemProperties;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
@@ -757,16 +758,14 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * Inspects the requested index, skipping metadata because it does not consume an index.
-     * Returns whether the caller must restore EOF after writing. Explicitly reopened EOF is always
-     * restored; otherwise any write below the active clock/published high-water is historical and
-     * must also return sealed.
+     * Opens the requested slot for exact recovery. EOF is deliberately left open so a CQE backfill
+     * can append the rest of that cycle without reopening and warning for every entry; the caller
+     * must invoke {@link #normaliseEOFs()} before publishing backfill completion.
      */
-    private boolean prepareExactIndexRecovery(final long recoveryIndex) {
+    private void prepareExactIndexRecovery(final long recoveryIndex) {
         assert writeLock.locked();
 
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
-        final int activeCycle = Math.max(queue.cycle(), queue.lastPublishedCycle());
-        final boolean historical = recoveryCycle < activeCycle;
         final Bytes<?> bytes = wire.bytes();
         positionForNextHeader();
         long recoveryPosition = bytes.writePosition();
@@ -777,7 +776,7 @@ class StoreAppender extends AbstractCloseable
             if (header == NOT_INITIALIZED) {
                 recordBackfillNormalisation(recoveryCycle);
                 bytes.writePosition(recoveryPosition);
-                return historical;
+                return;
             }
             if (header == END_OF_DATA) {
                 recordBackfillNormalisation(recoveryCycle);
@@ -785,7 +784,7 @@ class StoreAppender extends AbstractCloseable
                 replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
                 warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
                         recoveryPosition, header);
-                return true;
+                return;
             }
             if ((header & NOT_COMPLETE) != 0) {
                 recordBackfillNormalisation(recoveryCycle);
@@ -794,7 +793,7 @@ class StoreAppender extends AbstractCloseable
                         recoveryPosition, header);
                 // Clear the failed header here so Wire.enterHeader does not emit a second warning.
                 bytes.writeVolatileInt(recoveryPosition, NOT_INITIALIZED);
-                return historical;
+                return;
             }
             if (isReadyMetaData(header)) {
                 recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
@@ -951,14 +950,6 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void resealRecoveredCycle(final long index) {
-        final int recoveredCycle = queue.rollCycle().toCycle(index);
-        ensureEndOfData("Unable to restore end-of-data after exact-index recovery: queue="
-                + queue.fileAbsolutePath()
-                + ", cycle=" + recoveredCycle
-                + ", index=0x" + Long.toHexString(index));
-    }
-
     void ensureEndOfData(final String failureMessage) {
         if (store.writeEOF(wire, timeoutMS()) || cycleHasEOF())
             return;
@@ -976,7 +967,13 @@ class StoreAppender extends AbstractCloseable
     protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
         checkAppendLock(true);
 
-        final int cycle = queue.rollCycle().toCycle(index);
+        final RollCycle rollCycle = queue.rollCycle();
+        final int cycle = rollCycle.toCycle(index);
+        final long sequenceNumber = rollCycle.toSequenceNumber(index);
+        if (sequenceNumber >= rollCycle.maxMessagesPerCycle())
+            throw new IllegalArgumentException("Exact-index sequence " + sequenceNumber
+                    + " is outside maxMessagesPerCycle=" + rollCycle.maxMessagesPerCycle()
+                    + " for index=0x" + Long.toHexString(index));
 
         if (wire == null)
             setWireIfNull(cycle);
@@ -992,7 +989,9 @@ class StoreAppender extends AbstractCloseable
 
         // in case our cached headerNumber is incorrect.
         resetPosition();
-        publishUnpublishedRecords(cycle);
+        final long adoptedIndex = publishUnpublishedRecords(cycle);
+        if (index == adoptedIndex)
+            return;
 
         long headerNumber = wire.headerNumber();
 
@@ -1003,7 +1002,7 @@ class StoreAppender extends AbstractCloseable
                     + "provided index=0x" + Long.toHexString(index)
                     + ", last index=0x" + Long.toHexString(headerNumber));
 
-        final boolean reseal = prepareExactIndexRecovery(index);
+        prepareExactIndexRecovery(index);
 
         writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -1014,8 +1013,6 @@ class StoreAppender extends AbstractCloseable
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
 
-        if (reseal)
-            resealRecoveredCycle(index);
     }
 
     /**
@@ -1024,7 +1021,7 @@ class StoreAppender extends AbstractCloseable
      * {@code lastSequenceNumber} already counts these first-writer records; publishing the last one
      * repairs the write position and sparse index before classifying the requested exact index.
      */
-    private void publishUnpublishedRecords(final int cycle) {
+    private long publishUnpublishedRecords(final int cycle) {
         final Bytes<?> bytes = wire.bytes();
         final long publishedPosition = store.writePosition();
         long position = publishedPosition
@@ -1043,7 +1040,7 @@ class StoreAppender extends AbstractCloseable
             position += SPB_HEADER_SIZE + lengthOf(header);
         }
         if (lastReadyDataPosition < 0)
-            return;
+            return Long.MIN_VALUE;
 
         // Zero is the empty-store write-position sentinel, for which lastSequenceNumber() returns
         // -1 without scanning. Otherwise resetPosition() already numbered the physical records.
@@ -1054,6 +1051,7 @@ class StoreAppender extends AbstractCloseable
             recordBackfillNormalisation(cycle);
             wire.headerNumber(lastIndex);
             recordCommittedData(lastIndex, lastReadyDataPosition);
+            return lastIndex;
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         }
