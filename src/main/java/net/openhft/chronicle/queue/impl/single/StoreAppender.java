@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
@@ -107,8 +108,11 @@ class StoreAppender extends AbstractCloseable
             try {
                 // Process cycles and handle EOF markers
                 if (firstCycle != Integer.MAX_VALUE) {
+                    final NavigableSet<Long> existingCycles =
+                            queue.listCyclesBetween(firstCycle, lastExistingCycle);
                     // Backing down until EOF-ed cycle is encountered
-                    for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
+                    for (long existingCycle : existingCycles.descendingSet()) {
+                        final int eofCycle = Math.toIntExact(existingCycle);
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
                         if (cycleHasEOF()) {
                             // Make sure all older cycles have EOF marker
@@ -116,8 +120,10 @@ class StoreAppender extends AbstractCloseable
                                 normaliseEOFs0(eofCycle);
 
                             // If first non-EOF file is in the past, it's possible it will be replicated/backfilled to
-                            if (eofCycle < lastExistingCycle)
-                                setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, WireStoreSupplier.CreateStrategy.READ_ONLY);
+                            final Long nextExistingCycle = existingCycles.higher(existingCycle);
+                            if (nextExistingCycle != null)
+                                setCycle2(Math.toIntExact(nextExistingCycle),
+                                        WireStoreSupplier.CreateStrategy.READ_ONLY);
                             break;
                         }
                     }
@@ -652,6 +658,9 @@ class StoreAppender extends AbstractCloseable
         if (first == Integer.MAX_VALUE)
             return;
 
+        final int last = queue.lastCycle();
+        final NavigableSet<Long> existingCycles = queue.listCyclesBetween(first, last);
+
         final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
         int eofCycle = Math.max(first, (int) normalisedEOFsTo.getVolatileValue());
         if (Jvm.isDebugEnabled(StoreAppender.class)) {
@@ -662,17 +671,22 @@ class StoreAppender extends AbstractCloseable
         // clock must not leave cycles below the monotonic published high-water open.
         final int activeCycle = Math.max(queue.cycle(), queue.lastPublishedCycle());
         final int normaliseTo = Math.min(activeCycle, cycle);
-        for (; eofCycle < normaliseTo; ++eofCycle) {
-            setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
-            if (wire != null) {
-                assert queue.writeLock().locked();
-                ensureEndOfData("Unable to normalise end-of-data: queue="
-                        + queue.fileAbsolutePath() + ", cycle=" + eofCycle);
-            }
-            // Missing cycles are complete by definition. Advance the shared cursor so gaps are
-            // not reopened and rescanned on every subsequent normalisation.
-            normalisedEOFsTo.setMaxValue((long) eofCycle + 1);
+        for (long existingCycle : existingCycles) {
+            if (existingCycle < eofCycle)
+                continue;
+            if (existingCycle >= normaliseTo)
+                break;
+
+            final int cycleToNormalise = Math.toIntExact(existingCycle);
+            setCycle2(cycleToNormalise, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
+            assert wire != null;
+            assert queue.writeLock().locked();
+            ensureEndOfData("Unable to normalise end-of-data: queue="
+                    + queue.fileAbsolutePath() + ", cycle=" + cycleToNormalise);
         }
+        // The directory enumeration proves that any skipped cycle is absent. Advance across the
+        // whole range so later completions do not repeat sparse gaps.
+        normalisedEOFsTo.setMaxValue(normaliseTo);
     }
 
     private void recordBackfillNormalisation(final int recoveredCycle) {
@@ -860,6 +874,11 @@ class StoreAppender extends AbstractCloseable
 
         try {
             long pos = positionOfHeader;
+            // Zero is both the empty-store write-position sentinel and the value left when the
+            // first ready record was not yet published. In the latter case lastSequenceNumber()
+            // deliberately obtains the sequence from a physical scan instead.
+            if (pos == 0)
+                return true;
 
             long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
             long seq2 = store.sequenceForPosition(this, pos, true);
@@ -1092,8 +1111,8 @@ class StoreAppender extends AbstractCloseable
         if (lastReadyDataPosition < 0)
             return Long.MIN_VALUE;
 
-        // Zero is the empty-store write-position sentinel, for which lastSequenceNumber() returns
-        // -1 without scanning. Otherwise resetPosition() already numbered the physical records.
+        // Zero is the empty-store write-position sentinel. Count the records found after it;
+        // otherwise resetPosition() has already numbered the physical records.
         final long lastIndex = publishedPosition == 0
                 ? queue.rollCycle().toIndex(cycle, unpublishedDataCount - 1)
                 : wire.headerNumber();
