@@ -93,6 +93,10 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         return started;
     }
 
+    boolean requiresDestinationPreflight(boolean metaData) {
+        return listener != null && !metaData;
+    }
+
     void onWriteAttempt() {
         if (listener == null)
             return;

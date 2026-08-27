@@ -613,13 +613,20 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                resolveOrdinaryAppendDestination();
-                if (listenerState.beforeDocument(metaData, lastOrdinaryContextCount))
+                final long safeLength = queue.overlapSize();
+                if (listenerState.requiresDestinationPreflight(metaData)) {
+                    resolveOrdinaryAppendDestination();
+                    if (listenerState.beforeDocument(false, lastOrdinaryContextCount))
+                        resetPosition();
+                    assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+                    openContext(metaData, safeLength, false);
+                } else {
+                    moveToCycleForAppend();
                     resetPosition();
-                assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
-
-                // sets the writeLimit based on the safeLength
-                openContext(metaData, queue.overlapSize());
+                    assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+                    openContext(metaData, safeLength, true);
+                    lastOrdinaryContextCount = cycle;
+                }
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
@@ -791,11 +798,13 @@ class StoreAppender extends AbstractCloseable
     private void resolveOrdinaryAppendDestination() {
         moveToCycleForAppend();
         resetPosition();
-        if (nextApplicationHeader() == END_OF_DATA) {
+        int header = nextApplicationHeader();
+        if (header == END_OF_DATA) {
             rollCycleTo(cycle + 1, true);
             resetPosition();
+            header = nextApplicationHeader();
         }
-        if (nextApplicationHeader() == END_OF_DATA)
+        if (header == END_OF_DATA)
             throw new WriteAfterEOFException();
         lastOrdinaryContextCount = cycle;
     }
@@ -817,6 +826,15 @@ class StoreAppender extends AbstractCloseable
     private long writeHeader(final long safeLength) {
         positionForNextHeader();
         return wire.enterHeader(safeLength);
+    }
+
+    private long writeHeaderForOrdinaryAppend(final long safeLength) {
+        try {
+            return writeHeader(safeLength);
+        } catch (WriteAfterEOFException ignored) {
+            rollCycleTo(cycle + 1, true);
+            return writeHeader(safeLength);
+        }
     }
 
     private void positionForNextHeader() {
@@ -918,9 +936,13 @@ class StoreAppender extends AbstractCloseable
      * @param metaData   indicates if the context is for metadata
      * @param safeLength       the maximum length of data that can be safely written
      */
-    private void openContext(final boolean metaData, final long safeLength) {
+    private void openContext(final boolean metaData,
+                             final long safeLength,
+                             final boolean rollAtEndOfData) {
         assert wire != null;
-        this.positionOfHeader = writeHeader(safeLength);
+        this.positionOfHeader = rollAtEndOfData
+                ? writeHeaderForOrdinaryAppend(safeLength)
+                : writeHeader(safeLength);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
@@ -939,7 +961,7 @@ class StoreAppender extends AbstractCloseable
      */
     void openContextForContextListener(boolean metaData) {
         resetPosition();
-        openContext(metaData, queue.overlapSize());
+        openContext(metaData, queue.overlapSize(), false);
     }
 
     /**
@@ -1021,10 +1043,16 @@ class StoreAppender extends AbstractCloseable
         ContextListenerState listenerState = startContextListenerWriteAttempt();
         writeLock.lock();
         try {
-            resolveOrdinaryAppendDestination();
-            if (listenerState.beforeRawDocument(lastOrdinaryContextCount))
-                resetPosition();
-            this.positionOfHeader = writeHeader(queue.overlapSize());
+            if (listenerState.requiresDestinationPreflight(false)) {
+                resolveOrdinaryAppendDestination();
+                if (listenerState.beforeRawDocument(lastOrdinaryContextCount))
+                    resetPosition();
+                this.positionOfHeader = writeHeader(queue.overlapSize());
+            } else {
+                moveToCycleForAppend();
+                this.positionOfHeader = writeHeaderForOrdinaryAppend(queue.overlapSize());
+                lastOrdinaryContextCount = cycle;
+            }
 
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
@@ -1231,7 +1259,7 @@ class StoreAppender extends AbstractCloseable
         assert writeLock.locked();
         try {
             assert count == 0 : "count=" + count;
-            openContext(metadata, queue.overlapSize());
+            openContext(metadata, queue.overlapSize(), false);
 
             try {
                 final Bytes<?> bytes0 = context.wire().bytes();
