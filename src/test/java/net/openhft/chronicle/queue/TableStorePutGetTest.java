@@ -41,7 +41,7 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     assertEquals("world", dc.wire().getValueIn().text());
                 }
             }
-            assertEquals("" +
+            assertQueueDumpEquals("" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +

@@ -77,6 +77,33 @@ public class QueueTestCommon {
     private Set<String> targetAllowList;
     private long freeSpace;
 
+    /**
+     * Compares Queue dumps without coupling roll-file format tests to the internal layout of the
+     * table-store record which persists the ordinary-writer cycle floor. The floor has its own
+     * behavioural tests; adding it must not require every queue-store golden dump to renumber the
+     * unrelated table-store headers which follow it.
+     */
+    protected static void assertQueueDumpEquals(String expected, String actual) {
+        org.junit.Assert.assertEquals(normaliseDirectoryListingMetadata(expected),
+                normaliseDirectoryListingMetadata(actual));
+    }
+
+    @NotNull
+    protected static String withoutCycleWriteFloor(@NotNull String dump) {
+        return dump.replaceAll("--- !!data #binary\\Rlisting\\.highestCycleWriteFloor: -?\\d+\\R", "");
+    }
+
+    @NotNull
+    private static String normaliseDirectoryListingMetadata(@NotNull String dump) {
+        final String queueStoreHeader = "\n--- !!meta-data #binary\nheader: !SCQStore";
+        final int queueStoreStart = dump.indexOf(queueStoreHeader);
+        final int tableStoreEnd = queueStoreStart < 0 ? dump.length() : queueStoreStart;
+        final String tableStore = withoutCycleWriteFloor(dump.substring(0, tableStoreEnd))
+                .replaceAll("(?m)^#.*\\R", "");
+        return (tableStore + dump.substring(tableStoreEnd))
+                .replaceAll("(?m)^# \\d+ bytes remaining$", "# bytes remaining");
+    }
+
     @NotNull
     protected File getTmpDir() {
         final String methodName = testName.getMethodName();
