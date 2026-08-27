@@ -1012,7 +1012,13 @@ class StoreAppender extends AbstractCloseable
         // If we're behind the target cycle, roll forward to the last existing cycle first
         if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
             setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
-            rollCycleTo(cycle);
+            // The published-cycle high-water is monotonic and can outlive a cycle file removed by
+            // retention. If the read-only acquire finds no store, create the requested cycle
+            // directly instead of recursing with a null current store.
+            if (store == null)
+                setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
+            else
+                rollCycleTo(cycle);
         } else {
             setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
         }
