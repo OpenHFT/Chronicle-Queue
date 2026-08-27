@@ -703,14 +703,13 @@ class StoreAppender extends AbstractCloseable
      */
     private long writeHeaderForOrdinaryAppend(final long safeLength) {
         assert wire != null;
-        for (; ; ) {
-            try {
-                return writeHeader(safeLength);
-            } catch (WriteAfterEOFException ignored) {
-                // EOF remains a hard seal. Ordinary writes continue in a later roll rather than
-                // replacing it; only exact-index recovery is allowed to remove the marker.
-                rollCycleTo(cycle + 1, true);
-            }
+        try {
+            return writeHeader(safeLength);
+        } catch (WriteAfterEOFException ignored) {
+            // EOF remains a hard seal. Active-cycle selection has already chosen the highest
+            // supported roll, so one advance is sufficient; a second EOF is exceptional.
+            rollCycleTo(cycle + 1, true);
+            return writeHeader(safeLength);
         }
     }
 
