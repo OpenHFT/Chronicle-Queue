@@ -267,16 +267,22 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
+        return acquireOrGetValueFor(key, defaultValue, true);
+    }
+
+    @Override
+    public synchronized LongValue getValueFor(CharSequence key) {
+        return acquireOrGetValueFor(key, 0, false);
+    }
+
+    private LongValue acquireOrGetValueFor(CharSequence key, final long defaultValue, boolean createIfAbsent) {
 
         if (mappedBytes.isClosed())
             throw new ClosedIllegalStateException("Closed");
 
         mappedBytes.reserve(this);
         try {
-            mappedBytes.readPosition(0);
-            // if we set readLimit to realCapacity then we can run into DecoratedBufferUnderflowException: readLimit failed. Limit: xx > writeLimit: yy
-            // while reading from a TableStore which is being written to
-            mappedBytes.readLimit(Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity()));
+            prepareForTableScan();
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
@@ -288,6 +294,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     return valueIn.int64ForBinding(null);
                 }
                 mappedBytes.readPosition(readPosition + length);
+            }
+            if (!createIfAbsent) {
+                return null;
             }
             if (mappedBytes.isBackingFileReadOnly())
                 throw new IllegalStateException("key " + key + " does not exist in readOnly TableStore and cannot be created");
@@ -332,8 +341,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedBytes.reserve(this);
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
-            mappedBytes.readPosition(0);
-            mappedBytes.readLimit(mappedBytes.realCapacity());
+            prepareForTableScan();
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
@@ -361,5 +369,20 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public T metadata() {
         return metadata;
+    }
+
+    @Override
+    public boolean readOnly() {
+        return mappedBytes.isBackingFileReadOnly();
+    }
+
+    private void prepareForTableScan() {
+        mappedBytes.readPosition(0);
+        final long scanLimit = mappedBytes.realCapacity();
+        // writeLimit is local to this MappedBytes instance and is not updated when another
+        // table-store instance grows the file. Snapshot realCapacity() as this scan's upper
+        // bound; entries appended later are visible on a later scan.
+        mappedBytes.writeLimit(mappedBytes.capacity());
+        mappedBytes.readLimit(scanLimit);
     }
 }

@@ -139,6 +139,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
+    @Nullable
+    private Class<?> contextListenerWriterType;
+    @Nullable
+    private MarshallableOut.ContextListener<?> contextListener;
     private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
@@ -370,6 +374,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
+        validateContextListenerCompatibility();
         preBuild();
 
         SingleChronicleQueue chronicleQueue;
@@ -384,6 +389,17 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         postBuild(chronicleQueue);
 
         return chronicleQueue;
+    }
+
+    private void validateContextListenerCompatibility() {
+        if (contextListener == null)
+            return;
+        if (key != null || encodingSupplier != null)
+            throw new UnsupportedOperationException("contextListener is not supported on encoded or encrypted Enterprise queues");
+        if (writeBufferMode == BufferMode.Asynchronous)
+            throw new UnsupportedOperationException("contextListener is not supported on asynchronous Enterprise write buffers");
+        if (doubleBuffer)
+            throw new UnsupportedOperationException("contextListener is not supported with double buffering");
     }
 
     /**
@@ -1264,13 +1280,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Returns the {@link TimeProvider} for the queue. If not explicitly set, it defaults to the
-     * {@link SystemTimeProvider#INSTANCE}.
-     *
-     * @return the time provider used by the queue
+     * Returns the explicit time provider, or the current {@link SystemTimeProvider#CLOCK}.
+     * A queue captures this value when it is built.
      */
     public TimeProvider timeProvider() {
-        return timeProvider == null ? SystemTimeProvider.INSTANCE : timeProvider;
+        return timeProvider == null ? SystemTimeProvider.CLOCK : timeProvider;
     }
 
     /**
@@ -1617,6 +1631,24 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public AppenderListener appenderListener() {
         return appenderListener;
+    }
+
+    /**
+     * Sets the default context listener for appenders created by this queue.
+     * The caller retains ownership of the listener.
+     *
+     * @see ExcerptAppender#contextListener(Class, MarshallableOut.ContextListener)
+     */
+    public <T> SingleChronicleQueueBuilder contextListener(@NotNull Class<T> writerType,
+                                                            @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        contextListenerWriterType = requireNonNull(writerType, "writerType");
+        contextListener = requireNonNull(listener, "listener");
+        return this;
+    }
+
+    @NotNull
+    ContextListenerState contextListenerState() {
+        return new ContextListenerState(contextListenerWriterType, contextListener);
     }
 
     /**

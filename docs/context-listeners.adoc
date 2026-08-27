@@ -1,0 +1,68 @@
+= Queue Context Listeners
+
+A context listener writes ordinary method-writer records before an appender's first data document
+in each roll cycle. This is useful for snapshots, definitions or checkpoints that readers need
+before processing that cycle's data.
+
+[source,java]
+----
+SingleChronicleQueue queue = builder.build();
+ExcerptAppender appender = queue.acquireAppender();
+appender.contextListener(Events.class, events -> events.context(contextSnapshot));
+Events events = appender.methodWriter(Events.class);
+----
+
+The listener runs under the queue write lock. It must write through the supplied method writer and
+must be configured before the appender is first used. The writer may be retained for normal use.
+The listener is appender-local, is not retried after failure, and remains owned by the caller.
+Use the thread-local appender returned by `acquireAppender()` when its method writer must share an
+appender-local listener. Alternatively, configure the default listener on the queue builder.
+
+A new appender has no record of context written by an earlier appender. It can therefore write the
+context again when it starts in an existing roll cycle. Context records should be complete and
+idempotent.
+
+== Progressive context
+
+An application that already holds a document can write context without configuring a listener.
+The context DTO can keep its last written count in a transient field and report when it needs
+resending:
+
+[source,java]
+----
+final class ContextSnapshot extends SelfDescribingMarshallable implements ProgressiveContext {
+    private String definition;
+    private transient int lastContextCount = -1;
+
+    @Override
+    public boolean needsResending(int contextCount) {
+        if (contextCount <= lastContextCount)
+            return false;
+        lastContextCount = contextCount;
+        return true;
+    }
+}
+
+try (DocumentContext document = events.writingDocument()) {
+    if (contextSnapshot.needsResending(document.contextCount()))
+        events.context(contextSnapshot);
+    events.event(data);
+}
+----
+
+For Queue, the context count is the roll cycle. The context and data calls above are committed in
+one document. This pattern is not supported with double buffering.
+
+== Named tailer restarts
+
+A named tailer persists its next read position. After a restart it may resume in the middle of a
+cycle and will not reread context stored earlier in that cycle. A context listener does not restore
+the reader's in-memory state.
+
+Applications that require this state must either persist it separately or replay the current cycle
+up to the named tailer's saved index with a temporary unnamed tailer. Replay handlers must collectively
+cover the method stream, rebuild context without business side effects, and leave the named tailer unchanged.
+If the required roll file has already been removed, recovery needs another durable source.
+
+See link:named-tailer-context-recovery.adoc[Named Tailer Context Recovery] for the public replay
+helper, its result statuses and the restart pattern.

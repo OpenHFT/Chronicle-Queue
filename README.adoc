@@ -1868,6 +1868,7 @@ For comparison see http://kafka.apache.org/documentation.html[Kafka Documentatio
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/FAQ.adoc[FAQ] - questions asked by customers
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
+* link:docs/context-listeners.adoc[Queue context listeners] - writes roll-level context and handles reader restarts
 
 ==== Online support
 

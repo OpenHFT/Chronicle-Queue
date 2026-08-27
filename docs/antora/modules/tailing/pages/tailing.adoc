@@ -194,6 +194,11 @@ NOTE: The `direction()` is not preserved across restarts, only the next index to
 NOTE: The index of a tailer is only progressed when the `DocumentContext.close()` is called.
 If this is prevented by an error, the same message will be read on each restart.
 
+WARNING: Named tailer ids ending in the exact lowercase suffix `.lock` or `.version` are reserved and
+are rejected. Mixed-case variants remain accepted for compatibility with existing queues, although
+their metadata-shaped names are best migrated when practical. Maintenance snapshots continue to
+report distinguishable entries conservatively during migration.
+
 == Command Line Tools - Reading and Writing a Chronicle Queue
 
 Chronicle Queue stores its data in binary format, with a file extension of `cq4`:
