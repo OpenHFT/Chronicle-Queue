@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.algo.BytesStoreHash;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -48,7 +49,6 @@ class StoreAppender extends AbstractCloseable
      * This is the key in the table-store where we store that information
      */
     private static final String NORMALISED_EOFS_TO_TABLESTORE_KEY = "normalisedEOFsTo";
-    private static final long MAX_MISMATCH_DUMP_BYTES = 256;
 
     @NotNull
     private final SingleChronicleQueue queue;
@@ -676,11 +676,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void recordBackfillNormalisation(final int recoveredCycle) {
-        // The timestamp-current cycle remains open. A successful CQE completion calls
-        // normaliseEOFs(), which establishes the cursor at firstCycle without sealing this cycle;
-        // a failed completion restarts the backfill instead of relying on pending-reseal state.
-        if (recoveredCycle >= queue.cycle())
-            return;
+        // Lower the shared cursor even when clock rollback makes this cycle timestamp-current.
+        // normaliseEOFs0() still excludes the timestamp-current cycle; retaining the lower bound
+        // lets a later completion seal the cycle after it becomes historical again.
         queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, recoveredCycle)
                 .setMinValue(recoveredCycle);
     }
@@ -758,34 +756,12 @@ class StoreAppender extends AbstractCloseable
         bytes.writePosition(lastPos);
     }
 
-    enum RecoveryAction {
-        WRITE,
-        WARN_AND_WRITE,
-        WRITE_AND_RESEAL,
-        ALREADY_PRESENT,
-        SKIP_METADATA
-    }
-
-    static RecoveryAction recoveryActionForHeader(final int header) {
-        if (header == NOT_INITIALIZED)
-            return RecoveryAction.WRITE;
-        if (header == END_OF_DATA)
-            return RecoveryAction.WRITE_AND_RESEAL;
-        if ((header & NOT_COMPLETE) != 0)
-            return RecoveryAction.WARN_AND_WRITE;
-        if (isReadyData(header))
-            return RecoveryAction.ALREADY_PRESENT;
-        if (isReadyMetaData(header))
-            return RecoveryAction.SKIP_METADATA;
-        throw new IllegalStateException("Unexpected recovery header 0x" + Integer.toHexString(header));
-    }
-
     /**
      * Inspects the requested index, skipping metadata because it does not consume an index.
-     * If the slot is sealed, opens it for recovery; otherwise reports whether it can be written
-     * or is already occupied.
+     * If the slot is sealed, opens it for recovery and returns {@code true} so the caller reseals
+     * it after writing.
      */
-    private RecoveryAction prepareExactIndexRecovery(final long recoveryIndex) {
+    private boolean prepareExactIndexRecovery(final long recoveryIndex) {
         assert writeLock.locked();
 
         final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
@@ -796,50 +772,38 @@ class StoreAppender extends AbstractCloseable
             // Exact-index recovery is rejected for legacy unpadded stores before this method.
             recoveryPosition += BytesUtil.padOffset(recoveryPosition);
             final int header = bytes.readVolatileInt(recoveryPosition);
-            final RecoveryAction action = recoveryActionForHeader(header);
-            switch (action) {
-                case WRITE_AND_RESEAL:
-                    recordBackfillNormalisation(recoveryCycle);
-                    bytes.writePosition(recoveryPosition);
-                    replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
-                    warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
-                            recoveryPosition, header);
-                    return action;
-
-                case WRITE:
-                    recordBackfillNormalisation(recoveryCycle);
-                    bytes.writePosition(recoveryPosition);
-                    return action;
-
-                case WARN_AND_WRITE:
-                    recordBackfillNormalisation(recoveryCycle);
-                    bytes.writePosition(recoveryPosition);
-                    warnExactIndexRecovery("replaced incomplete header", recoveryIndex,
-                            recoveryPosition, header);
-                    // Clear the failed header here so Wire.enterHeader does not emit a second warning.
-                    bytes.writeVolatileInt(recoveryPosition, NOT_INITIALIZED);
-                    return action;
-
-                case ALREADY_PRESENT:
-                    // Unlike a published duplicate, this ready record is at the exact next index:
-                    // it survived an interrupted write before the store write position and EOF
-                    // were published. Its retry must re-establish the historical EOF lower bound.
-                    recordBackfillNormalisation(recoveryCycle);
-                    positionOfHeader = recoveryPosition;
-                    // A ready header may have survived a failure before the store write position
-                    // was published. Expose exactly this complete record so its payload can be
-                    // validated before the record is adopted.
-                    bytes.writePosition(recoveryPosition + SPB_HEADER_SIZE + lengthOf(header));
-                    bytes.readPosition(recoveryPosition);
-                    return action;
-
-                case SKIP_METADATA:
-                    recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
-                    break;
-
-                default:
-                    throw new AssertionError(action);
+            if (header == NOT_INITIALIZED) {
+                recordBackfillNormalisation(recoveryCycle);
+                bytes.writePosition(recoveryPosition);
+                return false;
             }
+            if (header == END_OF_DATA) {
+                recordBackfillNormalisation(recoveryCycle);
+                bytes.writePosition(recoveryPosition);
+                replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
+                warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
+                        recoveryPosition, header);
+                return true;
+            }
+            if ((header & NOT_COMPLETE) != 0) {
+                recordBackfillNormalisation(recoveryCycle);
+                bytes.writePosition(recoveryPosition);
+                warnExactIndexRecovery("replaced incomplete header", recoveryIndex,
+                        recoveryPosition, header);
+                // Clear the failed header here so Wire.enterHeader does not emit a second warning.
+                bytes.writeVolatileInt(recoveryPosition, NOT_INITIALIZED);
+                return false;
+            }
+            if (isReadyMetaData(header)) {
+                recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
+                continue;
+            }
+            if (isReadyData(header))
+                // publishUnpublishedRecords() runs before this scan while the write lock is
+                // held, so ready data beyond the published position indicates corruption.
+                throw new IllegalStateException("Ready data record after the published write position at "
+                        + recoveryPosition + " in " + queue.fileAbsolutePath());
+            throw new IllegalStateException("Unexpected recovery header 0x" + Integer.toHexString(header));
         }
     }
 
@@ -1013,8 +977,6 @@ class StoreAppender extends AbstractCloseable
         final int cycle = queue.rollCycle().toCycle(index);
         final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
 
-        rejectLegacyUnpaddedExactRecovery(cycle);
-
         if (wire == null)
             setWireIfNull(cycle);
 
@@ -1029,10 +991,10 @@ class StoreAppender extends AbstractCloseable
 
         // in case our cached headerNumber is incorrect.
         resetPosition();
+        publishUnpublishedRecords(cycle);
 
         long headerNumber = wire.headerNumber();
 
-        final RecoveryAction recoveryAction;
         if (index != headerNumber + 1) {
             if (index > headerNumber + 1)
                 throw new IllegalIndexException(index, headerNumber);
@@ -1040,12 +1002,7 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        recoveryAction = prepareExactIndexRecovery(index);
-        if (recoveryAction == RecoveryAction.ALREADY_PRESENT) {
-            compareExistingEntry(index, bytes);
-            adoptExistingEntry(index);
-            return;
-        }
+        final boolean reseal = prepareExactIndexRecovery(index);
 
         writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -1056,18 +1013,8 @@ class StoreAppender extends AbstractCloseable
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
 
-        if (recoveryAction == RecoveryAction.WRITE_AND_RESEAL)
+        if (reseal)
             resealRecoveredCycle(index);
-    }
-
-    private void rejectLegacyUnpaddedExactRecovery(final int cycle) {
-        try (SingleChronicleQueueStore targetStore =
-                     queue.storeForCycle(cycle, queue.epoch(), false, null)) {
-            if (targetStore != null && targetStore.dataVersion() == 0)
-                throw new UnsupportedOperationException("Exact-index recovery is not supported for "
-                        + "legacy unpadded queue stores: queue=" + queue.fileAbsolutePath()
-                        + ", cycle=" + cycle);
-        }
     }
 
     private void compareExistingEntryAtIndex(final long index, final long sequenceNumber,
@@ -1108,44 +1055,48 @@ class StoreAppender extends AbstractCloseable
                 + ", index=0x" + Long.toHexString(index)
                 + ", existingLength=" + existingLength
                 + ", suppliedLength=" + suppliedLength
-                + "\nexisting:\n" + toHexDump(existingBytes, existingLength)
-                + "\nsupplied:\n" + toHexDump(suppliedBytes, suppliedLength));
+                + ", existingHash=0x" + Long.toHexString(BytesStoreHash.hash(existingBytes, existingLength))
+                + ", suppliedHash=0x" + Long.toHexString(BytesStoreHash.hash(suppliedBytes, suppliedLength)));
     }
 
-    private void adoptExistingEntry(final long index) {
+    /**
+     * Publishes ready data left beyond the store write position when a writer stopped between
+     * making a header ready and {@link #recordCommittedData(long, long)}. The physical scan used by
+     * {@code lastSequenceNumber} already counts these first-writer records; publishing the last one
+     * repairs the write position and sparse index before classifying the requested exact index.
+     */
+    private void publishUnpublishedRecords(final int cycle) {
+        final Bytes<?> bytes = wire.bytes();
+        final long publishedPosition = store.writePosition();
+        long position = publishedPosition
+                + lengthOf(bytes.readVolatileInt(publishedPosition)) + SPB_HEADER_SIZE;
+        long lastReadyDataPosition = -1;
+        int unpublishedDataCount = 0;
+        for (; ; ) {
+            position += BytesUtil.padOffset(position);
+            final int header = bytes.readVolatileInt(position);
+            if (isReadyData(header)) {
+                lastReadyDataPosition = position;
+                unpublishedDataCount++;
+            } else if (!isReadyMetaData(header)) {
+                break;
+            }
+            position += SPB_HEADER_SIZE + lengthOf(header);
+        }
+        if (lastReadyDataPosition < 0)
+            return;
+
+        // Zero is the empty-store write-position sentinel, for which lastSequenceNumber() returns
+        // -1 without scanning. Otherwise resetPosition() already numbered the physical records.
+        final long lastIndex = publishedPosition == 0
+                ? queue.rollCycle().toIndex(cycle, unpublishedDataCount - 1)
+                : wire.headerNumber();
         try {
-            wire.bytes().writePosition(positionOfHeader);
-            wire.headerNumber(index);
-            recordCommittedData(index, positionOfHeader);
+            recordBackfillNormalisation(cycle);
+            wire.headerNumber(lastIndex);
+            recordCommittedData(lastIndex, lastReadyDataPosition);
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
-        }
-    }
-
-    private static String toHexDump(final BytesStore<?, ?> bytesStore,
-                                    final long length) {
-        final long dumpLength = Math.min(length, MAX_MISMATCH_DUMP_BYTES);
-        final String suffix = length > dumpLength
-                ? "\n... " + (length - dumpLength) + " bytes omitted"
-                : "";
-        if (bytesStore instanceof Bytes) {
-            final Bytes<?> bytes = (Bytes<?>) bytesStore;
-            final long savedReadLimit = bytes.readLimit();
-            try {
-                bytes.readLimit(bytes.readPosition() + length);
-                return bytes.toHexString(dumpLength) + suffix;
-            } finally {
-                bytes.readLimit(savedReadLimit);
-            }
-        }
-
-        final Bytes<?> bytes = bytesStore.bytesForRead();
-        try {
-            bytes.readPosition(bytesStore.readPosition());
-            bytes.readLimit(bytes.readPosition() + length);
-            return bytes.toHexString(dumpLength) + suffix;
-        } finally {
-            bytes.releaseLast();
         }
     }
 

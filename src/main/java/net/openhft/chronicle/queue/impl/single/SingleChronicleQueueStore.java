@@ -472,17 +472,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         if (nextSequence > sequenceNumber)
             return;
 
-        final long indexCapacity = indexing.indexCapacity();
-        if (sequenceNumber >= indexCapacity) {
-            if (sequenceNumber == indexCapacity)
-                Jvm.warn().on(getClass(), "Sparse index capacity reached for " + file()
-                        + " at sequence " + sequenceNumber
-                        + "; this entry and later entries in the cycle will be written without index entries"
-                        + " and located by linear scan from sequence " + indexing.lastIndexableSequence());
-            indexing.nextEntryToBeIndexed.setMaxValue(Long.MAX_VALUE);
-            return;
-        }
-
         indexing.setPositionForSequenceNumber(ec, sequenceNumber, position);
 
     }

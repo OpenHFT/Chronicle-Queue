@@ -19,8 +19,7 @@ public interface InternalAppender extends ExcerptAppender {
      * Append an excerpt at the specified index, if the index is a valid next index for the queue.
      * This internal replication path can replace an end-of-data marker when restoring an exact
      * missing index. Replacing the marker is logged as a warning and the cycle is resealed only after
-     * the data record and any addressable sparse-index metadata are committed. Entries beyond the
-     * sparse-index capacity remain valid and are found by scanning from the final indexed entry.
+     * the data record and any addressable sparse-index metadata are committed.
      * <p>
      * For queues that support this path, {@code StoreAppender} establishes padding when it
      * constructs the Wire. Exact-index recovery has no unpadded mode.
@@ -31,6 +30,9 @@ public interface InternalAppender extends ExcerptAppender {
      * If an attempt leaves the requested header incomplete, a later exact-index call can replace it,
      * including from a new Queue instance after restart. That retry does not infer whether the failed
      * attempt opened an end-of-data marker, so restoring any missing marker is a separate completion step.
+     * The caller must retry after failure, call {@link #normaliseEOFs()} before publishing recovery
+     * completion, and exclude archive/delete maintenance throughout that interval. EOF is a hard
+     * seal for ordinary writes, not proof that exact recovery can never reopen the roll.
      * <p>
      * If the index is:
      * <dl>

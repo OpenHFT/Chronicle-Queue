@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
-import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_HOURLY;
 import static net.openhft.chronicle.wire.Wires.*;
 import static org.junit.Assert.assertEquals;
@@ -214,40 +213,18 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             final long mismatchIndex = indexes[1];
             expectException(exception -> exception.message().contains(
                             "Exact-index recovery found different content for existing entry")
-                            && exception.message().contains("existing:\n")
-                            && exception.message().contains("supplied:\n"),
-                    "mismatch warning with readable existing and supplied content");
+                            && exception.message().contains("existingLength=10")
+                            && exception.message().contains("suppliedLength=11")
+                            && exception.message().contains("existingHash=0x")
+                            && exception.message().contains("suppliedHash=0x")
+                            && !exception.message().contains("original-1")
+                            && !exception.message().contains("different-1"),
+                    "mismatch warning with hashes but no payload content");
             internalAppender.writeBytes(mismatchIndex, Bytes.from("different-1"));
 
             Assert.assertEquals(values.length, q.entryCount());
             for (int i = 0; i < values.length; i++)
                 assertBytesAtIndex(q, indexes[i], Bytes.from(values[i]));
-        }
-    }
-
-    @Test
-    public void exactWriteBoundsMismatchDiagnostics() {
-        final byte[] existingPayload = new byte[300];
-        final byte[] suppliedPayload = new byte[300];
-        Arrays.fill(existingPayload, (byte) 'a');
-        Arrays.fill(suppliedPayload, (byte) 'b');
-
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .timeProvider(() -> 0)
-                .rollCycle(TEST4_DAILY)
-                .build();
-             ExcerptAppender appender = q.createAppender()) {
-            appender.writeBytes(Bytes.wrapForRead(existingPayload));
-            final long index = appender.lastIndexAppended();
-
-            expectException(exception -> exception.message().contains(
-                            "Exact-index recovery found different content for existing entry")
-                            && exception.message().contains("... 44 bytes omitted"),
-                    "mismatch diagnostics must omit payload beyond the bounded prefix");
-            ((InternalAppender) appender).writeBytes(index, Bytes.wrapForRead(suppliedPayload));
-
-            Assert.assertEquals(1, q.entryCount());
-            assertBytesAtIndex(q, index, Bytes.wrapForRead(existingPayload));
         }
     }
 
@@ -645,46 +622,6 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                 throw new AssertionError("exact recovery should succeed in its requested cycle", failure);
             assertBytesAtIndex(q, recoveredIndex, recovered);
             Assert.assertTrue("the recovered cycle must be resealed", hasEOF(q, recoveredCycle));
-        }
-    }
-
-    @Test
-    public void exactRecoveryWritesAtAndBeyondSparseIndexCapacity() {
-        SetTimeProvider timeProvider = new SetTimeProvider();
-
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .timeProvider(timeProvider)
-                .rollCycle(TEST_DAILY)
-                .build();
-             ExcerptAppender appender = q.createAppender()) {
-            for (long i = 0; i < q.rollCycle().maxMessagesPerCycle(); i++)
-                appender.writeText("entry-" + i);
-
-            final long recoveredIndex = appender.lastIndexAppended() + 1;
-            final int recoveredCycle = q.rollCycle().toCycle(recoveredIndex);
-            timeProvider.advanceMillis(TimeUnit.HOURS.toMillis(25));
-            appender.writeText("next-cycle");
-            final long lastIndexBeforeRecovery = appender.lastIndexAppended();
-            final long writePositionBeforeRecovery = writePosition(q, recoveredCycle);
-            Assert.assertTrue(hasEOF(q, recoveredCycle));
-
-            expectException("Sparse index capacity reached");
-            expectException("Exact-index recovery reopened end-of-data");
-            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("at-capacity"));
-
-            final long beyondCapacityIndex = recoveredIndex + 1;
-            ((InternalAppender) appender).writeBytes(beyondCapacityIndex, Bytes.from("beyond-capacity"));
-
-            Assert.assertTrue("successful recovery must advance the recovered store write position",
-                    writePosition(q, recoveredCycle) > writePositionBeforeRecovery);
-            assertBytesAtIndex(q, recoveredIndex, Bytes.from("at-capacity"));
-            assertBytesAtIndex(q, beyondCapacityIndex, Bytes.from("beyond-capacity"));
-            try (ExcerptTailer tailer = q.createTailer()) {
-                Assert.assertTrue(tailer.moveToIndex(lastIndexBeforeRecovery));
-                Assert.assertEquals("next-cycle", tailer.readText());
-            }
-            Assert.assertTrue("each recovered write must leave the old cycle resealed",
-                    hasEOF(q, recoveredCycle));
         }
     }
 

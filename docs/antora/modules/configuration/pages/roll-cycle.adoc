@@ -22,8 +22,13 @@ The following sections describe how rolling is performed, how the roll cycle int
 
 == How Rolling Works
 
-When the queue reaches the point in time when it should roll, the appender will atomically write an end-of-file (EOF) mark at the end of the current file, to indicate that no other appender should write to it.
+When the queue reaches the point in time when it should roll, the appender will atomically write an end-of-file (EOF) mark at the end of the current file, to indicate that no ordinary appender should write to it.
 Likewise, no tailer should read further than this mark.
+
+An EOF is not an archival-safety marker when exact-index replication recovery
+is enabled. The validated recovery path can temporarily reopen a sealed roll;
+see xref:replication:replication.adoc[Replication] for the required maintenance
+exclusion and completion contract.
 
 If the process was shut down and later restarted after rolling should have occurred, the appender will try to locate the old file(s) and write the EOF marker.
 However, after a certain timeout, the tailers will act as if there is an EOF mark in the file(s) regardless.
@@ -186,7 +191,7 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
 == Archiving Old Queue Files ★
 
 Over time, it may become necessary to automatically delete or archive old queue files.
-An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete. facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the xref:command-line:command_line_tools.adoc#_archiverollfiles[ArchiveRollFiles utility].
+An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete. When exact-index recovery is enabled, it must also coordinate with recovery as described in xref:replication:replication.adoc[Replication]; EOF and a zero reference count do not by themselves prove permanent immutability. To facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the xref:command-line:command_line_tools.adoc#_archiverollfiles[ArchiveRollFiles utility].
 
 == General Advice on Rolling
 

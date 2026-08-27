@@ -2510,6 +2510,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @NotNull
+    private static String withoutEofCursor(String dump) {
+        return dump.replaceAll("--- !!data #binary\\nnormalisedEOFsTo: \\d+\\n", "");
+    }
+
+    @NotNull
     private static String tidyDump(ChronicleQueue queue) {
         return queue.dump()
                 .replaceAll("(?m)^#.+$\\n", "")
@@ -3402,7 +3407,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
             }
 
-            String before = tidyDump(sourceQueue);
+            String before = withoutEofCursor(tidyDump(sourceQueue));
             try (ExcerptTailer tailer = sourceQueue.createTailer(named ? "named" : null);
                  ChronicleQueue queue =
                          builder(getTmpDir(), wireType).testBlockSize().build();
@@ -3417,7 +3422,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     }
                 }
 
-                String dump = tidyDump(queue);
+                // Exact-index recovery records its EOF-normalisation lower bound; compare payload
+                // and queue structure independently of that completion cursor.
+                String dump = withoutEofCursor(tidyDump(queue));
                 assertEquals(before, dump);
                 assertTrue(dump, dump.contains(
                         "--- !!data #binary\n" +

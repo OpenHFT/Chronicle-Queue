@@ -265,7 +265,7 @@ public void removeOldQueueFiles() throws IOException {
 }
 ....
 
-Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are zero references to a given file before attempting to delete it.
+Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are zero references to a given file before attempting to delete it. This is only a local file-handle check. If exact-index replication recovery is enabled, maintenance must also be excluded from its eligibility check through the archive/delete action until recovery retry and EOF normalisation have completed. An EOF marker and a zero reference count do not prove that the roll can never be reopened.
 
 == Configuration
 
