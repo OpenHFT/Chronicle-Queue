@@ -4,8 +4,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -13,11 +13,10 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.DocumentWritten;
 import net.openhft.chronicle.wire.MarshallableOut;
-import net.openhft.chronicle.wire.ProgressiveContext;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.After;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -25,6 +24,7 @@ import java.io.File;
 import java.io.StringWriter;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
@@ -40,12 +40,6 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     @Before
     public void useDeterministicSystemTimeProvider() {
         timeProvider.currentTimeNanos(1_000_000_000L);
-        SystemTimeProvider.CLOCK = timeProvider;
-    }
-
-    @After
-    public void resetSystemTimeProvider() {
-        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
     }
 
     @Test
@@ -134,51 +128,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test
-    public void writesProgressiveContextInsideHeldDocumentWhenCycleAdvances() {
-        File path = getTmpDir();
-        ServiceContext context = new ServiceContext("progressive");
-        int firstCycle;
-        int sameCycle;
-        int secondCycle;
-
-        try (ChronicleQueue queue = builder(path).build()) {
-            ProgressiveEvents events = queue.createAppender().methodWriter(ProgressiveEvents.class);
-
-            firstCycle = writeProgressively(queue, events, context, "one");
-            sameCycle = writeProgressively(queue, events, context, "two");
-            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
-            secondCycle = writeProgressively(queue, events, context, "three");
-        }
-
-        assertEquals(firstCycle, sameCycle);
-        assertTrue(secondCycle > firstCycle);
-        assertEquals(secondCycle, context.lastContextCount);
-        assertContextCounts(path, firstCycle, sameCycle, secondCycle);
-        assertEquals("" +
-                "# firstIndex: 100000000\n" +
-                "# index: 100000000\n" +
-                "context: {\n" +
-                "  name: progressive\n" +
-                "}\n" +
-                "message: {\n" +
-                "  text: one\n" +
-                "}\n" +
-                "# index: 100000001\n" +
-                "message: {\n" +
-                "  text: two\n" +
-                "}\n" +
-                "# index: 200000000\n" +
-                "context: {\n" +
-                "  name: progressive\n" +
-                "}\n" +
-                "message: {\n" +
-                "  text: three\n" +
-                "}\n" +
-                "# no more messages at 8000000000000000\n", dump(path));
-    }
-
-    @Test
-    public void indexedWriteDoesNotNotifyButStartsAppender() {
+    public void indexedWriteDoesNotNotifyOrConsumeListenerRegistration() {
         AtomicInteger callbacks = new AtomicInteger();
 
         try (ChronicleQueue queue = builder(getTmpDir())
@@ -194,8 +144,9 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             }
 
             assertEquals(0, callbacks.get());
-            assertThrows(IllegalStateException.class,
-                    () -> appender.contextListener(Events.class, writer -> { }));
+            appender.contextListener(Events.class, writer -> callbacks.incrementAndGet());
+            appender.writeMessage("message", "ordinary");
+            assertEquals(1, callbacks.get());
         }
     }
 
@@ -281,17 +232,22 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
         try (ChronicleQueue queue = builder(path)
                 .contextListener(Events.class, writer -> {
-                    callbacks.incrementAndGet();
-                    writer.context(new ServiceContext("partial"));
-                    throw new IllegalStateException("boom");
+                    if (callbacks.incrementAndGet() == 1) {
+                        writer.context(new ServiceContext("partial"));
+                        throw new IllegalStateException("boom");
+                    }
+                    writer.context(new ServiceContext("recovered"));
                 })
                 .build()) {
             StoreAppender appender = (StoreAppender) queue.createAppender();
 
             assertThrows(IllegalStateException.class,
                     () -> appender.writeMessage("message", "first"));
+            assertThrows(IllegalStateException.class,
+                    () -> appender.writeMessage("message", "blocked"));
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
             appender.writeMessage("message", "second");
-            assertEquals(1, callbacks.get());
+            assertEquals(2, callbacks.get());
         }
 
         assertEquals("" +
@@ -300,7 +256,11 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                 "context: {\n" +
                 "  name: partial\n" +
                 "}\n" +
-                "# index: 100000001\n" +
+                "# index: 200000000\n" +
+                "context: {\n" +
+                "  name: recovered\n" +
+                "}\n" +
+                "# index: 200000001\n" +
                 "message: second\n" +
                 "# no more messages at 8000000000000000\n", dump(path));
     }
@@ -312,24 +272,33 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
         try (ChronicleQueue queue = builder(path)
                 .contextListener(ProgressiveEvents.class, writer -> {
-                    callbacks.incrementAndGet();
-                    DocumentContext document = writer.writingDocument();
-                    writer.context(new ServiceContext("partial"));
-                    assertTrue(document.isNotComplete());
-                    throw new AssertionError("boom");
+                    if (callbacks.incrementAndGet() == 1) {
+                        DocumentContext document = writer.writingDocument();
+                        writer.context(new ServiceContext("partial"));
+                        assertTrue(document.isNotComplete());
+                        throw new AssertionError("boom");
+                    }
+                    writer.context(new ServiceContext("recovered"));
                 })
                 .build()) {
             StoreAppender appender = (StoreAppender) queue.createAppender();
 
             assertThrows(AssertionError.class,
                     () -> appender.writeMessage("message", "first"));
+            assertThrows(IllegalStateException.class,
+                    () -> appender.writeMessage("message", "blocked"));
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
             appender.writeMessage("message", "second");
-            assertEquals(1, callbacks.get());
+            assertEquals(2, callbacks.get());
         }
 
         assertEquals("" +
                 "# firstIndex: 100000000\n" +
-                "# index: 100000000\n" +
+                "# index: 200000000\n" +
+                "context: {\n" +
+                "  name: recovered\n" +
+                "}\n" +
+                "# index: 200000001\n" +
                 "message: second\n" +
                 "# no more messages at 8000000000000000\n", dump(path));
     }
@@ -338,10 +307,16 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     public void appenderWriteFromListenerFailsFast() {
         File path = getTmpDir();
         AtomicReference<StoreAppender> appenderRef = new AtomicReference<>();
+        AtomicInteger callbacks = new AtomicInteger();
 
         try (ChronicleQueue queue = builder(path)
                 .contextListener(Events.class,
-                        writer -> appenderRef.get().writeMessage("message", "reentrant"))
+                        writer -> {
+                            if (callbacks.incrementAndGet() == 1)
+                                appenderRef.get().writeMessage("message", "reentrant");
+                            else
+                                writer.context(new ServiceContext("recovered"));
+                        })
                 .build()) {
             StoreAppender appender = (StoreAppender) queue.createAppender();
             appenderRef.set(appender);
@@ -349,12 +324,19 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             IllegalStateException exception = assertThrows(IllegalStateException.class,
                     () -> appender.writeMessage("message", "first"));
             assertTrue(exception.getMessage().contains("supplied method writer"));
+            assertThrows(IllegalStateException.class,
+                    () -> appender.writeMessage("message", "blocked"));
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
             appender.writeMessage("message", "second");
         }
 
         assertEquals("" +
                 "# firstIndex: 100000000\n" +
-                "# index: 100000000\n" +
+                "# index: 200000000\n" +
+                "context: {\n" +
+                "  name: recovered\n" +
+                "}\n" +
+                "# index: 200000001\n" +
                 "message: second\n" +
                 "# no more messages at 8000000000000000\n", dump(path));
     }
@@ -378,6 +360,221 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
             assertEquals(expectedCycle, contextCount.get());
             assertTrue(outerDocumentRemainedOpen.get());
+        }
+    }
+
+    @Test
+    public void sealedHighestRollIsResolvedBeforeDocumentListener() {
+        AtomicInteger callbacks = new AtomicInteger();
+        AtomicInteger observedContext = new AtomicInteger(-1);
+        AtomicReference<StoreAppender> appenderReference = new AtomicReference<>();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    callbacks.incrementAndGet();
+                    observedContext.set(appenderReference.get().contextCount());
+                    writer.context(new ServiceContext("queue"));
+                })
+                .build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            appenderReference.set(appender);
+            appender.writeMessage("message", "before");
+            int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+
+            appender.writeMessage("message", "after");
+
+            assertEquals(2, callbacks.get());
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(sealedCycle + 1, appender.contextCount());
+            assertEquals(sealedCycle + 1, observedContext.get());
+            assertDocumentCycles(queue, sealedCycle, sealedCycle, sealedCycle + 1, sealedCycle + 1);
+        }
+    }
+
+    @Test
+    public void sealedHighestRollIsResolvedBeforeRawListener() {
+        AtomicInteger callbacks = new AtomicInteger();
+        AtomicReference<StoreAppender> appenderReference = new AtomicReference<>();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    callbacks.incrementAndGet();
+                    assertEquals(appenderReference.get().cycle(), appenderReference.get().contextCount());
+                    writer.context(new ServiceContext("queue"));
+                })
+                .build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            appenderReference.set(appender);
+            writeRaw(appender, "before");
+            int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+
+            writeRaw(appender, "after");
+
+            assertEquals(2, callbacks.get());
+            assertEquals(sealedCycle + 1, appender.contextCount());
+            assertDocumentCycles(queue, sealedCycle, sealedCycle, sealedCycle + 1, sealedCycle + 1);
+        }
+    }
+
+    @Test
+    public void rolledBackClockDoesNotRepeatAnOlderContext() {
+        AtomicInteger callbacks = new AtomicInteger();
+        AtomicLong clock = new AtomicLong(1_000L);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder(
+                        getTmpDir(), WireType.BINARY)
+                .testBlockSize()
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(clock::get)
+                .contextListener(Events.class, writer -> {
+                    callbacks.incrementAndGet();
+                    writer.context(new ServiceContext("queue"));
+                })
+                .build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            appender.writeMessage("message", "first");
+            clock.addAndGet(2L * TEST_SECONDLY.lengthInMillis());
+            appender.writeMessage("message", "high-water");
+            int highWater = appender.contextCount();
+
+            clock.set(1_000L);
+            appender.writeMessage("message", "clock-rollback");
+
+            assertEquals(2, callbacks.get());
+            assertEquals(highWater, appender.contextCount());
+            assertEquals(highWater, appender.cycle());
+        }
+    }
+
+    @Test
+    public void exactHistoricalRecoveryDoesNotChangeOrdinaryContext() {
+        ignoreException("Exact-index recovery reopened end-of-data");
+        AtomicInteger callbacks = new AtomicInteger();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    callbacks.incrementAndGet();
+                    writer.context(new ServiceContext("queue"));
+                })
+                .build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            appender.writeMessage("message", "historical");
+            int historicalCycle = appender.contextCount();
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
+            appender.writeMessage("message", "current");
+            int ordinaryContext = appender.contextCount();
+            assertTrue(ordinaryContext > historicalCycle);
+            assertEquals(2, callbacks.get());
+
+            Bytes<?> recovered = binaryPayload("recovered");
+            try {
+                long recoveryIndex = queue.rollCycle().toIndex(historicalCycle, 2);
+                appender.writeBytes(recoveryIndex, recovered);
+            } finally {
+                recovered.releaseLast();
+            }
+
+            assertEquals(ordinaryContext, appender.contextCount());
+            assertEquals(2, callbacks.get());
+            appender.writeMessage("message", "following");
+            assertEquals(ordinaryContext, appender.contextCount());
+            assertEquals(2, callbacks.get());
+        }
+    }
+
+    @Test
+    public void secondEofFailsBeforeListenerStateChanges() {
+        AtomicInteger callbacks = new AtomicInteger();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    callbacks.incrementAndGet();
+                    writer.context(new ServiceContext("queue"));
+                })
+                .build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            appender.writeMessage("message", "before");
+            int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+            sealCycle(queue, sealedCycle + 1);
+            queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+            queue.tableStoreAcquire("listing.highestCycleWriteFloor", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+
+            assertThrows(WriteAfterEOFException.class,
+                    () -> appender.writeMessage("message", "must-fail"));
+            assertEquals(1, callbacks.get());
+            assertEquals(sealedCycle, appender.contextCount());
+        }
+    }
+
+    @Test
+    public void unclosedListenerDocumentPoisonsOnlyTheCurrentRoll() {
+        AtomicInteger callbacks = new AtomicInteger();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(ProgressiveEvents.class, writer -> {
+                    if (callbacks.incrementAndGet() == 1) {
+                        writer.writingDocument();
+                        writer.context(new ServiceContext("abandoned"));
+                    } else {
+                        writer.context(new ServiceContext("recovered"));
+                    }
+                })
+                .build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            IllegalStateException abandoned = assertThrows(IllegalStateException.class,
+                    () -> appender.writeMessage("message", "first"));
+            assertTrue(abandoned.getMessage().contains("unclosed document"));
+            assertThrows(IllegalStateException.class,
+                    () -> appender.writeMessage("message", "blocked"));
+
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
+            appender.writeMessage("message", "second");
+            assertEquals(2, callbacks.get());
+        }
+    }
+
+    @Test(timeout = 5_000)
+    public void secondAppenderReentryFailsImmediatelyAndReleasesTheQueueLock() {
+        AtomicReference<StoreAppender> secondReference = new AtomicReference<>();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir()).build()) {
+            StoreAppender first = (StoreAppender) queue.createAppender();
+            StoreAppender second = (StoreAppender) queue.createAppender();
+            secondReference.set(second);
+            first.contextListener(Events.class,
+                    writer -> secondReference.get().writeMessage("message", "reentrant"));
+
+            IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> first.writeMessage("message", "first"));
+            assertTrue(failure.getMessage().contains("supplied method writer"));
+            second.writeMessage("message", "after-failure");
+            assertThrows(IllegalStateException.class,
+                    () -> first.writeMessage("message", "blocked"));
+        }
+    }
+
+    @Test
+    public void appendLockRejectionDoesNotConsumeListenerRegistration() {
+        try (SingleChronicleQueue queue = builder(getTmpDir()).timeoutMS(100).build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            WriteLock appendLock = queue.appendLock();
+            appendLock.lock();
+            try {
+                assertThrows(IllegalStateException.class,
+                        () -> appender.writeMessage("message", "blocked"));
+            } finally {
+                appendLock.unlock();
+            }
+
+            appender.contextListener(Events.class,
+                    writer -> writer.context(new ServiceContext("queue")));
+            appender.writeMessage("message", "allowed");
+            assertEquals(appender.cycle(), appender.contextCount());
         }
     }
 
@@ -459,14 +656,15 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                 "# no more messages at 8000000000000000\n", dump(path, WireType.BINARY_LIGHT));
     }
 
-    private static SingleChronicleQueueBuilder builder(File path) {
+    private SingleChronicleQueueBuilder builder(File path) {
         return builder(path, WireType.BINARY);
     }
 
-    private static SingleChronicleQueueBuilder builder(File path, WireType wireType) {
+    private SingleChronicleQueueBuilder builder(File path, WireType wireType) {
         return SingleChronicleQueueBuilder.builder(path, wireType)
                 .testBlockSize()
-                .rollCycle(TEST_SECONDLY);
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(timeProvider);
     }
 
     private static void writeMessages(ProgressiveEvents events, String... messages) {
@@ -477,21 +675,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
         }
     }
 
-    private static int writeProgressively(ChronicleQueue queue,
-                                          ProgressiveEvents events,
-                                          ServiceContext context,
-                                          String message) {
-        try (DocumentContext document = events.writingDocument()) {
-            int contextCount = document.contextCount();
-            assertEquals(queue.rollCycle().toCycle(document.index()), contextCount);
-            if (context.needsResending(contextCount))
-                events.context(context);
-            events.message(new Message(message));
-            return contextCount;
-        }
-    }
-
-    private static void assertContextCounts(File path, int... expected) {
+    private void assertContextCounts(File path, int... expected) {
         try (ChronicleQueue queue = builder(path).build();
              ExcerptTailer tailer = queue.createTailer()) {
             for (int contextCount : expected) {
@@ -514,6 +698,49 @@ public class ContextListenerCoreTest extends QueueTestCommon {
         return payload;
     }
 
+    private static void writeRaw(StoreAppender appender, String value) {
+        Bytes<?> payload = binaryPayload(value);
+        try {
+            appender.writeBytes(payload);
+        } finally {
+            payload.releaseLast();
+        }
+    }
+
+    private static void assertDocumentCycles(SingleChronicleQueue queue, int... expectedCycles) {
+        try (ExcerptTailer tailer = queue.createTailer()) {
+            for (int expectedCycle : expectedCycles) {
+                try (DocumentContext document = tailer.readingDocument()) {
+                    assertTrue(document.isPresent());
+                    assertEquals(expectedCycle, queue.rollCycle().toCycle(document.index()));
+                }
+            }
+            try (DocumentContext document = tailer.readingDocument()) {
+                assertFalse(document.isPresent());
+            }
+        }
+    }
+
+    private static void sealCurrentCycle(StoreAppender appender) {
+        SingleChronicleQueueStore store = appender.store;
+        if (store == null)
+            throw new AssertionError("Appender has no current store");
+        try (MappedBytes bytes = store.bytes()) {
+            Wire wire = appender.queue().wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue(store.writeEOF(wire, appender.queue().timeoutMS));
+        }
+    }
+
+    private static void sealCycle(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), true, null);
+             MappedBytes bytes = store.bytes()) {
+            Wire wire = queue.wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue(store.writeEOF(wire, queue.timeoutMS));
+        }
+    }
+
     private static void assertNestedWriteReusesContext(StoreAppender appender) {
         try (DocumentContext outer = appender.writingDocument()) {
             outer.wire().write("outer").text("one");
@@ -525,11 +752,11 @@ public class ContextListenerCoreTest extends QueueTestCommon {
         }
     }
 
-    private static String dump(File path) {
+    private String dump(File path) {
         return dump(path, WireType.BINARY);
     }
 
-    private static String dump(File path, WireType wireType) {
+    private String dump(File path, WireType wireType) {
         try (ChronicleQueue queue = builder(path, wireType).build()) {
             StringWriter writer = new StringWriter();
             queue.dump(writer, 0, Long.MAX_VALUE);
@@ -546,20 +773,11 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     interface ProgressiveEvents extends Events, DocumentWritten {
     }
 
-    static final class ServiceContext extends SelfDescribingMarshallable implements ProgressiveContext {
+    static final class ServiceContext extends SelfDescribingMarshallable {
         private final String name;
-        private transient int lastContextCount = -1;
 
         ServiceContext(String name) {
             this.name = name;
-        }
-
-        @Override
-        public boolean needsResending(int contextCount) {
-            if (contextCount <= lastContextCount)
-                return false;
-            lastContextCount = contextCount;
-            return true;
         }
     }
 

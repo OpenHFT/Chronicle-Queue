@@ -130,6 +130,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     final AppenderListener appenderListener;
     @NotNull
     private final ContextListenerState contextListenerState;
+    private final ThreadLocal<Boolean> contextListenerCallback =
+            ThreadLocal.withInitial(() -> Boolean.FALSE);
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -640,6 +642,22 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     ContextListenerState newContextListenerState(
             StoreAppender appender, StoreAppender.StoreAppenderContext context) {
         return contextListenerState.forAppender(appender, context);
+    }
+
+    void enterContextListenerCallback() {
+        if (contextListenerCallback.get())
+            throw new IllegalStateException("A Queue context listener callback is already active on this thread");
+        contextListenerCallback.set(Boolean.TRUE);
+    }
+
+    void exitContextListenerCallback() {
+        contextListenerCallback.remove();
+    }
+
+    void throwIfContextListenerCallbackActive() {
+        if (contextListenerCallback.get())
+            throw new IllegalStateException("Cannot enter a Queue appender from a context listener callback; " +
+                    "write through the supplied method writer instead");
     }
 
     // used by enterprise CQ

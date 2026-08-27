@@ -80,10 +80,13 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * {@inheritDoc}
      * <p>
      * For Queue, an output context is a roll cycle. Each appender's listener runs under the queue
-     * write lock before that appender's first data document in a cycle. It is not called for
-     * metadata, explicit-index writes or append-locked queues. A restarted appender can therefore
-     * write context again in an existing cycle. Context listeners are not supported with double
-     * buffering, and the caller retains ownership of the listener.
+     * write lock before that appender's first data document in a cycle. Queue resolves the actual
+     * monotonic destination, including one permitted advance past EOF, before the callback. It is
+     * not called for metadata, explicit-index writes or append-locked queues. Callback failure
+     * poisons the current cycle until a later roll; it is never retried in place. A restarted
+     * appender can write context again in an existing cycle. Context listeners are not supported
+     * with double buffering, asynchronous output, encoding or encryption, and the caller retains
+     * ownership of the listener.
      */
     @NotNull
     @Override
