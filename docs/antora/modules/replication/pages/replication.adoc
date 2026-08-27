@@ -52,16 +52,33 @@ a separate back-fill completion responsibility.
 
 This recovery does not rewind consumers that have already advanced beyond the
 reopened cycle. Enterprise back-fill completes before the replacement source is
-unlocked for normal use. Other callers must provide equivalent coordination,
-and external archival or cleanup tools must not treat an end-of-data marker as
-proof that a roll can never be reopened.
+unlocked for normal use.
+
+For maintenance purposes, EOF therefore means _hard-sealed against ordinary
+writes_, not permanently immutable. Queue does not publish a durable
+"no exact recovery is in progress or can be retried" marker. EOF, stable file
+identity, file age and a zero local reference count are not, separately or
+together, sufficient proof that a roll may be archived or deleted. A system
+that enables exact-index recovery must provide an exclusion protocol which
+covers both the maintenance eligibility check and the archive/delete action,
+and which remains held until recovery has been retried and EOF normalisation
+has completed.
+
+CQE owns that protocol for the supported replication use case: it retries a
+failed exact-index back-fill after restart, calls `normaliseEOFs()` before
+publishing back-fill completion, and keeps ordinary source writes excluded
+until then. Another internal caller of exact-index `writeBytes` assumes those
+same responsibilities. Queue construction and later ordinary appends can
+repair some older EOFs, but are a fallback only; they are not a replacement for
+caller-owned retry, normalisation and maintenance exclusion.
 
 Queue inspects the requested exact index, skipping user and sparse-index
 metadata because metadata does not consume an index. If the slot contains EOF,
 Queue replaces that word with one compare-and-swap, commits the data and any
 addressable sparse-index entry, and then restores EOF. An existing index remains
 authoritative: Queue compares a duplicate payload with it, returns silently
-when they match, and warns with bounded readable hex dumps when they differ.
+when they match, and warns with the two lengths and deterministic hashes when
+they differ. The payload bytes are not included in the warning.
 
 Current queue files are padded, keeping every header—including end-of-data—
 four-byte aligned for atomic replacement. Legacy `dataVersion == 0` stores are
@@ -72,10 +89,12 @@ The duplicate check also permits a replication implementation to replay a
 small overlap of recent entries to verify that source and sink agree before
 transferring missing data. Current callers need not use that optional check.
 
-Reaching a roll's sparse-index capacity does not prevent exact-index recovery.
-Queue warns when the first entry at the capacity boundary is written, leaves
-that entry and later entries unindexed, and locates them by scanning forward
-from the last addressable sparse-index entry.
+EOF recovery is implemented in Queue by validating the exact index and then
+performing the aligned header compare-and-swap while holding Queue's write
+lock. It does not depend on a new Wire EOF-recovery operation and works with the
+currently released Wire API. Wire changes which clear transient
+`insideHeader` state before an ordinary EOF exception are useful state hygiene,
+but are not a prerequisite for this recovery path.
 
 The set of hosts onto which the queue is replicated, is defined as a `cluster`.
 The configuration for a cluster is as follows:

@@ -43,6 +43,7 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
  */
 @SuppressWarnings("deprecation")
 class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable, WriteMarshallable, Closeable {
+    private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
     private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
 
@@ -306,10 +307,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      */
     @NotNull
     ScanResult moveToIndex(@NotNull final ExcerptContext ec, final long index) {
-        final long indexedSearchStart = index >= indexCapacity()
-                ? lastIndexableSequence()
-                : index & -indexSpacing;
-        ScanResult value = moveToIndex0(ec, index, indexedSearchStart);
+        ScanResult value = moveToIndex0(ec, index);
         if (value == null)
             return moveToIndexFromTheStart(ec, index);
         return value;
@@ -348,18 +346,16 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @return A {@link ScanResult} indicating the result of the operation, or {@code null} if the index cannot be found.
      */
     @Nullable
-    private ScanResult moveToIndex0(@NotNull final ExcerptContext ec,
-                                    final long index,
-                                    final long indexedSearchStart) {
+    ScanResult moveToIndex0(@NotNull final ExcerptContext ec, final long index) {
         if (index2Index.getVolatileValue() == NOT_INITIALIZED)
             return null;
 
         Wire wireForIndex = ec.wireForIndex();
         LongArrayValues index2index = getIndex2index(wireForIndex);
-        long primaryOffset = toAddress0(indexedSearchStart);
+        long primaryOffset = toAddress0(index);
 
         long secondaryAddress = 0;
-        long startIndex = indexedSearchStart;
+        long startIndex = index & -indexSpacing;
         while (primaryOffset >= 0) {
             secondaryAddress = index2index.getValueAt(primaryOffset);
             if (secondaryAddress != 0) {
@@ -387,7 +383,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @return A {@link ScanResult} indicating whether the index was found, or if a linear scan is required.
      */
     private ScanResult scanSecondaryIndexBackwards(@NotNull final ExcerptContext ec, LongArrayValues array1, long startIndex, long index) {
-        long secondaryOffset = toAddress1(startIndex);
+        long secondaryOffset = toAddress1(index);
 
         do {
             long fromAddress = array1.getValueAt(secondaryOffset);
@@ -876,11 +872,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                       long sequenceNumber,
                                       long position) throws StreamCorruptedException {
 
-        if (sequenceNumber >= indexCapacity()) {
-            nextEntryToBeIndexed.setMaxValue(Long.MAX_VALUE);
-            return;
-        }
-
         // only say for example index every 0,15,31st entry
         if (!indexable(sequenceNumber)) {
             return;
@@ -899,6 +890,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         int index2 = (int) ((sequenceNumber) >>> (indexCountBits + indexSpacingBits));
+        if (index2 >= indexCount) {
+            if (IGNORE_INDEXING_FAILURE) {
+                return;
+            }
+            throwNumEntriesExceededForRollCycle(sequenceNumber);
+        }
         long secondaryAddress = getSecondaryAddress(wire, index2indexArr, index2);
         if (secondaryAddress > bytes.capacity())
             throwSecondaryAddressError(secondaryAddress);
@@ -928,6 +925,16 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     /**
+     * Throws an {@link IllegalStateException} when the sequence number exceeds the allowed maximum
+     * number of entries for the current roll cycle.
+     *
+     * @param sequenceNumber The sequence number that exceeds the roll cycle's entry limit.
+     */
+    private void throwNumEntriesExceededForRollCycle(long sequenceNumber) {
+        throw new IllegalStateException("Unable to index " + sequenceNumber + ", the number of entries exceeds max number for the current rollcycle");
+    }
+
+    /**
      * Determines if the given index is indexable based on the current index spacing.
      * An index is indexable if it aligns with the defined index spacing.
      *
@@ -939,17 +946,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         throwExceptionIfClosed();
 
         return (index & (indexSpacing - 1)) == 0;
-    }
-
-    long indexCapacity() {
-        return (long) indexCount * indexCount * indexSpacing;
-    }
-
-    /**
-     * Returns the final sequence number that can have a sparse-index entry.
-     */
-    long lastIndexableSequence() {
-        return indexCapacity() - indexSpacing;
     }
 
     /**

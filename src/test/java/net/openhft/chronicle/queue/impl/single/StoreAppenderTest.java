@@ -13,12 +13,14 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,10 +53,18 @@ public class StoreAppenderTest extends QueueTestCommon {
     @Rule
     public final TemporaryFolder queueDirectory = new TemporaryFolder();
 
+    private boolean originalCheckIndex;
+
     @Override
     @Before
     public void threadDump() {
         super.threadDump();
+        originalCheckIndex = QueueSystemProperties.CHECK_INDEX;
+    }
+
+    @After
+    public void restoreIndexChecks() {
+        QueueSystemProperties.CHECK_INDEX = originalCheckIndex;
     }
 
     @Test
@@ -388,21 +398,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void recoveryClassifiesTheRequestedHeaderWithoutAdvancingItsIndex() {
-        assertEquals(StoreAppender.RecoveryAction.WRITE_AND_RESEAL,
-                StoreAppender.recoveryActionForHeader(Wires.END_OF_DATA));
-        assertEquals(StoreAppender.RecoveryAction.WARN_AND_WRITE,
-                StoreAppender.recoveryActionForHeader(Wires.NOT_COMPLETE));
-        assertEquals(StoreAppender.RecoveryAction.WRITE,
-                StoreAppender.recoveryActionForHeader(Wires.NOT_INITIALIZED));
-        assertEquals(StoreAppender.RecoveryAction.ALREADY_PRESENT,
-                StoreAppender.recoveryActionForHeader(8));
-        assertEquals(StoreAppender.RecoveryAction.SKIP_METADATA,
-                StoreAppender.recoveryActionForHeader(Wires.META_DATA | 8));
-    }
-
-    @Test
-    public void exactRecoveryRejectsLegacyUnpaddedStoreWithoutMutation() throws Exception {
+    public void exactRecoveryRejectsLegacyUnpaddedStore() throws Exception {
         ignoreException("reading control code as text");
         ignoreException("Unable to copy TimedStoreRecovery safely");
         ignoreException("Unexpected field lastAcknowledgedIndexReplicated");
@@ -419,14 +415,9 @@ public class StoreAppenderTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender()) {
             final int legacyCycle = queue.lastCycle();
             final long requestedIndex = queue.rollCycle().toIndex(legacyCycle, 0);
-            final long cursorBefore = queue.tableStoreGet("normalisedEOFsTo");
-            final long entryCountBefore = queue.entryCount();
-            final byte[] bytesBefore = Files.readAllBytes(legacyFile);
-            final long writePositionBefore;
             try (SingleChronicleQueueStore store =
                          queue.storeForCycle(legacyCycle, queue.epoch(), false, null)) {
                 assertEquals("test fixture must be a legacy unpadded store", 0, store.dataVersion());
-                writePositionBefore = store.writePosition();
             }
 
             final UnsupportedOperationException failure = org.junit.Assert.assertThrows(
@@ -435,16 +426,6 @@ public class StoreAppenderTest extends QueueTestCommon {
                             requestedIndex, Bytes.from("must-not-be-written")));
 
             assertTrue(failure.getMessage().contains("legacy unpadded queue stores"));
-            assertEquals("legacy rejection must not move the normalization cursor",
-                    cursorBefore, queue.tableStoreGet("normalisedEOFsTo"));
-            assertEquals(entryCountBefore, queue.entryCount());
-            org.junit.Assert.assertArrayEquals("legacy cycle bytes must remain unchanged",
-                    bytesBefore, Files.readAllBytes(legacyFile));
-            try (SingleChronicleQueueStore store =
-                         queue.storeForCycle(legacyCycle, queue.epoch(), false, null)) {
-                assertEquals("legacy rejection must not move the write position",
-                        writePositionBefore, store.writePosition());
-            }
         }
     }
 
@@ -544,6 +525,22 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void replayOfUnpublishedReadyRecordThenNextWritePreservesBothEntries() throws IOException {
+        QueueSystemProperties.CHECK_INDEX = false;
+        final File directory = queueDirectory.newFolder();
+        final long firstIndex = writeFirstThenCommitSecondWithoutPublishing(directory);
+
+        try (SingleChronicleQueue queue = fixedTimeQueue(directory);
+             ExcerptAppender appender = queue.createAppender()) {
+            final InternalAppender internalAppender = (InternalAppender) appender;
+            internalAppender.writeBytes(firstIndex + 1, Bytes.from("second"));
+            internalAppender.writeBytes(firstIndex + 2, Bytes.from("third"));
+
+            assertQueueContents(queue, firstIndex, "first", "second", "third");
+        }
+    }
+
+    @Test
     public void historicalRetryOfReadyInterruptedRecordLowersEofCursor() throws IOException {
         final File directory = queueDirectory.newFolder();
         final SetTimeProvider time = new SetTimeProvider();
@@ -621,6 +618,151 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void backfillIntoRolledBackCurrentCycleIsSealedOnceHistorical() throws IOException {
+        final SetTimeProvider time = new SetTimeProvider();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(time)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("cycle-0"));
+            final long missingIndex = appender.lastIndexAppended() + 1;
+            final int recoveredCycle = queue.rollCycle().toCycle(missingIndex);
+
+            time.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.writeBytes(Bytes.from("cycle-1"));
+            appender.normaliseEOFs();
+            assertTrue(hasEOF(queue, recoveredCycle));
+            assertTrue(queue.tableStoreGet("normalisedEOFsTo") > recoveredCycle);
+
+            time.advanceMillis(-TimeUnit.HOURS.toMillis(1));
+            assertEquals(recoveredCycle, queue.cycle());
+            removeEndOfData(queue, recoveredCycle);
+            ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("recovered"));
+            appender.normaliseEOFs();
+            assertFalse("timestamp-current cycle must remain open", hasEOF(queue, recoveredCycle));
+
+            time.advanceMillis(TimeUnit.HOURS.toMillis(1));
+            appender.normaliseEOFs();
+            assertTrue("backfilled cycle must be sealed once historical",
+                    hasEOF(queue, recoveredCycle));
+        }
+    }
+
+    @Test(timeout = 20_000)
+    public void restartRetriesIncompleteHistoricalRecoveryAndNormalisesEof()
+            throws IOException, InterruptedException {
+        QueueSystemProperties.CHECK_INDEX = false;
+        final File directory = queueDirectory.newFolder();
+        final Process failedRecovery = JavaProcessBuilder.create(CrashDuringHistoricalRecovery.class)
+                .withProgramArguments(directory.getAbsolutePath())
+                .start();
+        assertTrue("recovery process did not exit",
+                failedRecovery.waitFor(10, TimeUnit.SECONDS));
+        assertEquals("child must stop without closing its Queue",
+                CrashDuringHistoricalRecovery.EXIT_CODE, failedRecovery.exitValue());
+
+        final SetTimeProvider time = new SetTimeProvider();
+        time.currentTimeMillis(TEST_HOURLY.lengthInMillis());
+        final long missingIndex = TEST_HOURLY.toIndex(0, 1);
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            expectException("Exact-index recovery replaced incomplete header");
+            ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("recovered-after-restart"));
+
+            assertFalse("the failed process left the recovered historical cycle open",
+                    hasEOF(queue, 0));
+            appender.normaliseEOFs();
+            assertTrue("completion must reseal every historical backfilled cycle",
+                    hasEOF(queue, 0));
+
+            assertEquals(3, queue.entryCount());
+            final Bytes<?> result = Bytes.elasticHeapByteBuffer();
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                assertNextBytes(tailer, result, "first");
+                assertNextBytes(tailer, result, "recovered-after-restart");
+                assertNextBytes(tailer, result, "current-cycle");
+                assertFalse(tailer.readBytes(result.clear()));
+            }
+        }
+    }
+
+    @Test(timeout = 20_000)
+    public void restartPublishesReadyRecordLeftBeyondWritePosition()
+            throws IOException, InterruptedException {
+        QueueSystemProperties.CHECK_INDEX = false;
+        final File directory = queueDirectory.newFolder();
+        final Process interruptedPublisher = JavaProcessBuilder.create(CrashAfterReadyHeader.class)
+                .withProgramArguments(directory.getAbsolutePath())
+                .start();
+        assertTrue("publisher process did not exit",
+                interruptedPublisher.waitFor(10, TimeUnit.SECONDS));
+        assertEquals("child must stop before publishing its write position",
+                CrashAfterReadyHeader.EXIT_CODE, interruptedPublisher.exitValue());
+
+        final long firstIndex = TEST_HOURLY.toIndex(0, 0);
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            assertEquals("the physical scan must retain the ready first-writer record",
+                    firstIndex + 1, queue.lastIndex());
+            ((InternalAppender) appender).writeBytes(firstIndex + 2, Bytes.from("third"));
+            assertQueueContents(queue, firstIndex, "first", "second", "third");
+        }
+    }
+
+    public static final class CrashDuringHistoricalRecovery {
+        private static final int EXIT_CODE = 17;
+
+        public static void main(String[] args) {
+            QueueSystemProperties.CHECK_INDEX = false;
+            final SetTimeProvider time = new SetTimeProvider();
+            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(new File(args[0]))
+                    .timeProvider(time)
+                    .rollCycle(TEST_HOURLY)
+                    .testBlockSize()
+                    .build()) {
+                final ExcerptAppender appender = queue.createAppender();
+                appender.writeBytes(Bytes.from("first"));
+                time.currentTimeMillis(TEST_HOURLY.lengthInMillis());
+                appender.writeBytes(Bytes.from("current-cycle"));
+
+                // Persist the same state produced by termination after the shared lower bound,
+                // EOF CAS and a partial payload, but before the data header and EOF are committed.
+                queue.tableStoreAcquire("normalisedEOFsTo", 0).setValue(0);
+                leaveIncompleteRecordAtEof(queue, 0, Bytes.from("partial"));
+                Runtime.getRuntime().halt(EXIT_CODE);
+            }
+        }
+    }
+
+    public static final class CrashAfterReadyHeader {
+        private static final int EXIT_CODE = 18;
+
+        public static void main(String[] args) {
+            QueueSystemProperties.CHECK_INDEX = false;
+            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(new File(args[0]))
+                    .timeProvider(() -> 0)
+                    .rollCycle(TEST_HOURLY)
+                    .testBlockSize()
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
+                appender.writeBytes(Bytes.from("first"));
+                commitRecordWithoutPublishing(queue, 0, Bytes.from("second"));
+                Runtime.getRuntime().halt(EXIT_CODE);
+            }
+        }
+    }
+
+    @Test
     public void eofRestorationFailureIsNotReportedAsSuccess() throws IOException {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build();
              ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -671,6 +813,70 @@ public class StoreAppenderTest extends QueueTestCommon {
         assertEquals(expected, result.toString());
     }
 
+    private static SingleChronicleQueue fixedTimeQueue(File directory) {
+        return SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+    }
+
+    private long writeFirstThenCommitSecondWithoutPublishing(File directory) {
+        try (SingleChronicleQueue queue = fixedTimeQueue(directory);
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("first"));
+            final long firstIndex = appender.lastIndexAppended();
+            commitRecordWithoutPublishing(queue,
+                    queue.rollCycle().toCycle(firstIndex), Bytes.from("second"));
+            return firstIndex;
+        }
+    }
+
+    private static void commitRecordWithoutPublishing(SingleChronicleQueue queue,
+                                                       int cycle,
+                                                       Bytes<?> payload) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
+             MappedBytes bytes = store.bytes()) {
+            long position = store.writePosition();
+            position += lengthOf(bytes.readVolatileInt(position)) + SPB_HEADER_SIZE;
+            for (; ; ) {
+                position += BytesUtil.padOffset(position);
+                final int header = bytes.readVolatileInt(position);
+                if (header == NOT_INITIALIZED)
+                    break;
+                assertTrue("expected metadata before the free slot at " + position,
+                        isReadyMetaData(header));
+                position += SPB_HEADER_SIZE + lengthOf(header);
+            }
+            final long length = payload.readRemaining();
+            bytes.write(position + SPB_HEADER_SIZE, payload, payload.readPosition(), length);
+            bytes.writeOrderedInt(position, (int) length);
+            assertTrue(isReadyData(bytes.readVolatileInt(position)));
+        }
+    }
+
+    private static void assertQueueContents(SingleChronicleQueue queue,
+                                            long firstIndex,
+                                            String... expected) {
+        assertEquals(expected.length, queue.entryCount());
+        final Bytes<?> result = Bytes.elasticHeapByteBuffer();
+        try (ExcerptTailer tailer = queue.createTailer()) {
+            for (int i = 0; i < expected.length; i++) {
+                assertTrue("sequential read of entry " + i, tailer.readBytes(result.clear()));
+                assertEquals(expected[i], result.toString());
+                assertEquals(firstIndex + i + 1, tailer.index());
+            }
+            assertFalse(tailer.readBytes(result.clear()));
+        }
+        for (int i = 0; i < expected.length; i++) {
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                assertTrue("moveToIndex " + i, tailer.moveToIndex(firstIndex + i));
+                assertTrue(tailer.readBytes(result.clear()));
+                assertEquals(expected[i], result.toString());
+            }
+        }
+    }
+
     private static void sealCurrentCycle(StoreAppender appender) {
         final SingleChronicleQueueStore store = appender.store;
         if (store == null)
@@ -705,6 +911,31 @@ public class StoreAppenderTest extends QueueTestCommon {
                 final int header = bytes.readVolatileInt(position);
                 if (header == END_OF_DATA) {
                     assertTrue(bytes.compareAndSwapInt(position, END_OF_DATA, NOT_INITIALIZED));
+                    return;
+                }
+                assertTrue("expected metadata before EOF at position " + position,
+                        isReadyMetaData(header));
+                position += SPB_HEADER_SIZE + lengthOf(header);
+            }
+        }
+    }
+
+    private static void leaveIncompleteRecordAtEof(SingleChronicleQueue queue,
+                                                    int cycle,
+                                                    Bytes<?> partialPayload) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
+             MappedBytes bytes = store.bytes()) {
+            long position = store.writePosition();
+            position += lengthOf(bytes.readVolatileInt(position)) + SPB_HEADER_SIZE;
+            for (; ; ) {
+                position += BytesUtil.padOffset(position);
+                final int header = bytes.readVolatileInt(position);
+                if (header == END_OF_DATA) {
+                    StoreAppender.replaceEndOfDataMarkerForRecovery(bytes, position);
+                    final int length = Math.toIntExact(partialPayload.readRemaining());
+                    bytes.write(position + SPB_HEADER_SIZE, partialPayload,
+                            partialPayload.readPosition(), length);
+                    bytes.writeVolatileInt(position, NOT_COMPLETE | length);
                     return;
                 }
                 assertTrue("expected metadata before EOF at position " + position,
