@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodWriterBuilder;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.wire.BinaryMethodWriterInvocationHandler;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.DocumentContextHolder;
@@ -30,9 +31,18 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Nullable
     private final Object methodWriter;
     private boolean started;
-    private boolean notifying;
-    private int lastContextCount = -1;
+    private Status status = Status.READY;
+    private int contextCount = -1;
+    @Nullable
+    private Throwable failure;
     private int nesting;
+
+    private enum Status {
+        READY,
+        IN_PROGRESS,
+        SUCCEEDED,
+        FAILED
+    }
 
     private ContextListenerState(boolean started) {
         this.appender = null;
@@ -86,44 +96,69 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     void onWriteAttempt() {
         if (listener == null)
             return;
-        if (notifying)
+        if (status == Status.IN_PROGRESS)
             throw new IllegalStateException("Cannot write to the appender from within a ContextListener; " +
                     "write through the supplied method writer instead");
         started = true;
     }
 
-    boolean beforeDocument(boolean metaData) {
+    boolean beforeDocument(boolean metaData, int actualContextCount) {
         if (listener == null || metaData)
             return false;
-        return notifyIfNeeded();
+        return notifyIfNeeded(actualContextCount);
     }
 
-    boolean beforeRawDocument() {
+    boolean beforeRawDocument(int actualContextCount) {
         if (listener == null)
             return false;
-        appender.resetPositionForContextListener();
-        return notifyIfNeeded();
+        return notifyIfNeeded(actualContextCount);
     }
 
-    private boolean notifyIfNeeded() {
+    private boolean notifyIfNeeded(int actualContextCount) {
         StoreAppender appender = this.appender;
-        int contextCount = appender.cycle();
-        if (contextCount <= lastContextCount)
+        if (actualContextCount < contextCount)
+            throw new IllegalStateException("Queue context count moved backwards from " +
+                    contextCount + " to " + actualContextCount);
+        if (actualContextCount > contextCount) {
+            contextCount = actualContextCount;
+            status = Status.READY;
+            failure = null;
+        }
+        if (status == Status.SUCCEEDED)
             return false;
-        lastContextCount = contextCount;
+        if (status == Status.FAILED)
+            throw new IllegalStateException("The Queue context listener failed for context " +
+                    contextCount + "; a later roll is required before application data can be written", failure);
+        if (status == Status.IN_PROGRESS)
+            throw new IllegalStateException("Queue context listener recursion is not permitted");
 
-        notifying = true;
+        status = Status.IN_PROGRESS;
+        appender.queue().enterContextListenerCallback();
         try {
             try {
                 notifyListener();
-            } finally {
-                rollbackIfNotComplete();
+                if (listenerDocumentIsOpen())
+                    throw new IllegalStateException("Queue context listener returned with an unclosed document");
+                status = Status.SUCCEEDED;
+                return true;
+            } catch (Throwable callbackFailure) {
+                try {
+                    rollbackIfNotComplete();
+                } catch (Throwable rollbackFailure) {
+                    callbackFailure.addSuppressed(rollbackFailure);
+                }
+                status = Status.FAILED;
+                failure = callbackFailure;
+                throw Jvm.rethrow(callbackFailure);
             }
-            return true;
         } finally {
             nesting = 0;
-            notifying = false;
+            appender.queue().exitContextListenerCallback();
         }
+    }
+
+    private boolean listenerDocumentIsOpen() {
+        return nesting > 0 && context.isOpen();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -133,14 +168,14 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
 
     @Override
     public DocumentContext writingDocument(boolean metaData) {
-        return notifying
+        return status == Status.IN_PROGRESS
                 ? acquireWritingDocument(metaData)
                 : appender.writingDocument(metaData);
     }
 
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
-        if (!notifying)
+        if (status != Status.IN_PROGRESS)
             return appender.acquireWritingDocument(metaData);
 
         StoreAppender.StoreAppenderContext context = this.context;
@@ -171,7 +206,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
 
     @Override
     public void rollbackIfNotComplete() {
-        if (!notifying) {
+        if (status != Status.IN_PROGRESS) {
             appender.rollbackIfNotComplete();
             return;
         }
@@ -186,7 +221,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
 
     @Override
     public boolean writingIsComplete() {
-        return notifying
+        return status == Status.IN_PROGRESS
                 ? context.writingIsComplete()
                 : appender.writingIsComplete();
     }
@@ -221,7 +256,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     }
 
     private void requireCallback() {
-        if (!notifying)
+        if (status != Status.IN_PROGRESS)
             throw new IllegalStateException("ContextListener document is not active");
     }
 }

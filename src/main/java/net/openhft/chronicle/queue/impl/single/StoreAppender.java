@@ -83,6 +83,7 @@ class StoreAppender extends AbstractCloseable
     private Wire bufferWire = null;
     @NotNull
     private ContextListenerState contextListenerState;
+    private int lastOrdinaryContextCount = -1;
     private int count = 0;
 
     /**
@@ -581,6 +582,13 @@ class StoreAppender extends AbstractCloseable
         return this;
     }
 
+    @Override
+    public int contextCount() {
+        if (queue.doubleBuffer)
+            throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
+        return isClosed() ? -1 : lastOrdinaryContextCount;
+    }
+
     @NotNull
     @Override
     // throws UnrecoverableTimeoutException
@@ -600,6 +608,7 @@ class StoreAppender extends AbstractCloseable
     // throws UnrecoverableTimeoutException
     public DocumentContext writingDocument(final boolean metaData) {
         throwExceptionIfClosed();
+        queue.throwIfContextListenerCallbackActive();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
         ContextListenerState listenerState = startContextListenerWriteAttempt();
@@ -646,21 +655,16 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                //! writingDocumentIgnoresClockRollback and stalledWriterFollowsAnotherWriterToLaterCycle require
-                //! documents to use the same no-backward destination selector as sequential byte writes; retaining
-                //! the former local-clock selection lets the two public append paths choose different generations.
-                moveToCycleForAppend();
-
                 long safeLength = queue.overlapSize();
-                resetPosition();
-                if (listenerState.beforeDocument(metaData))
+                resolveOrdinaryAppendDestination();
+                if (listenerState.beforeDocument(metaData, lastOrdinaryContextCount))
                     resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
                 //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle fails if document acquisition bypasses
-                //! the bounded EOF-aware header path. stalledWriterAdvancesOnceFromPublishedSealedCycle additionally
-                //! requires moveToCycleForAppend above to select the published destination before EOF advances once.
-                openContext(metaData, safeLength, true);
+                //! the bounded EOF-aware destination preflight above. Passing false here opens the already-selected
+                //! cycle without performing a second roll policy after listener output has begun.
+                openContext(metaData, safeLength, false);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
@@ -1021,6 +1025,38 @@ class StoreAppender extends AbstractCloseable
      * @param safeLength the safe length of data that can be written
      * @return the position of the written header
      */
+    /**
+     * Selects the authoritative ordinary-write destination without opening an application header.
+     * QUEUE-144 invokes context listeners only after this method has fixed the actual cycle.
+     */
+    private void resolveOrdinaryAppendDestination() {
+        moveToCycleForAppend();
+        resetPosition();
+        int header = nextApplicationHeader();
+        if (header == END_OF_DATA) {
+            advanceOrdinaryAppendCycle();
+            resetPosition();
+            header = nextApplicationHeader();
+        }
+        if (header == END_OF_DATA)
+            throw new WriteAfterEOFException();
+        lastOrdinaryContextCount = cycle;
+    }
+
+    private int nextApplicationHeader() {
+        positionForNextHeader();
+        final Bytes<?> bytes = wire.bytes();
+        long position = bytes.writePosition();
+        for (; ; ) {
+            if (store.dataVersion() > 0)
+                position += BytesUtil.padOffset(position);
+            final int header = bytes.readVolatileInt(position);
+            if (!isReadyMetaData(header))
+                return header;
+            position += SPB_HEADER_SIZE + lengthOf(header);
+        }
+    }
+
     private long writeHeader(final long safeLength) {
         //! canBackfillPreviousCycleAfterEOF and exactWriteReplacesAnIncompleteRequestedEntryWithAWarning require
         //! exact recovery to inspect the next physical header before Wire opens or overwrites it. Ordinary writes
@@ -1239,10 +1275,6 @@ class StoreAppender extends AbstractCloseable
         openContext(metaData, queue.overlapSize());
     }
 
-    void resetPositionForContextListener() {
-        resetPosition();
-    }
-
     /**
      * Closes the document written by a context listener without releasing the appender's write
      * lock, which remains owned by the outer application write.
@@ -1317,14 +1349,15 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(@NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
+        queue.throwIfContextListenerCallbackActive();
         checkAppendLock();
         ContextListenerState listenerState = startContextListenerWriteAttempt();
         writeLock.lock();
         try {
             resolveOrdinaryAppendDestination();
-            if (listenerState.beforeRawDocument())
+            if (listenerState.beforeRawDocument(lastOrdinaryContextCount))
                 resetPosition();
-            this.positionOfHeader = writeHeader((int) queue.overlapSize());
+            this.positionOfHeader = writeHeader(queue.overlapSize());
 
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
@@ -1362,8 +1395,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
+        queue.throwIfContextListenerCallbackActive();
         checkAppendLock();
-        startContextListenerWriteAttempt();
         writeLock.lock();
         try {
             writeBytesInternal(index, bytes);
@@ -2379,7 +2412,7 @@ class StoreAppender extends AbstractCloseable
             // Progressive contextCount usage and double buffering are an unsupported combination.
             if (queue.doubleBuffer)
                 throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
-            return isClosed ? -1 : StoreAppender.this.cycle();
+            return isClosed ? -1 : StoreAppender.this.contextCount();
         }
 
         /**
