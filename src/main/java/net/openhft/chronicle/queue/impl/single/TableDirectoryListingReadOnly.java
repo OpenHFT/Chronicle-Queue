@@ -64,11 +64,6 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
         // no-op
     }
 
-    @Override
-    public int getMaxCycleForWrite() {
-        return getMaxCreatedCycle();
-    }
-
     /**
      * Handles file creation in the read-only queue, but this is treated as a no-op.
      *

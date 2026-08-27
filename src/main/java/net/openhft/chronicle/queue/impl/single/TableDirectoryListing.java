@@ -126,17 +126,18 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             final long currentMax = maxCycleValue.getVolatileValue();
 
             final String[] fileNamesList = queuePath.toFile().list();
+            if (fileNamesList == null)
+                return;
+
             String minFilename = INITIAL_MIN_FILENAME;
             String maxFilename = INITIAL_MAX_FILENAME;
-            if (fileNamesList != null) {
-                for (String fileName : fileNamesList) {
-                    if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
-                        if (minFilename.compareTo(fileName) > 0)
-                            minFilename = fileName;
+            for (String fileName : fileNamesList) {
+                if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
+                    if (minFilename.compareTo(fileName) > 0)
+                        minFilename = fileName;
 
-                        if (maxFilename.compareTo(fileName) < 0)
-                            maxFilename = fileName;
-                    }
+                    if (maxFilename.compareTo(fileName) < 0)
+                        maxFilename = fileName;
                 }
             }
 
@@ -213,7 +214,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
     @Override
     public int getMaxCycleForWrite() {
-        return (int) maxCycleWriteFloorValue.getVolatileValue();
+        return (int) Math.max(maxCycleWriteFloorValue.getVolatileValue(),
+                maxCycleValue.getVolatileValue());
     }
 
     /**
