@@ -654,7 +654,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     "hello: world\n" +
                     "number: 1\n" +
                     "...\n";
-            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertQueueDumpEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
 
             @NotNull ExcerptTailer tailer = queue.createTailer();
             Map<String, Object> map2 = tailer.readMap();
@@ -743,7 +743,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     "  quantity: 10E6\n" +
                     "}\n" +
                     "...\n";
-            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertQueueDumpEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
     }
 
@@ -845,7 +845,7 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                         s);
                 dc.rollbackOnClose();
             }
-            assertEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertQueueDumpEquals(expectedEager, queue.dump().replaceAll("(?m)^#.+$\\n", ""));
         }
         finishedNormally = true;
     }

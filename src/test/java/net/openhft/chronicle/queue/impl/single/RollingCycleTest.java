@@ -282,7 +282,7 @@ public class RollingCycleTest extends QueueTestCommon {
             // was it truncated
             if (dump.contains("\n4 bytes remaining"))
                 expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
-            assertEquals(expected, dump);
+            assertQueueDumpEquals(expected, dump);
 
             try {
                 IOTools.deleteDirWithFiles(basePath, 2);

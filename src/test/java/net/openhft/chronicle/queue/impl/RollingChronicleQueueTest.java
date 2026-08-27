@@ -200,7 +200,7 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
 
             Thread.yield();
             // on a roll, the file might be truncated making the size remaining just a few bytes
-            assertEquals(expected
+            assertQueueDumpEquals(expected
                             .replaceAll(" \\d+ (bytes remaining)", " X $1"),
                     q.dump()
                             .replaceAll(" \\d+ (bytes remaining)", " X $1"));

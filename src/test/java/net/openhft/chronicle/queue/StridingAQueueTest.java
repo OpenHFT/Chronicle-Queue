@@ -43,7 +43,7 @@ public class StridingAQueueTest extends QueueTestCommon {
                 .rollCycle(TEST4_SECONDLY)
                 .build()) {
 
-            assertEquals(getExpected(), queue.dump().replaceAll("(?m)^#.+$\\n", ""));
+            assertQueueDumpEquals(getExpected(), queue.dump().replaceAll("(?m)^#.+$\\n", ""));
             StringWriter sw = new StringWriter();
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd().striding(true);
             MethodReader reader = tailer.methodReader(Mocker.logging(SAQMessage.class, "", sw));

@@ -82,7 +82,7 @@ public class WriteBytesTest extends QueueTestCommon {
                         b.writeLong(finalI * 0x0101010101010101L));
             }
 
-            assertEquals("" +
+            assertQueueDumpEquals("" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
