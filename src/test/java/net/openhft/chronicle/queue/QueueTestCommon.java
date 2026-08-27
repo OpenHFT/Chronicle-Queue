@@ -90,7 +90,9 @@ public class QueueTestCommon {
 
     @NotNull
     protected static String withoutCycleWriteFloor(@NotNull String dump) {
-        return dump.replaceAll("--- !!data #binary\\Rlisting\\.highestCycleWriteFloor: -?\\d+\\R", "");
+        return dump.replaceAll(
+                "(?m)(?:^# position:[^\\r\\n]*\\R)?^--- !!data #binary\\Rlisting\\.highestCycleWriteFloor: -?\\d+\\R",
+                "");
     }
 
     @NotNull
@@ -99,9 +101,9 @@ public class QueueTestCommon {
         final int queueStoreStart = dump.indexOf(queueStoreHeader);
         final int tableStoreEnd = queueStoreStart < 0 ? dump.length() : queueStoreStart;
         final String tableStore = withoutCycleWriteFloor(dump.substring(0, tableStoreEnd))
-                .replaceAll("(?m)^#.*\\R", "");
-        return (tableStore + dump.substring(tableStoreEnd))
+                .replaceAll("(?m)^# position:[^\\r\\n]*\\R", "")
                 .replaceAll("(?m)^# \\d+ bytes remaining$", "# bytes remaining");
+        return tableStore + dump.substring(tableStoreEnd);
     }
 
     @NotNull
