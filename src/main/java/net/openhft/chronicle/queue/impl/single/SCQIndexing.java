@@ -968,7 +968,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
                 long address = writePosition.getVolatileValue(0);
                 if (address == 0)
-                    return -1;
+                    break;
                 long sequence = sequence1.getSequence(address);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;

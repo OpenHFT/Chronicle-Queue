@@ -20,6 +20,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
@@ -398,6 +400,35 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void secondConsecutiveEofIsPropagated() throws IOException {
+        final AtomicLong clock = new AtomicLong();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("before seals");
+            final int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+            sealCycle(queue, sealedCycle + 1);
+
+            // Keep the first sealed roll as the selected active cycle. The ordinary append may
+            // advance once, but the unexpected second EOF must escape instead of looping.
+            queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+            queue.tableStoreAcquire("listing.highestCycleWriteFloor", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+
+            assertThrows(WriteAfterEOFException.class,
+                    () -> appender.writeText("must fail at second EOF"));
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(1, queue.entryCount());
+        }
+    }
+
+    @Test
     public void exactRecoveryRejectsLegacyUnpaddedStore() throws Exception {
         ignoreException("reading control code as text");
         ignoreException("Unable to copy TimedStoreRecovery safely");
@@ -549,6 +580,42 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void eosOnlyRestartPreservesReadySequenceZeroBeforeOrdinaryAppend() throws IOException {
+        QueueSystemProperties.CHECK_INDEX = false;
+        final File directory = queueDirectory.newFolder();
+        final long firstIndex;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("first"));
+            firstIndex = appender.lastIndexAppended();
+            forceWritePosition(appender.store, 0);
+        }
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0)
+                .rollCycle(TEST4_DAILY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+
+            // CQE may receive EOS without another exact-index event. Normalisation deliberately
+            // leaves the active cycle open; appender restart must still discover its ready record.
+            appender.normaliseEOFs();
+            appender.writeBytes(Bytes.from("second"));
+
+            assertEquals(firstIndex + 1, appender.lastIndexAppended());
+            assertQueueContents(queue, firstIndex, "first", "second");
+        }
+    }
+
+    @Test
     public void historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion() throws IOException {
         final File directory = queueDirectory.newFolder();
         final SetTimeProvider time = new SetTimeProvider();
@@ -654,6 +721,48 @@ public class StoreAppenderTest extends QueueTestCommon {
             appender.normaliseEOFs();
             assertTrue("completion uses the published high-water to seal the recovered cycle",
                     hasEOF(queue, recoveredCycle));
+        }
+    }
+
+    @Test(timeout = 20_000)
+    public void sparseRollsAreTraversedByExistingCycle() throws IOException {
+        final int farCycle = 1_000_000;
+        final File directory = queueDirectory.newFolder();
+        final SetTimeProvider time = new SetTimeProvider();
+        final long recoveredIndex;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("cycle-zero"));
+            recoveredIndex = appender.lastIndexAppended() + 1;
+
+            time.currentTimeMillis((long) farCycle * TEST_HOURLY.lengthInMillis());
+            appender.writeBytes(Bytes.from("far-cycle"));
+            assertEquals(farCycle, appender.cycle());
+        }
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time)
+                .rollCycle(TEST_HOURLY)
+                .testBlockSize()
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=0, index=0x"
+                    + Long.toHexString(recoveredIndex));
+            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("backfilled"));
+            assertFalse(hasEOF(queue, 0));
+
+            appender.normaliseEOFs();
+
+            assertTrue(hasEOF(queue, 0));
+            final File[] rollFiles = directory.listFiles(
+                    ignored -> ignored.getName().endsWith(SingleChronicleQueue.SUFFIX));
+            assertEquals("normalisation must not create files for sparse gaps", 2,
+                    rollFiles == null ? 0 : rollFiles.length);
         }
     }
 
@@ -875,6 +984,16 @@ public class StoreAppenderTest extends QueueTestCommon {
             wire.usePadding(store.dataVersion() > 0);
             assertTrue("test precondition: current roll must be sealed",
                     store.writeEOF(wire, appender.queue().timeoutMS));
+        }
+    }
+
+    private static void sealCycle(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), true, null);
+             MappedBytes bytes = store.bytes()) {
+            final Wire wire = queue.wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue("test precondition: next roll must be sealed",
+                    store.writeEOF(wire, queue.timeoutMS));
         }
     }
 
