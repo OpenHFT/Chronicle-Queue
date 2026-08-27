@@ -18,6 +18,7 @@ import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -574,6 +575,35 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void secondConsecutiveEofIsPropagated() throws IOException {
+        final AtomicLong clock = new AtomicLong();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("before seals");
+            final int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+            sealCycle(queue, sealedCycle + 1);
+
+            // Keep the first sealed roll as the selected active cycle. The ordinary append may
+            // advance once, but the unexpected second EOF must escape instead of looping.
+            queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+            queue.tableStoreAcquire("listing.highestCycleWriteFloor", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+
+            assertThrows(WriteAfterEOFException.class,
+                    () -> appender.writeText("must fail at second EOF"));
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(1, queue.entryCount());
+        }
+    }
+
     private static void sealCurrentCycle(StoreAppender appender) {
         final SingleChronicleQueueStore store = appender.store;
         if (store == null)
@@ -584,6 +614,16 @@ public class StoreAppenderTest extends QueueTestCommon {
             wire.usePadding(store.dataVersion() > 0);
             assertTrue("test precondition: current roll must be sealed",
                     store.writeEOF(wire, appender.queue().timeoutMS));
+        }
+    }
+
+    private static void sealCycle(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), true, null);
+             MappedBytes bytes = store.bytes()) {
+            final Wire wire = queue.wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue("test precondition: next roll must be sealed",
+                    store.writeEOF(wire, queue.timeoutMS));
         }
     }
 
