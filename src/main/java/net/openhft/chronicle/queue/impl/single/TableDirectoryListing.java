@@ -25,6 +25,7 @@ import java.util.function.ToIntFunction;
 class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
 
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
+    private static final String HIGHEST_CYCLE_WRITE_FLOOR = "listing.highestCycleWriteFloor";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String MOD_COUNT = "listing.modCount";
     static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
@@ -36,6 +37,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private final ToIntFunction<String> fileNameToCycleFunction;
     private final TimeProvider time;
     private volatile LongValue maxCycleValue;
+    private volatile LongValue maxCycleWriteFloorValue;
     private volatile LongValue minCycleValue;
     private volatile LongValue modCount;
     private long lastRefreshTimeMS = 0;
@@ -81,6 +83,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
+            maxCycleWriteFloorValue = ts.acquireValueFor(
+                    HIGHEST_CYCLE_WRITE_FLOOR, UNSET_MAX_CYCLE);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
@@ -145,12 +149,14 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                 max = fileNameToCycleFunction.applyAsInt(maxFilename);
 
             if (currentMin0 == min && currentMax0 == max) {
+                updateWriteFloor(max);
                 modCount.addAtomicValue(1);
                 return;
             }
 
             minCycleValue.setOrderedValue(min);
             if (maxCycleValue.compareAndSwapValue(currentMax, max)) {
+                updateWriteFloor(max);
                 modCount.addAtomicValue(1);
                 break;
             }
@@ -176,9 +182,13 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     @Override
     public void onRoll(int cycle) {
-        minCycleValue.setMinValue(cycle);
-        maxCycleValue.setMaxValue(cycle);
-        modCount.addAtomicValue(1);
+        tableStore.doWithExclusiveLock(ignored -> {
+            minCycleValue.setMinValue(cycle);
+            maxCycleValue.setMaxValue(cycle);
+            maxCycleWriteFloorValue.setMaxValue(cycle);
+            modCount.addAtomicValue(1);
+            return null;
+        });
     }
 
     /**
@@ -199,6 +209,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public int getMaxCreatedCycle() {
         return getMaxCycleValue();
+    }
+
+    @Override
+    public int getMaxCycleForWrite() {
+        return (int) maxCycleWriteFloorValue.getVolatileValue();
     }
 
     /**
@@ -235,7 +250,21 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Closes the directory listing by releasing resources associated with the LongValues.
      */
     protected void performClose() {
-        Closeable.closeQuietly(minCycleValue, maxCycleValue, modCount);
+        Closeable.closeQuietly(minCycleValue, maxCycleValue, maxCycleWriteFloorValue, modCount);
+    }
+
+    private void updateWriteFloor(final int filesystemMaxCycle) {
+        tableStore.doWithExclusiveLock(ignored -> {
+            if (filesystemMaxCycle == UNSET_MAX_CYCLE) {
+                // Reset only while the current listing still proves that every roll is absent.
+                // A concurrent onRoll() uses the same lock and restores a monotonic floor.
+                if (maxCycleValue.getVolatileValue() == UNSET_MAX_CYCLE)
+                    maxCycleWriteFloorValue.setOrderedValue(UNSET_MAX_CYCLE);
+            } else {
+                maxCycleWriteFloorValue.setMaxValue(filesystemMaxCycle);
+            }
+            return null;
+        });
     }
 
     /**
