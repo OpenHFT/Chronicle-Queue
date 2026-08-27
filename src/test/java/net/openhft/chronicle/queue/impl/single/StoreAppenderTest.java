@@ -100,6 +100,58 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void deletingHighestRollDoesNotMoveActiveQueueBackwards() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong time = new AtomicLong();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("cycle-0"));
+            time.set(TEST_DAILY.lengthInMillis());
+            appender.writeBytes(Bytes.from("cycle-1"));
+            final File highestRoll = appender.currentFile();
+            assertEquals(1, queue.lastPublishedCycle());
+            assertTrue("test precondition: highest roll must be removed", highestRoll.delete());
+
+            time.set(0);
+            appender.writeBytes(Bytes.from("must-not-move-back"));
+            assertEquals("the published high-water must survive partial deletion", 1, appender.cycle());
+        }
+    }
+
+    @Test
+    public void reopeningAfterAllRollsAreDeletedUsesWallClockCycle() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong time = new AtomicLong(3L * TEST_DAILY.lengthInMillis());
+        final File onlyRoll;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("cycle-3"));
+            onlyRoll = appender.currentFile();
+            assertEquals(3, appender.cycle());
+        }
+
+        assertTrue("test precondition: every roll file must be removed", onlyRoll.delete());
+        time.set(0);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("reset-cycle-0"));
+            assertEquals("an empty reopened queue must reset the roll high-water", 0, appender.cycle());
+        }
+    }
+
+    @Test
     public void writingDocumentIgnoresClockRollback() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
