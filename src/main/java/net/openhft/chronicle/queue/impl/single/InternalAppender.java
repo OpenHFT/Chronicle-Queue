@@ -18,8 +18,8 @@ public interface InternalAppender extends ExcerptAppender {
     /**
      * Append an excerpt at the specified index, if the index is a valid next index for the queue.
      * This internal replication path can replace an end-of-data marker when restoring an exact
-     * missing index. Replacing the marker is logged as a warning and the cycle is resealed only after
-     * the data record and any addressable sparse-index metadata are committed.
+     * missing index. Replacing the marker is logged as a warning; the cycle remains open for the
+     * rest of the backfill and is resealed by {@link #normaliseEOFs()} at completion.
      * <p>
      * For queues that support this path, {@code StoreAppender} establishes padding when it
      * constructs the Wire. Exact-index recovery has no unpadded mode.
@@ -38,15 +38,17 @@ public interface InternalAppender extends ExcerptAppender {
      *     <dt>Greater than the next valid index for the queue</dt>
      *     <dd>An {@link IllegalIndexException} is thrown</dd>
      *
-     *     <dt>Less than or equal to the last index in the queue</dt>
+     *     <dt>Less than or equal to the last index published before this call</dt>
      *     <dd>An {@link IllegalStateException} is thrown because published-index replay is not
-     *     supported by this internal recovery path.</dd>
+     *     supported. A ready first-writer record left beyond the write-position publication
+     *     boundary is adopted successfully without comparing or overwriting its payload.</dd>
      * </dl>
      *
      * @param index the exact queue index to append at
      * @param bytes the contents of the excerpt to write
      * @throws IllegalIndexException if {@code index} is greater than the next valid queue index
      * @throws IllegalStateException if {@code index} is already published
+     * @throws IllegalArgumentException if the sequence is outside the roll cycle's declared capacity
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
 

@@ -64,21 +64,24 @@ covers both the maintenance eligibility check and the archive/delete action,
 and which remains held until recovery has been retried and EOF normalisation
 has completed.
 
-CQE owns that protocol for the supported replication use case: it retries a
-failed exact-index back-fill after restart, calls `normaliseEOFs()` before
-publishing back-fill completion, and keeps ordinary source writes excluded
-until then. Another internal caller of exact-index `writeBytes` assumes those
-same responsibilities. Queue construction and later ordinary appends can
-repair some older EOFs, but are a fallback only; they are not a replacement for
-caller-owned retry, normalisation and maintenance exclusion.
+CQE owns retry, EOF normalisation and completion ordering for the supported
+replication use case: it retries a failed exact-index back-fill after restart,
+calls `normaliseEOFs()` before publishing back-fill completion, and keeps
+ordinary source writes excluded until then. Queue-wide archive/delete exclusion
+still requires coordination with maintenance and is not supplied by EOF or CQE
+completion alone. Another internal caller of exact-index `writeBytes` assumes
+the same retry and normalisation responsibilities.
 
 Queue inspects the requested exact index, skipping user and sparse-index
 metadata because metadata does not consume an index. If the slot contains EOF,
 Queue replaces that word with one compare-and-swap, commits the data and any
-addressable sparse-index entry, and then restores EOF. An existing index remains
-authoritative and is not accepted by this recovery path. The requested index
-must be exactly the next unpublished index; an existing index or a gap is
-rejected.
+addressable sparse-index entry, and leaves the roll open for the remaining
+back-fill. CQE restores EOF once, during completion normalisation, so a normal
+multi-entry back-fill emits at most the one EOF-reopen warning. An existing
+published index remains authoritative and is not accepted by this recovery
+path. A ready first-writer record left beyond write-position publication is
+adopted without comparing or overwriting its payload. Otherwise the requested
+index must be exactly next; an existing index or a gap is rejected.
 
 Current queue files are padded, keeping every header—including end-of-data—
 four-byte aligned for atomic replacement. Legacy `dataVersion == 0` stores are

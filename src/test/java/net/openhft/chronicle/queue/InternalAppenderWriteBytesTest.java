@@ -151,12 +151,12 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
             Assert.assertTrue("every backfilled cycle must lower the shared EOF normalisation bound",
                     q.tableStoreGet("normalisedEOFsTo") <= recoveredCycle);
-            Assert.assertTrue("a successful historical write must return with EOF restored",
+            Assert.assertFalse("historical backfill remains open until completion normalisation",
                     hasEOF(q, recoveredCycle));
 
             appender.normaliseEOFs();
 
-            Assert.assertTrue("normalisation must preserve the historical seal",
+            Assert.assertTrue("completion normalisation must restore the historical seal",
                     hasEOF(q, recoveredCycle));
             assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
         }
@@ -324,15 +324,16 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                 expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
                         + ", index=0x" + Long.toHexString(nextIndexInFirstCycle));
                 ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
-                Assert.assertTrue("indexed recovery must immediately restore EOF", hasEOF(q, firstCycle));
+                Assert.assertFalse("indexed recovery must leave the roll open for the remaining backfill",
+                        hasEOF(q, firstCycle));
 
                 final long secondRecoveryIndex = nextIndexInFirstCycle + 1;
-                expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
-                        + ", index=0x" + Long.toHexString(secondRecoveryIndex));
                 ((InternalAppender) appender).writeBytes(secondRecoveryIndex, test1b);
-                Assert.assertTrue("each indexed recovery must leave the roll sealed", hasEOF(q, firstCycle));
+                Assert.assertFalse("later entries must reuse the open recovery slot without another EOF warning",
+                        hasEOF(q, firstCycle));
+                appender.normaliseEOFs();
             }
-            Assert.assertTrue(hasEOF(q, firstCycle));
+            Assert.assertTrue("completion must reseal once after all backfill entries", hasEOF(q, firstCycle));
             Assert.assertFalse("a live tailer that crossed the roll must not rewind implicitly",
                     tailer.readBytes(result.clear()));
 
@@ -373,12 +374,14 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
                     + ", index=0x" + Long.toHexString(recoveredIndex));
             ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
 
-            final String recoveredCycleDump = cycleDump(q, recoveredCycle);
-            Assert.assertTrue("backfill must add the second secondary index before resealing",
-                    recoveredCycleDump.contains("index2index: [\n  # length: 32, used: 2\n"));
-            Assert.assertTrue("backfill must leave the recovered cycle sealed",
-                    recoveredCycleDump.contains(" EOF")
-                            && recoveredCycleDump.contains("--- !!not-ready-meta-data"));
+            final String openCycleDump = cycleDump(q, recoveredCycle);
+            Assert.assertTrue("backfill must add the second secondary index while the roll is open",
+                    openCycleDump.contains("index2index: [\n  # length: 32, used: 2\n"));
+            Assert.assertFalse("the recovered cycle stays open until completion",
+                    openCycleDump.contains(" EOF"));
+
+            appender.normaliseEOFs();
+            Assert.assertTrue("completion must reseal the recovered cycle", hasEOF(q, recoveredCycle));
         }
     }
 
@@ -447,7 +450,10 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             if (failure != null)
                 throw new AssertionError("exact recovery should succeed in its requested cycle", failure);
             assertBytesAtIndex(q, recoveredIndex, recovered);
-            Assert.assertTrue("the recovered cycle must be resealed", hasEOF(q, recoveredCycle));
+            Assert.assertFalse("the recovered cycle must remain open until completion",
+                    hasEOF(q, recoveredCycle));
+            appender.normaliseEOFs();
+            Assert.assertTrue("completion must reseal the recovered cycle", hasEOF(q, recoveredCycle));
         }
     }
 
