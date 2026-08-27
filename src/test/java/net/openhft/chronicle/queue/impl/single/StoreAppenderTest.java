@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
 import org.junit.Rule;
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 
 public class StoreAppenderTest extends QueueTestCommon {
 
@@ -60,6 +62,40 @@ public class StoreAppenderTest extends QueueTestCommon {
             blockedWriter.makePostInterruptAttemptToWrite();
 
             expectTestText(queue, 16);
+        }
+    }
+
+    @Test
+    public void stalledAppenderRollsPastDeletedPublishedCycle() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong stalledClock = new AtomicLong();
+        final AtomicLong advancingClock = new AtomicLong();
+
+        try (SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(stalledClock::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.binary(directory)
+                     .timeProvider(advancingClock::get)
+                     .rollCycle(TEST_DAILY)
+                     .build();
+             ExcerptAppender stalledWriter = stalledQueue.createAppender()) {
+            stalledWriter.writeBytes(Bytes.from("cycle-0"));
+
+            advancingClock.set(TEST_DAILY.lengthInMillis());
+            final File publishedFile;
+            try (ExcerptAppender advancingWriter = advancingQueue.createAppender()) {
+                advancingWriter.writeBytes(Bytes.from("cycle-1"));
+                publishedFile = advancingWriter.currentFile();
+            }
+
+            assertEquals(1, stalledQueue.lastPublishedCycle());
+            assertTrue("test precondition: published cycle file must be removed",
+                    publishedFile.delete());
+
+            stalledClock.set(2 * TEST_DAILY.lengthInMillis());
+            stalledWriter.writeBytes(Bytes.from("cycle-2"));
+            assertEquals(2, stalledWriter.cycle());
         }
     }
 
@@ -181,42 +217,54 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
-    @Test
-    public void stalledWriterRollsWithoutRefreshingDirectoryListing() throws IOException {
-        final AtomicLong advancingClock = new AtomicLong();
+    @Test(timeout = 15_000)
+    public void stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing()
+            throws IOException, InterruptedException {
         final AtomicLong stalledClock = new AtomicLong();
         final File directory = queueDirectory.newFolder();
 
-        try (SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.binary(directory)
-                .timeProvider(advancingClock::get)
+        try (SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(stalledClock::get)
                 .rollCycle(TEST4_DAILY)
                 .forceDirectoryListingRefreshIntervalMs(1)
                 .build();
-             SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.binary(directory)
-                     .timeProvider(stalledClock::get)
-                     .rollCycle(TEST4_DAILY)
-                     .forceDirectoryListingRefreshIntervalMs(1)
-                     .build();
-             ExcerptAppender advancingWriter = advancingQueue.createAppender();
              ExcerptAppender stalledWriter = stalledQueue.createAppender()) {
             stalledWriter.writeText("initial");
 
-            advancingClock.set(3L * TEST4_DAILY.lengthInMillis());
-            advancingWriter.writeText("published-cycle-three");
-            assertEquals(3, stalledQueue.lastPublishedCycle());
+            final Process publisher = JavaProcessBuilder.create(PublishLaterCycle.class)
+                    .withProgramArguments(directory.getAbsolutePath(), "3")
+                    .start();
+            assertTrue("publisher process did not exit",
+                    publisher.waitFor(10, TimeUnit.SECONDS));
+            assertEquals("publisher process failed", 0, publisher.exitValue());
+            assertEquals("table-store publication must be visible across JVMs",
+                    3, stalledQueue.lastPublishedCycle());
 
-            // If the stalled appender calls lastCycle() while rolling, the elapsed refresh interval
-            // makes this external file visible and changes the published directory state to 5.
+            // Make a filesystem refresh observable. The stalled writer must follow the cycle
+            // published through directory-listing.cq4t, without discovering this planted file.
             assertTrue(new File(directory, "19700106T4" + SingleChronicleQueue.SUFFIX).createNewFile());
             stalledClock.set(2);
-
-            stalledWriter.writeText("follow-published-cycle");
+            stalledWriter.writeText("follow-cross-process-publication");
 
             assertEquals(3, stalledWriter.cycle());
-            assertEquals("rolling an initialised appender must not refresh the directory listing",
+            assertEquals("the append path must not refresh the filesystem listing",
                     3, stalledQueue.lastPublishedCycle());
-            assertEquals("an explicit refresh must still discover the externally planted file",
+            assertEquals("an explicit refresh must still discover the planted file",
                     5, stalledQueue.lastCycle());
+        }
+    }
+
+    public static final class PublishLaterCycle {
+        public static void main(String[] args) {
+            final File directory = new File(args[0]);
+            final long clock = Long.parseLong(args[1]) * TEST4_DAILY.lengthInMillis();
+            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                    .timeProvider(() -> clock)
+                    .rollCycle(TEST4_DAILY)
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("published-by-child");
+            }
         }
     }
 
