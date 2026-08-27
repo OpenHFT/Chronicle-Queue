@@ -101,7 +101,7 @@ public class RollCycleTest extends QueueTestCommon {
                     timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
                     appender.writeText(Integer.toString(i));
                 }
-                assertQueueDumpEquals("" +
+                assertEquals("" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +

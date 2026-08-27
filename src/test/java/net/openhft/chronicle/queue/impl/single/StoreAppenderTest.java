@@ -133,7 +133,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void reopeningAfterAllRollsAreDeletedUsesWallClockCycle() throws IOException {
+    public void reopeningAfterAllRollsAreDeletedRetainsHighWater() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong time = new AtomicLong(3L * TEST_DAILY.lengthInMillis());
         final File onlyRoll;
@@ -156,8 +156,8 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .rollCycle(TEST_DAILY)
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-            appender.writeBytes(Bytes.from("reset-cycle-0"));
-            assertEquals("an empty reopened queue must reset the roll high-water", 0, appender.cycle());
+            appender.writeBytes(Bytes.from("retain-cycle-3"));
+            assertEquals("an empty reopened queue must retain the roll high-water", 3, appender.cycle());
         }
     }
 

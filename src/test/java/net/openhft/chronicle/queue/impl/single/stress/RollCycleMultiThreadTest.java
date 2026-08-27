@@ -100,7 +100,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 
                 Assert.assertEquals(1, (int) es.submit(observer).get());
 
-                assertQueueDumpEquals("" +
+                assertEquals("" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -177,7 +177,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 3 data");
                 }
 
-                assertQueueDumpEquals("" +
+                assertEquals("" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
                                 "  wireType: !WireType BINARY_LIGHT,\n" +

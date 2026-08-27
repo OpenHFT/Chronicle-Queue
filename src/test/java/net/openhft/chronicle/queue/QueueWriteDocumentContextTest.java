@@ -49,7 +49,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
              final ExcerptAppender appender = cq.createAppender()) {
             Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
             writeThreeKeys(appender);
-            assertQueueDumpEquals("" +
+            assertEquals("" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -129,7 +129,7 @@ public class QueueWriteDocumentContextTest extends QueueTestCommon {
              final ExcerptAppender appender = cq.createAppender()) {
             Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(cq.file().getAbsolutePath()));
             writeThreeChainedKeys(appender);
-            assertQueueDumpEquals("" +
+            assertEquals("" +
                             "--- !!meta-data #binary\n" +
                             "header: !STStore {\n" +
                             "  wireType: !WireType BINARY_LIGHT,\n" +
