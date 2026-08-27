@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
@@ -109,7 +110,7 @@ class StoreAppender extends AbstractCloseable
                 // Process cycles and handle EOF markers
                 if (firstCycle != Integer.MAX_VALUE) {
                     final NavigableSet<Long> existingCycles =
-                            queue.listCyclesBetween(firstCycle, lastExistingCycle);
+                            existingCyclesBetween(firstCycle, lastExistingCycle);
                     // Backing down until EOF-ed cycle is encountered
                     for (long existingCycle : existingCycles.descendingSet()) {
                         final int eofCycle = Math.toIntExact(existingCycle);
@@ -659,7 +660,7 @@ class StoreAppender extends AbstractCloseable
             return;
 
         final int last = queue.lastCycle();
-        final NavigableSet<Long> existingCycles = queue.listCyclesBetween(first, last);
+        final NavigableSet<Long> existingCycles = existingCyclesBetween(first, last);
 
         final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
         int eofCycle = Math.max(first, (int) normalisedEOFsTo.getVolatileValue());
@@ -687,6 +688,17 @@ class StoreAppender extends AbstractCloseable
         // The directory enumeration proves that any skipped cycle is absent. Advance across the
         // whole range so later completions do not repeat sparse gaps.
         normalisedEOFsTo.setMaxValue(normaliseTo);
+    }
+
+    private NavigableSet<Long> existingCyclesBetween(final int first, final int last) {
+        if (first != last)
+            return queue.listCyclesBetween(first, last);
+
+        // Avoid reparsing the only filename. A queue opened with a compatible persisted roll
+        // cycle can legitimately have a builder whose originally requested format differs.
+        final NavigableSet<Long> onlyCycle = new TreeSet<>();
+        onlyCycle.add((long) first);
+        return onlyCycle;
     }
 
     private void recordBackfillNormalisation(final int recoveredCycle) {
