@@ -353,11 +353,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         directoryListing.refresh(true);
     }
 
-    @NotNull
-    DirectoryListing directoryListing() {
-        return directoryListing;
-    }
-
     /**
      * Returns the maximum last index that has been sent to any remote host during replication.
      * If replication is not enabled, returns -1.
@@ -1437,20 +1432,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the roll file backing the given cycle, or {@code null} if that cycle is not present.
-     * The path is resolved from the cycle number alone and only the file's existence is checked; this
-     * method does not acquire or memory-map the store. The file may disappear or be opened after this
-     * method returns, so callers remain responsible for coordinating archival or deletion.
-     *
-     * @param cycle the roll cycle
-     * @return the cycle's {@code .cq4} file, or {@code null} if absent
-     */
-    public File fileForCycle(int cycle) {
-        final File file = dateCache.resourceFor(cycle).path;
-        return file.exists() ? file : null;
-    }
-
-    /**
      * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
      * same value a freshly created, never-read tailer has - so retention by named-tailer position
      * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free
@@ -1462,11 +1443,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * parked consumer: parking declares its unread backlog, up to the oldest surviving roll at next
      * read, discardable.
      * <p>
-     * Replicated named tailers (those whose id starts with {@link #REPLICATED_NAMED_TAILER_PREFIX},
-     * ignoring case) are refused without change: their position is coordinated with sinks through
-     * version metadata, and a backward reset here would not bump that version, so parking one could
-     * desynchronise replication. The case-insensitive check is deliberately as broad as the
-     * historical table-store lookup that follows it. The result distinguishes this safety refusal
+     * Replicated named tailers (those whose id starts with the canonical lowercase
+     * {@link #REPLICATED_NAMED_TAILER_PREFIX}) are refused without change: their position is
+     * coordinated with sinks through version metadata, and a backward reset here would not bump
+     * that version, so parking one could desynchronise replication. A case variant of the prefix is
+     * invalid because table-store lookup is case-insensitive and could otherwise alias the
+     * canonical replicated tailer while bypassing its version lock. The result distinguishes the
+     * canonical safety refusal
      * from an unknown name so operators can diagnose the outcome without duplicating Queue's
      * metadata rules. Refusal is evaluated before metadata existence, so an unregistered id with a
      * replicated-looking prefix also returns {@link NamedTailerParkResult#REFUSED_REPLICATED}. A
@@ -1476,12 +1459,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @param name the named-tailer id to park
      * @return the outcome of the parking attempt
      * @throws NullPointerException     if {@code name} is {@code null}
-     * @throws IllegalArgumentException if {@code name} has a reserved metadata suffix
+     * @throws IllegalArgumentException if {@code name} has a reserved metadata suffix or a
+     *                                  non-canonical case variant of the replicated prefix
      */
     public NamedTailerParkResult parkNamedTailer(String name) {
         Objects.requireNonNull(name, "name");
         validateNamedTailerId(name);
-        if (startsWithIgnoreCase(name, REPLICATED_NAMED_TAILER_PREFIX))
+        if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
             return NamedTailerParkResult.REFUSED_REPLICATED;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
@@ -1516,6 +1500,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static void validateNamedTailerId(String id) {
         if (isReservedNamedTailerId(id))
             throw reservedNamedTailerIdException(id);
+        if (startsWithIgnoreCase(id, REPLICATED_NAMED_TAILER_PREFIX)
+                && !id.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+            throw new IllegalArgumentException("Invalid named tailer id '" + id + "': replicated tailer ids "
+                    + "must use the canonical lowercase prefix '" + REPLICATED_NAMED_TAILER_PREFIX + "'");
     }
 
     private static IllegalArgumentException reservedNamedTailerIdException(String id) {
@@ -1591,21 +1579,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Gets the value for the given key from the table store. If the key does not exist,
-     * returns Long.MIN_VALUE.
-     * <p>
-     * This is a pure read: a missing key is never created or cached, because a matching entry (for
-     * example a named tailer's index) may legitimately appear later - a named tailer can be
-     * registered by another process at any time without notice. A miss is therefore always
-     * expensive (a scan of the table store on every call, not just the first); callers polling a
-     * key that may not exist yet should expect that cost. Use
-     * {@link #tableStoreAcquire(CharSequence, long)} for get-or-create semantics.
+     * Gets the value for the given key from the table store, creating the key with
+     * {@link Long#MIN_VALUE} when it is absent. This preserves the historical get-or-create
+     * behaviour used by external callers.
      *
      * @param key the key for the entry in the table store
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
     public long tableStoreGet(CharSequence key) {
-        LongValue longValue = tableStoreAcquireOrGet(key, Long.MIN_VALUE, false);
+        LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
         if (longValue == null) return Long.MIN_VALUE;
         return longValue.getVolatileValue();
     }

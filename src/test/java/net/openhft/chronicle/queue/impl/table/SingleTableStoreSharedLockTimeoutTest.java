@@ -10,6 +10,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -56,6 +61,30 @@ public class SingleTableStoreSharedLockTimeoutTest {
                     // A zero timeout still performs one non-blocking attempt.
                 }
             }
+        }
+    }
+
+    @Test
+    public void positiveTimeoutAcquiresAContendedLockAfterRelease() throws Exception {
+        File file = temporaryFolder.newFile("waiting-metadata.cq4t");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch started = new CountDownLatch(1);
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
+            randomAccessFile.setLength(1);
+            try (FileLock lock = randomAccessFile.getChannel()
+                    .lock(Long.MAX_VALUE - 1, 1, false)) {
+                Future<String> result = executor.submit(() -> {
+                    started.countDown();
+                    return SingleTableStore.doWithSharedLock(file, 2_000,
+                            ignored -> "locked", () -> null);
+                });
+                assertTrue(started.await(1, TimeUnit.SECONDS));
+                Thread.sleep(25);
+                lock.release();
+                assertEquals("locked", result.get(1, TimeUnit.SECONDS));
+            }
+        } finally {
+            executor.shutdownNow();
         }
     }
 }

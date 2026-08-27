@@ -29,6 +29,8 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -189,7 +191,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
-        final long timeoutNanos = java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
         final long startNanos = System.nanoTime();
         final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
@@ -208,10 +210,14 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                         }
                     }
                 }
-                if (System.nanoTime() - startNanos >= timeoutNanos)
+                final long remainingNanos = timeoutNanos - (System.nanoTime() - startNanos);
+                if (remainingNanos <= 0)
                     break;
-                int delay = Math.min(250, count * count);
-                Jvm.pause(delay);
+                final long backoffMillis = Math.min(250L, (long) count * count);
+                final long delayNanos = Math.min(
+                        TimeUnit.MILLISECONDS.toNanos(backoffMillis),
+                        remainingNanos);
+                LockSupport.parkNanos(delayNanos);
             }
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
