@@ -24,9 +24,8 @@ public interface InternalAppender extends ExcerptAppender {
      * For queues that support this path, {@code StoreAppender} establishes padding when it
      * constructs the Wire. Exact-index recovery has no unpadded mode.
      * <p>
-     * Queue serialises concurrent backfill appenders with its write lock. The first committed value
-     * at an index wins. Later duplicates are compared with it; matching content returns silently,
-     * while different content produces a warning and leaves the committed value unchanged.
+     * Queue serialises concurrent backfill appenders with its write lock. This method supports only
+     * the exact next index; an index which is already published or leaves a gap is rejected.
      * If an attempt leaves the requested header incomplete, a later exact-index call can replace it,
      * including from a new Queue instance after restart. That retry does not infer whether the failed
      * attempt opened an end-of-data marker, so restoring any missing marker is a separate completion step.
@@ -40,13 +39,14 @@ public interface InternalAppender extends ExcerptAppender {
      *     <dd>An {@link IllegalIndexException} is thrown</dd>
      *
      *     <dt>Less than or equal to the last index in the queue</dt>
-     *     <dd>The method returns without modifying the queue. The first committed record remains
-     *     authoritative; a warning is emitted if the supplied bytes differ.</dd>
+     *     <dd>An {@link IllegalStateException} is thrown because published-index replay is not
+     *     supported by this internal recovery path.</dd>
      * </dl>
      *
      * @param index the exact queue index to append at
      * @param bytes the contents of the excerpt to write
      * @throws IllegalIndexException if {@code index} is greater than the next valid queue index
+     * @throws IllegalStateException if {@code index} is already published
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
 
