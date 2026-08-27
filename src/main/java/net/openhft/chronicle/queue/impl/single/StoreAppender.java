@@ -997,10 +997,10 @@ class StoreAppender extends AbstractCloseable
 
         if (index > headerNumber + 1)
             throw new IllegalIndexException(index, headerNumber);
-        if (index <= headerNumber)
-            throw new IllegalStateException("Exact-index write requires the next queue index: "
-                    + "provided index=0x" + Long.toHexString(index)
-                    + ", last index=0x" + Long.toHexString(headerNumber));
+        if (index <= headerNumber) {
+            compareExistingEntryAtIndex(index, sequenceNumber, bytes);
+            return;
+        }
 
         prepareExactIndexRecovery(index);
 
@@ -1013,6 +1013,56 @@ class StoreAppender extends AbstractCloseable
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
 
+    }
+
+    private void compareExistingEntryAtIndex(final long index, final long sequenceNumber,
+                                             @NotNull final BytesStore<?, ?> suppliedBytes) {
+        final Bytes<?> wireBytes = wire.bytes();
+        final long savedReadPosition = wireBytes.readPosition();
+        final long savedReadLimit = wireBytes.readLimit();
+        final long savedWritePosition = wireBytes.writePosition();
+        try {
+            final ScanResult scanResult = store.moveToIndexForRead(this, sequenceNumber);
+            if (scanResult == ScanResult.FOUND)
+                compareExistingEntry(index, suppliedBytes);
+            else
+                warnUnableToCompareExistingEntry(index, suppliedBytes.readRemaining(), scanResult);
+        } finally {
+            wireBytes.readPosition(savedReadPosition);
+            wireBytes.readLimit(savedReadLimit);
+            // Restore this last so ChunkedMappedBytes is parked on the append mapping.
+            wireBytes.writePosition(savedWritePosition);
+        }
+    }
+
+    private void compareExistingEntry(final long index,
+                                      @NotNull final BytesStore<?, ?> suppliedBytes) {
+        final Bytes<?> existingBytes = wire.bytes();
+        final int header = existingBytes.readVolatileInt();
+        assert isReadyData(header);
+
+        final int existingLength = lengthOf(header);
+        final long suppliedLength = suppliedBytes.readRemaining();
+        if (existingLength == suppliedLength
+                && existingBytes.equalBytes(suppliedBytes, existingLength))
+            return;
+
+        Jvm.warn().on(getClass(), "Exact-index recovery found different content for existing entry: queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + queue.rollCycle().toCycle(index)
+                + ", index=0x" + Long.toHexString(index)
+                + ", existingLength=" + existingLength
+                + ", suppliedLength=" + suppliedLength);
+    }
+
+    private void warnUnableToCompareExistingEntry(final long index, final long suppliedLength,
+                                                   final ScanResult reason) {
+        Jvm.warn().on(getClass(), "Exact-index recovery could not compare existing entry: queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + queue.rollCycle().toCycle(index)
+                + ", index=0x" + Long.toHexString(index)
+                + ", suppliedLength=" + suppliedLength
+                + ", reason=" + reason);
     }
 
     /**

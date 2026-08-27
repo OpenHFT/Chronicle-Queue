@@ -24,8 +24,9 @@ public interface InternalAppender extends ExcerptAppender {
      * For queues that support this path, {@code StoreAppender} establishes padding when it
      * constructs the Wire. Exact-index recovery has no unpadded mode.
      * <p>
-     * Queue serialises concurrent backfill appenders with its write lock. This method supports only
-     * the exact next index; an index which is already published or leaves a gap is rejected.
+     * Queue serialises concurrent backfill appenders with its write lock. A published index is a
+     * first-writer-wins retry: matching content returns silently and different content emits a
+     * warning without overwriting the existing entry. A gap is rejected.
      * If an attempt leaves the requested header incomplete, a later exact-index call can replace it,
      * including from a new Queue instance after restart. That retry does not infer whether the failed
      * attempt opened an end-of-data marker, so restoring any missing marker is a separate completion step.
@@ -39,15 +40,14 @@ public interface InternalAppender extends ExcerptAppender {
      *     <dd>An {@link IllegalIndexException} is thrown</dd>
      *
      *     <dt>Less than or equal to the last index published before this call</dt>
-     *     <dd>An {@link IllegalStateException} is thrown because published-index replay is not
-     *     supported. A ready first-writer record left beyond the write-position publication
-     *     boundary is adopted successfully without comparing or overwriting its payload.</dd>
+     *     <dd>The existing entry is compared. Matching content returns silently; different content
+     *     emits a warning and remains first-writer-wins. A ready first-writer record left beyond the
+     *     write-position publication boundary is adopted successfully without overwriting it.</dd>
      * </dl>
      *
      * @param index the exact queue index to append at
      * @param bytes the contents of the excerpt to write
      * @throws IllegalIndexException if {@code index} is greater than the next valid queue index
-     * @throws IllegalStateException if {@code index} is already published
      * @throws IllegalArgumentException if the sequence is outside the roll cycle's declared capacity
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
