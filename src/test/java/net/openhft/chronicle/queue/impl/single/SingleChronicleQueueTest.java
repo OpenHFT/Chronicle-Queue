@@ -2511,7 +2511,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @NotNull
     private static String tidyDump(ChronicleQueue queue) {
-        return queue.dump()
+        return withoutCycleWriteFloor(queue.dump())
                 .replaceAll("(?m)^#.+$\\n", "")
                 .replaceAll("(\\n0000\\d+ ).*", "$1Binary");
     }

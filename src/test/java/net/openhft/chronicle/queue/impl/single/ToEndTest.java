@@ -297,7 +297,7 @@ public class ToEndTest extends QueueTestCommon {
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(queue.file().getAbsolutePath()));
             writeMetadataToQueue(queue);
-            assertEquals("" +
+            assertQueueDumpEquals("" +
                     "--- !!meta-data #binary\n" +
                     "header: !STStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
