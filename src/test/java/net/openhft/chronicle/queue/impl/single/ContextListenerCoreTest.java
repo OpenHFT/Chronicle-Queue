@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.assertEquals;
@@ -340,6 +341,48 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                 "# index: 200000001\n" +
                 "message: second\n" +
                 "# no more messages at 8000000000000000\n", dump(path));
+    }
+
+    @Test(timeout = 5_000)
+    public void capturedAppenderRollbackFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(StoreAppender::rollbackIfNotComplete);
+    }
+
+    @Test(timeout = 5_000)
+    public void capturedAppenderNormalisationFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(StoreAppender::normaliseEOFs);
+    }
+
+    @Test(timeout = 5_000)
+    public void capturedAppenderCloseFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(StoreAppender::close);
+    }
+
+    private void assertCapturedAppenderMutationFails(Consumer<StoreAppender> mutation) {
+        final AtomicReference<StoreAppender> appenderRef = new AtomicReference<>();
+        final AtomicInteger callbacks = new AtomicInteger();
+
+        try (ChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    if (callbacks.incrementAndGet() == 1)
+                        mutation.accept(appenderRef.get());
+                    else
+                        writer.context(new ServiceContext("recovered"));
+                })
+                .build()) {
+            final StoreAppender first = (StoreAppender) queue.createAppender();
+            appenderRef.set(first);
+
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> first.writeMessage("message", "first"));
+            assertTrue(failure.getMessage().contains("supplied method writer"));
+            assertFalse(first.isClosed());
+
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
+            try (ExcerptAppender second = queue.createAppender()) {
+                second.writeMessage("message", "second");
+            }
+        }
     }
 
     @Test
@@ -686,6 +729,20 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                 "# no more messages at 8000000000000000\n", dump(path, WireType.BINARY_LIGHT));
     }
 
+    @Test
+    public void tailerDocumentsExposeTheirActualCycle() {
+        final File path = getTmpDir();
+        try (ChronicleQueue queue = builder(path).build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("one");
+            appender.writeText("two");
+            timeProvider.advanceMillis(TEST_SECONDLY.lengthInMillis());
+            appender.writeText("three");
+        }
+
+        assertContextCounts(path, 1, 1, 2);
+    }
+
     private SingleChronicleQueueBuilder builder(File path) {
         return builder(path, WireType.BINARY);
     }
@@ -717,6 +774,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             }
             try (DocumentContext document = tailer.readingDocument()) {
                 assertFalse(document.isPresent());
+                assertEquals(-1, document.contextCount());
             }
         }
     }

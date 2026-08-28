@@ -293,6 +293,12 @@ class StoreAppender extends AbstractCloseable
         bufferWire = null;
     }
 
+    @Override
+    protected void assertCloseable() {
+        queue.throwIfContextListenerCallbackActive();
+        super.assertCloseable();
+    }
+
     /**
      * pretouch() has to be run on the same thread, as the thread that created the appender. If you want to use pretouch() in another thread, you must
      * first create or have an appender that was created on this thread, and then use this appender to call the pretouch()
@@ -300,6 +306,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void pretouch() {
         throwExceptionIfClosed();
+        queue.throwIfContextListenerCallbackActive();
 
         try {
             if (pretoucher == null)
@@ -321,6 +328,7 @@ class StoreAppender extends AbstractCloseable
     @Override
     public boolean microTouch() {
         throwExceptionIfClosed();
+        queue.throwIfContextListenerCallbackActive();
 
         if (microtoucher == null)
             microtoucher = new MicroToucher(this);
@@ -334,6 +342,7 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public void bgMicroTouch() {
+        queue.throwIfContextListenerCallbackActive();
         if (isClosed())
             throw new ClosedIllegalStateException(getClass().getName() + " closed for " + Thread.currentThread().getName(), closedHere);
 
@@ -572,11 +581,13 @@ class StoreAppender extends AbstractCloseable
     public <T> ExcerptAppender contextListener(@NotNull Class<T> writerType,
                                                 @NotNull MarshallableOut.ContextListener<? super T> listener) {
         throwExceptionIfClosed();
+        queue.throwIfContextListenerCallbackActive();
         Objects.requireNonNull(writerType, "writerType");
         Objects.requireNonNull(listener, "listener");
         queue.validateContextListenerCompatibility();
         if (contextListenerState.started())
             throw new IllegalStateException("Cannot change contextListener after this appender has written");
+        queue.enableContextListenerCallbackGuard();
         contextListenerState = ContextListenerState.forAppender(this, context, writerType, listener);
         return this;
     }
@@ -708,6 +719,7 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
+        queue.throwIfContextListenerCallbackActive();
         if (!DISABLE_SINGLE_THREADED_CHECK)
             this.threadSafetyCheck(true);
         if (context.wire != null && context.isOpen() && context.chainedElement())
@@ -724,6 +736,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     void normaliseEOFs(@Nullable Runnable afterCycleEnumeration) {
+        queue.throwIfContextListenerCallbackActive();
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
@@ -2090,6 +2103,7 @@ class StoreAppender extends AbstractCloseable
     @SuppressWarnings("rawtypes")
     @Override
     public void sync() {
+        queue.throwIfContextListenerCallbackActive();
         if (store == null || wire == null)
             return;
 
@@ -2117,6 +2131,7 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public void rollbackIfNotComplete() {
+        queue.throwIfContextListenerCallbackActive();
         context.rollbackIfNotComplete();
     }
 
