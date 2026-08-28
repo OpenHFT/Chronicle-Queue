@@ -117,9 +117,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         if (!force)
             return;
 
-        lastRefreshTimeMS = time.currentTimeMillis();
-
-        tableStore.doWithExclusiveLock(ignored -> {
+        final boolean refreshed = tableStore.doWithExclusiveLock(ignored -> {
             throwExceptionIfClosed();
             tableStore.throwExceptionIfClosed();
 
@@ -133,7 +131,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
                 final String[] fileNamesList = queuePath.toFile().list();
                 if (fileNamesList == null)
-                    return null;
+                    return false;
 
                 String minFilename = INITIAL_MIN_FILENAME;
                 String maxFilename = INITIAL_MAX_FILENAME;
@@ -182,12 +180,17 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                 // Historical deletion may move or empty these bounds, but cannot move a writer back.
                 if (observedLegacyMax != UNSET_MAX_CYCLE)
                     writeFloorValue.setMaxValue(observedLegacyMax);
+                // Existing generations are authoritative during discovery as well as initial
+                // migration. This deliberately treats a restored higher generation as a floor;
+                // maintenance never lowers the floor or fabricates an in-place new Queue.
                 if (max != UNSET_MAX_CYCLE)
                     writeFloorValue.setMaxValue(max);
                 modCount.addAtomicValue(1);
-                return null;
+                return true;
             }
         });
+        if (refreshed)
+            lastRefreshTimeMS = time.currentTimeMillis();
     }
 
     /**
@@ -208,15 +211,13 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     @Override
     public void onRoll(int cycle) {
-        tableStore.doWithExclusiveLock(ignored -> {
-            // Physical bounds are shared table values. Reading them directly avoids a local
-            // cache publication window during rolling upgrades with older Queue processes.
-            minCycleValue.setMinValue(cycle);
-            maxCycleValue.setMaxValue(cycle);
-            writeFloorValue.setMaxValue(cycle);
-            modCount.addAtomicValue(1);
-            return null;
-        });
+        // All publications are CAS/atomic operations. refresh(true) observes and CASes both
+        // bounds, so ordinary roll publication does not need to block the append path on the
+        // table-store file lock.
+        minCycleValue.setMinValue(cycle);
+        maxCycleValue.setMaxValue(cycle);
+        writeFloorValue.setMaxValue(cycle);
+        modCount.addAtomicValue(1);
     }
 
     /**
