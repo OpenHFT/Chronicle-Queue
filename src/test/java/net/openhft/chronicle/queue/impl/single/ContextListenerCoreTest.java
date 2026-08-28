@@ -23,6 +23,11 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.StringWriter;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -676,6 +681,65 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             second.writeMessage("message", "after-failure");
             assertThrows(IllegalStateException.class,
                     () -> first.writeMessage("message", "blocked"));
+        }
+    }
+
+    @Test(timeout = 5_000)
+    public void secondQueueInstanceOnSamePathFailsImmediatelyDuringCallback() {
+        File path = getTmpDir();
+        AtomicReference<SingleChronicleQueue> secondReference = new AtomicReference<>();
+
+        try (SingleChronicleQueue first = builder(path)
+                .contextListener(Events.class,
+                        writer -> secondReference.get().createAppender()
+                                .writeMessage("message", "reentrant"))
+                .build();
+             SingleChronicleQueue second = builder(path).build()) {
+            secondReference.set(second);
+            StoreAppender firstAppender = (StoreAppender) first.createAppender();
+
+            IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> firstAppender.writeMessage("message", "first"));
+            assertTrue(failure.getMessage().contains("supplied method writer"));
+
+            second.createAppender().writeMessage("message", "after-failure");
+        }
+    }
+
+    @Test(timeout = 5_000)
+    public void otherThreadUsingSamePathFailsImmediatelyDuringCallback() throws Exception {
+        File path = getTmpDir();
+        CountDownLatch callbackStarted = new CountDownLatch(1);
+        CountDownLatch releaseCallback = new CountDownLatch(1);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        try (SingleChronicleQueue first = builder(path)
+                .contextListener(Events.class, writer -> {
+                    callbackStarted.countDown();
+                    try {
+                        assertTrue(releaseCallback.await(3, TimeUnit.SECONDS));
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("Interrupted while pausing listener", interrupted);
+                    }
+                    writer.context(new ServiceContext("first"));
+                })
+                .build();
+             SingleChronicleQueue second = builder(path).build()) {
+            Future<?> firstWrite = executor.submit(() ->
+                    first.createAppender().writeMessage("message", "first"));
+            assertTrue(callbackStarted.await(3, TimeUnit.SECONDS));
+
+            IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> second.createAppender().writeMessage("message", "blocked"));
+            assertTrue(failure.getMessage().contains("supplied method writer"));
+
+            releaseCallback.countDown();
+            firstWrite.get(3, TimeUnit.SECONDS);
+            second.createAppender().writeMessage("message", "after-callback");
+        } finally {
+            releaseCallback.countDown();
+            executor.shutdownNow();
         }
     }
 

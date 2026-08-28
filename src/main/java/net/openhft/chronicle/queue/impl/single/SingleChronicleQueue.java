@@ -78,6 +78,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
+    private static final Map<String, Thread> ACTIVE_CONTEXT_LISTENER_CALLBACKS = new ConcurrentHashMap<>();
+    private static volatile boolean anyContextListenerCallbackActive;
 
     @NotNull
     protected final EventLoop eventLoop;
@@ -91,6 +93,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     final File path;
     final String fileAbsolutePath;
+    private final String contextListenerCallbackKey;
     // Uses this.closers as a lock. concurrent read, locking for write.
     @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
@@ -136,8 +139,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final ContextListenerState contextListenerState;
     private volatile boolean contextListenerCallbacksEnabled;
-    private final ThreadLocal<Boolean> contextListenerCallback =
-            ThreadLocal.withInitial(() -> Boolean.FALSE);
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -172,6 +173,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 //noinspection ResultOfMethodCallIgnored
                 path.mkdirs();
             fileAbsolutePath = path.getAbsolutePath();
+            contextListenerCallbackKey = path.toPath().toAbsolutePath().normalize().toString();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
             // the maximum message size is 1L << 30 so greater overlapSize has no effect
@@ -675,17 +677,24 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     void enterContextListenerCallback() {
         contextListenerCallbacksEnabled = true;
-        if (contextListenerCallback.get())
-            throw new IllegalStateException("A Queue context listener callback is already active on this thread");
-        contextListenerCallback.set(Boolean.TRUE);
+        final Thread currentThread = Thread.currentThread();
+        final Thread existing = ACTIVE_CONTEXT_LISTENER_CALLBACKS.putIfAbsent(
+                contextListenerCallbackKey, currentThread);
+        if (existing != null)
+            throw new IllegalStateException("A Queue context listener callback is already active for " +
+                    contextListenerCallbackKey + " on thread " + existing.getName());
+        anyContextListenerCallbackActive = true;
     }
 
     void exitContextListenerCallback() {
-        contextListenerCallback.remove();
+        ACTIVE_CONTEXT_LISTENER_CALLBACKS.remove(contextListenerCallbackKey, Thread.currentThread());
+        if (ACTIVE_CONTEXT_LISTENER_CALLBACKS.isEmpty())
+            anyContextListenerCallbackActive = false;
     }
 
     void throwIfContextListenerCallbackActive() {
-        if (contextListenerCallbacksEnabled && contextListenerCallback.get())
+        if (anyContextListenerCallbackActive &&
+                ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey))
             throw new IllegalStateException("Cannot enter a Queue appender from a context listener callback; " +
                     "write through the supplied method writer instead");
     }
@@ -1040,7 +1049,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     protected void assertCloseable() {
-        if (contextListenerCallbacksEnabled && contextListenerCallback.get())
+        if (anyContextListenerCallbackActive &&
+                ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey))
             throw new IllegalStateException(
                     "Cannot close a Queue from a context listener callback; return from the callback first");
         super.assertCloseable();
