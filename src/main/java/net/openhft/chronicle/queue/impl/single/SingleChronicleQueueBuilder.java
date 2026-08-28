@@ -374,8 +374,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
-        validateContextListenerCompatibility();
         preBuild();
+        validateContextListenerCompatibility();
 
         SingleChronicleQueue chronicleQueue;
 
@@ -394,12 +394,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private void validateContextListenerCompatibility() {
         if (contextListener == null)
             return;
-        if (key != null || encodingSupplier != null)
-            throw new UnsupportedOperationException("contextListener is not supported on encoded or encrypted Enterprise queues");
-        if (writeBufferMode == BufferMode.Asynchronous)
-            throw new UnsupportedOperationException("contextListener is not supported on asynchronous Enterprise write buffers");
-        if (doubleBuffer)
-            throw new UnsupportedOperationException("contextListener is not supported with double buffering");
+        try {
+            SingleChronicleQueue.validateContextListenerCompatibility(
+                    key != null || encodingSupplier != null,
+                    writeBufferMode() == BufferMode.Asynchronous,
+                    doubleBuffer());
+        } catch (RuntimeException incompatible) {
+            Closeable.closeQuietly(metaStore);
+            throw incompatible;
+        }
     }
 
     /**
