@@ -140,6 +140,23 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
+    public void legacyHighestCycleRatchetsAnAlreadyInitialisedWriteFloor() {
+        listing.onFileCreated(tempFile, 7);
+        assertEquals(7, listing.getMaxCycleForWrite());
+
+        // Simulate a pre-QUEUE-146 process, which publishes only the legacy physical maximum.
+        final LongValue legacyHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
+        try {
+            legacyHighestCycle.setMaxValue(9);
+        } finally {
+            legacyHighestCycle.close();
+        }
+
+        assertEquals(9, listing.getMaxCycleForWrite());
+        assertEquals(9, persistedCycle("listing.highestCycleWriteFloor"));
+    }
+
+    @Test
     public void refreshNeverLowersPersistedWatermarks() throws IOException {
         listing.onFileCreated(tempFile, 7);
         listing.onFileCreated(tempFile, 9);
