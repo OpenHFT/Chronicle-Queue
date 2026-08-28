@@ -157,6 +157,31 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
+    public void legacyPublicationAfterRefreshIsVisibleWithoutAnotherEvent() throws IOException {
+        final File cycleSeven = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
+        assertTrue(cycleSeven.createNewFile());
+        listing.onFileCreated(cycleSeven, 7);
+        listing.refresh(true);
+        assertEquals(7, listing.getMaxCreatedCycle());
+
+        // Simulate the publication made by a pre-QUEUE-146 process after this instance has
+        // completed its filesystem scan. Current physical-bound reads must not depend on a
+        // second local refresh event.
+        final LongValue legacyHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
+        final LongValue legacyModCount = tablestore.acquireValueFor("listing.modCount");
+        try {
+            legacyHighestCycle.setMaxValue(9);
+            legacyModCount.addAtomicValue(1);
+        } finally {
+            legacyHighestCycle.close();
+            legacyModCount.close();
+        }
+
+        assertEquals(9, listing.getMaxCreatedCycle());
+        assertEquals(9, listing.getMaxCycleForWrite());
+    }
+
+    @Test
     public void refreshNeverLowersPersistedWatermarks() throws IOException {
         listing.onFileCreated(tempFile, 7);
         listing.onFileCreated(tempFile, 9);

@@ -40,9 +40,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private volatile LongValue minCycleValue;
     private volatile LongValue writeFloorValue;
     private volatile LongValue modCount;
-    private volatile int maxCreatedCycle = UNSET_MAX_CYCLE;
-    private volatile int minCreatedCycle = UNSET_MIN_CYCLE;
-    private volatile long lastSeenModCount;
     private long lastRefreshTimeMS = 0;
 
     /**
@@ -92,7 +89,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
             }
-            lastSeenModCount = modCount.getVolatileValue();
             return this;
         });
     }
@@ -118,10 +114,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public void refresh(final boolean force) {
 
-        if (!force) {
-            refreshPublishedBounds();
+        if (!force)
             return;
-        }
 
         lastRefreshTimeMS = time.currentTimeMillis();
 
@@ -173,9 +167,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                     continue;
                 }
 
-                minCreatedCycle = min;
-                maxCreatedCycle = max;
-
                 // Persist the physical bounds independently of the monotonic ordinary-write floor.
                 // Historical deletion may move or empty these bounds, but cannot move a writer back.
                 minCycleValue.setOrderedValue(min);
@@ -184,7 +175,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                 if (max != UNSET_MAX_CYCLE)
                     writeFloorValue.setMaxValue(max);
                 modCount.addAtomicValue(1);
-                lastSeenModCount = modCount.getVolatileValue();
                 return null;
             }
         });
@@ -209,15 +199,12 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public void onRoll(int cycle) {
         tableStore.doWithExclusiveLock(ignored -> {
-            // Another Queue instance may have published a bound since this instance last
-            // refreshed. Update the shared values first, then derive the cache from them.
+            // Physical bounds are shared table values. Reading them directly avoids a local
+            // cache publication window during rolling upgrades with older Queue processes.
             minCycleValue.setMinValue(cycle);
             maxCycleValue.setMaxValue(cycle);
             writeFloorValue.setMaxValue(cycle);
-            minCreatedCycle = getMinCycleValue();
-            maxCreatedCycle = getMaxCycleValue();
             modCount.addAtomicValue(1);
-            lastSeenModCount = modCount.getVolatileValue();
             return null;
         });
     }
@@ -240,8 +227,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public int getMaxCreatedCycle() {
         throwExceptionIfClosed();
-        refreshPublishedBounds();
-        return maxCreatedCycle;
+        return getMaxCycleValue();
     }
 
     @Override
@@ -266,8 +252,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public int getMinCreatedCycle() {
         throwExceptionIfClosed();
-        refreshPublishedBounds();
-        return minCreatedCycle;
+        return getMinCycleValue();
     }
 
     /**
@@ -295,18 +280,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     protected void performClose() {
         Closeable.closeQuietly(minCycleValue, maxCycleValue, writeFloorValue, modCount);
-    }
-
-    private void refreshPublishedBounds() {
-        final long publishedModCount = modCount.getVolatileValue();
-        if (lastSeenModCount == publishedModCount)
-            return;
-
-        // A cooperating writer already published these bounds through the table store. Observe
-        // them without scanning the directory from an append or tailer hot path.
-        minCreatedCycle = getMinCycleValue();
-        maxCreatedCycle = getMaxCycleValue();
-        lastSeenModCount = publishedModCount;
     }
 
     /**
