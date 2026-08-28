@@ -567,12 +567,10 @@ class StoreAppender extends AbstractCloseable
                 //! documents to use the same no-backward destination selector as sequential byte writes; retaining
                 //! the former local-clock selection lets the two public append paths choose different generations.
                 moveToCycleForAppend();
-
                 long safeLength = queue.overlapSize();
                 resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
-                // sets the writeLimit based on the safeLength
                 openContext(metaData, safeLength, true);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
@@ -744,16 +742,17 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Writes a header for the current wire, ensuring the correct position and header number
-     * is set for the next write operation.
-     *
-     * @param wire       the {@link Wire} to write the header to
-     * @param safeLength the safe length of data that can be written
-     * @return the position of the written header
+     * Writes an ordinary application header, advancing exactly once if the selected roll is
+     * sealed. The attempted header write preserves the existing mapping behaviour when no context
+     * listener needs a non-mutating destination preflight.
      */
     private long writeHeaderForOrdinaryAppend(final long safeLength) {
-        resolveOrdinaryAppendDestination();
-        return writeHeader(safeLength);
+        try {
+            return writeHeader(safeLength);
+        } catch (WriteAfterEOFException ignored) {
+            advanceOrdinaryAppendCycle();
+            return writeHeader(safeLength);
+        }
     }
 
     /**
@@ -765,14 +764,18 @@ class StoreAppender extends AbstractCloseable
         resetPosition();
         int header = nextApplicationHeader();
         if (header == END_OF_DATA) {
-            if (cycle == Integer.MAX_VALUE)
-                throw new IllegalStateException("Cannot advance ordinary append beyond cycle " + cycle);
-            rollCycleTo(cycle + 1, true);
+            advanceOrdinaryAppendCycle();
             resetPosition();
             header = nextApplicationHeader();
         }
         if (header == END_OF_DATA)
             throw new WriteAfterEOFException();
+    }
+
+    private void advanceOrdinaryAppendCycle() {
+        if (cycle == Integer.MAX_VALUE)
+            throw new IllegalStateException("Cannot advance ordinary append beyond cycle " + cycle);
+        rollCycleTo(cycle + 1, true);
     }
 
     private int nextApplicationHeader() {
@@ -820,9 +823,10 @@ class StoreAppender extends AbstractCloseable
      *
      * @param metaData   indicates if the context is for metadata
      * @param safeLength       the maximum length of data that can be safely written
-     * @param rollAtEndOfData  whether an ordinary append should transparently roll past EOF
      */
-    private void openContext(final boolean metaData, final long safeLength, final boolean rollAtEndOfData) {
+    private void openContext(final boolean metaData,
+                             final long safeLength,
+                             final boolean rollAtEndOfData) {
         assert wire != null;
         this.positionOfHeader = rollAtEndOfData
                 ? writeHeaderForOrdinaryAppend(safeLength)
@@ -891,7 +895,6 @@ class StoreAppender extends AbstractCloseable
             //! sequentialWriteBytesIgnoresClockRollback fails if this entry point retains the former clock-only
             //! selection: bytes would move backwards while writingDocument() follows the shared published maximum.
             moveToCycleForAppend();
-
             this.positionOfHeader = writeHeaderForOrdinaryAppend((int) queue.overlapSize());
 
             assert isInsideHeader(wire);
