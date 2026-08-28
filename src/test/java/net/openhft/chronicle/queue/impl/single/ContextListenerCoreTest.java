@@ -42,6 +42,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     @Before
     public void useDeterministicSystemTimeProvider() {
         timeProvider.currentTimeNanos(1_000_000_000L);
+        ignoreException("Queue context listener failed:");
     }
 
     @Test
@@ -364,6 +365,11 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test(timeout = 5_000)
+    public void capturedAppenderIndexWireAccessFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(StoreAppender::wireForIndex);
+    }
+
+    @Test(timeout = 5_000)
     public void appenderCreationFromListenerFailsFast() {
         final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
 
@@ -378,6 +384,54 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             assertTrue(failure.getMessage().contains("supplied method writer"));
             assertThrows(IllegalStateException.class,
                     () -> appender.writeMessage("message", "blocked"));
+        }
+    }
+
+    @Test(timeout = 5_000)
+    public void queueCloseFromListenerFailsBeforeTeardownAndReleasesTheLock() {
+        final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
+        final AtomicInteger callbacks = new AtomicInteger();
+
+        final SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    if (callbacks.incrementAndGet() == 1)
+                        queueRef.get().close();
+                    else
+                        writer.context(new ServiceContext("recovered"));
+                })
+                .build();
+        queueRef.set(queue);
+        try {
+            final StoreAppender first = (StoreAppender) queue.createAppender();
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> first.writeMessage("message", "first"));
+            assertTrue(failure.getMessage().contains("Cannot close a Queue"));
+            assertFalse(queue.isClosing());
+
+            try (ExcerptAppender second = queue.createAppender()) {
+                second.writeMessage("message", "after-failure");
+            }
+            assertFalse(queue.isClosing());
+        } finally {
+            queue.close();
+        }
+    }
+
+    @Test
+    public void metadataDoesNotConsumeAppenderListenerRegistration() {
+        final AtomicInteger callbacks = new AtomicInteger();
+        try (SingleChronicleQueue queue = builder(getTmpDir()).build()) {
+            final StoreAppender appender = (StoreAppender) queue.createAppender();
+            try (DocumentContext metadata = appender.writingDocument(true)) {
+                metadata.wire().write("header").text("metadata");
+            }
+
+            appender.contextListener(Events.class, writer -> {
+                callbacks.incrementAndGet();
+                writer.context(new ServiceContext("queue"));
+            });
+            appender.writeMessage("message", "ordinary");
+            assertEquals(1, callbacks.get());
         }
     }
 

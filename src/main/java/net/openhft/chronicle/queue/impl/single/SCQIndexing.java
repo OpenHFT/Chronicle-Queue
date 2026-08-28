@@ -350,7 +350,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         if (index2Index.getVolatileValue() == NOT_INITIALIZED)
             return null;
 
-        Wire wireForIndex = ec.wireForIndex();
+        Wire wireForIndex = wireForIndex(ec);
         LongArrayValues index2index = getIndex2index(wireForIndex);
         long primaryOffset = toAddress0(index);
 
@@ -921,7 +921,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             return;
         }
 
-        Wire wire = ec.wireForIndex();
+        Wire wire = wireForIndex(ec);
         Bytes<?> bytes = wire.bytes();
         if (position > bytes.capacity())
             throw new IllegalArgumentException("pos: " + position);
@@ -1024,7 +1024,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 if (sequence == Sequence.NOT_FOUND)
                     break;
                 try {
-                    Wire wireForIndex = ec.wireForIndex();
+                    Wire wireForIndex = wireForIndex(ec);
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);
@@ -1033,6 +1033,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
+    }
+
+    private static Wire wireForIndex(@NotNull ExcerptContext context) {
+        return context instanceof StoreAppender
+                ? ((StoreAppender) context).wireForIndexInternal()
+                : context.wireForIndex();
     }
 
     /**
