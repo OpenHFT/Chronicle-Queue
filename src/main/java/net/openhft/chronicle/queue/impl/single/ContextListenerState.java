@@ -36,6 +36,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Nullable
     private Throwable failure;
     private int nesting;
+    private int closesAfterReset;
     private boolean listenerRolledBack;
 
     private enum Status {
@@ -139,6 +140,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
 
         status = Status.IN_PROGRESS;
         listenerRolledBack = false;
+        closesAfterReset = 0;
         appender.queue().enterContextListenerCallback();
         try {
             try {
@@ -167,6 +169,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
             }
         } finally {
             nesting = 0;
+            closesAfterReset = 0;
             appender.queue().exitContextListenerCallback();
         }
     }
@@ -251,6 +254,10 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Override
     public void close() {
         requireCallback();
+        if (nesting == 0 && closesAfterReset > 0) {
+            closesAfterReset--;
+            return;
+        }
         if (nesting == 0)
             throw new IllegalStateException("No ContextListener document is open");
         StoreAppender.StoreAppenderContext context = this.context;
@@ -270,13 +277,17 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         // DocumentContext.reset() means close/commit the active document and then discard the
         // holder state. Clearing the underlying context while it is still open would let the
         // triggering application write overwrite an uncommitted listener record.
-        if (nesting > 0 && context.isOpen()) {
+        final int outstandingCloses = nesting;
+        if (outstandingCloses > 0 && context.isOpen()) {
             context.chainedElement(false);
             nesting = 1;
             close();
         }
         context.reset();
         nesting = 0;
+        // reset() has already closed the shared underlying document. Each outstanding
+        // try-with-resources scope still invokes close(), which must now be harmless.
+        closesAfterReset = outstandingCloses;
     }
 
     private void requireCallback() {

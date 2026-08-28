@@ -735,9 +735,10 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
         try (ChronicleQueue queue = builder(path)
                 .contextListener(ProgressiveEvents.class, writer -> {
-                    DocumentContext document = writer.writingDocument();
-                    writer.context(new ServiceContext("reset"));
-                    document.reset();
+                    try (DocumentContext document = writer.writingDocument()) {
+                        writer.context(new ServiceContext("reset"));
+                        document.reset();
+                    }
                 })
                 .build()) {
             queue.methodWriter(Events.class).message(new Message("application"));
@@ -754,6 +755,51 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                 "  text: application\n" +
                 "}\n" +
                 "# no more messages at 8000000000000000\n", dump(path));
+    }
+
+    @Test
+    public void listenerDocumentResetMakesNestedAutomaticClosesHarmless() {
+        File path = getTmpDir();
+
+        try (ChronicleQueue queue = builder(path)
+                .contextListener(ProgressiveEvents.class, writer -> {
+                    try (DocumentContext outer = writer.writingDocument();
+                         DocumentContext nested = writer.writingDocument()) {
+                        assertSame(outer, nested);
+                        writer.context(new ServiceContext("nested-reset"));
+                        nested.reset();
+                    }
+                })
+                .build()) {
+            queue.methodWriter(Events.class).message(new Message("application"));
+        }
+
+        assertTrue(dump(path).contains("name: nested-reset"));
+        assertTrue(dump(path).contains("text: application"));
+    }
+
+    @Test
+    public void listenerRollbackThenResetPoisonsContextAndAutomaticCloseIsHarmless() {
+        AtomicInteger attempts = new AtomicInteger();
+
+        try (ChronicleQueue queue = builder(getTmpDir())
+                .contextListener(ProgressiveEvents.class, writer -> {
+                    attempts.incrementAndGet();
+                    try (DocumentContext document = writer.writingDocument()) {
+                        writer.context(new ServiceContext("rolled-back"));
+                        document.rollbackOnClose();
+                        document.reset();
+                    }
+                })
+                .build()) {
+            Events events = queue.methodWriter(Events.class);
+            assertThrows(IllegalStateException.class,
+                    () -> events.message(new Message("first")));
+            assertThrows(IllegalStateException.class,
+                    () -> events.message(new Message("second")));
+        }
+
+        assertEquals(1, attempts.get());
     }
 
     @Test
