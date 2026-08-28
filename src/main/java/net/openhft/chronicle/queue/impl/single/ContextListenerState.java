@@ -267,6 +267,14 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Override
     public void reset() {
         requireCallback();
+        // DocumentContext.reset() means close/commit the active document and then discard the
+        // holder state. Clearing the underlying context while it is still open would let the
+        // triggering application write overwrite an uncommitted listener record.
+        if (nesting > 0 && context.isOpen()) {
+            context.chainedElement(false);
+            nesting = 1;
+            close();
+        }
         context.reset();
         nesting = 0;
     }
