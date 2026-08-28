@@ -1651,6 +1651,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
+                    "listing.highestCycleWriteFloor: 18554\n" +
+                    "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
                     queueLockForTestReentrant() +
                     "--- !!data #binary\n" +
@@ -1934,6 +1936,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "listing.highestCycle: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycleWriteFloor: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 4\n" +
                     "--- !!data #binary\n" +
@@ -2531,6 +2535,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "listing.highestCycle: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycleWriteFloor: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 5\n" +
                     "--- !!data #binary\n" +
