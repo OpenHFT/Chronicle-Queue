@@ -708,6 +708,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @SuppressWarnings("deprecation")
     @NotNull
     public ExcerptAppender acquireAppender() {
+        throwIfContextListenerCallbackActive();
         return ThreadLocalAppender.acquireThreadLocalAppender(this);
     }
 
@@ -722,6 +723,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
         queue.throwExceptionIfClosed();
+        queue.throwIfContextListenerCallbackActive();
         if (queue.readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
@@ -744,6 +746,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public ExcerptAppender createAppender() {
         throwExceptionIfClosed();
+        throwIfContextListenerCallbackActive();
 
         if (readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");

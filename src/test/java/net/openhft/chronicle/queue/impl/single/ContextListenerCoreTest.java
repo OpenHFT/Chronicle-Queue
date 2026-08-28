@@ -358,6 +358,29 @@ public class ContextListenerCoreTest extends QueueTestCommon {
         assertCapturedAppenderMutationFails(StoreAppender::close);
     }
 
+    @Test(timeout = 5_000)
+    public void capturedAppenderWireAccessFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(StoreAppender::wire);
+    }
+
+    @Test(timeout = 5_000)
+    public void appenderCreationFromListenerFailsFast() {
+        final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> queueRef.get().createAppender())
+                .build()) {
+            queueRef.set(queue);
+            final StoreAppender appender = (StoreAppender) queue.createAppender();
+
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> appender.writeMessage("message", "first"));
+            assertTrue(failure.getMessage().contains("supplied method writer"));
+            assertThrows(IllegalStateException.class,
+                    () -> appender.writeMessage("message", "blocked"));
+        }
+    }
+
     private void assertCapturedAppenderMutationFails(Consumer<StoreAppender> mutation) {
         final AtomicReference<StoreAppender> appenderRef = new AtomicReference<>();
         final AtomicInteger callbacks = new AtomicInteger();
