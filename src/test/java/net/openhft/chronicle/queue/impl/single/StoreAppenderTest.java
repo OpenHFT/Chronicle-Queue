@@ -604,6 +604,27 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void eofAdvanceRejectsCycleOverflowBeforeMutation() throws IOException {
+        final long clock = (long) Integer.MAX_VALUE * TEST_DAILY.lengthInMillis();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(() -> clock)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("last cycle");
+            assertEquals(Integer.MAX_VALUE, appender.cycle());
+            sealCurrentCycle(appender);
+
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> appender.writeText("must not wrap"));
+            assertTrue(failure.getMessage().contains("Cannot advance ordinary append"));
+            assertEquals(Integer.MAX_VALUE, appender.cycle());
+        }
+    }
+
     private static void sealCurrentCycle(StoreAppender appender) {
         final SingleChronicleQueueStore store = appender.store;
         if (store == null)

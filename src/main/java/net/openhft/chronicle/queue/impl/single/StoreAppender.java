@@ -752,14 +752,40 @@ class StoreAppender extends AbstractCloseable
      * @return the position of the written header
      */
     private long writeHeaderForOrdinaryAppend(final long safeLength) {
-        assert wire != null;
-        try {
-            return writeHeader(safeLength);
-        } catch (WriteAfterEOFException ignored) {
-            // EOF remains a hard seal. Active-cycle selection has already chosen the highest
-            // supported roll, so one advance is sufficient; a second EOF is exceptional.
+        resolveOrdinaryAppendDestination();
+        return writeHeader(safeLength);
+    }
+
+    /**
+     * Selects the authoritative ordinary-write destination without opening an application header.
+     * QUEUE-144 invokes context listeners only after this method has fixed the actual cycle.
+     */
+    private void resolveOrdinaryAppendDestination() {
+        moveToCycleForAppend();
+        resetPosition();
+        int header = nextApplicationHeader();
+        if (header == END_OF_DATA) {
+            if (cycle == Integer.MAX_VALUE)
+                throw new IllegalStateException("Cannot advance ordinary append beyond cycle " + cycle);
             rollCycleTo(cycle + 1, true);
-            return writeHeader(safeLength);
+            resetPosition();
+            header = nextApplicationHeader();
+        }
+        if (header == END_OF_DATA)
+            throw new WriteAfterEOFException();
+    }
+
+    private int nextApplicationHeader() {
+        positionForNextHeader();
+        final Bytes<?> bytes = wire.bytes();
+        long position = bytes.writePosition();
+        for (; ; ) {
+            if (store.dataVersion() > 0)
+                position += BytesUtil.padOffset(position);
+            final int header = bytes.readVolatileInt(position);
+            if (!isReadyMetaData(header))
+                return header;
+            position += SPB_HEADER_SIZE + lengthOf(header);
         }
     }
 
