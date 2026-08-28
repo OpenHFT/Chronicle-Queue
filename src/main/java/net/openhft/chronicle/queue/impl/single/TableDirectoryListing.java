@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -128,42 +129,64 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             throwExceptionIfClosed();
             tableStore.throwExceptionIfClosed();
 
-            final String[] fileNamesList = queuePath.toFile().list();
-            if (fileNamesList == null)
-                return null;
+            while (true) {
+                // Writers from before QUEUE-146 do not take this table lock. Observe both legacy
+                // publication fields around the filesystem scan and retry if such a writer moves
+                // either one while the scan is in progress.
+                final long observedModCount = modCount.getVolatileValue();
+                final long observedLegacyMax = maxCycleValue.getVolatileValue();
 
-            String minFilename = INITIAL_MIN_FILENAME;
-            String maxFilename = INITIAL_MAX_FILENAME;
-            for (String fileName : fileNamesList) {
-                if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
-                    if (minFilename.compareTo(fileName) > 0)
-                        minFilename = fileName;
+                final String[] fileNamesList = queuePath.toFile().list();
+                if (fileNamesList == null)
+                    return null;
 
-                    if (maxFilename.compareTo(fileName) < 0)
-                        maxFilename = fileName;
+                String minFilename = INITIAL_MIN_FILENAME;
+                String maxFilename = INITIAL_MAX_FILENAME;
+                for (String fileName : fileNamesList) {
+                    if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
+                        if (minFilename.compareTo(fileName) > 0)
+                            minFilename = fileName;
+
+                        if (maxFilename.compareTo(fileName) < 0)
+                            maxFilename = fileName;
+                    }
                 }
+
+                int min = UNSET_MIN_CYCLE;
+                if (!INITIAL_MIN_FILENAME.equals(minFilename))
+                    min = fileNameToCycleFunction.applyAsInt(minFilename);
+
+                int max = UNSET_MAX_CYCLE;
+                if (!INITIAL_MAX_FILENAME.equals(maxFilename))
+                    max = fileNameToCycleFunction.applyAsInt(maxFilename);
+
+                if (observedModCount != modCount.getVolatileValue()
+                        || observedLegacyMax != maxCycleValue.getVolatileValue()) {
+                    Jvm.nanoPause();
+                    continue;
+                }
+
+                // The CAS closes the remaining check/publication window for a legacy writer. A
+                // failed CAS means its publication won and the directory must be scanned again.
+                if (!maxCycleValue.compareAndSwapValue(observedLegacyMax, max)) {
+                    Jvm.nanoPause();
+                    continue;
+                }
+
+                minCreatedCycle = min;
+                maxCreatedCycle = max;
+
+                // Persist the physical bounds independently of the monotonic ordinary-write floor.
+                // Historical deletion may move or empty these bounds, but cannot move a writer back.
+                minCycleValue.setOrderedValue(min);
+                if (observedLegacyMax != UNSET_MAX_CYCLE)
+                    writeFloorValue.setMaxValue(observedLegacyMax);
+                if (max != UNSET_MAX_CYCLE)
+                    writeFloorValue.setMaxValue(max);
+                modCount.addAtomicValue(1);
+                lastSeenModCount = modCount.getVolatileValue();
+                return null;
             }
-
-            int min = UNSET_MIN_CYCLE;
-            if (!INITIAL_MIN_FILENAME.equals(minFilename))
-                min = fileNameToCycleFunction.applyAsInt(minFilename);
-
-            int max = UNSET_MAX_CYCLE;
-            if (!INITIAL_MAX_FILENAME.equals(maxFilename))
-                max = fileNameToCycleFunction.applyAsInt(maxFilename);
-
-            minCreatedCycle = min;
-            maxCreatedCycle = max;
-
-            // Persist the physical bounds independently of the monotonic ordinary-write floor.
-            // Historical deletion may move or empty these bounds, but cannot move a writer back.
-            minCycleValue.setOrderedValue(min);
-            maxCycleValue.setOrderedValue(max);
-            if (max != UNSET_MAX_CYCLE)
-                writeFloorValue.setMaxValue(max);
-            modCount.addAtomicValue(1);
-            lastSeenModCount = modCount.getVolatileValue();
-            return null;
         });
     }
 
@@ -223,9 +246,16 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
     @Override
     public int getMaxCycleForWrite() {
-        return writeFloorValue == null
-                ? getMaxCycleValue()
-                : (int) writeFloorValue.getVolatileValue();
+        final int legacyMaximum = getMaxCycleValue();
+        if (writeFloorValue == null)
+            return legacyMaximum;
+
+        // During a rolling upgrade an older process still publishes only listing.highestCycle.
+        // Ratchet that value into the new monotonic key on every selection, rather than only once
+        // during init, so a rolled-back clock cannot select below a later legacy publication.
+        if (legacyMaximum != UNSET_MAX_CYCLE)
+            writeFloorValue.setMaxValue(legacyMaximum);
+        return (int) writeFloorValue.getVolatileValue();
     }
 
     /**
