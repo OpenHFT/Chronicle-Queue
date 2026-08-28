@@ -358,6 +358,7 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     @Override
     public Wire wire() {
+        queue.throwIfContextListenerCallbackActive();
         return wire;
     }
 
