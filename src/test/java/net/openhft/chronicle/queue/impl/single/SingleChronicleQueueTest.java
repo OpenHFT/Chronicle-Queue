@@ -12,8 +12,10 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -413,6 +415,24 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
             excerptAppender.writeText("hello");
+        }
+    }
+
+    @Test
+    public void deadAppendLockOwnerDoesNotStrandWriters() {
+        File tmpDir = getTmpDir();
+        try (SingleChronicleQueue queue = builder(tmpDir, wireType).build()) {
+            LongValue appendLockValue = queue.metaStore().acquireValueFor(TableStoreWriteLock.APPEND_LOCK_KEY);
+            try {
+                appendLockValue.setValue(Integer.MAX_VALUE);
+
+                queue.createAppender().writeText("recovered");
+
+                assertEquals(AbstractTSQueueLock.UNLOCKED, appendLockValue.getVolatileValue());
+                assertEquals("recovered", queue.createTailer().readText());
+            } finally {
+                appendLockValue.close();
+            }
         }
     }
 
