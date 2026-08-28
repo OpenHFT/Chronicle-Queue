@@ -730,6 +730,33 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test
+    public void listenerDocumentResetCommitsContextBeforeApplicationData() {
+        File path = getTmpDir();
+
+        try (ChronicleQueue queue = builder(path)
+                .contextListener(ProgressiveEvents.class, writer -> {
+                    DocumentContext document = writer.writingDocument();
+                    writer.context(new ServiceContext("reset"));
+                    document.reset();
+                })
+                .build()) {
+            queue.methodWriter(Events.class).message(new Message("application"));
+        }
+
+        assertEquals("" +
+                "# firstIndex: 100000000\n" +
+                "# index: 100000000\n" +
+                "context: {\n" +
+                "  name: reset\n" +
+                "}\n" +
+                "# index: 100000001\n" +
+                "message: {\n" +
+                "  text: application\n" +
+                "}\n" +
+                "# no more messages at 8000000000000000\n", dump(path));
+    }
+
+    @Test
     public void listenerRemainsCallerOwned() {
         CloseableListener listener = new CloseableListener();
 
