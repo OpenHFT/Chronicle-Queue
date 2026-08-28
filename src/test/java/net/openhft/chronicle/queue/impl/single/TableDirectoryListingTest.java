@@ -182,6 +182,62 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
+    public void preOpenedListingsPublishBoundsFromSharedValues() throws IOException {
+        final TableDirectoryListing secondListing = new TableDirectoryListing(
+                tablestore,
+                testDirectory.toPath(),
+                f -> Integer.parseInt(f.split("\\.")[0]),
+                SystemTimeProvider.INSTANCE);
+        try {
+            secondListing.init();
+
+            final File cycleFive = new File(testDirectory, 5 + SingleChronicleQueue.SUFFIX);
+            final File cycleSix = new File(testDirectory, 6 + SingleChronicleQueue.SUFFIX);
+            assertTrue(cycleFive.createNewFile());
+            listing.onFileCreated(cycleFive, 5);
+            assertTrue(cycleSix.createNewFile());
+            secondListing.onFileCreated(cycleSix, 6);
+
+            assertEquals(5, secondListing.getMinCreatedCycle());
+            assertEquals(6, secondListing.getMaxCreatedCycle());
+            listing.refresh(false);
+            assertEquals(5, listing.getMinCreatedCycle());
+            assertEquals(6, listing.getMaxCreatedCycle());
+        } finally {
+            secondListing.close();
+        }
+    }
+
+    @Test
+    public void lowerRecreatedCycleIsPublishedToAnotherOpenListing() throws IOException {
+        final TableDirectoryListing secondListing = new TableDirectoryListing(
+                tablestore,
+                testDirectory.toPath(),
+                f -> Integer.parseInt(f.split("\\.")[0]),
+                SystemTimeProvider.INSTANCE);
+        try {
+            secondListing.init();
+
+            final File cycleSix = new File(testDirectory, 6 + SingleChronicleQueue.SUFFIX);
+            assertTrue(cycleSix.createNewFile());
+            listing.onFileCreated(cycleSix, 6);
+            secondListing.refresh(false);
+            assertEquals(6, secondListing.getMinCreatedCycle());
+
+            final File cycleFive = new File(testDirectory, 5 + SingleChronicleQueue.SUFFIX);
+            assertTrue(cycleFive.createNewFile());
+            listing.onFileCreated(cycleFive, 5);
+
+            secondListing.refresh(false);
+            assertEquals(5, secondListing.getMinCreatedCycle());
+            assertEquals(6, secondListing.getMaxCreatedCycle());
+            assertEquals(6, secondListing.getMaxCycleForWrite());
+        } finally {
+            secondListing.close();
+        }
+    }
+
+    @Test
     public void emptyRefreshPreservesPublishedWriteFloor() throws IOException {
         final File cycleFile = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
         cycleFile.createNewFile();

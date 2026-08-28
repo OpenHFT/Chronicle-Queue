@@ -186,11 +186,13 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public void onRoll(int cycle) {
         tableStore.doWithExclusiveLock(ignored -> {
-            minCreatedCycle = Math.min(minCreatedCycle, cycle);
-            maxCreatedCycle = Math.max(maxCreatedCycle, cycle);
-            minCycleValue.compareAndSwapValue(UNSET_MIN_CYCLE, cycle);
+            // Another Queue instance may have published a bound since this instance last
+            // refreshed. Update the shared values first, then derive the cache from them.
+            minCycleValue.setMinValue(cycle);
             maxCycleValue.setMaxValue(cycle);
             writeFloorValue.setMaxValue(cycle);
+            minCreatedCycle = getMinCycleValue();
+            maxCreatedCycle = getMaxCycleValue();
             modCount.addAtomicValue(1);
             lastSeenModCount = modCount.getVolatileValue();
             return null;
