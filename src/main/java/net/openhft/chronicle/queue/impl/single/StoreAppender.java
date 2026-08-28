@@ -368,6 +368,12 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     @Override
     public Wire wireForIndex() {
+        queue.throwIfContextListenerCallbackActive();
+        return wireForIndex;
+    }
+
+    @Nullable
+    Wire wireForIndexInternal() {
         return wireForIndex;
     }
 
@@ -622,7 +628,7 @@ class StoreAppender extends AbstractCloseable
         queue.throwIfContextListenerCallbackActive();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
-        ContextListenerState listenerState = startContextListenerWriteAttempt();
+        ContextListenerState listenerState = startContextListenerWriteAttempt(metaData);
         count++;
         try {
             return prepareAndReturnWriteContext(metaData, listenerState);
@@ -635,8 +641,12 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private ContextListenerState startContextListenerWriteAttempt() {
+    private ContextListenerState startContextListenerWriteAttempt(boolean metaData) {
         ContextListenerState state = contextListenerState;
+        // Metadata and exact-index recovery are listener-free and do not consume the ordinary
+        // output registration window.
+        if (metaData)
+            return state;
         if (state == ContextListenerState.UNSET)
             contextListenerState = state = ContextListenerState.NONE;
         state.onWriteAttempt();
@@ -1368,7 +1378,7 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         queue.throwIfContextListenerCallbackActive();
         checkAppendLock();
-        ContextListenerState listenerState = startContextListenerWriteAttempt();
+        ContextListenerState listenerState = startContextListenerWriteAttempt(false);
         writeLock.lock();
         try {
             if (listenerState.requiresDestinationPreflight(false)) {
@@ -2032,7 +2042,7 @@ class StoreAppender extends AbstractCloseable
             // If the sequence numbers don't match, log an error and perform a linear scan
             if (seq1 != seq2) {
                 final long seq3 = store.indexing
-                        .linearScanByPosition(wireForIndex(), position, 0, 0, true);
+                        .linearScanByPosition(wireForIndex, position, 0, 0, true);
                 Jvm.error().on(getClass(),
                         "Thread=" + Thread.currentThread().getName() +
                                 " pos: " + position +

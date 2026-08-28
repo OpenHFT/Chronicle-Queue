@@ -1039,6 +1039,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * block, and special care is taken to close the event loop and other important components.
      */
     @Override
+    protected void assertCloseable() {
+        if (contextListenerCallbacksEnabled && contextListenerCallback.get())
+            throw new IllegalStateException(
+                    "Cannot close a Queue from a context listener callback; return from the callback first");
+        super.assertCloseable();
+    }
+
+    @Override
     protected void performClose() {
         synchronized (closers) {
             metaStoreMap.values().forEach(Closeable::closeQuietly);

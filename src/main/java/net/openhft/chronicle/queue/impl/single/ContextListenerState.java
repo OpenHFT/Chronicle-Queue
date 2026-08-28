@@ -153,6 +153,12 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
                 }
                 status = Status.FAILED;
                 failure = callbackFailure;
+                Jvm.warn().on(ContextListenerState.class,
+                        "Queue context listener failed: listenerType=" + listener.getClass().getName()
+                                + ", appenderIdentity=0x"
+                                + Integer.toHexString(System.identityHashCode(appender))
+                                + ", contextCount=" + contextCount,
+                        callbackFailure);
                 throw Jvm.rethrow(callbackFailure);
             }
         } finally {
