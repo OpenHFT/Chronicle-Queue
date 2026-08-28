@@ -349,26 +349,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Clears the persistent ordinary-write floor when maintenance has removed every roll file.
-     * The caller must quiesce writers and hold {@link #appendLock()} for the complete destructive
-     * operation. The directory is checked again while the listing metadata is exclusively locked;
-     * a surviving roll leaves the floor unchanged.
-     *
-     * @return {@code true} if the directory was empty and the floor was cleared
-     * @throws IllegalStateException if this process does not hold the append lock
-     */
-    public boolean resetDirectoryListingWhenEmpty() {
-        throwExceptionIfClosed();
-        if (!appendLock.isLockedByCurrentProcess(ignored -> { }))
-            throw new IllegalStateException("The append lock must be held by this process");
-        if (!(directoryListing instanceof TableDirectoryListing)) {
-            directoryListing.refresh(true);
-            return directoryListing.getMaxCreatedCycle() == Integer.MIN_VALUE;
-        }
-        return ((TableDirectoryListing) directoryListing).resetWriteFloorIfEmpty();
-    }
-
-    /**
      * Returns the maximum last index that has been sent to any remote host during replication.
      * If replication is not enabled, returns -1.
      *

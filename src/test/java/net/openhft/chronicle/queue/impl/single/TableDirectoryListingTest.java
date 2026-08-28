@@ -129,7 +129,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     public void publishedHighestCycleIsTheWriteFloor() {
         listing.onFileCreated(tempFile, 7);
 
-        final LongValue publishedHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
+        final LongValue publishedHighestCycle = tablestore.acquireValueFor("listing.highestCycleWriteFloor");
         try {
             publishedHighestCycle.setOrderedValue(9);
         } finally {
@@ -153,7 +153,8 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         new File(testDirectory, 6 + SingleChronicleQueue.SUFFIX).createNewFile();
         listing.refresh(true);
         assertEquals(6, listing.getMinCreatedCycle());
-        assertEquals(8, persistedCycle("listing.lowestCycle"));
+        assertEquals(6, persistedCycle("listing.lowestCycle"));
+        assertEquals(8, persistedCycle("listing.highestCycle"));
         assertEquals(9, listing.getMaxCycleForWrite());
     }
 
@@ -181,7 +182,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void completeMaintenanceDeletionResetsPublishedBounds() throws IOException {
+    public void emptyRefreshPreservesPublishedWriteFloor() throws IOException {
         final File cycleFile = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
         cycleFile.createNewFile();
         listing.onFileCreated(cycleFile, 7);
@@ -197,29 +198,15 @@ public class TableDirectoryListingTest extends QueueTestCommon {
             assertEquals(7, secondListing.getMaxCycleForWrite());
 
             assertTrue(cycleFile.delete());
-            assertTrue(((TableDirectoryListing) listing).resetWriteFloorIfEmpty());
+            listing.refresh(true);
 
             secondListing.refresh(false);
             assertEquals(TableDirectoryListing.UNSET_MIN_CYCLE, secondListing.getMinCreatedCycle());
             assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, secondListing.getMaxCreatedCycle());
-            assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, secondListing.getMaxCycleForWrite());
+            assertEquals(7, secondListing.getMaxCycleForWrite());
         } finally {
             secondListing.close();
         }
-    }
-
-    @Test
-    public void partialMaintenanceDeletionDoesNotResetPublishedBounds() throws IOException {
-        final File lower = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
-        final File higher = new File(testDirectory, 9 + SingleChronicleQueue.SUFFIX);
-        lower.createNewFile();
-        higher.createNewFile();
-        listing.onFileCreated(lower, 7);
-        listing.onFileCreated(higher, 9);
-
-        assertTrue(higher.delete());
-        assertFalse(((TableDirectoryListing) listing).resetWriteFloorIfEmpty());
-        assertEquals(9, listing.getMaxCycleForWrite());
     }
 
     private int persistedCycle(final String key) {

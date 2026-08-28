@@ -24,6 +24,7 @@ import java.util.function.ToIntFunction;
 class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
 
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
+    private static final String HIGHEST_CYCLE_WRITE_FLOOR = "listing.highestCycleWriteFloor";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String MOD_COUNT = "listing.modCount";
     static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
@@ -36,6 +37,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private final TimeProvider time;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
+    private volatile LongValue writeFloorValue;
     private volatile LongValue modCount;
     private volatile int maxCreatedCycle = UNSET_MAX_CYCLE;
     private volatile int minCreatedCycle = UNSET_MIN_CYCLE;
@@ -85,6 +87,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             initLongValues();
             maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MAX_CYCLE);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
+            writeFloorValue.compareAndSwapValue(Long.MIN_VALUE, getMaxCycleValue());
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
             }
@@ -99,6 +102,10 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     protected void initLongValues() {
         maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
         minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
+        // A read-only Queue may open legacy metadata which predates the separate write-floor key.
+        // It never selects an ordinary-write cycle, so it needs only the physical bounds.
+        if (!tableStore.readOnly())
+            writeFloorValue = tableStore.acquireValueFor(HIGHEST_CYCLE_WRITE_FLOOR);
         modCount = tableStore.acquireValueFor(MOD_COUNT);
     }
 
@@ -148,13 +155,12 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             minCreatedCycle = min;
             maxCreatedCycle = max;
 
-            // Both persisted watermarks move only forward. Empty or stale directory listings
-            // cannot move ordinary writers back into an earlier generation.
-            if (min != UNSET_MIN_CYCLE &&
-                    !minCycleValue.compareAndSwapValue(UNSET_MIN_CYCLE, min))
-                minCycleValue.setMaxValue(min);
+            // Persist the physical bounds independently of the monotonic ordinary-write floor.
+            // Historical deletion may move or empty these bounds, but cannot move a writer back.
+            minCycleValue.setOrderedValue(min);
+            maxCycleValue.setOrderedValue(max);
             if (max != UNSET_MAX_CYCLE)
-                maxCycleValue.setMaxValue(max);
+                writeFloorValue.setMaxValue(max);
             modCount.addAtomicValue(1);
             lastSeenModCount = modCount.getVolatileValue();
             return null;
@@ -184,6 +190,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             maxCreatedCycle = Math.max(maxCreatedCycle, cycle);
             minCycleValue.compareAndSwapValue(UNSET_MIN_CYCLE, cycle);
             maxCycleValue.setMaxValue(cycle);
+            writeFloorValue.setMaxValue(cycle);
             modCount.addAtomicValue(1);
             lastSeenModCount = modCount.getVolatileValue();
             return null;
@@ -214,30 +221,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
     @Override
     public int getMaxCycleForWrite() {
-        return getMaxCycleValue();
-    }
-
-    boolean resetWriteFloorIfEmpty() {
-        return tableStore.doWithExclusiveLock(ignored -> {
-            throwExceptionIfClosed();
-            tableStore.throwExceptionIfClosed();
-
-            final String[] fileNames = queuePath.toFile().list();
-            if (fileNames == null)
-                return false;
-            for (String fileName : fileNames) {
-                if (fileName.endsWith(SingleChronicleQueue.SUFFIX))
-                    return false;
-            }
-
-            minCreatedCycle = UNSET_MIN_CYCLE;
-            maxCreatedCycle = UNSET_MAX_CYCLE;
-            minCycleValue.setOrderedValue(UNSET_MIN_CYCLE);
-            maxCycleValue.setOrderedValue(UNSET_MAX_CYCLE);
-            modCount.addAtomicValue(1);
-            lastSeenModCount = modCount.getVolatileValue();
-            return true;
-        });
+        return writeFloorValue == null
+                ? getMaxCycleValue()
+                : (int) writeFloorValue.getVolatileValue();
     }
 
     /**
@@ -276,7 +262,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Closes the directory listing by releasing resources associated with the LongValues.
      */
     protected void performClose() {
-        Closeable.closeQuietly(minCycleValue, maxCycleValue, modCount);
+        Closeable.closeQuietly(minCycleValue, maxCycleValue, writeFloorValue, modCount);
     }
 
     private void refreshPublishedBounds() {

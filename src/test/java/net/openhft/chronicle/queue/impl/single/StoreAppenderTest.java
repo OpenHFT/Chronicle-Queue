@@ -133,7 +133,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void completeMaintenanceDeletionStartsANewQueue() throws IOException {
+    public void completeExternalRollDeletionDoesNotResetWriteFloor() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong time = new AtomicLong(3L * TEST_DAILY.lengthInMillis());
         final File onlyRoll;
@@ -151,24 +151,13 @@ public class StoreAppenderTest extends QueueTestCommon {
         assertTrue("test precondition: every roll file must be removed", onlyRoll.delete());
         time.set(0);
 
-        try (SingleChronicleQueue maintenanceQueue = SingleChronicleQueueBuilder.binary(directory)
-                .timeProvider(time::get)
-                .rollCycle(TEST_DAILY)
-                .build();
-             SingleChronicleQueue alreadyOpenQueue = SingleChronicleQueueBuilder.binary(directory)
+        try (SingleChronicleQueue alreadyOpenQueue = SingleChronicleQueueBuilder.binary(directory)
                 .timeProvider(time::get)
                 .rollCycle(TEST_DAILY)
                 .build()) {
-            maintenanceQueue.appendLock().lock();
-            try {
-                assertTrue(maintenanceQueue.resetDirectoryListingWhenEmpty());
-            } finally {
-                maintenanceQueue.appendLock().unlock();
-            }
-
             try (ExcerptAppender appender = alreadyOpenQueue.createAppender()) {
-                appender.writeBytes(Bytes.from("new-queue-cycle-0"));
-                assertEquals("complete deletion establishes a new queue generation", 0, appender.cycle());
+                appender.writeBytes(Bytes.from("preserve-cycle-floor"));
+                assertEquals("deleting roll paths must not reset retained Queue metadata", 3, appender.cycle());
             }
         }
     }

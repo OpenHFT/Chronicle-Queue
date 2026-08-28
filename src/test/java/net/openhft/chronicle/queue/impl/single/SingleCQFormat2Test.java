@@ -604,6 +604,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
+                    "listing.highestCycleWriteFloor: 18554\n" +
+                    "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
@@ -691,6 +693,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
+                    "listing.highestCycleWriteFloor: 18554\n" +
+                    "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
@@ -772,6 +776,8 @@ public class SingleCQFormat2Test extends QueueTestCommon {
                     "listing.highestCycle: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
+                    "--- !!data #binary\n" +
+                    "listing.highestCycleWriteFloor: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
                     "--- !!data #binary\n" +

@@ -55,6 +55,8 @@ public class TableStorePutGetTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18550\n" +
                     "--- !!data #binary\n" +
+                    "listing.highestCycleWriteFloor: 18550\n" +
+                    "--- !!data #binary\n" +
                     "listing.modCount: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
