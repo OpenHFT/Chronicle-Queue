@@ -36,6 +36,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Nullable
     private Throwable failure;
     private int nesting;
+    private boolean listenerRolledBack;
 
     private enum Status {
         READY,
@@ -137,10 +138,13 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
             throw new IllegalStateException("Queue context listener recursion is not permitted");
 
         status = Status.IN_PROGRESS;
+        listenerRolledBack = false;
         appender.queue().enterContextListenerCallback();
         try {
             try {
                 notifyListener();
+                if (listenerRolledBack)
+                    throw new IllegalStateException("Queue context listener rolled back its output document");
                 if (listenerDocumentIsOpen())
                     throw new IllegalStateException("Queue context listener returned with an unclosed document");
                 status = Status.SUCCEEDED;
@@ -223,6 +227,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         StoreAppender.StoreAppenderContext context = this.context;
         if (nesting == 0 || !context.isOpen())
             return;
+        listenerRolledBack = true;
         context.chainedElement(false);
         context.rollbackOnClose();
         nesting = 1;
@@ -239,6 +244,7 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Override
     public void rollbackOnClose() {
         requireCallback();
+        listenerRolledBack = true;
         context.rollbackOnClose();
     }
 

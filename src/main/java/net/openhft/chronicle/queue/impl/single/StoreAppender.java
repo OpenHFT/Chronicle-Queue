@@ -688,7 +688,8 @@ class StoreAppender extends AbstractCloseable
                     resetPosition();
                     assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
                     openContext(metaData, safeLength, true);
-                    lastOrdinaryContextCount = cycle;
+                    if (!metaData)
+                        lastOrdinaryContextCount = cycle;
                 }
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
