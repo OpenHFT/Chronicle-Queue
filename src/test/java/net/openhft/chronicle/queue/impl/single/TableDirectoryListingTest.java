@@ -17,6 +17,10 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
@@ -179,6 +183,55 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
         assertEquals(9, listing.getMaxCreatedCycle());
         assertEquals(9, listing.getMaxCycleForWrite());
+    }
+
+    @Test
+    public void refreshRetriesWhenLegacyMinimumIsPublishedAfterMaximumCas() throws Exception {
+        final TableDirectoryListing tableListing = (TableDirectoryListing) listing;
+        final LongValue legacyMinimum = tablestore.acquireValueFor("listing.lowestCycle");
+        final LongValue legacyMaximum = tablestore.acquireValueFor("listing.highestCycle");
+        final LongValue legacyModCount = tablestore.acquireValueFor("listing.modCount");
+        final Field maximumField = TableDirectoryListing.class.getDeclaredField("maxCycleValue");
+        maximumField.setAccessible(true);
+        final LongValue maximumDelegate = (LongValue) maximumField.get(tableListing);
+        final AtomicBoolean published = new AtomicBoolean();
+
+        final LongValue interceptedMaximum = (LongValue) Proxy.newProxyInstance(
+                LongValue.class.getClassLoader(),
+                new Class<?>[]{LongValue.class},
+                (proxy, method, args) -> {
+                    try {
+                        final Object result = method.invoke(maximumDelegate, args);
+                        if ("compareAndSwapValue".equals(method.getName())
+                                && Boolean.TRUE.equals(result)
+                                && published.compareAndSet(false, true)) {
+                            // Precisely model a pre-QUEUE-146 publication between the new
+                            // refresher's maximum and minimum CAS operations.
+                            assertTrue(new File(testDirectory, 9 + SingleChronicleQueue.SUFFIX).createNewFile());
+                            legacyMinimum.setMinValue(9);
+                            legacyMaximum.setMaxValue(9);
+                            legacyModCount.addAtomicValue(1);
+                        }
+                        return result;
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
+
+        maximumField.set(tableListing, interceptedMaximum);
+        try {
+            tableListing.refresh(true);
+        } finally {
+            maximumField.set(tableListing, maximumDelegate);
+            legacyMinimum.close();
+            legacyMaximum.close();
+            legacyModCount.close();
+        }
+
+        assertTrue(published.get());
+        assertEquals(9, tableListing.getMinCreatedCycle());
+        assertEquals(9, tableListing.getMaxCreatedCycle());
+        assertEquals(9, tableListing.getMaxCycleForWrite());
     }
 
     @Test

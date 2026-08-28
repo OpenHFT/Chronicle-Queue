@@ -128,6 +128,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                 // publication fields around the filesystem scan and retry if such a writer moves
                 // either one while the scan is in progress.
                 final long observedModCount = modCount.getVolatileValue();
+                final long observedLegacyMin = minCycleValue.getVolatileValue();
                 final long observedLegacyMax = maxCycleValue.getVolatileValue();
 
                 final String[] fileNamesList = queuePath.toFile().list();
@@ -155,6 +156,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                     max = fileNameToCycleFunction.applyAsInt(maxFilename);
 
                 if (observedModCount != modCount.getVolatileValue()
+                        || observedLegacyMin != minCycleValue.getVolatileValue()
                         || observedLegacyMax != maxCycleValue.getVolatileValue()) {
                     Jvm.nanoPause();
                     continue;
@@ -167,9 +169,17 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                     continue;
                 }
 
+                // A legacy writer publishes minimum before maximum. It can therefore race after
+                // the maximum CAS above without changing maximum yet. Publish both physical bounds
+                // symmetrically; if either observed value moved, rescan rather than overwriting the
+                // legacy writer's lower bound with a stale (possibly empty-directory) result.
+                if (!minCycleValue.compareAndSwapValue(observedLegacyMin, min)) {
+                    Jvm.nanoPause();
+                    continue;
+                }
+
                 // Persist the physical bounds independently of the monotonic ordinary-write floor.
                 // Historical deletion may move or empty these bounds, but cannot move a writer back.
-                minCycleValue.setOrderedValue(min);
                 if (observedLegacyMax != UNSET_MAX_CYCLE)
                     writeFloorValue.setMaxValue(observedLegacyMax);
                 if (max != UNSET_MAX_CYCLE)
