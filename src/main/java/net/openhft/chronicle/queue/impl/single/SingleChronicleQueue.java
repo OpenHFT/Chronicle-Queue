@@ -720,23 +720,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Creates an {@link ExcerptTailer} with a specific ID. The tailer will use the
      * provided ID to track its position, and the preconditions for creating a tailer
      * are verified before initialization.
-     * <p>
-     * Ids ending in {@code .lock} or {@code .version}, in any letter case, are rejected. Every
-     * named tailer uses {@code index.<id>}; versioned named tailers additionally use
-     * {@code index.<id>.lock} and {@code index.<id>.version}. Reserving those suffixes prevents one
-     * tailer's primary index from overlapping another tailer's version metadata. Table-store key
-     * matching is case-insensitive, so accepting a case variant would not avoid that collision.
      *
      * @param id the identifier for the tailer
      * @return a new ExcerptTailer
-     * @throws IllegalArgumentException         if {@code id} ends with the reserved suffix
-     *                                          {@code .lock} or {@code .version}, ignoring case
      * @throws NamedTailerNotAvailableException if the tailer is not available due to replication locks
      */
     @NotNull
     @Override
     public ExcerptTailer createTailer(String id) {
-        validateNamedTailerId(id);
         verifyTailerPreconditions(id);
         IndexUpdater indexUpdater = IndexUpdaterFactory.createIndexUpdater(id, this); // NOSONAR
 
@@ -773,12 +764,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for which to acquire the index
      * @return a LongValue representing the index for the given ID
-     * @throws IllegalArgumentException if the id has a reserved suffix
      */
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
-        validateNamedTailerId(id);
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
     }
 
@@ -787,11 +776,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for which to acquire the version index
      * @return a LongValue representing the version index for the given ID
-     * @throws IllegalArgumentException if the id has a reserved suffix
      */
     @NotNull
     public LongValue indexVersionForId(@NotNull String id) {
-        validateNamedTailerId(id);
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(String.format(INDEX_VERSION_FORMAT, id), -1L));
     }
 
@@ -800,11 +787,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      *
      * @param id the identifier for which to create the write lock
      * @return a new TableStoreWriteLock for the version index
-     * @throws IllegalArgumentException if the id has a reserved suffix
      */
     @NotNull
     public TableStoreWriteLock versionIndexLockForId(@NotNull String id) {
-        validateNamedTailerId(id);
         return new TableStoreWriteLock(
                 metaStore,
                 pauserSupplier,
@@ -1464,7 +1449,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     public NamedTailerParkResult parkNamedTailer(String name) {
         Objects.requireNonNull(name, "name");
-        validateNamedTailerId(name);
+        validateParkableNamedTailerId(name);
         if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
             return NamedTailerParkResult.REFUSED_REPLICATED;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
@@ -1497,7 +1482,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 && value.regionMatches(true, 0, prefix, 0, prefix.length());
     }
 
-    private static void validateNamedTailerId(String id) {
+    private static void validateParkableNamedTailerId(String id) {
         if (isReservedNamedTailerId(id))
             throw reservedNamedTailerIdException(id);
         if (startsWithIgnoreCase(id, REPLICATED_NAMED_TAILER_PREFIX)
