@@ -574,8 +574,7 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         Objects.requireNonNull(writerType, "writerType");
         Objects.requireNonNull(listener, "listener");
-        if (queue.doubleBuffer)
-            throw new UnsupportedOperationException("contextListener is not supported with double buffering");
+        queue.validateContextListenerCompatibility();
         if (contextListenerState.started())
             throw new IllegalStateException("Cannot change contextListener after this appender has written");
         contextListenerState = ContextListenerState.forAppender(this, context, writerType, listener);

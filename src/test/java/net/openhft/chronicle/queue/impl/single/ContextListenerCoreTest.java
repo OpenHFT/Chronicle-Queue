@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -632,6 +633,35 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             assertThrows(UnsupportedOperationException.class,
                     () -> queue.createAppender().contextListener(Events.class, writer -> { }));
         }
+    }
+
+    @Test
+    public void rejectsEveryUnsupportedEffectiveQueueMode() {
+        assertThrows(UnsupportedOperationException.class,
+                () -> SingleChronicleQueue.validateContextListenerCompatibility(true, false, false));
+        assertThrows(UnsupportedOperationException.class,
+                () -> SingleChronicleQueue.validateContextListenerCompatibility(false, true, false));
+        assertThrows(UnsupportedOperationException.class,
+                () -> SingleChronicleQueue.validateContextListenerCompatibility(false, false, true));
+    }
+
+    @Test
+    public void validatesModesLoadedDuringPreBuildAndClosesMetadata() {
+        SingleChronicleQueueBuilder delayedMode = new SingleChronicleQueueBuilder() {
+            @Override
+            protected void preBuild() {
+                super.preBuild();
+                writeBufferMode(BufferMode.Asynchronous);
+            }
+        };
+        delayedMode.path(getTmpDir())
+                .testBlockSize()
+                .rollCycle(TEST_SECONDLY)
+                .timeProvider(timeProvider)
+                .contextListener(Events.class, writer -> { });
+
+        assertThrows(UnsupportedOperationException.class, delayedMode::build);
+        assertTrue(delayedMode.metaStore().isClosed());
     }
 
     @Test

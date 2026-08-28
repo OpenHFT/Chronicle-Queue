@@ -97,6 +97,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final StoreSupplier storeSupplier;
     private final long epoch;
     private final boolean isBuffered;
+    private final boolean encodedOrEncrypted;
     @NotNull
     private final WireType wireType;
     private final long blockSize;
@@ -164,6 +165,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             storeSupplier = new StoreSupplier();
             pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
             isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
+            encodedOrEncrypted = builder.key() != null || builder.encodingSupplier() != null;
             path = builder.path();
             if (!builder.readOnly())
                 //noinspection ResultOfMethodCallIgnored
@@ -252,6 +254,24 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             close();
             throw Jvm.rethrow(t);
         }
+    }
+
+    void validateContextListenerCompatibility() {
+        validateContextListenerCompatibility(encodedOrEncrypted, isBuffered, doubleBuffer);
+    }
+
+    static void validateContextListenerCompatibility(boolean encodedOrEncrypted,
+                                                     boolean asynchronous,
+                                                     boolean doubleBuffered) {
+        if (encodedOrEncrypted)
+            throw new UnsupportedOperationException(
+                    "contextListener is not supported on encoded or encrypted Enterprise queues");
+        if (asynchronous)
+            throw new UnsupportedOperationException(
+                    "contextListener is not supported on asynchronous Enterprise write buffers");
+        if (doubleBuffered)
+            throw new UnsupportedOperationException(
+                    "contextListener is not supported with double buffering");
     }
 
     /**
