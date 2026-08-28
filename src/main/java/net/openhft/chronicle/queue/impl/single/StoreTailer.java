@@ -1819,7 +1819,7 @@ class StoreTailer extends AbstractCloseable
 
         @Override
         public int contextCount() {
-            return queue.rollCycle().toCycle(index());
+            return isPresent() ? queue.rollCycle().toCycle(index()) : -1;
         }
 
         /**

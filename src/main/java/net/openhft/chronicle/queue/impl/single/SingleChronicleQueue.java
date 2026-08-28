@@ -135,6 +135,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     final AppenderListener appenderListener;
     @NotNull
     private final ContextListenerState contextListenerState;
+    private volatile boolean contextListenerCallbacksEnabled;
     private final ThreadLocal<Boolean> contextListenerCallback =
             ThreadLocal.withInitial(() -> Boolean.FALSE);
     protected int sourceId;
@@ -197,6 +198,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
             contextListenerState = builder.contextListenerState();
+            contextListenerCallbacksEnabled = contextListenerState != ContextListenerState.UNSET;
 
             //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithMetadataUsesPersistedDirectoryListing
             //! distinguishes a missing metadata table from a read-only mapped table; only the former
@@ -672,6 +674,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     void enterContextListenerCallback() {
+        contextListenerCallbacksEnabled = true;
         if (contextListenerCallback.get())
             throw new IllegalStateException("A Queue context listener callback is already active on this thread");
         contextListenerCallback.set(Boolean.TRUE);
@@ -682,9 +685,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     void throwIfContextListenerCallbackActive() {
-        if (contextListenerCallback.get())
+        if (contextListenerCallbacksEnabled && contextListenerCallback.get())
             throw new IllegalStateException("Cannot enter a Queue appender from a context listener callback; " +
                     "write through the supplied method writer instead");
+    }
+
+    void enableContextListenerCallbackGuard() {
+        contextListenerCallbacksEnabled = true;
     }
 
     // used by enterprise CQ
