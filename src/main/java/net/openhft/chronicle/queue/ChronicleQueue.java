@@ -159,19 +159,11 @@ public interface ChronicleQueue extends Closeable {
      * <p>
      * If the provided {@code id} is {@code null}, the Tailer will be unnamed and this is
      * equivalent to invoking {@link #createTailer()}.
-     * <p>
-     * Ids ending in {@code .lock} or {@code .version}, in any letter case, are rejected because those
-     * suffixes are used by replicated tailer metadata and table-store key matching is case-insensitive.
-     * Releases before this restriction could create such ids. Before upgrading, create a replacement
-     * with a legal id, move it to the old tailer's committed index, and confirm the replacement position
-     * is persisted before retiring the old id. Existing legacy entries remain visible under their exact
-     * raw persisted keys in maintenance snapshots so that they conservatively retain data.
      *
      * @param id unique id for a tailer which uses to track where it was up to
      * @return a new ExcerptTailer for this ChronicleQueue with the given unique {@code id}
      * @throws net.openhft.chronicle.core.io.ClosedIllegalStateException                if required resources are closed
      * @throws net.openhft.chronicle.queue.impl.single.NamedTailerNotAvailableException if named tailer is not available
-     * @throws IllegalArgumentException if {@code id} has a reserved suffix, ignoring case
      * @see #createTailer()
      */
     @NotNull
