@@ -1310,6 +1310,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Parses the numeric cycle represented by a roll filename using this Queue's persisted roll
+     * geometry. Callers must not infer cycle order from lexical filename order.
+     *
+     * @param file a {@code .cq4} roll file
+     * @return the numeric cycle encoded by the filename
+     */
+    public int cycleForFile(@NotNull File file) {
+        final String name = file.getName();
+        if (!name.endsWith(SUFFIX))
+            throw new IllegalArgumentException("Not a Queue roll file: " + file);
+        return fileNameToCycleFunction().applyAsInt(name);
+    }
+
+    /**
      * Removes the specified {@link StoreTailer} from the close listeners.
      *
      * @param storeTailer the StoreTailer to remove
