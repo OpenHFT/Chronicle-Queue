@@ -217,6 +217,29 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         return getMaxCycleValue();
     }
 
+    boolean resetWriteFloorIfEmpty() {
+        return tableStore.doWithExclusiveLock(ignored -> {
+            throwExceptionIfClosed();
+            tableStore.throwExceptionIfClosed();
+
+            final String[] fileNames = queuePath.toFile().list();
+            if (fileNames == null)
+                return false;
+            for (String fileName : fileNames) {
+                if (fileName.endsWith(SingleChronicleQueue.SUFFIX))
+                    return false;
+            }
+
+            minCreatedCycle = UNSET_MIN_CYCLE;
+            maxCreatedCycle = UNSET_MAX_CYCLE;
+            minCycleValue.setOrderedValue(UNSET_MIN_CYCLE);
+            maxCycleValue.setOrderedValue(UNSET_MAX_CYCLE);
+            modCount.addAtomicValue(1);
+            lastSeenModCount = modCount.getVolatileValue();
+            return true;
+        });
+    }
+
     /**
      * Returns the lowest cycle number created in the queue.
      *

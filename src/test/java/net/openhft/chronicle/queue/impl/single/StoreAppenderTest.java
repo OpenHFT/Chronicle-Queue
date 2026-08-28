@@ -133,7 +133,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void reopeningAfterAllRollsAreDeletedRetainsHighWater() throws IOException {
+    public void completeMaintenanceDeletionStartsANewQueue() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong time = new AtomicLong(3L * TEST_DAILY.lengthInMillis());
         final File onlyRoll;
@@ -151,13 +151,25 @@ public class StoreAppenderTest extends QueueTestCommon {
         assertTrue("test precondition: every roll file must be removed", onlyRoll.delete());
         time.set(0);
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+        try (SingleChronicleQueue maintenanceQueue = SingleChronicleQueueBuilder.binary(directory)
                 .timeProvider(time::get)
                 .rollCycle(TEST_DAILY)
                 .build();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeBytes(Bytes.from("retain-cycle-3"));
-            assertEquals("an empty reopened queue must retain the roll high-water", 3, appender.cycle());
+             SingleChronicleQueue alreadyOpenQueue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .build()) {
+            maintenanceQueue.appendLock().lock();
+            try {
+                assertTrue(maintenanceQueue.resetDirectoryListingWhenEmpty());
+            } finally {
+                maintenanceQueue.appendLock().unlock();
+            }
+
+            try (ExcerptAppender appender = alreadyOpenQueue.createAppender()) {
+                appender.writeBytes(Bytes.from("new-queue-cycle-0"));
+                assertEquals("complete deletion establishes a new queue generation", 0, appender.cycle());
+            }
         }
     }
 
