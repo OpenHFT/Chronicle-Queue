@@ -83,36 +83,33 @@ public class RollingCycleTest extends QueueTestCommon {
                     "listing.lowestCycle: 19059\n" +
                     "# position: 232, header: 2\n" +
                     "--- !!data #binary\n" +
-                    //! The table store now persists the ordinary-write floor; the entries after it shift by one record.
-                    "listing.highestCycleWriteFloor: 19061\n" +
-                    "# position: 280, header: 3\n" +
-                    "--- !!data #binary\n" +
+                    //! testRollCycle records the reduced publication count from the shared append selector.
                     "listing.modCount: 9\n" +
-                    "# position: 312, header: 4\n" +
+                    "# position: 264, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 352, header: 5\n" +
+                    "# position: 304, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 392, header: 6\n" +
+                    "# position: 344, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 440, header: 7\n" +
+                    "# position: 392, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                    "# position: 496, header: 8\n" +
+                    "# position: 448, header: 7\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexMSynced: -1\n" +
-                    (named ? "# position: 544, header: 9\n" +
+                    (named ? "# position: 496, header: 8\n" +
                             "--- !!data #binary\n" +
                             "index.named: 81866371629059\n" +
-                            "# position: 576, header: 10\n" +
+                            "# position: 528, header: 9\n" +
                             "--- !!data #binary\n" +
                             "index.named2: 81866371629059\n" +
                             "...\n" +
-                            "# 130460 bytes remaining\n"
+                            "# 130508 bytes remaining\n"
                             : "...\n" +
-                            "# 130524 bytes remaining\n") +
+                            "# 130572 bytes remaining\n") +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

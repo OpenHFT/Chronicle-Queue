@@ -1651,9 +1651,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
                     "--- !!data #binary\n" +
-                    //! The table store now persists the ordinary-write floor; the entries after it shift by one record.
-                    "listing.highestCycleWriteFloor: 18554\n" +
-                    "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
                     queueLockForTestReentrant() +
                     "--- !!data #binary\n" +
@@ -1758,8 +1755,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
+    //! Complete Queue deletion is offline: close all handles, remove metadata and rolls, then create a new Queue.
     @Test
-    public void testToEndOnDeletedQueueFiles() throws IOException {
+    public void testToEndAfterOfflineQueueDeletion() throws IOException {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
@@ -1769,31 +1767,19 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         try (ChronicleQueue q = builder(dir, wireType).build();
              ExcerptAppender append = q.createAppender()) {
             append.writeDocument(w -> w.write("test").text("before text"));
+        }
 
-            ExcerptTailer tailer = q.createTailer(named ? "named" : null);
+        assertTrue("offline deletion must remove the complete Queue directory", IOTools.deleteDirWithFiles(dir));
+        assertTrue("test precondition: recreate the directory for a genuinely new Queue", dir.mkdirs());
 
-            // move to the end even though it doesn't exist yet.
+        try (ChronicleQueue q2 = builder(dir, wireType).build();
+             ExcerptAppender q2Appender = q2.createAppender()) {
+            final ExcerptTailer tailer = q2.createTailer(named ? "named" : null);
             tailer.toEnd();
+            assertEquals(TailerState.UNINITIALISED, tailer.state());
+            q2Appender.writeDocument(w -> w.write("test").text("new queue text"));
 
-            append.writeDocument(w -> w.write("test").text("text"));
-
-            assertTrue(tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals)));
-
-            try (Stream<Path> cq4Files = Files.find(dir.toPath(), 1, (p, basicFileAttributes) -> p.toString().endsWith("cq4"), FileVisitOption.FOLLOW_LINKS)) {
-                final List<Path> unDeletable = cq4Files.filter(path -> !path.toFile().delete())
-                        .collect(Collectors.toList());
-                assertTrue("Unable to delete" + unDeletable, unDeletable.isEmpty());
-            }
-
-            try (ChronicleQueue q2 = builder(dir, wireType).build();
-                 final ExcerptAppender q2Appender = q2.createAppender()) {
-                tailer = q2.createTailer(named ? "named" : null);
-                tailer.toEnd();
-                assertEquals(TailerState.UNINITIALISED, tailer.state());
-                q2Appender.writeDocument(w -> w.write("test").text("before text"));
-
-                assertTrue(tailer.readDocument(w -> w.read("test").text("before text", Assert::assertEquals)));
-            }
+            assertTrue(tailer.readDocument(w -> w.read("test").text("new queue text", Assert::assertEquals)));
         }
     }
 
@@ -1937,9 +1923,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "listing.highestCycle: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
-                    "--- !!data #binary\n" +
-                    //! The table store now persists the ordinary-write floor; the entries after it shift by one record.
-                    "listing.highestCycleWriteFloor: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 4\n" +
                     "--- !!data #binary\n" +
@@ -2537,9 +2520,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                     "listing.highestCycle: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.lowestCycle: 18554\n" +
-                    "--- !!data #binary\n" +
-                    //! The table store now persists the ordinary-write floor; the entries after it shift by one record.
-                    "listing.highestCycleWriteFloor: 18554\n" +
                     "--- !!data #binary\n" +
                     "listing.modCount: 5\n" +
                     "--- !!data #binary\n" +

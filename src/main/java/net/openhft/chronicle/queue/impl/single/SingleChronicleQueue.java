@@ -1143,9 +1143,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * scanning the queue directory.
      */
     int lastPublishedCycle() {
-        //! Ordinary appenders use this shared publication instead of lastCycle(). Calling lastCycle()
-        //! here would put a periodic filesystem scan back on the append path and could return a retention-lowered bound.
-        return directoryListing.getMaxCycleForWrite();
+        //! StoreAppenderTest#stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing
+        //! demonstrates that ordinary appenders must read the shared publication without calling lastCycle() and scanning.
+        return directoryListing.getMaxCreatedCycle();
     }
 
     /**

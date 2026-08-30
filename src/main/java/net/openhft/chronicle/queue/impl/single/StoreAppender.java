@@ -682,12 +682,11 @@ class StoreAppender extends AbstractCloseable
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
-        //! The target combines wall-clock progress with the Queue-wide published floor. The maximum
-        //! prevents a rolled-back clock or stale appender from selecting history; initial wire acquisition must use that
-        //! same target. The strict `<` is intentional: ordinary appenders may roll forward but never backward.
+        //! StoreAppenderTest#stalledWriterFollowsAnotherWriterToLaterCycle demonstrates that the
+        //! target combines wall-clock progress with the shared published maximum without scanning the directory.
         final int lastExistingCycle = queue.lastPublishedCycle();
-        // setCycle2 publishes this appender's cycle via queue.onRoll(); taking the maximum with
-        // time prevents clock rollback while the persistent floor survives partial deletion.
+        // Supported retention keeps the published maximum; taking it with time prevents clock
+        // rollback while still allowing a writer to advance normally.
         final int targetCycle = Math.max(queue.cycle(), lastExistingCycle);
         if (wire == null) {
             setWireIfNull(targetCycle);
@@ -1021,16 +1020,12 @@ class StoreAppender extends AbstractCloseable
         // If we're behind the target cycle, roll forward to the last existing cycle first
         if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
             setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
-            // The published-cycle high-water is monotonic and can outlive a cycle file removed by
-            // retention. If the read-only acquire finds no store, create the requested cycle
-            // directly instead of recursing with a null current store.
-            //! Retention may remove the generation named by the persistent floor. A read-only acquire
-            //! then leaves store null; create the requested destination directly instead of dereferencing or recursing
-            //! through the missing generation.
+            //! StoreAppenderTest#deletingPublishedMaximumFailsExistingAppender demonstrates that
+            //! an unsupported missing current generation must fail instead of being skipped while rolling forward.
             if (store == null)
-                setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
-            else
-                rollCycleTo(cycle);
+                throw new IllegalStateException("Highest/current roll " + lastExistingCycle
+                        + " disappeared while Queue metadata remains");
+            rollCycleTo(cycle);
         } else {
             setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
         }

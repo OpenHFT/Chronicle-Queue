@@ -314,28 +314,24 @@ public class ToEndTest extends QueueTestCommon {
                     "listing.lowestCycle: 5\n" +
                     "# position: 240, header: 2\n" +
                     "--- !!data #binary\n" +
-                    //! The table store now persists the ordinary-write floor; the entries after it shift by one record.
-                    "listing.highestCycleWriteFloor: 5\n" +
-                    "# position: 288, header: 3\n" +
-                    "--- !!data #binary\n" +
                     "listing.modCount: 3\n" +
-                    "# position: 320, header: 4\n" +
+                    "# position: 272, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
-                    "# position: 360, header: 5\n" +
+                    "# position: 312, header: 4\n" +
                     "--- !!data #binary\n" +
                     "chronicle.append.lock: -9223372036854775808\n" +
-                    "# position: 400, header: 6\n" +
+                    "# position: 352, header: 5\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexReplicated: -1\n" +
-                    "# position: 448, header: 7\n" +
+                    "# position: 400, header: 6\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastAcknowledgedIndexReplicated: -1\n" +
-                    "# position: 504, header: 8\n" +
+                    "# position: 456, header: 7\n" +
                     "--- !!data #binary\n" +
                     "chronicle.lastIndexMSynced: -1\n" +
                     "...\n" +
-                    "# 130516 bytes remaining\n" +
+                    "# 130564 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  writePosition: [\n" +

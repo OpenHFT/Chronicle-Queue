@@ -5,7 +5,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.TableStore;
 import org.jetbrains.annotations.NotNull;
 
@@ -63,15 +62,6 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
     @Override
     public void refresh(final boolean force) {
         // no-op
-    }
-
-    //! Legacy metadata has no write-floor key, and a read-only mapping cannot create it. This listing
-    //! needs only physical bounds because it cannot select an ordinary write destination.
-    @Override
-    protected LongValue acquireWriteFloor() {
-        // Metadata written before QUEUE-146 has no listing.highestCycleWriteFloor key, and a read-only
-        // mapping cannot create it. A read-only Queue only needs the physical bounds.
-        return null;
     }
 
     /**

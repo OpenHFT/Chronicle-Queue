@@ -3,19 +3,14 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
-import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
-import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,7 +23,6 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 
 public class TableDirectoryListingTest extends QueueTestCommon {
     private DirectoryListing listing;
@@ -117,9 +111,9 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, listingReadOnly.getMaxCreatedCycle());
     }
 
-    //! A directory that cannot be listed must not be published as empty: bounds and floor stay as they were.
+    //! A directory that cannot be listed must not be published as empty: its published bounds stay unchanged.
     @Test
-    public void failedDirectoryListingDoesNotResetWriteFloor() {
+    public void failedDirectoryListingDoesNotResetPublishedBounds() {
         listing.onFileCreated(tempFile, 7);
 
         final TableDirectoryListing failedListing = new TableDirectoryListing(
@@ -130,46 +124,11 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         try {
             failedListing.init();
             failedListing.refresh(true);
-            assertEquals(7, failedListing.getMaxCycleForWrite());
-            // A failed listing must not be published as an empty directory either.
             assertEquals(7, failedListing.getMaxCreatedCycle());
             assertEquals(7, failedListing.getMinCreatedCycle());
         } finally {
             failedListing.close();
         }
-    }
-
-    //! Writer selection reads the persisted floor key, not the physical maximum.
-    @Test
-    public void publishedHighestCycleIsTheWriteFloor() {
-        listing.onFileCreated(tempFile, 7);
-
-        final LongValue publishedHighestCycle = tablestore.acquireValueFor("listing.highestCycleWriteFloor");
-        try {
-            publishedHighestCycle.setOrderedValue(9);
-        } finally {
-            publishedHighestCycle.close();
-        }
-
-        assertEquals(9, listing.getMaxCycleForWrite());
-    }
-
-    //! During a rolling upgrade an older writer publishes only listing.highestCycle; the floor must follow it on every read.
-    @Test
-    public void legacyHighestCycleRatchetsAnAlreadyInitialisedWriteFloor() {
-        listing.onFileCreated(tempFile, 7);
-        assertEquals(7, listing.getMaxCycleForWrite());
-
-        // Simulate a pre-QUEUE-146 process, which publishes only the legacy physical maximum.
-        final LongValue legacyHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
-        try {
-            legacyHighestCycle.setMaxValue(9);
-        } finally {
-            legacyHighestCycle.close();
-        }
-
-        assertEquals(9, listing.getMaxCycleForWrite());
-        assertEquals(9, persistedCycle("listing.highestCycleWriteFloor"));
     }
 
     //! Physical bounds are read from the shared values, so a legacy publication is visible without a further refresh.
@@ -195,7 +154,6 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
 
         assertEquals(9, listing.getMaxCreatedCycle());
-        assertEquals(9, listing.getMaxCycleForWrite());
     }
 
     //! A legacy writer publishes minimum after maximum; a refresh racing between the two CASes must rescan rather than overwrite it.
@@ -245,27 +203,32 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertTrue(published.get());
         assertEquals(9, tableListing.getMinCreatedCycle());
         assertEquals(9, tableListing.getMaxCreatedCycle());
-        assertEquals(9, tableListing.getMaxCycleForWrite());
     }
 
-    //! Refresh may lower the physical bounds after deletion but never the persisted floor.
+    //! Historical-roll deletion may raise the minimum, while a lower exact recreation may lower it without lowering the maximum.
     @Test
-    public void refreshNeverLowersPersistedWatermarks() throws IOException {
-        listing.onFileCreated(tempFile, 7);
-        listing.onFileCreated(tempFile, 9);
+    public void historicalDeletionAndLowerRecreationPreservePublishedMaximum() throws IOException {
+        final File cycleSeven = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
+        final File cycleEight = new File(testDirectory, 8 + SingleChronicleQueue.SUFFIX);
+        final File cycleNine = new File(testDirectory, 9 + SingleChronicleQueue.SUFFIX);
+        assertTrue(cycleSeven.createNewFile());
+        listing.onFileCreated(cycleSeven, 7);
+        assertTrue(cycleEight.createNewFile());
+        listing.onFileCreated(cycleEight, 8);
+        assertTrue(cycleNine.createNewFile());
+        listing.onFileCreated(cycleNine, 9);
 
-        new File(testDirectory, 8 + SingleChronicleQueue.SUFFIX).createNewFile();
+        assertTrue(cycleSeven.delete());
         listing.refresh(true);
         assertEquals(8, listing.getMinCreatedCycle());
-        assertEquals(8, listing.getMaxCreatedCycle());
-        assertEquals(9, listing.getMaxCycleForWrite());
+        assertEquals(9, listing.getMaxCreatedCycle());
 
-        new File(testDirectory, 6 + SingleChronicleQueue.SUFFIX).createNewFile();
-        listing.refresh(true);
+        final File cycleSix = new File(testDirectory, 6 + SingleChronicleQueue.SUFFIX);
+        assertTrue(cycleSix.createNewFile());
+        listing.onFileCreated(cycleSix, 6);
         assertEquals(6, listing.getMinCreatedCycle());
         assertEquals(6, persistedCycle("listing.lowestCycle"));
-        assertEquals(8, persistedCycle("listing.highestCycle"));
-        assertEquals(9, listing.getMaxCycleForWrite());
+        assertEquals(9, persistedCycle("listing.highestCycle"));
     }
 
     //! A non-forced refresh must still expose bounds published by another listing.
@@ -320,7 +283,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
     }
 
-    //! A lower recreated cycle reaches other open listings through the shared minimum without lowering the floor.
+    //! A lower recreated cycle reaches other open listings through the shared minimum without lowering the published maximum.
     @Test
     public void lowerRecreatedCycleIsPublishedToAnotherOpenListing() throws IOException {
         final TableDirectoryListing secondListing = new TableDirectoryListing(
@@ -344,134 +307,58 @@ public class TableDirectoryListingTest extends QueueTestCommon {
             secondListing.refresh(false);
             assertEquals(5, secondListing.getMinCreatedCycle());
             assertEquals(6, secondListing.getMaxCreatedCycle());
-            assertEquals(6, secondListing.getMaxCycleForWrite());
         } finally {
             secondListing.close();
         }
     }
 
-    //! Deleting every roll empties the physical bounds; the ordinary-write floor must survive, or a writer could reuse a cycle that was already published.
+    //! Deleting the highest/current roll while retaining Queue metadata is unsupported and must fail before either bound changes.
     @Test
-    public void emptyRefreshPreservesPublishedWriteFloor() throws IOException {
-        final File cycleFile = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
-        cycleFile.createNewFile();
-        listing.onFileCreated(cycleFile, 7);
+    public void refreshRejectsMissingPublishedMaximum() throws IOException {
+        final File cycleSeven = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
+        assertTrue(cycleSeven.createNewFile());
+        listing.onFileCreated(cycleSeven, 7);
+        final long modCount = listing.modCount();
+        final long refreshTime = listing.lastRefreshTimeMS();
 
-        final TableDirectoryListing secondListing = new TableDirectoryListing(
-                tablestore,
-                testDirectory.toPath(),
-                f -> Integer.parseInt(f.split("\\.")[0]),
-                SystemTimeProvider.INSTANCE);
-        try {
-            secondListing.init();
-            secondListing.refresh(false);
-            assertEquals(7, secondListing.getMaxCycleForWrite());
+        assertTrue(cycleSeven.delete());
+        final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> listing.refresh(true));
 
-            assertTrue(cycleFile.delete());
-            listing.refresh(true);
-
-            secondListing.refresh(false);
-            assertEquals(TableDirectoryListing.UNSET_MIN_CYCLE, secondListing.getMinCreatedCycle());
-            assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, secondListing.getMaxCreatedCycle());
-            assertEquals(7, secondListing.getMaxCycleForWrite());
-        } finally {
-            secondListing.close();
-        }
+        assertTrue(failure.getMessage().contains("Highest/current roll 7 disappeared"));
+        assertEquals(7, listing.getMinCreatedCycle());
+        assertEquals(7, listing.getMaxCreatedCycle());
+        assertEquals(modCount, listing.modCount());
+        assertEquals(refreshTime, listing.lastRefreshTimeMS());
     }
 
-    //! A fresh listing must report the same unset sentinel as lastCycle(); a raw LongValue would cast to cycle zero.
+    //! A fresh listing must report the same unset maximum as lastCycle(); a raw LongValue would cast to cycle zero.
     @Test
-    public void freshListingReportsUnsetWriteFloor() {
-        // Before any publication the floor is the same sentinel lastCycle() uses, not (int) Long.MIN_VALUE == 0.
-        assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, listing.getMaxCycleForWrite());
+    public void freshListingReportsUnsetMaximum() {
         assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, listing.getMaxCreatedCycle());
     }
 
-    //! A legacy publication whose file was removed before any floor read must still raise the floor when refresh lowers the maximum.
+    //! A legacy publication whose file has disappeared is not lowered by refresh; the surviving metadata makes the Queue fail closed.
     @Test
-    public void refreshRatchetsLegacyPublicationDeletedBeforeAnyWriteFloorRead() throws IOException {
+    public void refreshRejectsMissingLegacyPublication() throws IOException {
         final File cycleSeven = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
         assertTrue(cycleSeven.createNewFile());
         listing.onFileCreated(cycleSeven, 7);
 
-        // A pre-QUEUE-146 writer publishes cycle 9, its file is removed again, and nothing reads the write
-        // floor before this listing rescans the directory and lowers the physical maximum back to 7.
         final LongValue legacyHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
         try {
             legacyHighestCycle.setMaxValue(9);
         } finally {
             legacyHighestCycle.close();
         }
-        listing.refresh(true);
-
-        assertEquals(7, listing.getMaxCreatedCycle());
-        assertEquals(9, listing.getMaxCycleForWrite());
+        assertThrows(IllegalStateException.class, () -> listing.refresh(true));
+        assertEquals(9, listing.getMaxCreatedCycle());
     }
 
-    //! A read-only mapping cannot create the floor key in metadata written before it existed; opening must not try.
+    //! QUEUE-146 reuses listing.highestCycle, so writable metadata must not gain a second writer-floor entry.
     @Test
-    public void readOnlyListingOpensMetadataWrittenBeforeTheWriteFloorKey() {
-        final File legacyFile = new File(testDirectory, "legacy-list" + SingleTableStore.SUFFIX);
-        // A pre-QUEUE-146 writer persists only the physical bounds and the modification count.
-        try (TableStore<Metadata.NoMeta> legacyStore = SingleTableBuilder.binary(legacyFile, Metadata.NoMeta.INSTANCE).build()) {
-            for (String key : new String[]{"listing.highestCycle", "listing.lowestCycle", "listing.modCount"}) {
-                final LongValue value = legacyStore.acquireValueFor(key);
-                try {
-                    value.setOrderedValue("listing.modCount".equals(key) ? 1 : 7);
-                } finally {
-                    value.close();
-                }
-            }
-        }
-
-        try (TableStore<Metadata.NoMeta> readOnlyStore = SingleTableBuilder.binary(legacyFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
-             TableDirectoryListingReadOnly readOnlyListing = new TableDirectoryListingReadOnly(readOnlyStore, SystemTimeProvider.INSTANCE)) {
-            readOnlyListing.init();
-            assertEquals(7, readOnlyListing.getMaxCreatedCycle());
-            assertEquals(7, readOnlyListing.getMinCreatedCycle());
-            assertEquals(7, readOnlyListing.getMaxCycleForWrite());
-        }
-    }
-
-    //! The same guarantee at Queue level: a read-only Queue opens older metadata and reads through it.
-    @Test
-    public void readOnlyQueueOpensMetadataWrittenBeforeTheWriteFloorKey() {
-        assumeFalse("read-only queues are not supported on Windows", OS.isWindows());
-
-        final File legacyQueueDirectory = new File(testDirectory, "legacy-queue");
-        final int legacyCycle;
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(legacyQueueDirectory).testBlockSize().build();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeText("legacy payload");
-            legacyCycle = queue.rollCycle().toCycle(appender.lastIndexAppended());
-        }
-
-        // Replace only the metadata table with its pre-QUEUE-146 shape. The genuine roll file above keeps this an
-        // end-to-end Queue open rather than another direct TableDirectoryListing construction.
-        final File metadataFile = new File(legacyQueueDirectory, SingleChronicleQueue.QUEUE_METADATA_FILE);
-        assertTrue("failed to replace metadata with its legacy shape", metadataFile.delete());
-        final SCQMeta legacyMetadata = new SCQMeta(new SCQRoll(RollCycles.DEFAULT, 0L, null, null), 0);
-        try (TableStore<SCQMeta> legacyStore = SingleTableBuilder.binary(metadataFile, legacyMetadata).build()) {
-            for (String key : new String[]{"listing.highestCycle", "listing.lowestCycle", "listing.modCount"}) {
-                final LongValue value = legacyStore.acquireValueFor(key);
-                try {
-                    value.setOrderedValue("listing.modCount".equals(key) ? 1 : legacyCycle);
-                } finally {
-                    value.close();
-                }
-            }
-            assertFalse(legacyStore.dump(WireType.BINARY_LIGHT).contains("listing.highestCycleWriteFloor"));
-        }
-
-        try (SingleChronicleQueue readOnlyQueue = SingleChronicleQueueBuilder.binary(legacyQueueDirectory)
-                .testBlockSize()
-                .readOnly(true)
-                .build();
-             ExcerptTailer tailer = readOnlyQueue.createTailer()) {
-            assertEquals(legacyCycle, readOnlyQueue.firstCycle());
-            assertEquals(legacyCycle, readOnlyQueue.lastCycle());
-            assertEquals("legacy payload", tailer.readText());
-        }
+    public void metadataContainsNoSeparateWriteFloor() {
+        assertFalse(tablestore.dump(net.openhft.chronicle.wire.WireType.BINARY_LIGHT)
+                .contains("listing.highestCycleWriteFloor"));
     }
 
     private int persistedCycle(final String key) {
