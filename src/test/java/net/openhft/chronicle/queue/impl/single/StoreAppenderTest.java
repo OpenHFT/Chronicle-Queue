@@ -533,6 +533,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// A document write that meets a seal continues in the next roll.
     @Test
     public void ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -554,6 +555,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// The same guarantee for sequential byte writes.
     @Test
     public void sequentialWriteBytesRollsForwardPastSealedCurrentCycle() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -575,6 +577,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// Only one advance per attempt: a second seal is reported, and the appender remains usable afterwards.
     @Test
     public void secondConsecutiveEofIsPropagated() throws IOException {
         final AtomicLong clock = new AtomicLong();
@@ -609,6 +612,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// At the last representable cycle the advance is refused before anything is created or published.
     @Test
     public void eofAdvanceRejectsCycleOverflowBeforeMutation() throws IOException {
         final long clock = (long) Integer.MAX_VALUE * TEST_DAILY.lengthInMillis();
