@@ -597,8 +597,6 @@ public class StoreAppenderTest extends QueueTestCommon {
             // advance once, but the unexpected second EOF must escape instead of looping.
             queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
                     .setVolatileValue(sealedCycle);
-            queue.tableStoreAcquire("listing.highestCycleWriteFloor", sealedCycle)
-                    .setVolatileValue(sealedCycle);
 
             assertThrows(WriteAfterEOFException.class,
                     () -> appender.writeText("must fail at second EOF"));
