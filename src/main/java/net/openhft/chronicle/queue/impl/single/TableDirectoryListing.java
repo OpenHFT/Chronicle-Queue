@@ -109,15 +109,15 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         modCount = tableStore.acquireValueFor(MOD_COUNT);
     }
 
-    /// Do not infer mapping mode from TableStore.readOnly(); not every TableStore implementation
-    /// exposes the mode used for this mapping. The subclass hook also lets a read-only listing open older metadata
-    /// without attempting to create the write-floor key.
     /**
      * Acquires the monotonic ordinary-write floor. The read-only listing returns {@code null}: its
      * table store is mapped read-only, so the key cannot be created in metadata written before
      * QUEUE-146, and a read-only Queue never selects an ordinary-write cycle.
      */
     protected LongValue acquireWriteFloor() {
+        /// Do not infer mapping mode from TableStore.readOnly(); not every TableStore implementation
+        /// exposes the mode used for this mapping. The subclass hook also lets a read-only listing open older metadata
+        /// without attempting to create the write-floor key.
         return tableStore.acquireValueFor(HIGHEST_CYCLE_WRITE_FLOOR);
     }
 

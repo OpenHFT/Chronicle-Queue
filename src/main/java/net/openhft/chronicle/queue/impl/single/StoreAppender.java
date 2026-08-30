@@ -677,14 +677,14 @@ class StoreAppender extends AbstractCloseable
         setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
     }
 
-    /// The target combines wall-clock progress with the Queue-wide published floor. The maximum
-    /// prevents a rolled-back clock or stale appender from selecting history; initial wire acquisition must use that
-    /// same target. The strict `<` is intentional: ordinary appenders may roll forward but never backward.
     /**
      * Moves an ordinary append to the latest cycle known by either time, this appender, or another
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
+        /// The target combines wall-clock progress with the Queue-wide published floor. The maximum
+        /// prevents a rolled-back clock or stale appender from selecting history; initial wire acquisition must use that
+        /// same target. The strict `<` is intentional: ordinary appenders may roll forward but never backward.
         final int lastExistingCycle = queue.lastPublishedCycle();
         // setCycle2 publishes this appender's cycle via queue.onRoll(); taking the maximum with
         // time prevents clock rollback while the persistent floor survives partial deletion.
