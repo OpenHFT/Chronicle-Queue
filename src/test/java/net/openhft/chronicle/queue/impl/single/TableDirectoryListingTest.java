@@ -3,14 +3,19 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,6 +28,7 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 public class TableDirectoryListingTest extends QueueTestCommon {
     private DirectoryListing listing;
@@ -124,6 +130,9 @@ public class TableDirectoryListingTest extends QueueTestCommon {
             failedListing.init();
             failedListing.refresh(true);
             assertEquals(7, failedListing.getMaxCycleForWrite());
+            // A failed listing must not be published as an empty directory either.
+            assertEquals(7, failedListing.getMaxCreatedCycle());
+            assertEquals(7, failedListing.getMinCreatedCycle());
         } finally {
             failedListing.close();
         }
@@ -357,6 +366,97 @@ public class TableDirectoryListingTest extends QueueTestCommon {
             assertEquals(7, secondListing.getMaxCycleForWrite());
         } finally {
             secondListing.close();
+        }
+    }
+
+    @Test
+    public void freshListingReportsUnsetWriteFloor() {
+        // Before any publication the floor is the same sentinel lastCycle() uses, not (int) Long.MIN_VALUE == 0.
+        assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, listing.getMaxCycleForWrite());
+        assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, listing.getMaxCreatedCycle());
+    }
+
+    @Test
+    public void refreshRatchetsLegacyPublicationDeletedBeforeAnyWriteFloorRead() throws IOException {
+        final File cycleSeven = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
+        assertTrue(cycleSeven.createNewFile());
+        listing.onFileCreated(cycleSeven, 7);
+
+        // A pre-QUEUE-146 writer publishes cycle 9, its file is removed again, and nothing reads the write
+        // floor before this listing rescans the directory and lowers the physical maximum back to 7.
+        final LongValue legacyHighestCycle = tablestore.acquireValueFor("listing.highestCycle");
+        try {
+            legacyHighestCycle.setMaxValue(9);
+        } finally {
+            legacyHighestCycle.close();
+        }
+        listing.refresh(true);
+
+        assertEquals(7, listing.getMaxCreatedCycle());
+        assertEquals(9, listing.getMaxCycleForWrite());
+    }
+
+    @Test
+    public void readOnlyListingOpensMetadataWrittenBeforeTheWriteFloorKey() {
+        final File legacyFile = new File(testDirectory, "legacy-list" + SingleTableStore.SUFFIX);
+        // A pre-QUEUE-146 writer persists only the physical bounds and the modification count.
+        try (TableStore<Metadata.NoMeta> legacyStore = SingleTableBuilder.binary(legacyFile, Metadata.NoMeta.INSTANCE).build()) {
+            for (String key : new String[]{"listing.highestCycle", "listing.lowestCycle", "listing.modCount"}) {
+                final LongValue value = legacyStore.acquireValueFor(key);
+                try {
+                    value.setOrderedValue("listing.modCount".equals(key) ? 1 : 7);
+                } finally {
+                    value.close();
+                }
+            }
+        }
+
+        try (TableStore<Metadata.NoMeta> readOnlyStore = SingleTableBuilder.binary(legacyFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
+             TableDirectoryListingReadOnly readOnlyListing = new TableDirectoryListingReadOnly(readOnlyStore, SystemTimeProvider.INSTANCE)) {
+            readOnlyListing.init();
+            assertEquals(7, readOnlyListing.getMaxCreatedCycle());
+            assertEquals(7, readOnlyListing.getMinCreatedCycle());
+            assertEquals(7, readOnlyListing.getMaxCycleForWrite());
+        }
+    }
+
+    @Test
+    public void readOnlyQueueOpensMetadataWrittenBeforeTheWriteFloorKey() {
+        assumeFalse("read-only queues are not supported on Windows", OS.isWindows());
+
+        final File legacyQueueDirectory = new File(testDirectory, "legacy-queue");
+        final int legacyCycle;
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(legacyQueueDirectory).testBlockSize().build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("legacy payload");
+            legacyCycle = queue.rollCycle().toCycle(appender.lastIndexAppended());
+        }
+
+        // Replace only the metadata table with its pre-QUEUE-146 shape. The genuine roll file above keeps this an
+        // end-to-end Queue open rather than another direct TableDirectoryListing construction.
+        final File metadataFile = new File(legacyQueueDirectory, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        assertTrue("failed to replace metadata with its legacy shape", metadataFile.delete());
+        final SCQMeta legacyMetadata = new SCQMeta(new SCQRoll(RollCycles.DEFAULT, 0L, null, null), 0);
+        try (TableStore<SCQMeta> legacyStore = SingleTableBuilder.binary(metadataFile, legacyMetadata).build()) {
+            for (String key : new String[]{"listing.highestCycle", "listing.lowestCycle", "listing.modCount"}) {
+                final LongValue value = legacyStore.acquireValueFor(key);
+                try {
+                    value.setOrderedValue("listing.modCount".equals(key) ? 1 : legacyCycle);
+                } finally {
+                    value.close();
+                }
+            }
+            assertFalse(legacyStore.dump(WireType.BINARY_LIGHT).contains("listing.highestCycleWriteFloor"));
+        }
+
+        try (SingleChronicleQueue readOnlyQueue = SingleChronicleQueueBuilder.binary(legacyQueueDirectory)
+                .testBlockSize()
+                .readOnly(true)
+                .build();
+             ExcerptTailer tailer = readOnlyQueue.createTailer()) {
+            assertEquals(legacyCycle, readOnlyQueue.firstCycle());
+            assertEquals(legacyCycle, readOnlyQueue.lastCycle());
+            assertEquals("legacy payload", tailer.readText());
         }
     }
 

@@ -1137,6 +1137,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return directoryListing.getMaxCreatedCycle();
     }
 
+    /// Ordinary appenders use this shared publication instead of lastCycle(). Calling lastCycle()
+    /// here would put a periodic filesystem scan back on the append path and could return a retention-lowered bound.
     /**
      * Returns the latest cycle published by a cooperating writer without the periodic filesystem
      * refresh performed by {@link #lastCycle()}. This distinction keeps the append hot path from
