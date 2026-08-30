@@ -63,9 +63,6 @@ public interface DirectoryListing extends Closeable {
      */
     int getMaxCreatedCycle();
 
-    /// This is a writer-selection value, not necessarily the current physical maximum.
-    /// Metadata-backed listings override it with a monotonic floor; filesystem-only listings retain their
-    /// historical behaviour by using the current maximum.
     /**
      * Returns the monotonic cycle floor used by ordinary writers. Implementations without
      * persistent listing metadata use the current maximum as their floor.
@@ -73,6 +70,9 @@ public interface DirectoryListing extends Closeable {
      * @return the highest cycle an ordinary writer must not move behind
      */
     default int getMaxCycleForWrite() {
+        /// This is a writer-selection value, not necessarily the current physical maximum.
+        /// Metadata-backed listings override it with a monotonic floor; filesystem-only listings retain their
+        /// historical behaviour by using the current maximum.
         return getMaxCreatedCycle();
     }
 
