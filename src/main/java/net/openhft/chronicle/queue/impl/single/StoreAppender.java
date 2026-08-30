@@ -750,8 +750,16 @@ class StoreAppender extends AbstractCloseable
         try {
             return writeHeader(safeLength);
         } catch (WriteAfterEOFException ignored) {
+            /// EOF opens no document; keep Queue's boundary independent of Wire's transient header state.
+            ((InternalWire) wire).forceNotInsideHeader();
             advanceOrdinaryAppendCycle();
-            return writeHeader(safeLength);
+            try {
+                return writeHeader(safeLength);
+            } catch (WriteAfterEOFException secondEOF) {
+                /// The mapped Wire survives this failed attempt, so a later append must not inherit an open header.
+                ((InternalWire) wire).forceNotInsideHeader();
+                throw secondEOF;
+            }
         }
     }
 
