@@ -563,8 +563,8 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                /// Keep sequential byte writes and document writes on the same ordinary-cycle
-                /// selector; allowing the entry points to diverge reintroduces clock-rollback inconsistencies.
+                //! Keep sequential byte writes and document writes on the same ordinary-cycle
+                //! selector; allowing the entry points to diverge reintroduces clock-rollback inconsistencies.
                 moveToCycleForAppend();
 
                 long safeLength = queue.overlapSize();
@@ -682,9 +682,9 @@ class StoreAppender extends AbstractCloseable
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
-        /// The target combines wall-clock progress with the Queue-wide published floor. The maximum
-        /// prevents a rolled-back clock or stale appender from selecting history; initial wire acquisition must use that
-        /// same target. The strict `<` is intentional: ordinary appenders may roll forward but never backward.
+        //! The target combines wall-clock progress with the Queue-wide published floor. The maximum
+        //! prevents a rolled-back clock or stale appender from selecting history; initial wire acquisition must use that
+        //! same target. The strict `<` is intentional: ordinary appenders may roll forward but never backward.
         final int lastExistingCycle = queue.lastPublishedCycle();
         // setCycle2 publishes this appender's cycle via queue.onRoll(); taking the maximum with
         // time prevents clock rollback while the persistent floor survives partial deletion.
@@ -798,8 +798,8 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock();
         writeLock.lock();
         try {
-            /// This document path shares the selector used by sequential byte writes; see
-            /// moveToCycleForAppend() for the no-backward-roll invariant.
+            //! This document path shares the selector used by sequential byte writes; see
+            //! moveToCycleForAppend() for the no-backward-roll invariant.
             moveToCycleForAppend();
 
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
@@ -1014,8 +1014,8 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
         }
 
-        /// Use the shared publication, not lastCycle(). The latter refreshes physical files and
-        /// couples ordinary append latency and destination selection to retention-time directory state.
+        //! Use the shared publication, not lastCycle(). The latter refreshes physical files and
+        //! couples ordinary append latency and destination selection to retention-time directory state.
         int lastExistingCycle = queue.lastPublishedCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
@@ -1024,9 +1024,9 @@ class StoreAppender extends AbstractCloseable
             // The published-cycle high-water is monotonic and can outlive a cycle file removed by
             // retention. If the read-only acquire finds no store, create the requested cycle
             // directly instead of recursing with a null current store.
-            /// Retention may remove the generation named by the persistent floor. A read-only acquire
-            /// then leaves store null; create the requested destination directly instead of dereferencing or recursing
-            /// through the missing generation.
+            //! Retention may remove the generation named by the persistent floor. A read-only acquire
+            //! then leaves store null; create the requested destination directly instead of dereferencing or recursing
+            //! through the missing generation.
             if (store == null)
                 setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
             else

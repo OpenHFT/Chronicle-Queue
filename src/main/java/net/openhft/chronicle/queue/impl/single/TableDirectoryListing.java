@@ -25,8 +25,8 @@ import java.util.function.ToIntFunction;
 class TableDirectoryListing extends AbstractCloseable implements DirectoryListing {
 
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
-    /// Physical bounds may fall after retention; this separate persisted value is monotonic and is
-    /// therefore safe for ordinary writer selection across reopen and rolling upgrades.
+    //! Physical bounds may fall after retention; this separate persisted value is monotonic and is
+    //! therefore safe for ordinary writer selection across reopen and rolling upgrades.
     private static final String HIGHEST_CYCLE_WRITE_FLOOR = "listing.highestCycleWriteFloor";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String MOD_COUNT = "listing.modCount";
@@ -40,7 +40,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private final TimeProvider time;
     private volatile LongValue maxCycleValue;
     private volatile LongValue minCycleValue;
-    /// This mapped value has the same acquire/close ownership as the existing bound values.
+    //! This mapped value has the same acquire/close ownership as the existing bound values.
     private volatile LongValue writeFloorValue;
     private volatile LongValue modCount;
     private long lastRefreshTimeMS = 0;
@@ -86,9 +86,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
-            /// A newly acquired LongValue contains Long.MIN_VALUE, whose int cast is zero. Normalize
-            /// the physical maximum first, then initialize the floor from it, so a fresh Queue consistently reports
-            /// UNSET_MAX_CYCLE rather than fabricating cycle zero.
+            //! A newly acquired LongValue contains Long.MIN_VALUE, whose int cast is zero. Normalize
+            //! the physical maximum first, then initialize the floor from it, so a fresh Queue consistently reports
+            //! UNSET_MAX_CYCLE rather than fabricating cycle zero.
             maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MAX_CYCLE);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
             writeFloorValue.compareAndSwapValue(Long.MIN_VALUE, getMaxCycleValue());
@@ -115,9 +115,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * QUEUE-146, and a read-only Queue never selects an ordinary-write cycle.
      */
     protected LongValue acquireWriteFloor() {
-        /// Do not infer mapping mode from TableStore.readOnly(); not every TableStore implementation
-        /// exposes the mode used for this mapping. The subclass hook also lets a read-only listing open older metadata
-        /// without attempting to create the write-floor key.
+        //! Do not infer mapping mode from TableStore.readOnly(); not every TableStore implementation
+        //! exposes the mode used for this mapping. The subclass hook also lets a read-only listing open older metadata
+        //! without attempting to create the write-floor key.
         return tableStore.acquireValueFor(HIGHEST_CYCLE_WRITE_FLOOR);
     }
 
@@ -132,9 +132,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         if (!force)
             return;
 
-        /// Older writers publish only the legacy bounds and do not participate in this protocol.
-        /// Observe both bounds and modCount around the scan, then CAS both bounds; any change or lost CAS requires a
-        /// rescan so stale filesystem state cannot overwrite a concurrent legacy publication.
+        //! Older writers publish only the legacy bounds and do not participate in this protocol.
+        //! Observe both bounds and modCount around the scan, then CAS both bounds; any change or lost CAS requires a
+        //! rescan so stale filesystem state cannot overwrite a concurrent legacy publication.
         throwExceptionIfClosed();
         tableStore.throwExceptionIfClosed();
 
@@ -147,8 +147,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             final long observedLegacyMax = maxCycleValue.getVolatileValue();
 
             final String[] fileNamesList = queuePath.toFile().list();
-            /// Null means the directory could not be listed, not that it is empty. Preserve all
-            /// published state and leave the refresh timestamp unchanged so a later read can retry.
+            //! Null means the directory could not be listed, not that it is empty. Preserve all
+            //! published state and leave the refresh timestamp unchanged so a later read can retry.
             if (fileNamesList == null)
                 return;
 
@@ -197,8 +197,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
             // Persist the physical bounds independently of the monotonic ordinary-write floor.
             // Historical deletion may move or empty these bounds, but cannot move a writer back.
-            /// This CAS sequence may lower the physical maximum after deletion. Preserve the maximum
-            /// observed before the scan in the monotonic floor first, including publications made by legacy writers.
+            //! This CAS sequence may lower the physical maximum after deletion. Preserve the maximum
+            //! observed before the scan in the monotonic floor first, including publications made by legacy writers.
             if (observedLegacyMax != UNSET_MAX_CYCLE)
                 writeFloorValue.setMaxValue(observedLegacyMax);
             modCount.addAtomicValue(1);
@@ -230,8 +230,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         // table-store file lock.
         minCycleValue.setMinValue(cycle);
         maxCycleValue.setMaxValue(cycle);
-        /// Publish the writer floor as part of roll publication. The read-side legacy ratchet is a
-        /// rolling-upgrade fallback, not the primary path for cooperating writers.
+        //! Publish the writer floor as part of roll publication. The read-side legacy ratchet is a
+        //! rolling-upgrade fallback, not the primary path for cooperating writers.
         writeFloorValue.setMaxValue(cycle);
         modCount.addAtomicValue(1);
     }
@@ -256,9 +256,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         return getMaxCycleValue();
     }
 
-    /// Writer selection reads the monotonic floor, while rolling upgrades also require every read to
-    /// ratchet legacy highest-cycle publications into that floor. A null floor belongs only to the read-only listing,
-    /// which never selects an ordinary write destination.
+    //! Writer selection reads the monotonic floor, while rolling upgrades also require every read to
+    //! ratchet legacy highest-cycle publications into that floor. A null floor belongs only to the read-only listing,
+    //! which never selects an ordinary write destination.
     @Override
     public int getMaxCycleForWrite() {
         final int legacyMaximum = getMaxCycleValue();
@@ -307,8 +307,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Closes the directory listing by releasing resources associated with the LongValues.
      */
     protected void performClose() {
-        /// writeFloorValue owns mapped resources just like the physical-bound values and must be
-        /// released in the same lifecycle.
+        //! writeFloorValue owns mapped resources just like the physical-bound values and must be
+        //! released in the same lifecycle.
         Closeable.closeQuietly(minCycleValue, maxCycleValue, writeFloorValue, modCount);
     }
 

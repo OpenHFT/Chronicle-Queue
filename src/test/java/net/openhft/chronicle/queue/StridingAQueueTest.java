@@ -80,7 +80,7 @@ public class StridingAQueueTest extends QueueTestCommon {
                 "--- !!data #binary\n" +
                 "listing.lowestCycle: 1567498753\n" +
                 "--- !!data #binary\n" +
-                /// The table store now persists the ordinary-write floor; the entries after it shift by one record.
+                //! The table store now persists the ordinary-write floor; the entries after it shift by one record.
                 "listing.highestCycleWriteFloor: 1567498756\n" +
                 "--- !!data #binary\n" +
                 "listing.modCount: 8\n" +
