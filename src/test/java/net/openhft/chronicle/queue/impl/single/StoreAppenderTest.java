@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -24,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
@@ -65,9 +68,45 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
-    //! The floor can name a roll that retention removed; rolling past it must create the target directly instead of dereferencing a missing store.
+    //! Supported retention removes only historical rolls; both an existing and a reopened appender must retain the published maximum.
     @Test
-    public void stalledAppenderRollsPastDeletedPublishedCycle() throws IOException {
+    public void deletingOldestHistoricalRollPreservesPublishedMaximum() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong time = new AtomicLong();
+        final File oldestRoll;
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(Bytes.from("cycle-0"));
+            oldestRoll = appender.currentFile();
+            time.set(TEST_DAILY.lengthInMillis());
+            appender.writeBytes(Bytes.from("cycle-1"));
+            time.set(2L * TEST_DAILY.lengthInMillis());
+            appender.writeBytes(Bytes.from("cycle-2"));
+
+            assertTrue("test precondition: oldest historical roll must be removable", oldestRoll.delete());
+            queue.refreshDirectoryListing();
+            time.set(0);
+            appender.writeBytes(Bytes.from("existing-appender"));
+            assertEquals(2, appender.cycle());
+        }
+
+        try (SingleChronicleQueue reopened = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender appender = reopened.createAppender()) {
+            appender.writeBytes(Bytes.from("reopened-appender"));
+            assertEquals(2, appender.cycle());
+        }
+    }
+
+    //! An already-open appender must not skip an externally removed published maximum when its clock advances.
+    @Test
+    public void deletingPublishedMaximumFailsExistingAppender() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong stalledClock = new AtomicLong();
         final AtomicLong advancingClock = new AtomicLong();
@@ -90,19 +129,18 @@ public class StoreAppenderTest extends QueueTestCommon {
                 publishedFile = advancingWriter.currentFile();
             }
 
-            assertEquals(1, stalledQueue.lastPublishedCycle());
-            assertTrue("test precondition: published cycle file must be removed",
-                    publishedFile.delete());
+            assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
+            stalledClock.set(2L * TEST_DAILY.lengthInMillis());
 
-            stalledClock.set(2 * TEST_DAILY.lengthInMillis());
-            stalledWriter.writeBytes(Bytes.from("cycle-2"));
-            assertEquals(2, stalledWriter.cycle());
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> stalledWriter.writeBytes(Bytes.from("must-fail")));
+            assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
         }
     }
 
-    //! Deleting the highest roll and reopening must not move ordinary writes back below the persisted floor.
+    //! Deleting the highest/current roll while retaining metadata is unsupported; reopening must fail before recreating it.
     @Test
-    public void deletingHighestRollDoesNotMoveActiveQueueBackwards() throws IOException {
+    public void deletingHighestRollWithMetadataFailsClosed() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong time = new AtomicLong();
         final File highestRoll;
@@ -123,23 +161,24 @@ public class StoreAppenderTest extends QueueTestCommon {
                 highestRoll.delete());
         time.set(0);
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
-                .timeProvider(time::get)
-                .rollCycle(TEST_DAILY)
-                .build();
-             ExcerptAppender appender = queue.createAppender()) {
-            appender.writeBytes(Bytes.from("must-not-move-back"));
-            assertEquals("the persistent write floor must survive partial deletion and reopen",
-                    1, appender.cycle());
-        }
+        final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> {
+            try (SingleChronicleQueue unexpectedlyOpened = SingleChronicleQueueBuilder.binary(directory)
+                    .timeProvider(time::get)
+                    .rollCycle(TEST_DAILY)
+                    .build()) {
+                assertFalse("the constructor must reject the missing current generation",
+                        unexpectedlyOpened.isClosed());
+            }
+        });
+        assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
+        assertFalse("failed reopen must not recreate the removed current roll", highestRoll.exists());
     }
 
-    //! Deleting every roll file leaves the metadata; the floor it holds still governs the next write.
+    //! A genuinely new Queue requires every handle closed and the entire directory, including metadata, removed.
     @Test
-    public void completeExternalRollDeletionDoesNotResetWriteFloor() throws IOException {
+    public void deletingWholeQueueOfflineAllowsClockSelectedInitialCycle() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong time = new AtomicLong(3L * TEST_DAILY.lengthInMillis());
-        final File onlyRoll;
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
                 .timeProvider(time::get)
@@ -147,21 +186,20 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
             appender.writeBytes(Bytes.from("cycle-3"));
-            onlyRoll = appender.currentFile();
             assertEquals(3, appender.cycle());
         }
 
-        assertTrue("test precondition: every roll file must be removed", onlyRoll.delete());
+        assertTrue("offline deletion must remove rolls and Queue metadata", IOTools.deleteDirWithFiles(directory));
+        assertTrue("test precondition: recreate the now-new Queue directory", directory.mkdirs());
         time.set(0);
 
-        try (SingleChronicleQueue alreadyOpenQueue = SingleChronicleQueueBuilder.binary(directory)
+        try (SingleChronicleQueue newQueue = SingleChronicleQueueBuilder.binary(directory)
                 .timeProvider(time::get)
                 .rollCycle(TEST_DAILY)
-                .build()) {
-            try (ExcerptAppender appender = alreadyOpenQueue.createAppender()) {
-                appender.writeBytes(Bytes.from("preserve-cycle-floor"));
-                assertEquals("deleting roll paths must not reset retained Queue metadata", 3, appender.cycle());
-            }
+                .build();
+             ExcerptAppender appender = newQueue.createAppender()) {
+            appender.writeBytes(Bytes.from("new-queue"));
+            assertEquals(0, appender.cycle());
         }
     }
 
