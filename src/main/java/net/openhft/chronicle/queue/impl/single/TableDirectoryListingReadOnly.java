@@ -65,8 +65,8 @@ class TableDirectoryListingReadOnly extends TableDirectoryListing {
         // no-op
     }
 
-    /// Legacy metadata has no write-floor key, and a read-only mapping cannot create it. This listing
-    /// needs only physical bounds because it cannot select an ordinary write destination.
+    //! Legacy metadata has no write-floor key, and a read-only mapping cannot create it. This listing
+    //! needs only physical bounds because it cannot select an ordinary write destination.
     @Override
     protected LongValue acquireWriteFloor() {
         // Metadata written before QUEUE-146 has no listing.highestCycleWriteFloor key, and a read-only
