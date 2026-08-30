@@ -571,6 +571,7 @@ class StoreAppender extends AbstractCloseable
                 resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
+                /// Ordinary documents may advance once past a sealed roll; index-addressed writes pass false and stay strict.
                 openContext(metaData, safeLength, true);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
@@ -747,6 +748,8 @@ class StoreAppender extends AbstractCloseable
      * listener needs a non-mutating destination preflight.
      */
     private long writeHeaderForOrdinaryAppend(final long safeLength) {
+        /// A sealed roll must not fail an ordinary append: advance once to the next generation and retry.
+        /// A second seal is propagated, so a run of sealed rolls cannot loop here.
         try {
             return writeHeader(safeLength);
         } catch (WriteAfterEOFException ignored) {
@@ -768,6 +771,8 @@ class StoreAppender extends AbstractCloseable
      * QUEUE-144 invokes context listeners only after this method has fixed the actual cycle.
      */
     private void resolveOrdinaryAppendDestination() {
+        /// Non-mutating destination selection for outputs that must know the roll before any header is
+        /// opened. The ordinary append path above does not need it and does not use it.
         moveToCycleForAppend();
         resetPosition();
         int header = nextApplicationHeader();
@@ -780,12 +785,15 @@ class StoreAppender extends AbstractCloseable
             throw new WriteAfterEOFException();
     }
 
+    /// Overflow is rejected before any roll or publication. The seal that triggered the advance already
+    /// ends the source roll, so no second end-of-data marker is written there.
     private void advanceOrdinaryAppendCycle() {
         if (cycle == Integer.MAX_VALUE)
             throw new IllegalStateException("Cannot advance ordinary append beyond cycle " + cycle);
         rollCycleTo(cycle + 1, true);
     }
 
+    /// Reads headers without entering one, so a preflight leaves no header state behind.
     private int nextApplicationHeader() {
         positionForNextHeader();
         final Bytes<?> bytes = wire.bytes();
@@ -800,11 +808,13 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
+    /// Positioning is separated from header acquisition so one scan serves both a preflight and the real attempt.
     private long writeHeader(final long safeLength) {
         positionForNextHeader();
         return wire.enterHeader(safeLength);
     }
 
+    /// The former first half of writeHeader: moves writePosition to the first free header without opening it.
     private void positionForNextHeader() {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
@@ -835,6 +845,8 @@ class StoreAppender extends AbstractCloseable
     private void openContext(final boolean metaData,
                              final long safeLength,
                              final boolean rollAtEndOfData) {
+                                 /// Only ordinary appends may follow a seal into the next roll; index-addressed writes must fail at the
+                                 /// position they name.
         assert wire != null;
         this.positionOfHeader = rollAtEndOfData
                 ? writeHeaderForOrdinaryAppend(safeLength)
@@ -903,6 +915,7 @@ class StoreAppender extends AbstractCloseable
             //! sequentialWriteBytesIgnoresClockRollback fails if this entry point retains the former clock-only
             //! selection: bytes would move backwards while writingDocument() follows the shared published maximum.
             moveToCycleForAppend();
+            /// Sequential byte appends share the one-advance rule with document writes.
             this.positionOfHeader = writeHeaderForOrdinaryAppend((int) queue.overlapSize());
 
             assert isInsideHeader(wire);
@@ -1005,6 +1018,8 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
+            /// An exact-index write names its destination; it must not follow the ordinary selector past a
+            /// sealed roll. Recovering such writes is a separate contract.
             openContext(metadata, safeLength, false);
 
             try {
