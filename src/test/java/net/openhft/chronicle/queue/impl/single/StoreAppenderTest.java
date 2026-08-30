@@ -65,6 +65,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// The floor can name a roll that retention removed; rolling past it must create the target directly instead of dereferencing a missing store.
     @Test
     public void stalledAppenderRollsPastDeletedPublishedCycle() throws IOException {
         final File directory = queueDirectory.newFolder();
@@ -99,6 +100,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// Deleting the highest roll and reopening must not move ordinary writes back below the persisted floor.
     @Test
     public void deletingHighestRollDoesNotMoveActiveQueueBackwards() throws IOException {
         final File directory = queueDirectory.newFolder();
@@ -132,6 +134,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// Deleting every roll file leaves the metadata; the floor it holds still governs the next write.
     @Test
     public void completeExternalRollDeletionDoesNotResetWriteFloor() throws IOException {
         final File directory = queueDirectory.newFolder();
@@ -162,6 +165,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// A clock that moves backwards must not reopen a sealed earlier roll for document writes.
     @Test
     public void writingDocumentIgnoresClockRollback() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -196,6 +200,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// The same guarantee for sequential byte writes, which select their cycle through the same path.
     @Test
     public void sequentialWriteBytesIgnoresClockRollback() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
@@ -221,6 +226,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// An appender whose clock lags must follow the cycle another writer published.
     @Test
     public void stalledWriterFollowsAnotherWriterToLaterCycle() throws IOException {
         final AtomicLong advancingClock = new AtomicLong(System.currentTimeMillis());
@@ -253,6 +259,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// The append path must not scan the directory: an unpublished file must never become the destination.
     @Test
     public void ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing() throws IOException {
         final AtomicLong clock = new AtomicLong();
@@ -280,6 +287,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// Publication crosses processes through the table store, and rolling must not trigger a filesystem refresh.
     @Test(timeout = 15_000)
     public void stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing()
             throws IOException, InterruptedException {
@@ -317,6 +325,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
+    /// Child process that publishes a later cycle through the shared table store.
     public static final class PublishLaterCycle {
         public static void main(String[] args) {
             final File directory = new File(args[0]);

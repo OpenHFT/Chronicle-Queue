@@ -65,6 +65,7 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
                     "listing.lowestCycle: 0\n" +
                     "# position: 232, header: 2\n" +
                     "--- !!data #binary\n" +
+                    /// The table store now persists the ordinary-write floor; the entries after it shift by one record.
                     "listing.highestCycleWriteFloor: 4\n" +
                     "# position: 280, header: 3\n" +
                     "--- !!data #binary\n" +

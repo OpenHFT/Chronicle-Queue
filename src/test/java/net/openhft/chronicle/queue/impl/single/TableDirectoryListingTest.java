@@ -117,6 +117,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, listingReadOnly.getMaxCreatedCycle());
     }
 
+    /// A directory that cannot be listed must not be published as empty: bounds and floor stay as they were.
     @Test
     public void failedDirectoryListingDoesNotResetWriteFloor() {
         listing.onFileCreated(tempFile, 7);
@@ -138,6 +139,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
     }
 
+    /// Writer selection reads the persisted floor key, not the physical maximum.
     @Test
     public void publishedHighestCycleIsTheWriteFloor() {
         listing.onFileCreated(tempFile, 7);
@@ -152,6 +154,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, listing.getMaxCycleForWrite());
     }
 
+    /// During a rolling upgrade an older writer publishes only listing.highestCycle; the floor must follow it on every read.
     @Test
     public void legacyHighestCycleRatchetsAnAlreadyInitialisedWriteFloor() {
         listing.onFileCreated(tempFile, 7);
@@ -169,6 +172,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, persistedCycle("listing.highestCycleWriteFloor"));
     }
 
+    /// Physical bounds are read from the shared values, so a legacy publication is visible without a further refresh.
     @Test
     public void legacyPublicationAfterRefreshIsVisibleWithoutAnotherEvent() throws IOException {
         final File cycleSeven = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
@@ -194,6 +198,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, listing.getMaxCycleForWrite());
     }
 
+    /// A legacy writer publishes minimum after maximum; a refresh racing between the two CASes must rescan rather than overwrite it.
     @Test
     public void refreshRetriesWhenLegacyMinimumIsPublishedAfterMaximumCas() throws Exception {
         final TableDirectoryListing tableListing = (TableDirectoryListing) listing;
@@ -243,6 +248,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, tableListing.getMaxCycleForWrite());
     }
 
+    /// Refresh may lower the physical bounds after deletion but never the persisted floor.
     @Test
     public void refreshNeverLowersPersistedWatermarks() throws IOException {
         listing.onFileCreated(tempFile, 7);
@@ -262,6 +268,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, listing.getMaxCycleForWrite());
     }
 
+    /// A non-forced refresh must still expose bounds published by another listing.
     @Test
     public void publishedModificationRefreshesAnotherListingsCurrentBounds() throws IOException {
         final TableDirectoryListing secondListing = new TableDirectoryListing(
@@ -285,6 +292,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
     }
 
+    /// Listings opened before a publication must see it: bounds are shared values, not per-instance caches.
     @Test
     public void preOpenedListingsPublishBoundsFromSharedValues() throws IOException {
         final TableDirectoryListing secondListing = new TableDirectoryListing(
@@ -312,6 +320,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
     }
 
+    /// A lower recreated cycle reaches other open listings through the shared minimum without lowering the floor.
     @Test
     public void lowerRecreatedCycleIsPublishedToAnotherOpenListing() throws IOException {
         final TableDirectoryListing secondListing = new TableDirectoryListing(
@@ -341,6 +350,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
     }
 
+    /// Deleting every roll empties the physical bounds; the ordinary-write floor must survive, or a writer could reuse a cycle that was already published.
     @Test
     public void emptyRefreshPreservesPublishedWriteFloor() throws IOException {
         final File cycleFile = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
@@ -369,6 +379,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
     }
 
+    /// A fresh listing must report the same unset sentinel as lastCycle(); a raw LongValue would cast to cycle zero.
     @Test
     public void freshListingReportsUnsetWriteFloor() {
         // Before any publication the floor is the same sentinel lastCycle() uses, not (int) Long.MIN_VALUE == 0.
@@ -376,6 +387,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, listing.getMaxCreatedCycle());
     }
 
+    /// A legacy publication whose file was removed before any floor read must still raise the floor when refresh lowers the maximum.
     @Test
     public void refreshRatchetsLegacyPublicationDeletedBeforeAnyWriteFloorRead() throws IOException {
         final File cycleSeven = new File(testDirectory, 7 + SingleChronicleQueue.SUFFIX);
@@ -396,6 +408,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, listing.getMaxCycleForWrite());
     }
 
+    /// A read-only mapping cannot create the floor key in metadata written before it existed; opening must not try.
     @Test
     public void readOnlyListingOpensMetadataWrittenBeforeTheWriteFloorKey() {
         final File legacyFile = new File(testDirectory, "legacy-list" + SingleTableStore.SUFFIX);
@@ -420,6 +433,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
     }
 
+    /// The same guarantee at Queue level: a read-only Queue opens older metadata and reads through it.
     @Test
     public void readOnlyQueueOpensMetadataWrittenBeforeTheWriteFloorKey() {
         assumeFalse("read-only queues are not supported on Windows", OS.isWindows());
