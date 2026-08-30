@@ -601,6 +601,11 @@ public class StoreAppenderTest extends QueueTestCommon {
                     () -> appender.writeText("must fail at second EOF"));
             assertEquals(sealedCycle + 1, appender.cycle());
             assertEquals(1, queue.entryCount());
+
+            // The failed acquisition must not poison the mapped Wire retained by the appender.
+            appender.writeText("after propagated EOF");
+            assertEquals(sealedCycle + 2, appender.cycle());
+            assertEquals(2, queue.entryCount());
         }
     }
 
