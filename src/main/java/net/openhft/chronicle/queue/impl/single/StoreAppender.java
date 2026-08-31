@@ -33,7 +33,6 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.time.DateTimeException;
 import java.util.NavigableSet;
-import java.util.Objects;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
@@ -81,6 +80,9 @@ class StoreAppender extends AbstractCloseable
     private Pretoucher pretoucher = null;
     private MicroToucher microtoucher = null;
     private Wire bufferWire = null;
+    //! ContextListenerCoreTest#notifiesEachAppenderWithItsOwnContextOncePerRoll requires lifecycle
+    //! state to belong to this appender, while #rolledBackClockDoesNotRepeatAnOlderContext requires
+    //! the last notified value to track the resolved ordinary destination rather than wall time.
     @NotNull
     private ContextListenerState contextListenerState;
     private int lastOrdinaryContextCount = -1;
@@ -103,6 +105,8 @@ class StoreAppender extends AbstractCloseable
         this.writeLock = queue.writeLock();
         this.appendLock = queue.appendLock();
         this.context = new StoreAppenderContext();
+        //! ContextListenerCoreTest#notifiesEachAppenderWithItsOwnContextOncePerRoll distinguishes
+        //! independent appender lifecycle state from one Queue-global notification state.
         this.contextListenerState = queue.newContextListenerState(this, context);
         this.finalizer = Jvm.isResourceTracing() ? new Finalizer() : null;
 
@@ -272,6 +276,8 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     protected void performClose() {
+        //! No focused regression observes this assignment directly; detach the listener lifecycle
+        //! before releasing its mapped Wires so no later close path can call into torn-down state.
         contextListenerState = ContextListenerState.NONE;
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
@@ -308,6 +314,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void pretouch() {
         throwExceptionIfClosed();
+        //! ContextListenerCoreTest#capturedAppenderPretouchFromListenerFailsFast requires rejection
+        //! before a captured appender can mutate the Queue's next-cycle mapped state.
         queue.throwIfContextListenerCallbackActive();
 
         try {
@@ -330,7 +338,6 @@ class StoreAppender extends AbstractCloseable
     @Override
     public boolean microTouch() {
         throwExceptionIfClosed();
-        queue.throwIfContextListenerCallbackActive();
 
         if (microtoucher == null)
             microtoucher = new MicroToucher(this);
@@ -344,6 +351,8 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public void bgMicroTouch() {
+        //! ContextListenerCoreTest#capturedAppenderBackgroundMicroTouchFromListenerFailsFast requires
+        //! rejection before scheduling mapped-page work against the callback's outer appender.
         queue.throwIfContextListenerCallbackActive();
         if (isClosed())
             throw new ClosedIllegalStateException(getClass().getName() + " closed for " + Thread.currentThread().getName(), closedHere);
@@ -360,6 +369,9 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     @Override
     public Wire wire() {
+        //! ContextListenerCoreTest#capturedAppenderWireAccessFromListenerFailsFast and
+        //! #capturedAppenderMicroTouchFromListenerFailsFast require mutable application Wire access
+        //! to fail before direct or composed paths can corrupt the held outer document.
         queue.throwIfContextListenerCallbackActive();
         return wire;
     }
@@ -370,12 +382,16 @@ class StoreAppender extends AbstractCloseable
     @Nullable
     @Override
     public Wire wireForIndex() {
+        //! ContextListenerCoreTest#capturedAppenderIndexWireAccessFromListenerFailsFast requires the
+        //! public mutable index Wire to be hidden while Queue internals use wireForIndexInternal().
         queue.throwIfContextListenerCallbackActive();
         return wireForIndex;
     }
 
     @Nullable
     Wire wireForIndexInternal() {
+        //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter requires Queue's
+        //! own index publication to proceed under the callback guard without exposing this path publicly.
         return wireForIndex;
     }
 
@@ -590,9 +606,9 @@ class StoreAppender extends AbstractCloseable
     public <T> ExcerptAppender contextListener(@NotNull Class<T> writerType,
                                                 @NotNull MarshallableOut.ContextListener<? super T> listener) {
         throwExceptionIfClosed();
+        //! ContextListenerCoreTest#capturedAppenderListenerRegistrationFromListenerFailsFast requires
+        //! registration through a captured appender to fail before replacing active callback state.
         queue.throwIfContextListenerCallbackActive();
-        Objects.requireNonNull(writerType, "writerType");
-        Objects.requireNonNull(listener, "listener");
         queue.validateContextListenerCompatibility();
         //! metadataDoesNotConsumeAppenderListenerRegistration and appendLockRejectionDoesNotConsumeListenerRegistration
         //! pin the registration boundary to the first accepted ordinary write attempt.
@@ -630,6 +646,8 @@ class StoreAppender extends AbstractCloseable
     // throws UnrecoverableTimeoutException
     public DocumentContext writingDocument(final boolean metaData) {
         throwExceptionIfClosed();
+        //! ContextListenerCoreTest#appenderWriteFromListenerFailsFast mutation-times out without
+        //! rejection before the captured appender attempts to reacquire its non-reentrant write lock.
         queue.throwIfContextListenerCallbackActive();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
@@ -669,6 +687,9 @@ class StoreAppender extends AbstractCloseable
      */
     private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(
             boolean metaData, ContextListenerState listenerState) {
+        //! ContextListenerCoreTest#metadataDoesNotConsumeAppenderListenerRegistration and
+        //! #appendLockRejectionDoesNotConsumeListenerRegistration require the state chosen after
+        //! preflight to accompany this exact attempt rather than being re-read after locking.
         if (count > 1) {
             assert metaData == context.metaData;
             return context;
@@ -692,6 +713,9 @@ class StoreAppender extends AbstractCloseable
                     assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
                     openContext(metaData, safeLength, false);
                 } else {
+                    //! ContextListenerCoreTest#metadataDoesNotConsumeAppenderListenerRegistration and
+                    //! #indexedWriteDoesNotNotifyOrConsumeListenerRegistration require listener-free
+                    //! paths to preserve positioning without advancing listener lifecycle state.
                     moveToCycleForAppend();
                     resetPosition();
                     assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -703,9 +727,9 @@ class StoreAppender extends AbstractCloseable
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
             } catch (Throwable e) {
-                // Catch Throwable, not just RuntimeException: a context listener (or a corrupt-index
-                // AssertionError) can throw an Error, and leaking the cross-process write lock would
-                // stall every appender in every process until the lock times out.
+                //! ContextListenerCoreTest#listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable
+                //! requires Error as well as RuntimeException to release the cross-process write lock;
+                //! leaking it stalls every appender in every process until lock-timeout recovery.
                 writeLock.unlock();
                 throw Jvm.rethrow(e);
             }
@@ -739,6 +763,8 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
+        //! ContextListenerCoreTest#appenderWriteFromListenerFailsFast requires both document-opening
+        //! APIs to reject before chained-context reuse can expose the outer application document.
         queue.throwIfContextListenerCallbackActive();
         if (!DISABLE_SINGLE_THREADED_CHECK)
             this.threadSafetyCheck(true);
@@ -756,6 +782,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     void normaliseEOFs(@Nullable Runnable afterCycleEnumeration) {
+        //! ContextListenerCoreTest#capturedAppenderNormalisationFromListenerFailsFast requires
+        //! rejection before normalization attempts to reacquire the callback's Queue write lock.
         queue.throwIfContextListenerCallbackActive();
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
@@ -1082,6 +1110,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     private int nextApplicationHeader() {
+        //! ContextListenerCoreTest#sealedHighestRollIsResolvedBeforeDocumentListener and
+        //! #sealedHighestRollIsResolvedBeforeRawListener require metadata to be skipped while
+        //! locating the application header that decides whether notification may begin.
         positionForNextHeader();
         final Bytes<?> bytes = wire.bytes();
         long position = bytes.writePosition();
@@ -1324,8 +1355,9 @@ class StoreAppender extends AbstractCloseable
      * that follows.</p>
      */
     void closeContextForContextListener() {
-        //! listenerClosePreservesNestingForDocumentWrite mutation-pins committing the listener
-        //! document without consuming the outer application's nesting/count state.
+        //! ContextListenerCoreTest#listenerClosePreservesNestingForDocumentWrite and
+        //! #listenerClosePreservesNestingAfterRawWrite mutation-pin committing the listener document
+        //! without consuming either outer application's nesting/count state.
         int savedCount = count;
         try {
             count = 1;
@@ -1445,6 +1477,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
+        //! ContextListenerCoreTest#appenderWriteFromListenerFailsFast establishes the general rule:
+        //! captured public write entry points must reject before taking the outer write's lock.
         queue.throwIfContextListenerCallbackActive();
         checkAppendLock();
         writeLock.lock();
@@ -2060,6 +2094,8 @@ class StoreAppender extends AbstractCloseable
 
             // If the sequence numbers don't match, log an error and perform a linear scan
             if (seq1 != seq2) {
+                //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter requires
+                //! this internal diagnostic scan to avoid the guarded public wireForIndex() escape.
                 final long seq3 = store.indexing
                         .linearScanByPosition(wireForIndex, position, 0, 0, true);
                 Jvm.error().on(getClass(),
@@ -2133,6 +2169,8 @@ class StoreAppender extends AbstractCloseable
     @SuppressWarnings("rawtypes")
     @Override
     public void sync() {
+        //! ContextListenerCoreTest#capturedAppenderSyncFromListenerFailsFast requires rejection
+        //! before flushing durability state for a document the callback does not own.
         queue.throwIfContextListenerCallbackActive();
         if (store == null || wire == null)
             return;
@@ -2161,6 +2199,8 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public void rollbackIfNotComplete() {
+        //! ContextListenerCoreTest#capturedAppenderRollbackFromListenerFailsFast requires rejection
+        //! before rollback can release or truncate the outer application's shared document.
         queue.throwIfContextListenerCallbackActive();
         context.rollbackIfNotComplete();
     }
@@ -2461,9 +2501,9 @@ class StoreAppender extends AbstractCloseable
 
         @Override
         public int contextCount() {
-            // Reject on any double-buffered queue, not just when this write happened to hit lock
-            // contention: otherwise the same code works or throws depending on runtime contention.
-            // Progressive contextCount usage and double buffering are an unsupported combination.
+            //! ContextListenerCoreTest#rejectsDoubleBuffering requires deterministic rejection for
+            //! every buffered Queue: destination/context selection occurs only when the buffer flushes,
+            //! so exposing a count here would vary with incidental lock contention.
             if (queue.doubleBuffer)
                 throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
             return isClosed ? -1 : StoreAppender.this.contextCount();
