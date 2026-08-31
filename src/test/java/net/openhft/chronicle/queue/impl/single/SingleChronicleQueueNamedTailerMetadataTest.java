@@ -54,6 +54,27 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    @Test
+    public void closedCachedMetadataValueIsReacquired() {
+        try (SingleChronicleQueue queue = builder(getTmpDir()).build()) {
+            LongValue first = queue.tableStoreAcquire("test.closed.value", 41L);
+            assertNotNull(first);
+            assertEquals(41L, first.getVolatileValue());
+            first.close();
+            assertTrue(first.isClosed());
+
+            //! Protected metadata handles can be closed by subclass/package callers; a closed
+            //! cached handle must not poison later access to the persisted value.
+            LongValue replacement = queue.tableStoreAcquire("test.closed.value", 0L);
+
+            assertNotSame(first, replacement);
+            assertFalse(replacement.isClosed());
+            assertEquals(41L, replacement.getVolatileValue());
+            replacement.setVolatileValue(42L);
+            assertEquals(42L, queue.tableStoreGet("test.closed.value"));
+        }
+    }
+
     //! A retention snapshot contains committed consumer positions but no lock/version records.
     @Test
     public void namedTailerIndexesReturnsCommittedTailerPositionsOnly() {
