@@ -43,7 +43,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private static final int CYCLES_TO_DELETE_PER_ITERATION = 20;
     private final Path tempQueueDir = getTmpDir().toPath();
 
-    //! Supported retention removes historical rolls only; refresh must advance firstIndex without lowering lastIndex.
     @Test
     public void testRefreshDirectoryListingAfterHistoricalDeletion() throws IOException {
         assumeFalse(OS.isWindows());
@@ -119,7 +118,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    //! toEnd must still find the retained current roll when an interior historical roll disappears.
     @Test
     public void tailerToEndWorksInFaceOfDeletedHistoricalStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
@@ -246,7 +244,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         deleteFileFromUnderTailerTest(10, 5);
     }
 
-    //! Keep the actual latest roll while exercising two adjacent deletions near the end of the historical range.
     @Test
     public void deleteFileFromUnderTailerTest_EndOfHistoricalRange() throws IOException {
         deleteFileFromUnderTailerTest(10, 7);
@@ -294,7 +291,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         try {
             int deletedUpTo = 0;
             // previously used for debug output; removed to avoid commented code smell
-            //! deletingOldFilesChaosTest exercises destructive historical retention, so the current/latest roll is never selected.
             while (queueWithCycleDetails.rollCycles.size() > 1) {
                 Jvm.startup().on(TestDeleteQueueFile.class, "Deleting from " + deletedUpTo + " to " + (deletedUpTo + CYCLES_TO_DELETE_PER_ITERATION));
                 final int cyclesThisIteration = Math.min(CYCLES_TO_DELETE_PER_ITERATION,
@@ -318,7 +314,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             int numberOfCycles = queueWithCycleDetails.rollCycles.size();
             int deleted = 0;
             while (queueWithCycleDetails.rollCycles.size() > 1) {
-                //! deletingRandomRollCyclesChaosTest may remove any historical generation but must retain the latest.
                 final int index = ThreadLocalRandom.current().nextInt(0, queueWithCycleDetails.rollCycles.size() - 1);
                 final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(index);
                 deleted++;
@@ -497,8 +492,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                     counter++;
                 }
             }
-            //! Both tailingThroughDeletedCyclesWillRefreshThenRetry variants retain the current roll;
-            //! the already-mapped historical roll and retained current roll contribute ten records each.
             assertEquals(20, counter);
         }
     }
