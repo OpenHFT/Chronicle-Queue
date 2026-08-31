@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
@@ -25,6 +26,7 @@ import static org.junit.Assume.assumeFalse;
 
 public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
 
+    //! Read-only inspection must not create metadata for a Queue that never had a metadata table.
     @Test
     public void readOnlyQueueWithoutMetadataHasNoNamedTailers() {
         assumeFalse(OS.isWindows());
@@ -43,8 +45,9 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
         assertFalse(Files.exists(metadata));
     }
 
+    //! Persisted metadata uses TableDirectoryListingReadOnly, avoiding a filesystem scan per poll.
     @Test
-    public void readOnlyQueueWithMetadataUsesPersistedDirectoryListing() {
+    public void readOnlyQueueWithMetadataUsesPersistedDirectoryListing() throws Exception {
         File directory = getTmpDir();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(directory).build()) {
             queue.createAppender().writeText("one");
@@ -54,12 +57,16 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
                 .readOnly(true)
                 .build()) {
             assertTrue(queue.metaStore().readOnly());
+            Field listing = SingleChronicleQueue.class.getDeclaredField("directoryListing");
+            listing.setAccessible(true);
+            assertTrue(listing.get(queue) instanceof TableDirectoryListingReadOnly);
             try (ExcerptTailer tailer = queue.createTailer()) {
                 assertEquals("one", tailer.readText());
             }
         }
     }
 
+    //! A metadata snapshot remains available when the operating-system file is not writable.
     @Test
     public void readsNamedTailersWithoutWriteAccessOrMetadataMutation() throws Exception {
         assumeFalse(OS.isWindows());

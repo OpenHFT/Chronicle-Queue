@@ -81,6 +81,8 @@ public class SCQMeta implements Metadata {
      * @return the persisted roll length in milliseconds
      */
     public int rollLengthInMillis() {
+        //! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll keeps
+        //! maintenance geometry available without making the mutable SCQRoll type public.
         return roll.length();
     }
 
@@ -91,6 +93,7 @@ public class SCQMeta implements Metadata {
      * @return the persisted roll-file name format
      */
     public String rollFormat() {
+        //! exposesPersistedRollMetadataWithoutExposingSCQRoll discriminates this immutable projection.
         return roll.format();
     }
 
@@ -101,6 +104,7 @@ public class SCQMeta implements Metadata {
      * @return the persisted roll epoch in milliseconds
      */
     public long rollEpoch() {
+        //! exposesPersistedRollMetadataWithoutExposingSCQRoll discriminates this immutable projection.
         return roll.epoch();
     }
 
@@ -111,6 +115,7 @@ public class SCQMeta implements Metadata {
      */
     @Nullable
     public LocalTime rollTime() {
+        //! exposesPersistedRollMetadataWithoutExposingSCQRoll covers the optional local roll boundary.
         return roll.rollTime();
     }
 
@@ -121,6 +126,7 @@ public class SCQMeta implements Metadata {
      */
     @Nullable
     public ZoneId rollTimeZone() {
+        //! exposesPersistedRollMetadataWithoutExposingSCQRoll covers the optional persisted zone.
         return roll.rollTimeZone();
     }
 

@@ -144,6 +144,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                                             final long timeoutMillis,
                                             @NotNull final Function<T, ? extends R> code,
                                             @NotNull final Supplier<T> target) {
+        //! negativeSharedLockTimeoutIsRejected keeps invalid policy input distinct from lock
+        //! contention, while callerCanSupplySharedLockTimeout pins one non-blocking attempt at zero.
         if (timeoutMillis < 0)
             throw new IllegalArgumentException("timeoutMillis must not be negative");
         return doWithLock(file, code, target, true, timeoutMillis);
@@ -195,6 +197,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final long startNanos = System.nanoTime();
         final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
+            //! callerCanSupplySharedLockTimeout fails if a zero timeout skips the initial tryLock;
+            //! positiveTimeoutAcquiresAContendedLockAfterRelease requires bounded retries thereafter.
             for (int count = 1; ; count++) {
                 try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
                     if (fileLock != null) {
@@ -312,6 +316,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     @Override
     public synchronized LongValue getValueFor(CharSequence key) {
+        //! TableStoreTest#getValueForDoesNotCreateMissingKey distinguishes lookup from acquire;
+        //! destructive planning must not mutate metadata while checking optional state.
         return acquireOrGetValueFor(key, 0, false);
     }
 
@@ -358,8 +364,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
             if (end >= endOfChunk + overlapSize)
                 throw new IllegalStateException("Misaligned write");
-            // Failed creation must restore the caller's scan state; only a complete entry keeps
-            // the post-write positions and limits used by subsequent acquire calls.
+            //! laterScanSeesEntriesAppendedByAnotherStore requires lookup paths to restore the
+            //! caller's limits; a completed creation deliberately keeps acquire's write position.
             restoreScanState = false;
             return longValue;
 
@@ -409,6 +415,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new IORuntimeException(e);
 
         } finally {
+            //! SingleTableStoreForEachKeyGuardTest#scansWhileAnotherStoreAppendsKeys detects the
+            //! corrupt binding read caused by leaking this scan's positions into later operations.
             restoreAfterTableScan(previousReadPosition, previousReadLimit, previousWriteLimit);
             mappedBytes.release(this);
         }
@@ -426,15 +434,16 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     @Override
     public boolean readOnly() {
+        //! ReadonlyNamedTailerIndexesTest#readsNamedTailersWithoutWriteAccessOrMetadataMutation
+        //! requires shared-lock lookup rather than an exclusive, potentially writing path.
         return mappedBytes.isBackingFileReadOnly();
     }
 
     private void prepareForTableScan() {
         mappedBytes.readPosition(0);
         final long scanLimit = mappedBytes.realCapacity();
-        // writeLimit is local to this MappedBytes instance and is not updated when another
-        // table-store instance grows the file. Snapshot realCapacity() as this scan's upper
-        // bound; entries appended later are visible on a later scan.
+        //! laterScanSeesEntriesAppendedByAnotherStore fails if this instance's stale local
+        //! writeLimit truncates a subsequent scan after another process grows the table.
         mappedBytes.writeLimit(mappedBytes.capacity());
         mappedBytes.readLimit(scanLimit);
     }

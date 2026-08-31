@@ -217,11 +217,13 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 .build());
     }
 
+    //! Writable tailers must skip two consecutive externally deleted historical generations.
     @Test
     public void tailingThroughDeletedCyclesWillRecoverToLaterCycle_Writable() throws IOException {
         tailingThroughDeletedCyclesWillRecoverToLaterCycle(qwcd -> qwcd.queue);
     }
 
+    //! The same composed deleted-generation recovery contract applies to read-only tailers.
     @Test
     public void tailingThroughDeletedCyclesWillRecoverToLaterCycle_ReadOnly() throws IOException {
         tailingThroughDeletedCyclesWillRecoverToLaterCycle(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())

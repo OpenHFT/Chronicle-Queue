@@ -418,6 +418,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
+    //! A dead maintenance owner must not leave all future appenders blocked on its append lock.
     @Test
     public void deadAppendLockOwnerDoesNotStrandWriters() {
         File tmpDir = getTmpDir();
