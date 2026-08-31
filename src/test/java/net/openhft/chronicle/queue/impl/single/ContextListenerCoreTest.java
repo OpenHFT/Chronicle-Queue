@@ -52,6 +52,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void writesContextBeforeDataAndAllowsRetainingWriter() {
+        //! Mutation-removing beforeDocument() leaves no context and fails this first ordering check.
         File path = getTmpDir();
         AtomicInteger callbacks = new AtomicInteger();
         AtomicReference<Events> retainedWriter = new AtomicReference<>();
@@ -98,6 +99,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void writesContextBeforeHeldDataDocument() {
+        //! Pins one shared, nested listener document while the application context remains open.
         File path = getTmpDir();
 
         try (SingleChronicleQueue queue = builder(path).build()) {
@@ -137,6 +139,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void indexedWriteDoesNotNotifyOrConsumeListenerRegistration() {
+        //! Distinguishes recovery writes from the first subsequent ordinary listener boundary.
         AtomicInteger callbacks = new AtomicInteger();
 
         try (ChronicleQueue queue = builder(getTmpDir())
@@ -160,6 +163,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void notifiesEachAppenderWithItsOwnContextOncePerRoll() {
+        //! Mutation of cycle rearming changes callback counts and fails this per-appender matrix.
         File path = getTmpDir();
         AtomicInteger firstCallbacks = new AtomicInteger();
         AtomicInteger secondCallbacks = new AtomicInteger();
@@ -235,6 +239,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerFailureAfterWritingContextIsNotRetriedInTheSameRoll() {
+        //! Mutation-changing FAILED to READY permits the next write and fails the one-attempt count.
         File path = getTmpDir();
         AtomicInteger callbacks = new AtomicInteger();
 
@@ -275,6 +280,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable() {
+        //! Pins Throwable cleanup, document rollback, count restoration and later-roll recovery.
         File path = getTmpDir();
         AtomicInteger callbacks = new AtomicInteger();
 
@@ -313,6 +319,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void appenderWriteFromListenerFailsFast() {
+        //! Prevents deadlock/reentrancy through the captured appender's ordinary write path.
         File path = getTmpDir();
         AtomicReference<StoreAppender> appenderRef = new AtomicReference<>();
         AtomicInteger callbacks = new AtomicInteger();
@@ -351,31 +358,37 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void capturedAppenderRollbackFromListenerFailsFast() {
+        //! Pins rejection before rollback can release the outer write's shared context and lock.
         assertCapturedAppenderMutationFails(StoreAppender::rollbackIfNotComplete);
     }
 
     @Test(timeout = 5_000)
     public void capturedAppenderNormalisationFromListenerFailsFast() {
+        //! Pins rejection before normalisation attempts to reacquire the non-reentrant write lock.
         assertCapturedAppenderMutationFails(StoreAppender::normaliseEOFs);
     }
 
     @Test(timeout = 5_000)
     public void capturedAppenderCloseFromListenerFailsFast() {
+        //! Pins rejection before callback code can tear down the outer write's appender.
         assertCapturedAppenderMutationFails(StoreAppender::close);
     }
 
     @Test(timeout = 5_000)
     public void capturedAppenderWireAccessFromListenerFailsFast() {
+        //! Prevents mutable outer-Wire escape from the supplied listener writer.
         assertCapturedAppenderMutationFails(StoreAppender::wire);
     }
 
     @Test(timeout = 5_000)
     public void capturedAppenderIndexWireAccessFromListenerFailsFast() {
+        //! Prevents mutable index-Wire escape while internal index publication uses its private path.
         assertCapturedAppenderMutationFails(StoreAppender::wireForIndex);
     }
 
     @Test(timeout = 5_000)
     public void appenderCreationFromListenerFailsFast() {
+        //! Pins the common new-appender guard before a second appender can block on the write lock.
         final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
 
         try (SingleChronicleQueue queue = builder(getTmpDir())
@@ -394,6 +407,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void queueCloseFromListenerFailsBeforeTeardownAndReleasesTheLock() {
+        //! Pins close rejection before teardown and verifies normal close after callback unwinding.
         final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
         final AtomicInteger callbacks = new AtomicInteger();
 
@@ -424,6 +438,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void metadataDoesNotConsumeAppenderListenerRegistration() {
+        //! Mutation-removing the metadata exemption makes later listener registration fail here.
         final AtomicInteger callbacks = new AtomicInteger();
         try (SingleChronicleQueue queue = builder(getTmpDir()).build()) {
             final StoreAppender appender = (StoreAppender) queue.createAppender();
@@ -469,6 +484,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerCanHoldOneDocumentWhileWritingContext() {
+        //! Pins chained/nested supplied-writer semantics within one listener callback.
         AtomicBoolean outerDocumentRemainedOpen = new AtomicBoolean();
         AtomicInteger contextCount = new AtomicInteger();
 
@@ -491,6 +507,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void sealedHighestRollIsResolvedBeforeDocumentListener() {
+        //! Mutation-removing destination preflight fails before the callback can target the rolled cycle.
         AtomicInteger callbacks = new AtomicInteger();
         AtomicInteger observedContext = new AtomicInteger(-1);
         AtomicReference<StoreAppender> appenderReference = new AtomicReference<>();
@@ -520,6 +537,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void sealedHighestRollIsResolvedBeforeRawListener() {
+        //! Applies the same QUEUE-146 destination invariant to sequential raw writes.
         AtomicInteger callbacks = new AtomicInteger();
         AtomicReference<StoreAppender> appenderReference = new AtomicReference<>();
 
@@ -546,6 +564,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void rolledBackClockDoesNotRepeatAnOlderContext() {
+        //! Pins contextCount to the monotonic ordinary destination rather than rolled-back wall time.
         AtomicInteger callbacks = new AtomicInteger();
         AtomicLong clock = new AtomicLong(1_000L);
 
@@ -576,6 +595,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void exactHistoricalRecoveryDoesNotChangeOrdinaryContext() {
+        //! Pins exact-index recovery as listener-free and unable to move the ordinary context backwards.
         ignoreException("Exact-index recovery reopened end-of-data");
         AtomicInteger callbacks = new AtomicInteger();
 
@@ -612,6 +632,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void secondEofFailsBeforeListenerStateChanges() {
+        //! Pins failure before callback state changes when QUEUE-146's one advance also finds EOF.
         AtomicInteger callbacks = new AtomicInteger();
 
         try (SingleChronicleQueue queue = builder(getTmpDir())
@@ -639,6 +660,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void unclosedListenerDocumentPoisonsOnlyTheCurrentRoll() {
+        //! Mutation-removing the open-document check changes the failure and leaves invalid header state.
         AtomicInteger callbacks = new AtomicInteger();
 
         try (SingleChronicleQueue queue = builder(getTmpDir())
@@ -666,6 +688,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void secondAppenderReentryFailsImmediatelyAndReleasesTheQueueLock() {
+        //! Pins same-instance reentry rejection and subsequent lock usability.
         AtomicReference<StoreAppender> secondReference = new AtomicReference<>();
 
         try (SingleChronicleQueue queue = builder(getTmpDir()).build()) {
@@ -686,6 +709,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void secondQueueInstanceOnSamePathFailsImmediatelyDuringCallback() {
+        //! Mutation-removing the path guard times out on the cross-instance write lock.
         File path = getTmpDir();
         AtomicReference<SingleChronicleQueue> secondReference = new AtomicReference<>();
 
@@ -708,6 +732,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void otherThreadUsingSamePathFailsImmediatelyDuringCallback() throws Exception {
+        //! Pins process-wide path isolation rather than a thread-local-only callback guard.
         File path = getTmpDir();
         CountDownLatch callbackStarted = new CountDownLatch(1);
         CountDownLatch releaseCallback = new CountDownLatch(1);
@@ -745,6 +770,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void appendLockRejectionDoesNotConsumeListenerRegistration() {
+        //! Keeps rejected preflight outside the listener's started/attempt lifecycle.
         try (SingleChronicleQueue queue = builder(getTmpDir()).timeoutMS(100).build()) {
             StoreAppender appender = (StoreAppender) queue.createAppender();
             WriteLock appendLock = queue.appendLock();
@@ -765,6 +791,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerClosePreservesNestingForDocumentWrite() {
+        //! Pins listener close/commit without consuming the outer application document nesting.
         try (ChronicleQueue queue = builder(getTmpDir())
                 .timeoutMS(100)
                 .contextListener(Events.class,
@@ -776,6 +803,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerClosePreservesNestingAfterRawWrite() {
+        //! Pins the same count restoration for sequential raw output.
         try (ChronicleQueue queue = builder(getTmpDir())
                 .timeoutMS(100)
                 .contextListener(Events.class,
@@ -795,6 +823,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerDocumentResetCommitsContextBeforeApplicationData() {
+        //! Fails if reset clears the holder before committing the active listener document.
         File path = getTmpDir();
 
         try (ChronicleQueue queue = builder(path)
@@ -823,6 +852,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerDocumentResetMakesNestedAutomaticClosesHarmless() {
+        //! Mutation-removing closesAfterReset produces a spurious no-document-open failure.
         File path = getTmpDir();
 
         try (ChronicleQueue queue = builder(path)
@@ -844,6 +874,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerRollbackThenResetPoisonsContextAndAutomaticCloseIsHarmless() {
+        //! Pins rollback intent across reset while absorbing already-satisfied automatic closes.
         AtomicInteger attempts = new AtomicInteger();
 
         try (ChronicleQueue queue = builder(getTmpDir())
@@ -868,6 +899,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void listenerRemainsCallerOwned() {
+        //! Guards the ownership contract: Queue retains but never closes the supplied listener.
         CloseableListener listener = new CloseableListener();
 
         try (ChronicleQueue queue = builder(getTmpDir())
@@ -881,6 +913,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void rejectsDoubleBuffering() {
+        //! Pins rejection because buffered destination selection occurs after notification time.
         assertThrows(UnsupportedOperationException.class, () -> builder(getTmpDir())
                 .doubleBuffer(true)
                 .contextListener(Events.class, writer -> { })
@@ -894,6 +927,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void rejectsEveryUnsupportedEffectiveQueueMode() {
+        //! Mutation-removing any compatibility branch admits a mode without same-Wire ordering.
         assertThrows(UnsupportedOperationException.class,
                 () -> SingleChronicleQueue.validateContextListenerCompatibility(true, false, false));
         assertThrows(UnsupportedOperationException.class,
@@ -904,6 +938,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void validatesModesLoadedDuringPreBuildAndClosesMetadata() {
+        //! Pins post-preBuild validation and exceptional metadata cleanup.
         SingleChronicleQueueBuilder delayedMode = new SingleChronicleQueueBuilder() {
             @Override
             protected void preBuild() {
@@ -923,6 +958,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void encodesContextWithQueueWireType() {
+        //! Distinguishes Queue's configured Wire type from a hard-coded listener format.
         File path = getTmpDir();
 
         try (ChronicleQueue queue = builder(path, WireType.BINARY_LIGHT)
@@ -945,6 +981,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void tailerDocumentsExposeTheirActualCycle() {
+        //! Mutation-returning a constant/unavailable count fails for present documents across rolls.
         final File path = getTmpDir();
         try (ChronicleQueue queue = builder(path).build();
              ExcerptAppender appender = queue.createAppender()) {

@@ -138,7 +138,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     final AppenderListener appenderListener;
     @NotNull
     private final ContextListenerState contextListenerState;
-    private volatile boolean contextListenerCallbacksEnabled;
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -200,7 +199,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
             contextListenerState = builder.contextListenerState();
-            contextListenerCallbacksEnabled = contextListenerState != ContextListenerState.UNSET;
 
             //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithMetadataUsesPersistedDirectoryListing
             //! distinguishes a missing metadata table from a read-only mapped table; only the former
@@ -267,6 +265,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     static void validateContextListenerCompatibility(boolean encodedOrEncrypted,
                                                      boolean asynchronous,
                                                      boolean doubleBuffered) {
+        //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode pins these exclusions:
+        //! the listener must target the same synchronous physical Wire as its triggering document.
         if (encodedOrEncrypted)
             throw new UnsupportedOperationException(
                     "contextListener is not supported on encoded or encrypted Enterprise queues");
@@ -676,8 +676,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     void enterContextListenerCallback() {
-        contextListenerCallbacksEnabled = true;
         final Thread currentThread = Thread.currentThread();
+        //! secondQueueInstanceOnSamePathFailsImmediatelyDuringCallback mutation-times out if this
+        //! path-scoped guard is removed and a second Queue blocks on the non-reentrant write lock.
         final Thread existing = ACTIVE_CONTEXT_LISTENER_CALLBACKS.putIfAbsent(
                 contextListenerCallbackKey, currentThread);
         if (existing != null)
@@ -693,14 +694,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     void throwIfContextListenerCallbackActive() {
+        //! The captured-appender, appender-creation, mutable-Wire and normalization regressions
+        //! require this check before every public mutation/escape path performs any side effect.
         if (anyContextListenerCallbackActive &&
                 ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey))
             throw new IllegalStateException("Cannot enter a Queue appender from a context listener callback; " +
                     "write through the supplied method writer instead");
-    }
-
-    void enableContextListenerCallbackGuard() {
-        contextListenerCallbacksEnabled = true;
     }
 
     // used by enterprise CQ
@@ -1049,6 +1048,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     protected void assertCloseable() {
+        //! queueCloseFromListenerFailsBeforeTeardownAndReleasesTheLock prevents callback code from
+        //! closing stores and locks still owned by the outer application write.
         if (anyContextListenerCallbackActive &&
                 ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey))
             throw new IllegalStateException(
