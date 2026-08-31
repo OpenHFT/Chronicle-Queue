@@ -83,7 +83,6 @@ public class RollingCycleTest extends QueueTestCommon {
                     "listing.lowestCycle: 19059\n" +
                     "# position: 232, header: 2\n" +
                     "--- !!data #binary\n" +
-                    //! testRollCycle records the reduced publication count from the shared append selector.
                     "listing.modCount: 9\n" +
                     "# position: 264, header: 3\n" +
                     "--- !!data #binary\n" +

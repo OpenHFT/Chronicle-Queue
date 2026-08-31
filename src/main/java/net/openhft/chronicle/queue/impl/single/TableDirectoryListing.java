@@ -81,8 +81,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
-            //! TableDirectoryListingTest#freshListingReportsUnsetMaximum demonstrates that a new
-            //! LongValue must not expose (int) Long.MIN_VALUE as the valid cycle zero.
+            // A newly allocated LongValue contains Long.MIN_VALUE; its int cast is cycle zero,
+            // so normalise the sentinel before any reader can mistake it for a published roll.
             maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MAX_CYCLE);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
@@ -112,9 +112,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         if (!force)
             return;
 
-        //! Older writers publish only the legacy bounds and do not participate in this protocol.
-        //! Observe both bounds and modCount around the scan, then CAS both bounds; any change or lost CAS requires a
-        //! rescan so stale filesystem state cannot overwrite a concurrent legacy publication.
         throwExceptionIfClosed();
         tableStore.throwExceptionIfClosed();
 
@@ -127,8 +124,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             final long observedLegacyMax = maxCycleValue.getVolatileValue();
 
             final String[] fileNamesList = queuePath.toFile().list();
-            //! Null means the directory could not be listed, not that it is empty. Preserve all
-            //! published state and leave the refresh timestamp unchanged so a later read can retry.
+            // A failed directory read is not evidence that the Queue is empty. Preserve the
+            // published bounds and leave the refresh timestamp unchanged so a later call retries.
             if (fileNamesList == null)
                 return;
 
@@ -159,8 +156,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                 continue;
             }
 
-            //! TableDirectoryListingTest#refreshRejectsMissingPublishedMaximum demonstrates that
-            //! Queue metadata must not survive deletion of its highest/current roll as a usable Queue.
+            // Supported maintenance retains the highest/current roll. Losing it while metadata
+            // survives is an inconsistent Queue, not permission to move ordinary writes backward.
             if (observedLegacyMax != UNSET_MAX_CYCLE && max < observedLegacyMax)
                 throw new IllegalStateException("Highest/current roll " + observedLegacyMax
                         + " disappeared while Queue metadata remains");
@@ -205,8 +202,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     @Override
     public void onRoll(int cycle) {
-        //! TableDirectoryListingTest#preOpenedListingsPublishBoundsFromSharedValues demonstrates
-        //! that onRoll publishes both bounds atomically without adding a file lock to the append path.
         minCycleValue.setMinValue(cycle);
         maxCycleValue.setMaxValue(cycle);
         modCount.addAtomicValue(1);

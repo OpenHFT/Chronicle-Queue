@@ -1755,7 +1755,6 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    //! Complete Queue deletion is offline: close all handles, remove metadata and rolls, then create a new Queue.
     @Test
     public void testToEndAfterOfflineQueueDeletion() throws IOException {
         if (OS.isWindows()) {

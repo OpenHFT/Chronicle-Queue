@@ -563,8 +563,6 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                //! Keep sequential byte writes and document writes on the same ordinary-cycle
-                //! selector; allowing the entry points to diverge reintroduces clock-rollback inconsistencies.
                 moveToCycleForAppend();
 
                 long safeLength = queue.overlapSize();
@@ -682,8 +680,6 @@ class StoreAppender extends AbstractCloseable
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
-        //! StoreAppenderTest#stalledWriterFollowsAnotherWriterToLaterCycle demonstrates that the
-        //! target combines wall-clock progress with the shared published maximum without scanning the directory.
         final int lastExistingCycle = queue.lastPublishedCycle();
         // Supported retention keeps the published maximum; taking it with time prevents clock
         // rollback while still allowing a writer to advance normally.
@@ -797,8 +793,6 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock();
         writeLock.lock();
         try {
-            //! This document path shares the selector used by sequential byte writes; see
-            //! moveToCycleForAppend() for the no-backward-roll invariant.
             moveToCycleForAppend();
 
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
@@ -1013,15 +1007,11 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
         }
 
-        //! Use the shared publication, not lastCycle(). The latter refreshes physical files and
-        //! couples ordinary append latency and destination selection to retention-time directory state.
         int lastExistingCycle = queue.lastPublishedCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
         if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
             setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
-            //! StoreAppenderTest#deletingPublishedMaximumFailsExistingAppender demonstrates that
-            //! an unsupported missing current generation must fail instead of being skipped while rolling forward.
             if (store == null)
                 throw new IllegalStateException("Highest/current roll " + lastExistingCycle
                         + " disappeared while Queue metadata remains");
