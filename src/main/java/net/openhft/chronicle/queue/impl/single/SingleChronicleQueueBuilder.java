@@ -139,6 +139,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
+    //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter and
+    //! #listenerRemainsCallerOwned require builder registration to retain the writer contract and
+    //! caller-owned callback until the Queue creates independent appender lifecycle state.
     @Nullable
     private Class<?> contextListenerWriterType;
     @Nullable
@@ -375,6 +378,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueue build() {
         preBuild();
+        //! ContextListenerCoreTest#validatesModesLoadedDuringPreBuildAndClosesMetadata requires the
+        //! compatibility decision after persisted/enterprise configuration has been loaded but
+        //! before a Queue can expose an unsupported listener/output combination.
         validateContextListenerCompatibility();
 
         SingleChronicleQueue chronicleQueue;

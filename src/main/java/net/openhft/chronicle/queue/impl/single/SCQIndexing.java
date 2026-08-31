@@ -350,6 +350,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         if (index2Index.getVolatileValue() == NOT_INITIALIZED)
             return null;
 
+        //! Internal index traversal may run while a context callback owns the Queue write lock.
+        //! Use the private appender view: ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
+        //! would otherwise re-enter the guarded public mutable-Wire accessor.
         Wire wireForIndex = wireForIndex(ec);
         LongArrayValues index2index = getIndex2index(wireForIndex);
         long primaryOffset = toAddress0(index);
@@ -751,7 +754,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     long sequenceForPosition(@NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive) throws StreamCorruptedException {
-        return sequenceForPosition(ec.wireForIndex(), position, inclusive, true);
+        //! Sequence lookup is Queue-internal and must remain available while public mutable-Wire
+        //! access is rejected; ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
+        //! exercises this indexing work during listener-backed publication.
+        return sequenceForPosition(wireForIndex(ec), position, inclusive, true);
     }
 
     long sequenceForPositionWithoutSequenceShortcut(@NotNull Wire wire,
@@ -921,6 +927,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             return;
         }
 
+        //! Index publication must use the private appender view so the callback guard protects only
+        //! callers, not Queue internals; ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
+        //! fails if publication re-enters StoreAppender#wireForIndex().
         Wire wire = wireForIndex(ec);
         Bytes<?> bytes = wire.bytes();
         if (position > bytes.capacity())
@@ -1024,6 +1033,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 if (sequence == Sequence.NOT_FOUND)
                     break;
                 try {
+                    //! The sparse-index fallback is also internal indexing, so it needs the same
+                    //! guard-free view exercised by ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter.
                     Wire wireForIndex = wireForIndex(ec);
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {

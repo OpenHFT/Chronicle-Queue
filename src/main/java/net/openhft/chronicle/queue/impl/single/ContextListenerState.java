@@ -147,8 +147,9 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         try {
             try {
                 notifyListener();
-                //! Explicit rollback or an open document means no complete context was published;
-                //! the rollback/unclosed regressions require fail-closed state, never success.
+                //! ContextListenerCoreTest#unclosedListenerDocumentPoisonsOnlyTheCurrentRoll and
+                //! #listenerRollbackThenResetPoisonsContextAndAutomaticCloseIsHarmless require
+                //! incomplete or explicitly rolled-back context to fail closed, never report success.
                 if (listenerRolledBack)
                     throw new IllegalStateException("Queue context listener rolled back its output document");
                 if (listenerDocumentIsOpen())
@@ -220,6 +221,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @NotNull
     @Override
     public <T> MethodWriterBuilder<T> methodWriterBuilder(boolean metaData, @NotNull Class<T> type) {
+        //! ContextListenerCoreTest#encodesContextWithQueueWireType distinguishes the Queue's
+        //! configured Wire type from a hard-coded listener format while retaining this locked output.
         VanillaMethodWriterBuilder<T> builder = new VanillaMethodWriterBuilder<>(type,
                 appender.queue().wireType(),
                 () -> new BinaryMethodWriterInvocationHandler(type, metaData,
@@ -298,7 +301,9 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         nesting = 0;
         // reset() has already closed the shared underlying document. Each outstanding
         // try-with-resources scope still invokes close(), which must now be harmless.
-        //! Sequential resets leave closes pending from every earlier try-with-resources scope.
+        //! ContextListenerCoreTest#sequentialResetsPreserveAutomaticClosesForQueueListener and
+        //! #sequentialResetsPreserveAutomaticClosesForAppenderListener require accumulation: each
+        //! reset satisfies a document now, but every enclosing try-with-resources scope closes later.
         closesAfterReset += outstandingCloses;
     }
 
