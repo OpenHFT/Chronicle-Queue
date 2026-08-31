@@ -563,6 +563,9 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
+                //! writingDocumentIgnoresClockRollback and stalledWriterFollowsAnotherWriterToLaterCycle require
+                //! documents to use the same no-backward destination selector as sequential byte writes; retaining
+                //! the former local-clock selection lets the two public append paths choose different generations.
                 moveToCycleForAppend();
 
                 long safeLength = queue.overlapSize();
@@ -686,6 +689,12 @@ class StoreAppender extends AbstractCloseable
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
+        //! deletingOldestHistoricalRollPreservesPublishedMaximum, deletingHighestRollWithMetadataFailsClosed and
+        //! deletingWholeQueueOfflineAllowsClockSelectedInitialCycle distinguish supported historical retention,
+        //! forbidden removal of the published maximum, and genuine offline Queue replacement. The shared maximum
+        //! therefore remains authoritative while metadata exists; only a target newer than it may be created.
+        //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum and
+        //! unusedAppenderDoesNotCreateDeletedPublishedMaximum cover both live-wire and first-write equality paths.
         final int lastExistingCycle = queue.lastPublishedCycle();
         // Supported retention keeps the published maximum; taking it with time prevents clock
         // rollback while still allowing a writer to advance normally.
@@ -695,7 +704,8 @@ class StoreAppender extends AbstractCloseable
             requirePublishedCycle(lastExistingCycle);
         if (wire == null) {
             //! Equality means another writer already published this generation. Opening it as
-            //! existing-only prevents an ordinary write from recreating a removed current roll.
+            //! existing-only prevents an ordinary write from recreating a removed current roll; both deletion
+            //! regressions above fail if equality is allowed to use CREATE.
             setWireIfNull(targetCycle, publishedCycleMustExist
                     ? WireStoreSupplier.CreateStrategy.READ_ONLY
                     : WireStoreSupplier.CreateStrategy.CREATE);
@@ -819,6 +829,8 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock();
         writeLock.lock();
         try {
+            //! sequentialWriteBytesIgnoresClockRollback fails if this entry point retains the former clock-only
+            //! selection: bytes would move backwards while writingDocument() follows the shared published maximum.
             moveToCycleForAppend();
 
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
@@ -1028,6 +1040,14 @@ class StoreAppender extends AbstractCloseable
 
     private void rollCycleTo(final int cycle, boolean suppressEOF, boolean existingOnly) {
 
+        //! testRefreshDirectoryListingAfterHistoricalDeletion, tailerToEndWorksInFaceOfDeletedHistoricalStoreFile,
+        //! tailerToEndFromEndWorksInFaceOfDeletedStoreFile, deleteFileFromUnderTailerTest_EndOfHistoricalRange and
+        //! testToEndAfterOfflineQueueDeletion exercise the distinction between removable historical rolls and the
+        //! published maximum. Using lastCycle() here can refresh to a transiently lower physical bound and either
+        //! move the appender backwards or dereference a missing store before the fail-closed check.
+        //! testCountExcerptsWhenTheCycleIsRolled, testRollCycle and testRead2 also pin the publication/mod-count
+        //! consequences of using the mapped maximum rather than refreshing the directory during rollover.
+
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
             throw new AssertionError();
@@ -1037,6 +1057,10 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
         }
 
+        //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fails if rollover consults
+        //! lastCycle(): the refresh both adds filesystem I/O and may replace the cross-process publication with a
+        //! transient physical observation. The existing-only strategy makes a missing published generation fail
+        //! before CREATE can silently replace it.
         int lastExistingCycle = queue.lastPublishedCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
