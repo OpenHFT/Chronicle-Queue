@@ -9,6 +9,8 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
+//! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll requires nullable,
+//! immutable time projections so maintenance need not expose the mutable package-private SCQRoll.
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalTime;

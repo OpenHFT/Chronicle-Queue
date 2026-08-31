@@ -19,7 +19,7 @@ import static org.junit.Assert.assertThrows;
 
 public class SCQMetaRollMetadataTest extends QueueTestCommon {
 
-    //! Maintenance receives immutable roll geometry rather than the mutable package-private SCQRoll.
+    // Maintenance receives immutable roll geometry rather than the mutable package-private SCQRoll.
     @Test
     public void exposesPersistedRollMetadataWithoutExposingSCQRoll() {
         LocalTime rollTime = LocalTime.of(6, 30);
@@ -36,7 +36,7 @@ public class SCQMetaRollMetadataTest extends QueueTestCommon {
         assertEquals(rollTimeZone, metadata.rollTimeZone());
     }
 
-    //! Cycle parsing must use the Queue's persisted format and reject non-roll paths.
+    // Cycle parsing must use the Queue's persisted format and reject non-roll paths.
     @Test
     public void cycleForFileUsesTheQueueRollGeometry() {
         SetTimeProvider time = new SetTimeProvider(1_700_000_000_000L);

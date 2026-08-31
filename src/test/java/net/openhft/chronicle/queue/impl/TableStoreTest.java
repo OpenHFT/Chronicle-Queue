@@ -76,7 +76,7 @@ public class TableStoreTest extends QueueTestCommon {
         }
     }
 
-    //! A missing optional value must remain absent until the explicit acquire operation.
+    // A missing optional value must remain absent until the explicit acquire operation.
     @Test
     public void getValueForDoesNotCreateMissingKey() throws IOException {
         final File dir = tempDir("table-store-get");

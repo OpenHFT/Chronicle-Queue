@@ -29,6 +29,8 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+//! SingleTableStoreSharedLockTimeoutTest#positiveTimeoutAcquiresAContendedLockAfterRelease and
+//! #zeroTimeoutPerformsOneAttemptWhenTheStructuralLockIsHeld require monotonic bounded waiting.
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
@@ -145,7 +147,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                                             @NotNull final Function<T, ? extends R> code,
                                             @NotNull final Supplier<T> target) {
         //! negativeSharedLockTimeoutIsRejected keeps invalid policy input distinct from lock
-        //! contention, while callerCanSupplySharedLockTimeout pins one non-blocking attempt at zero.
+        //! contention, while callerCanSupplySharedLockTimeout and
+        //! zeroTimeoutPerformsOneAttemptWhenTheStructuralLockIsHeld pin one attempt at zero.
         if (timeoutMillis < 0)
             throw new IllegalArgumentException("timeoutMillis must not be negative");
         return doWithLock(file, code, target, true, timeoutMillis);
@@ -215,6 +218,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     }
                 }
                 final long remainingNanos = timeoutNanos - (System.nanoTime() - startNanos);
+                //! SingleTableStoreSharedLockTimeoutTest#positiveTimeoutAcquiresAContendedLockAfterRelease
+                //! requires retries to use only the remaining monotonic budget; an unconditional
+                //! quadratic pause can overshoot the caller's bound or miss a timely lock release.
                 if (remainingNanos <= 0)
                     break;
                 final long backoffMillis = Math.min(250L, (long) count * count);
@@ -327,6 +333,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new ClosedIllegalStateException("Closed");
 
         mappedBytes.reserve(this);
+        //! SingleTableStoreForEachKeyGuardTest#laterScanSeesEntriesAppendedByAnotherStore requires
+        //! lookup to restore all caller-visible scan bounds after observing cross-instance growth.
         final long previousReadPosition = mappedBytes.readPosition();
         final long previousReadLimit = mappedBytes.readLimit();
         final long previousWriteLimit = mappedBytes.writeLimit();
@@ -346,6 +354,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 mappedBytes.readPosition(readPosition + length);
             }
             if (!createIfAbsent) {
+                //! TableStoreTest#getValueForDoesNotCreateMissingKey demonstrates that lookup must
+                //! return before the legacy acquire path appends a durable table entry.
                 return null;
             }
             if (mappedBytes.isBackingFileReadOnly())
@@ -394,6 +404,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
         mappedBytes.reserve(this);
+        //! SingleTableStoreForEachKeyGuardTest#scansWhileAnotherStoreAppendsKeys demonstrates that
+        //! a structural scan must save and restore the caller's complete position/limit state;
+        //! leaking the temporary bounds corrupts later binding reads.
         final long previousReadPosition = mappedBytes.readPosition();
         final long previousReadLimit = mappedBytes.readLimit();
         final long previousWriteLimit = mappedBytes.writeLimit();
