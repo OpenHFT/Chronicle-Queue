@@ -1450,7 +1450,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * at its next read - the oldest roll still present - exactly as a freshly created, never-read
      * tailer does. Consequently rolls deleted below that surviving floor are never replayed to the
      * parked consumer: parking declares its unread backlog, up to the oldest surviving roll at next
-     * read, discardable.
+     * read, discardable. The owning consumer must be stopped and its tailer closed before parking;
+     * an active owner can publish a later position and undo the maintenance decision.
      * <p>
      * Replicated named tailers (those whose id starts with the canonical lowercase
      * {@link #REPLICATED_NAMED_TAILER_PREFIX}) are refused without change: their position is
@@ -1571,10 +1572,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null) {
+            if (longValue == null || longValue.isClosed()) {
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null) {
+                    //! Protected callers may close an acquired metadata handle; reacquire it under
+                    //! the cache lock so later users never inherit the closed reference.
+                    if (longValue == null || longValue.isClosed()) {
                         longValue = createIfAbsent
                                 ? metaStore.acquireValueFor(key, defaultValue)
                                 : metaStore.getValueFor(key);
