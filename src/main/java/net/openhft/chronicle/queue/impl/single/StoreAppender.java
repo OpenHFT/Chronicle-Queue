@@ -571,6 +571,9 @@ class StoreAppender extends AbstractCloseable
                 resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
+                //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle fails if document acquisition bypasses
+                //! the bounded EOF-aware header path: a routine ordinary write then remains pinned behind a durable
+                //! seal instead of advancing exactly once.
                 openContext(metaData, safeLength, true);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
@@ -746,6 +749,11 @@ class StoreAppender extends AbstractCloseable
      * indicates inconsistent state and is propagated. Exact-index writes do not use this path.
      */
     private long writeHeaderForOrdinaryAppend(final long safeLength) {
+        //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle and
+        //! sequentialWriteBytesRollsForwardPastSealedCurrentCycle require the same single retry for both ordinary
+        //! entry points. secondConsecutiveEofIsPropagated fails if the retry becomes a loop: a second seal indicates
+        //! inconsistent state and must remain visible. eofAdvanceRejectsCycleOverflowBeforeMutation requires the
+        //! cycle overflow check before any roll creation or publication.
         try {
             return writeHeader(safeLength);
         } catch (WriteAfterEOFException ignored) {
@@ -804,6 +812,9 @@ class StoreAppender extends AbstractCloseable
                              final long safeLength,
                              final boolean rollAtEndOfData) {
         assert wire != null;
+        //! Exact-index recovery must remain strict while ordinary documents may cross one EOF. Keeping the policy as
+        //! an explicit argument prevents writeBytesInternal() from accidentally inheriting the ordinary retry when
+        //! the two paths share context construction.
         this.positionOfHeader = rollAtEndOfData
                 ? writeHeaderForOrdinaryAppend(safeLength)
                 : writeHeader(safeLength);
@@ -871,6 +882,9 @@ class StoreAppender extends AbstractCloseable
             //! sequentialWriteBytesIgnoresClockRollback fails if this entry point retains the former clock-only
             //! selection: bytes would move backwards while writingDocument() follows the shared published maximum.
             moveToCycleForAppend();
+            //! sequentialWriteBytesRollsForwardPastSealedCurrentCycle proves sequential byte appends need the same
+            //! bounded EOF transition as ordinary document writes; calling writeHeader() directly leaves this path
+            //! behind the seal.
             this.positionOfHeader = writeHeaderForOrdinaryAppend((int) queue.overlapSize());
 
             assert isInsideHeader(wire);
@@ -973,6 +987,9 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
+            //! Exact-index writes identify a specific physical destination and must surface EOF for the recovery
+            //! protocol to classify. Passing false keeps the ordinary one-roll retry out of this strict path; no
+            //! separate regression is needed because #1741's exact recovery tests exercise this composed boundary.
             openContext(metadata, safeLength, false);
 
             try {
