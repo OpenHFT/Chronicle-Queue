@@ -670,9 +670,15 @@ class StoreAppender extends AbstractCloseable
      * @param cycle the cycle for which the wire should be set
      */
     private void setWireIfNull(final int cycle) {
+        setWireIfNull(cycle, WireStoreSupplier.CreateStrategy.CREATE);
+    }
+
+    private void setWireIfNull(final int cycle, WireStoreSupplier.CreateStrategy createStrategy) {
         normaliseEOFs0(cycle);
 
-        setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
+        setCycle2(cycle, createStrategy);
+        if (store == null)
+            throw missingPublishedCycle(cycle);
     }
 
     /**
@@ -684,13 +690,33 @@ class StoreAppender extends AbstractCloseable
         // Supported retention keeps the published maximum; taking it with time prevents clock
         // rollback while still allowing a writer to advance normally.
         final int targetCycle = Math.max(queue.cycle(), lastExistingCycle);
+        final boolean publishedCycleMustExist = lastExistingCycle >= 0 && targetCycle == lastExistingCycle;
+        if (publishedCycleMustExist)
+            requirePublishedCycle(lastExistingCycle);
         if (wire == null) {
-            setWireIfNull(targetCycle);
+            //! Equality means another writer already published this generation. Opening it as
+            //! existing-only prevents an ordinary write from recreating a removed current roll.
+            setWireIfNull(targetCycle, publishedCycleMustExist
+                    ? WireStoreSupplier.CreateStrategy.READ_ONLY
+                    : WireStoreSupplier.CreateStrategy.CREATE);
             return;
         }
 
         if (cycle < targetCycle)
-            rollCycleTo(targetCycle);
+            rollCycleTo(targetCycle, false, publishedCycleMustExist);
+    }
+
+    private void requirePublishedCycle(int publishedCycle) {
+        try (SingleChronicleQueueStore ignored = queue.storeForCycle(
+                publishedCycle, queue.epoch(), false, null)) {
+            if (ignored == null)
+                throw missingPublishedCycle(publishedCycle);
+        }
+    }
+
+    private IllegalStateException missingPublishedCycle(int publishedCycle) {
+        return new IllegalStateException("Highest/current roll " + publishedCycle
+                + " disappeared while Queue metadata remains");
     }
 
     /**
@@ -997,6 +1023,10 @@ class StoreAppender extends AbstractCloseable
      * @param suppressEOF flag to suppress writing EOF markers
      */
     private void rollCycleTo(final int cycle, boolean suppressEOF) {
+        rollCycleTo(cycle, suppressEOF, false);
+    }
+
+    private void rollCycleTo(final int cycle, boolean suppressEOF, boolean existingOnly) {
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
@@ -1013,11 +1043,14 @@ class StoreAppender extends AbstractCloseable
         if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
             setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
             if (store == null)
-                throw new IllegalStateException("Highest/current roll " + lastExistingCycle
-                        + " disappeared while Queue metadata remains");
+                throw missingPublishedCycle(lastExistingCycle);
             rollCycleTo(cycle);
         } else {
-            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
+            setCycle2(cycle, existingOnly
+                    ? WireStoreSupplier.CreateStrategy.READ_ONLY
+                    : WireStoreSupplier.CreateStrategy.CREATE);
+            if (existingOnly && store == null)
+                throw missingPublishedCycle(cycle);
         }
     }
 

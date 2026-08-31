@@ -104,7 +104,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void deletingPublishedMaximumFailsExistingAppender() throws IOException {
+    public void stalledAppenderDoesNotRecreateDeletedPublishedMaximum() throws IOException {
         final File directory = queueDirectory.newFolder();
         final AtomicLong stalledClock = new AtomicLong();
         final AtomicLong advancingClock = new AtomicLong();
@@ -128,11 +128,49 @@ public class StoreAppenderTest extends QueueTestCommon {
             }
 
             assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
-            stalledClock.set(2L * TEST_DAILY.lengthInMillis());
+            final long stalledWritePositionBefore = ((StoreAppender) stalledWriter).store.writePosition();
 
+            //! When wall time equals neither a newer nor the published cycle, an ordinary append
+            //! must still open the published maximum as existing-only and fail if it disappeared.
             final IllegalStateException failure = assertThrows(IllegalStateException.class,
                     () -> stalledWriter.writeBytes(Bytes.from("must-fail")));
             assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
+            assertFalse("failed append must not recreate the removed generation", publishedFile.exists());
+            assertEquals("failure must precede sealing the stalled roll",
+                    stalledWritePositionBefore, ((StoreAppender) stalledWriter).store.writePosition());
+        }
+    }
+
+    @Test
+    public void unusedAppenderDoesNotCreateDeletedPublishedMaximum() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong stalledClock = new AtomicLong();
+        final AtomicLong advancingClock = new AtomicLong(TEST_DAILY.lengthInMillis());
+
+        try (SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(stalledClock::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.binary(directory)
+                     .timeProvider(advancingClock::get)
+                     .rollCycle(TEST_DAILY)
+                     .build();
+             ExcerptAppender unusedAppender = stalledQueue.createAppender()) {
+            final File publishedFile;
+            try (ExcerptAppender advancingWriter = advancingQueue.createAppender()) {
+                advancingWriter.writeBytes(Bytes.from("cycle-1"));
+                publishedFile = advancingWriter.currentFile();
+            }
+
+            assertEquals(1, stalledQueue.lastPublishedCycle());
+            assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
+
+            //! A first ordinary write follows the same existing-only rule as an already-live
+            //! appender when its target is the published maximum.
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> unusedAppender.writeBytes(Bytes.from("must-fail")));
+            assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
+            assertFalse("failed append must not recreate the removed generation", publishedFile.exists());
         }
     }
 
