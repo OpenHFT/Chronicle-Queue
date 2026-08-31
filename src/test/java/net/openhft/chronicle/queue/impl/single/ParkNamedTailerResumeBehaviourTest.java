@@ -76,7 +76,7 @@ public class ParkNamedTailerResumeBehaviourTest extends QueueTestCommon {
             assertTrue(rolls[i].delete());
     }
 
-    //! Parking discards the deleted backlog and resumes at the oldest surviving roll after restart.
+    // Parking discards the deleted backlog and resumes at the oldest surviving roll after restart.
     @Test
     public void parkedTailerResumesFromOldestSurvivingRollAfterRestart() {
         File dir = getTmpDir();
@@ -107,7 +107,7 @@ public class ParkNamedTailerResumeBehaviourTest extends QueueTestCommon {
         }
     }
 
-    //! Index zero must retain the same first-read semantics as a never-read named tailer.
+    // Index zero must retain the same first-read semantics as a never-read named tailer.
     @Test
     public void parkedTailerReadsSameFirstEntryAsNeverReadTailer() {
         File dir = getTmpDir();

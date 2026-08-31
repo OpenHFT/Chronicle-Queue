@@ -24,6 +24,8 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
+//! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithMetadataUsesPersistedDirectoryListing
+//! distinguishes the read-only mapped table from the no-metadata fallback at construction.
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
@@ -1317,8 +1319,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the numeric cycle encoded by the filename
      */
     public int cycleForFile(@NotNull File file) {
+        //! SCQMetaRollMetadataTest#cycleForFileUsesTheQueueRollGeometry and CQE's
         //! ArchiveRollFilesEligibilityTest#destructivePlanningRejectsFilenameOrderThatDisagreesWithCycles
-        //! requires Queue's persisted roll geometry; lexical filename order is not a safe deletion key.
+        //! require Queue's persisted geometry; lexical filename order is not a safe deletion key.
         final String name = file.getName();
         if (!name.endsWith(SUFFIX))
             throw new IllegalArgumentException("Not a Queue roll file: " + file);
@@ -1368,10 +1371,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @throws UnsupportedOperationException if the metadata store does not support locked key scans
      */
     public NavigableMap<String, Long> namedTailerIndexes() {
-        //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesSupportsConcurrentRegistration
-        //! requires one structural lock around the complete snapshot, not per-key observations.
+        //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesSupportsConcurrentRegistration,
+        //! #namedTailerRegistrationWaitsForExclusiveMetadataLock and
+        //! #namedTailerRegistrationWaitsForSharedMetadataLock require one structural lock around
+        //! the complete snapshot and prove it composes with registration's existing lock protocol.
         if (!metaStore.readOnly())
             return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
+        //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithoutMetadataHasNoNamedTailers demonstrates
+        //! that a read-only Queue lacking a mapped metadata table reports an empty snapshot without
+        //! creating metadata merely to inspect it.
         if (!(metaStore instanceof SingleTableStore))
             return new TreeMap<>();
         File metadataFile = new File(path, QUEUE_METADATA_FILE);
@@ -1380,6 +1388,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
+        //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesReturnsDetachedSnapshot
+        //! requires newly allocated point-in-time state rather than a view backed by mapped values.
         final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
         tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
             final String k = key.toString();
@@ -1399,6 +1409,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             //! records are exposed as independent consumers and pin unrelated roll files.
             if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
                 return;
+            //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesKeepCaseVariantIdsSeparate
+            //! requires exact raw ids in the result because case-distinct persisted positions may
+            //! independently pin different rolls even though public lookup is case-insensitive.
             result.put(namedTailer, index);
             if (hasMetadataShapedSuffix(namedTailer))
                 Jvm.warn().on(SingleChronicleQueue.class,
@@ -1474,8 +1487,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     public NamedTailerParkResult parkNamedTailer(String name) {
         Objects.requireNonNull(name, "name");
-        //! parkNamedTailerRejectsReservedSuffixesWithoutMutatingMetadata and
-        //! maintenanceParkingRejectsMixedCaseReplicatedPrefix prevent aliasing Queue-owned keys.
+        //! parkNamedTailerRejectsReservedSuffixesWithoutMutatingMetadata,
+        //! #parkNamedTailerRejectsExistingMixedCaseSuffixWithoutMutation and
+        //! #maintenanceParkingRejectsMixedCaseReplicatedPrefix prevent case-insensitive aliases
+        //! from mutating Queue-owned lock, version, or replicated-tailer keys.
         validateParkableNamedTailerId(name);
         //! replicatedNamedTailersCannotBeParked keeps version-coordinated sink state unchanged;
         //! resetting only its index would desynchronise replication.
@@ -1488,6 +1503,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
             if (longValue == null)
                 return NamedTailerParkResult.NOT_FOUND;
+            //! SingleChronicleQueueNamedTailerMetadataTest#parkNamedTailerResetsExistingNonReplicatedTailer,
+            //! #parkedNamedTailerRemainsParkedAfterQueueRestart,
+            //! ParkNamedTailerResumeBehaviourTest#parkedTailerResumesFromOldestSurvivingRollAfterRestart
+            //! and #parkedTailerReadsSameFirstEntryAsNeverReadTailer demonstrate why parking writes
+            //! the durable never-read sentinel: it survives restart and resumes from the oldest roll
+            //! that still exists, discarding older backlog.
             longValue.setOrderedValue(0);
             return NamedTailerParkResult.PARKED;
         }
@@ -1575,9 +1596,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             if (longValue == null || longValue.isClosed()) {
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
-                    //! Protected callers may close an acquired metadata handle; reacquire it under
-                    //! the cache lock so later users never inherit the closed reference.
+                    //! SingleChronicleQueueNamedTailerMetadataTest#closedCachedMetadataValueIsReacquired
+                    //! demonstrates that protected callers may close an acquired metadata handle;
+                    //! reacquire it under the cache lock so later users never inherit that reference.
                     if (longValue == null || longValue.isClosed()) {
+                        //! SingleChronicleQueueNamedTailerMetadataTest#parkNamedTailerDoesNotCreateMissingTailer
+                        //! distinguishes the lookup-only branch from historical acquisition: an
+                        //! absent consumer must return NOT_FOUND without adding metadata.
                         longValue = createIfAbsent
                                 ? metaStore.acquireValueFor(key, defaultValue)
                                 : metaStore.getValueFor(key);
@@ -1605,6 +1630,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
     public long tableStoreGet(CharSequence key) {
+        //! SingleTableStoreIntegrationTests#getMissingKeyWithoutDefault demonstrates that this
+        //! historical public getter remains get-or-create even though maintenance now has a
+        //! separate lookup-only path.
         LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
         if (longValue == null) return Long.MIN_VALUE;
         return longValue.getVolatileValue();

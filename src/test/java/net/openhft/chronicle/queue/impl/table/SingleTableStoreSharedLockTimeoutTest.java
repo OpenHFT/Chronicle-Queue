@@ -26,7 +26,7 @@ public class SingleTableStoreSharedLockTimeoutTest {
     @Rule
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-    //! Zero is a non-blocking policy, not a request to skip the first lock attempt.
+    // Zero is a non-blocking policy, not a request to skip the first lock attempt.
     @Test
     public void callerCanSupplySharedLockTimeout() throws Exception {
         File file = temporaryFolder.newFile("metadata.cq4t");
@@ -40,7 +40,7 @@ public class SingleTableStoreSharedLockTimeoutTest {
         assertEquals("locked", value);
     }
 
-    //! Negative durations are invalid policy input and must not be reported as contention.
+    // Negative durations are invalid policy input and must not be reported as contention.
     @Test(expected = IllegalArgumentException.class)
     public void negativeSharedLockTimeoutIsRejected() throws Exception {
         File file = temporaryFolder.newFile("metadata.cq4t");
@@ -48,7 +48,7 @@ public class SingleTableStoreSharedLockTimeoutTest {
                 ignored -> "unreachable", () -> null);
     }
 
-    //! A contended zero-timeout call performs exactly one attempt and returns promptly.
+    // A contended zero-timeout call performs exactly one attempt and returns promptly.
     @Test
     public void zeroTimeoutPerformsOneAttemptWhenTheStructuralLockIsHeld() throws Exception {
         File file = temporaryFolder.newFile("locked-metadata.cq4t");
@@ -68,7 +68,7 @@ public class SingleTableStoreSharedLockTimeoutTest {
         }
     }
 
-    //! Positive timeouts retry while contended and succeed when the lock is released in time.
+    // Positive timeouts retry while contended and succeed when the lock is released in time.
     @Test
     public void positiveTimeoutAcquiresAContendedLockAfterRelease() throws Exception {
         File file = temporaryFolder.newFile("waiting-metadata.cq4t");

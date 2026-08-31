@@ -42,7 +42,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         assertEquals(1, context.newQueueInstance().tableStoreGet("a"));
     }
 
-    //! Historical tableStoreGet remains get-or-create even though getValueFor is lookup-only.
+    // Historical tableStoreGet remains get-or-create even though getValueFor is lookup-only.
     @Test
     public void getMissingKeyWithoutDefault() {
         SingleChronicleQueue queue = context.newQueueInstance();

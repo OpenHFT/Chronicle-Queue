@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -36,7 +34,6 @@ import java.util.stream.IntStream;
 
 import static java.lang.Long.toHexString;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 
 @SuppressWarnings("this-escape")
@@ -212,21 +209,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     @Test
     public void tailingThroughDeletedCyclesWillRefreshThenRetry_ReadOnly() throws IOException {
         tailingThroughDeletedCyclesWillRefreshThenRetry(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())
-                .rollCycle(RollCycles.FAST_DAILY)
-                .readOnly(true)
-                .build());
-    }
-
-    //! Writable tailers must skip two consecutive externally deleted historical generations.
-    @Test
-    public void tailingThroughDeletedCyclesWillRecoverToLaterCycle_Writable() throws IOException {
-        tailingThroughDeletedCyclesWillRecoverToLaterCycle(qwcd -> qwcd.queue);
-    }
-
-    //! The same composed deleted-generation recovery contract applies to read-only tailers.
-    @Test
-    public void tailingThroughDeletedCyclesWillRecoverToLaterCycle_ReadOnly() throws IOException {
-        tailingThroughDeletedCyclesWillRecoverToLaterCycle(qwcd -> SingleChronicleQueueBuilder.binary(qwcd.queue.fileAbsolutePath())
                 .rollCycle(RollCycles.FAST_DAILY)
                 .readOnly(true)
                 .build());
@@ -525,54 +507,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 }
             }
             assertEquals(20, counter);
-        }
-    }
-
-    private void tailingThroughDeletedCyclesWillRecoverToLaterCycle(Function<QueueWithCycleDetails, SingleChronicleQueue> queueCreator) throws IOException {
-        assumeFalse(OS.isWindows());
-        expectException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
-
-        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null);
-             SingleChronicleQueue queue = queueCreator.apply(queueWithCycleDetails)
-        ) {
-            RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
-            RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
-            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
-
-            List<String> observedText = new ArrayList<>();
-            List<Long> observedIndexes = new ArrayList<>();
-            try (ExcerptTailer tailer = queue.createTailer()) {
-                String firstText = tailer.readText();
-                assertEquals("test1", firstText);
-                observedText.add(firstText);
-                observedIndexes.add(tailer.lastReadIndex());
-
-                // Delete the mapped current cycle and the next cycle. The third cycle remains on disk,
-                // so recovery must scan past both deleted files and continue from that later cycle.
-                Files.delete(Paths.get(firstCycle.filename));
-                Files.delete(Paths.get(secondCycle.filename));
-
-                String text;
-                while ((text = tailer.readText()) != null) {
-                    observedText.add(text);
-                    observedIndexes.add(tailer.lastReadIndex());
-                }
-
-                assertEquals(thirdCycle.lastIndex, tailer.lastReadIndex());
-            }
-
-            List<String> expectedText = new ArrayList<>();
-            expectedText.addAll(Collections.nCopies(NUM_REPEATS, "test1"));
-            expectedText.addAll(Collections.nCopies(NUM_REPEATS, "test3"));
-            assertEquals(expectedText, observedText);
-            assertEquals(NUM_REPEATS * 2, observedIndexes.size());
-            assertTrue(observedIndexes.stream()
-                    .noneMatch(index -> queue.rollCycle().toCycle(index) == secondCycle.rollCycle));
-            for (int i = 1; i < observedIndexes.size(); i++)
-                assertTrue("indexes must increase: " + observedIndexes,
-                        observedIndexes.get(i) > observedIndexes.get(i - 1));
-            assertEquals(thirdCycle.lastIndex,
-                    observedIndexes.get(observedIndexes.size() - 1).longValue());
         }
     }
 

@@ -26,7 +26,7 @@ import static org.junit.Assume.assumeFalse;
 
 public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
 
-    //! Read-only inspection must not create metadata for a Queue that never had a metadata table.
+    // Read-only inspection must not create metadata for a Queue that never had a metadata table.
     @Test
     public void readOnlyQueueWithoutMetadataHasNoNamedTailers() {
         assumeFalse(OS.isWindows());
@@ -45,7 +45,7 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
         assertFalse(Files.exists(metadata));
     }
 
-    //! Persisted metadata uses TableDirectoryListingReadOnly, avoiding a filesystem scan per poll.
+    // Persisted metadata uses TableDirectoryListingReadOnly, avoiding a filesystem scan per poll.
     @Test
     public void readOnlyQueueWithMetadataUsesPersistedDirectoryListing() throws Exception {
         File directory = getTmpDir();
@@ -66,7 +66,7 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
         }
     }
 
-    //! A metadata snapshot remains available when the operating-system file is not writable.
+    // A metadata snapshot remains available when the operating-system file is not writable.
     @Test
     public void readsNamedTailersWithoutWriteAccessOrMetadataMutation() throws Exception {
         assumeFalse(OS.isWindows());
