@@ -1143,6 +1143,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * scanning the queue directory.
      */
     int lastPublishedCycle() {
+        //! ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing and
+        //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fail if this uses
+        //! lastCycle(): that call refreshes the filesystem and puts directory I/O back on the append path.
+        //! preOpenedListingsPublishBoundsFromSharedValues and
+        //! publishedModificationRefreshesAnotherListingsCurrentBounds demonstrate that the mapped maximum is
+        //! already the cross-process publication needed here.
         return directoryListing.getMaxCreatedCycle();
     }
 
