@@ -298,7 +298,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         nesting = 0;
         // reset() has already closed the shared underlying document. Each outstanding
         // try-with-resources scope still invokes close(), which must now be harmless.
-        closesAfterReset = outstandingCloses;
+        //! Sequential resets leave closes pending from every earlier try-with-resources scope.
+        closesAfterReset += outstandingCloses;
     }
 
     private void requireCallback() {

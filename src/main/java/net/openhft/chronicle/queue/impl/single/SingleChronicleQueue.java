@@ -172,7 +172,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 //noinspection ResultOfMethodCallIgnored
                 path.mkdirs();
             fileAbsolutePath = path.getAbsolutePath();
-            contextListenerCallbackKey = path.toPath().toAbsolutePath().normalize().toString();
+            //! Resolve aliases before entering the process-wide callback guard; two spellings of
+            //! one Queue must not contend on the non-reentrant write lock from inside a callback.
+            contextListenerCallbackKey = path.toPath().toRealPath().toString();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
             // the maximum message size is 1L << 30 so greater overlapSize has no effect

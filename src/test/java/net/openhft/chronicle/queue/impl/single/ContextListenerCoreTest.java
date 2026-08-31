@@ -22,7 +22,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -648,8 +651,6 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             sealCycle(queue, sealedCycle + 1);
             queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
                     .setVolatileValue(sealedCycle);
-            queue.tableStoreAcquire("listing.highestCycleWriteFloor", sealedCycle)
-                    .setVolatileValue(sealedCycle);
 
             assertThrows(WriteAfterEOFException.class,
                     () -> appender.writeMessage("message", "must-fail"));
@@ -727,6 +728,43 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             assertTrue(failure.getMessage().contains("supplied method writer"));
 
             second.createAppender().writeMessage("message", "after-failure");
+        }
+    }
+
+    @Test(timeout = 5_000)
+    public void symlinkAliasCannotBypassCallbackGuard() throws Exception {
+        Path real = Files.createDirectories(getTmpDir().toPath().toAbsolutePath());
+        Path alias = real.resolveSibling(real.getFileName() + "-alias");
+        try {
+            Files.createSymbolicLink(alias, real);
+        } catch (IOException | UnsupportedOperationException | SecurityException unavailable) {
+            org.junit.Assume.assumeNoException(unavailable);
+        }
+        assertTrue(Files.isSameFile(real, alias));
+
+        AtomicReference<SingleChronicleQueue> aliasQueue = new AtomicReference<>();
+        AtomicReference<Throwable> aliasFailure = new AtomicReference<>();
+        try (SingleChronicleQueue primary = builder(real.toFile())
+                .timeoutMS(100)
+                .contextListener(Events.class, writer -> {
+                    try {
+                        aliasQueue.get().createAppender().writeMessage("message", "reentrant");
+                    } catch (Throwable failure) {
+                        aliasFailure.set(failure);
+                    }
+                    writer.context(new ServiceContext("valid-context"));
+                })
+                .build();
+             SingleChronicleQueue second = builder(alias.toFile()).timeoutMS(100).build()) {
+            aliasQueue.set(second);
+
+            //! Callback isolation is keyed by physical Queue identity, not the spelling used to
+            //! open it; an alias must fail before touching the cross-process write lock.
+            primary.createAppender().writeMessage("message", "application");
+
+            assertTrue(aliasFailure.get() instanceof IllegalStateException);
+            assertTrue(aliasFailure.get().getMessage().contains("supplied method writer"));
+            second.createAppender().writeMessage("message", "after-callback");
         }
     }
 
@@ -873,6 +911,16 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test
+    public void sequentialResetsPreserveAutomaticClosesForQueueListener() {
+        assertSequentialResetsPreserveAutomaticCloses(true);
+    }
+
+    @Test
+    public void sequentialResetsPreserveAutomaticClosesForAppenderListener() {
+        assertSequentialResetsPreserveAutomaticCloses(false);
+    }
+
+    @Test
     public void listenerRollbackThenResetPoisonsContextAndAutomaticCloseIsHarmless() {
         //! Pins rollback intent across reset while absorbing already-satisfied automatic closes.
         AtomicInteger attempts = new AtomicInteger();
@@ -1011,6 +1059,40 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             for (String message : messages)
                 events.message(new Message(message));
         }
+    }
+
+    private void assertSequentialResetsPreserveAutomaticCloses(boolean queueListener) {
+        File path = getTmpDir();
+        MarshallableOut.ContextListener<ProgressiveEvents> listener = writer -> {
+            try (DocumentContext first = writer.writingDocument()) {
+                writer.context(new ServiceContext("first"));
+                first.reset();
+                try (DocumentContext second = writer.writingDocument()) {
+                    writer.context(new ServiceContext("second"));
+                    second.reset();
+                }
+            }
+        };
+
+        SingleChronicleQueueBuilder builder = builder(path);
+        if (queueListener)
+            builder.contextListener(ProgressiveEvents.class, listener);
+        try (SingleChronicleQueue queue = builder.build()) {
+            ExcerptAppender appender = queue.createAppender();
+            if (!queueListener)
+                appender.contextListener(ProgressiveEvents.class, listener);
+
+            //! Each reset satisfies one active document but every enclosing try-with-resources
+            //! scope still closes later; deferred close accounting must accumulate across resets.
+            if (queueListener)
+                appender.methodWriter(Events.class).message(new Message("application"));
+            else
+                appender.writeMessage("message", "application");
+        }
+
+        String dump = dump(path);
+        assertTrue(dump, dump.indexOf("name: first") < dump.indexOf("name: second"));
+        assertTrue(dump, dump.indexOf("name: second") < dump.indexOf("application"));
     }
 
     private void assertContextCounts(File path, int... expected) {
