@@ -125,6 +125,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         if (actualContextCount < contextCount)
             throw new IllegalStateException("Queue context count moved backwards from " +
                     contextCount + " to " + actualContextCount);
+        //! ContextListenerCoreTest#notifiesEachAppenderWithItsOwnContextOncePerRoll mutation-pins
+        //! the cycle transition as the only automatic rearm boundary.
         if (actualContextCount > contextCount) {
             contextCount = actualContextCount;
             status = Status.READY;
@@ -145,6 +147,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         try {
             try {
                 notifyListener();
+                //! Explicit rollback or an open document means no complete context was published;
+                //! the rollback/unclosed regressions require fail-closed state, never success.
                 if (listenerRolledBack)
                     throw new IllegalStateException("Queue context listener rolled back its output document");
                 if (listenerDocumentIsOpen())
@@ -157,6 +161,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
                 } catch (Throwable rollbackFailure) {
                     callbackFailure.addSuppressed(rollbackFailure);
                 }
+                //! listenerFailureAfterWritingContextIsNotRetriedInTheSameRoll mutation-fails if
+                //! this returns to READY and invokes an invalid serializer again.
                 status = Status.FAILED;
                 failure = callbackFailure;
                 Jvm.warn().on(ContextListenerState.class,
@@ -196,6 +202,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
             return appender.acquireWritingDocument(metaData);
 
         StoreAppender.StoreAppenderContext context = this.context;
+        //! writesContextBeforeHeldDataDocument and listenerCanHoldOneDocumentWhileWritingContext
+        //! require nested supplied-writer calls to share the one locked Queue document.
         if (nesting > 0 && context.wire() != null && context.isOpen()) {
             if (!context.chainedElement()) {
                 assert metaData == context.isMetaData();
@@ -230,6 +238,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         StoreAppender.StoreAppenderContext context = this.context;
         if (nesting == 0 || !context.isOpen())
             return;
+        //! listenerRollbackThenResetPoisonsContextAndAutomaticCloseIsHarmless requires rollback
+        //! intent to survive reset/close bookkeeping and poison this cycle.
         listenerRolledBack = true;
         context.chainedElement(false);
         context.rollbackOnClose();
@@ -254,6 +264,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Override
     public void close() {
         requireCallback();
+        //! listenerDocumentResetMakesNestedAutomaticClosesHarmless mutation-fails when reset's
+        //! already-satisfied try-with-resources closes are treated as new close operations.
         if (nesting == 0 && closesAfterReset > 0) {
             closesAfterReset--;
             return;
@@ -274,9 +286,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Override
     public void reset() {
         requireCallback();
-        // DocumentContext.reset() means close/commit the active document and then discard the
-        // holder state. Clearing the underlying context while it is still open would let the
-        // triggering application write overwrite an uncommitted listener record.
+        //! listenerDocumentResetCommitsContextBeforeApplicationData requires reset to commit the
+        //! active supplied document before clearing holder state; otherwise application data can overwrite it.
         final int outstandingCloses = nesting;
         if (outstandingCloses > 0 && context.isOpen()) {
             context.chainedElement(false);

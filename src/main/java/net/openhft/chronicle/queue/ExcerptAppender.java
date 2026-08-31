@@ -92,6 +92,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     @Override
     default <T> ExcerptAppender contextListener(@NotNull Class<T> writerType,
                                                 @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        //! The default keeps third-party ExcerptAppender implementations source-compatible while
+        //! StoreAppender supplies Queue's concrete listener lifecycle.
         throw new UnsupportedOperationException();
     }
 

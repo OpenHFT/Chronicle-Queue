@@ -295,6 +295,8 @@ class StoreAppender extends AbstractCloseable
 
     @Override
     protected void assertCloseable() {
+        //! capturedAppenderCloseFromListenerFailsFast keeps callback teardown from releasing the
+        //! outer write's lock and mapped state.
         queue.throwIfContextListenerCallbackActive();
         super.assertCloseable();
     }
@@ -592,15 +594,18 @@ class StoreAppender extends AbstractCloseable
         Objects.requireNonNull(writerType, "writerType");
         Objects.requireNonNull(listener, "listener");
         queue.validateContextListenerCompatibility();
+        //! metadataDoesNotConsumeAppenderListenerRegistration and appendLockRejectionDoesNotConsumeListenerRegistration
+        //! pin the registration boundary to the first accepted ordinary write attempt.
         if (contextListenerState.started())
             throw new IllegalStateException("Cannot change contextListener after this appender has written");
-        queue.enableContextListenerCallbackGuard();
         contextListenerState = ContextListenerState.forAppender(this, context, writerType, listener);
         return this;
     }
 
     @Override
     public int contextCount() {
+        //! rolledBackClockDoesNotRepeatAnOlderContext and exactHistoricalRecoveryDoesNotChangeOrdinaryContext
+        //! pin this to the last resolved ordinary destination, not the appender's temporary cycle.
         if (queue.doubleBuffer)
             throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
         return isClosed() ? -1 : lastOrdinaryContextCount;
@@ -633,9 +638,8 @@ class StoreAppender extends AbstractCloseable
         try {
             return prepareAndReturnWriteContext(metaData, listenerState);
         } catch (Throwable e) {
-            // Throwable, not just RuntimeException: an Error from a context listener must also
-            // restore count, or the next write takes the count>1 fast path and is handed a stale,
-            // never-opened context - permanently wedging the appender.
+            //! listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable requires Error as well as
+            //! RuntimeException to restore count; otherwise the next write receives a stale context.
             count--;
             throw Jvm.rethrow(e);
         }
@@ -645,6 +649,8 @@ class StoreAppender extends AbstractCloseable
         ContextListenerState state = contextListenerState;
         // Metadata and exact-index recovery are listener-free and do not consume the ordinary
         // output registration window.
+        //! metadataDoesNotConsumeAppenderListenerRegistration mutation-fails if metadata selects
+        //! NONE or marks the appender's ordinary listener state as started.
         if (metaData)
             return state;
         if (state == ContextListenerState.UNSET)
@@ -678,6 +684,8 @@ class StoreAppender extends AbstractCloseable
             try {
                 final long safeLength = queue.overlapSize();
                 if (listenerState.requiresDestinationPreflight(metaData)) {
+                    //! sealedHighestRollIsResolvedBeforeDocumentListener mutation-fails if the
+                    //! callback observes a cycle before QUEUE-146 resolves EOF and the actual destination.
                     resolveOrdinaryAppendDestination();
                     if (listenerState.beforeDocument(false, lastOrdinaryContextCount))
                         resetPosition();
@@ -1058,6 +1066,8 @@ class StoreAppender extends AbstractCloseable
      * QUEUE-144 invokes context listeners only after this method has fixed the actual cycle.
      */
     private void resolveOrdinaryAppendDestination() {
+        //! secondEofFailsBeforeListenerStateChanges requires the same one-advance QUEUE-146 rule
+        //! to complete before listener state or application-header state changes.
         moveToCycleForAppend();
         resetPosition();
         int header = nextApplicationHeader();
@@ -1276,9 +1286,9 @@ class StoreAppender extends AbstractCloseable
      */
     private void openContext(final boolean metaData, final long safeLength, final boolean rollAtEndOfData) {
         assert wire != null;
-        //! Exact-index recovery must remain strict while ordinary documents may cross one EOF. Keeping the policy as
-        //! an explicit argument prevents writeBytesInternal() from accidentally inheriting the ordinary retry when
-        //! the two paths share context construction.
+        //! exactHistoricalRecoveryDoesNotChangeOrdinaryContext requires explicit-index recovery to
+        //! remain listener-free and strict at EOF. Keeping the policy explicit prevents writeBytesInternal() from
+        //! accidentally inheriting the ordinary one-advance helper when both paths share context construction.
         this.positionOfHeader = rollAtEndOfData
                 ? writeHeaderForOrdinaryAppend(safeLength)
                 : writeHeader(safeLength);
@@ -1299,6 +1309,8 @@ class StoreAppender extends AbstractCloseable
      * @param metaData whether the listener document contains metadata
      */
     void openContextForContextListener(boolean metaData) {
+        //! listenerCanHoldOneDocumentWhileWritingContext requires an in-lock opening path; public
+        //! appender entry would try to reacquire the non-reentrant Queue write lock.
         resetPosition();
         openContext(metaData, queue.overlapSize(), false);
     }
@@ -1312,6 +1324,8 @@ class StoreAppender extends AbstractCloseable
      * that follows.</p>
      */
     void closeContextForContextListener() {
+        //! listenerClosePreservesNestingForDocumentWrite mutation-pins committing the listener
+        //! document without consuming the outer application's nesting/count state.
         int savedCount = count;
         try {
             count = 1;
@@ -1383,6 +1397,8 @@ class StoreAppender extends AbstractCloseable
         writeLock.lock();
         try {
             if (listenerState.requiresDestinationPreflight(false)) {
+                //! sealedHighestRollIsResolvedBeforeRawListener pins sequential raw writes to the
+                //! same resolved destination and notification ordering as document writes.
                 resolveOrdinaryAppendDestination();
                 if (listenerState.beforeRawDocument(lastOrdinaryContextCount))
                     resetPosition();
@@ -1855,6 +1871,8 @@ class StoreAppender extends AbstractCloseable
 
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
         assert writeLock.locked();
+        //! indexedWriteDoesNotNotifyOrConsumeListenerRegistration pins this exact-index path as
+        //! recovery infrastructure: it must not invoke or advance ordinary listener state.
         try {
             assert count == 0 : "count=" + count;
             //! canBackfillPreviousCycleAfterEOF and exactBackfillFindsEofInEmptySealedCycle require exact recovery to

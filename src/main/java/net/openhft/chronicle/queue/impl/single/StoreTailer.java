@@ -1819,6 +1819,8 @@ class StoreTailer extends AbstractCloseable
 
         @Override
         public int contextCount() {
+            //! ContextListenerCoreTest#tailerDocumentsExposeTheirActualCycle distinguishes an
+            //! unavailable context from the cycle of the document currently exposed to the reader.
             return isPresent() ? queue.rollCycle().toCycle(index()) : -1;
         }
 

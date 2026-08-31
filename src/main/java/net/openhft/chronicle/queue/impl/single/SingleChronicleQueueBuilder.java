@@ -394,6 +394,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private void validateContextListenerCompatibility() {
         if (contextListener == null)
             return;
+        //! validatesModesLoadedDuringPreBuildAndClosesMetadata requires validation after preBuild
+        //! and requires the metadata mapping to close when persisted settings make the mode invalid.
         try {
             SingleChronicleQueue.validateContextListenerCompatibility(
                     key != null || encodingSupplier != null,
@@ -1646,6 +1648,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public <T> SingleChronicleQueueBuilder contextListener(@NotNull Class<T> writerType,
                                                             @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        //! ContextListenerCoreTest#listenerRemainsCallerOwned requires configuration to retain but
+        //! never close the caller-owned listener.
         contextListenerWriterType = requireNonNull(writerType, "writerType");
         contextListener = requireNonNull(listener, "listener");
         return this;

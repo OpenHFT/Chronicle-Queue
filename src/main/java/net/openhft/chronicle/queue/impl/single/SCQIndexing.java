@@ -1036,6 +1036,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     private static Wire wireForIndex(@NotNull ExcerptContext context) {
+        //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter mutation-fails
+        //! if Queue's internal index publication re-enters the guarded public appender wire accessor.
         return context instanceof StoreAppender
                 ? ((StoreAppender) context).wireForIndexInternal()
                 : context.wireForIndex();
