@@ -29,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 
 public class SingleTableStoreForEachKeyGuardTest extends QueueTestCommon {
 
+    //! A later scan must see table entries appended through another mapped store instance.
     @Test
     public void laterScanSeesEntriesAppendedByAnotherStore() throws Exception {
         File directory = getTmpDir();
@@ -79,6 +80,7 @@ public class SingleTableStoreForEachKeyGuardTest extends QueueTestCommon {
         }
     }
 
+    //! Concurrent scans must restore their positions so later bound-value reads remain valid.
     @Test
     public void scansWhileAnotherStoreAppendsKeys() throws Exception {
         File directory = getTmpDir();

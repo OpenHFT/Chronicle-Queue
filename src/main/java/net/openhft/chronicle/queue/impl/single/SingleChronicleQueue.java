@@ -189,9 +189,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
 
-            // ReadonlyTableStore is the no-metadata fallback. A SingleTableStore can also be
-            // read-only, but still contains the persisted cycle listing that a read-only queue
-            // must retain rather than replacing with a filesystem rescan.
+            //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithMetadataUsesPersistedDirectoryListing
+            //! distinguishes a missing metadata table from a read-only mapped table; only the former
+            //! needs filesystem discovery, avoiding a directory scan on every read-only tail poll.
             if (metaStore instanceof ReadonlyTableStore) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
             } else {
@@ -1317,6 +1317,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the numeric cycle encoded by the filename
      */
     public int cycleForFile(@NotNull File file) {
+        //! ArchiveRollFilesEligibilityTest#destructivePlanningRejectsFilenameOrderThatDisagreesWithCycles
+        //! requires Queue's persisted roll geometry; lexical filename order is not a safe deletion key.
         final String name = file.getName();
         if (!name.endsWith(SUFFIX))
             throw new IllegalArgumentException("Not a Queue roll file: " + file);
@@ -1366,6 +1368,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @throws UnsupportedOperationException if the metadata store does not support locked key scans
      */
     public NavigableMap<String, Long> namedTailerIndexes() {
+        //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesSupportsConcurrentRegistration
+        //! requires one structural lock around the complete snapshot, not per-key observations.
         if (!metaStore.readOnly())
             return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
         if (!(metaStore instanceof SingleTableStore))
@@ -1379,6 +1383,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
         tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
             final String k = key.toString();
+            //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesReturnsCommittedTailerPositionsOnly
+            //! rejects Queue locks and replication bookkeeping from the retention-floor snapshot.
             if (k.startsWith("index."))
                 acc.put(k.substring("index.".length()), value.int64());
         });
@@ -1389,6 +1395,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     static NavigableMap<String, Long> selectNamedTailerIndexes(Map<String, Long> metadataIndexes) {
         final NavigableMap<String, Long> result = new TreeMap<>();
         metadataIndexes.forEach((namedTailer, index) -> {
+            //! namedTailerIndexesReturnsCommittedTailerPositionsOnly fails if replicated lock/version
+            //! records are exposed as independent consumers and pin unrelated roll files.
             if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
                 return;
             result.put(namedTailer, index);
@@ -1423,6 +1431,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static boolean containsKeyIgnoreCase(Map<String, Long> metadataIndexes, String candidate) {
+        //! namedTailerIndexesRetainsDistinguishableLegacyReservedIds covers metadata written by
+        //! releases whose case-insensitive lookup allowed differently-cased persisted keys.
         for (String persistedKey : metadataIndexes.keySet()) {
             if (persistedKey.equalsIgnoreCase(candidate))
                 return true;
@@ -1463,11 +1473,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     public NamedTailerParkResult parkNamedTailer(String name) {
         Objects.requireNonNull(name, "name");
+        //! parkNamedTailerRejectsReservedSuffixesWithoutMutatingMetadata and
+        //! maintenanceParkingRejectsMixedCaseReplicatedPrefix prevent aliasing Queue-owned keys.
         validateParkableNamedTailerId(name);
+        //! replicatedNamedTailersCannotBeParked keeps version-coordinated sink state unchanged;
+        //! resetting only its index would desynchronise replication.
         if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
             return NamedTailerParkResult.REFUSED_REPLICATED;
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
+            //! parkNamedTailerDoesNotCreateMissingTailer requires lookup-only semantics: parking
+            //! an unknown consumer must not create a durable retention record.
             LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
             if (longValue == null)
                 return NamedTailerParkResult.NOT_FOUND;
@@ -1555,10 +1571,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null || longValue.isClosed()) {
+            if (longValue == null) {
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null || longValue.isClosed()) {
+                    if (longValue == null) {
                         longValue = createIfAbsent
                                 ? metaStore.acquireValueFor(key, defaultValue)
                                 : metaStore.getValueFor(key);

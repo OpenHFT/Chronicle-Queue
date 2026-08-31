@@ -59,6 +59,8 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      * @throws UnsupportedOperationException if this implementation does not support non-mutating lookup
      */
     default LongValue getValueFor(CharSequence key) {
+        //! A default preserves source compatibility for specialised TableStore implementations;
+        //! maintenance callers fail explicitly rather than silently creating a missing key.
         throw new UnsupportedOperationException("Non-mutating lookup is not supported");
     }
 

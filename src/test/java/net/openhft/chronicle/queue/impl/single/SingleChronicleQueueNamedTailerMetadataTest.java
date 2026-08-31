@@ -54,6 +54,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! A retention snapshot contains committed consumer positions but no lock/version records.
     @Test
     public void namedTailerIndexesReturnsCommittedTailerPositionsOnly() {
         File dir = getTmpDir();
@@ -78,6 +79,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Case-distinct persisted ids remain distinct because each may pin a different roll.
     @Test
     public void namedTailerIndexesKeepCaseVariantIdsSeparate() {
         NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
@@ -94,6 +96,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         assertEquals(Long.valueOf(3L), indexes.get("gateway.lock"));
     }
 
+    //! Legacy metadata-shaped ids are retained when nested records make them distinguishable.
     @Test
     public void namedTailerIndexesRetainsDistinguishableLegacyReservedIds() {
         File dir = getTmpDir();
@@ -130,6 +133,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! A snapshot is point-in-time state and must not change with later tailer movement.
     @Test
     public void namedTailerIndexesReturnsDetachedSnapshot() {
         File dir = getTmpDir();
@@ -158,6 +162,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Parking an ordinary consumer resets only its durable position to the never-read sentinel.
     @Test
     public void parkNamedTailerResetsExistingNonReplicatedTailer() {
         File dir = getTmpDir();
@@ -175,6 +180,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Parking an unknown id reports NOT_FOUND without creating a metadata entry.
     @Test
     public void parkNamedTailerDoesNotCreateMissingTailer() {
         File dir = getTmpDir();
@@ -188,6 +194,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Metadata-shaped ids are rejected before their owner's lock or version can be altered.
     @Test
     public void parkNamedTailerRejectsReservedSuffixesWithoutMutatingMetadata() {
         File dir = getTmpDir();
@@ -217,6 +224,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Replicated consumer state is version coordinated and cannot be reset locally.
     @Test
     public void replicatedNamedTailersCannotBeParked() {
         File dir = getTmpDir();
@@ -245,6 +253,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Case-insensitive table lookup must not let a prefix variant bypass replication safety.
     @Test
     public void maintenanceParkingRejectsMixedCaseReplicatedPrefix() {
         File dir = getTmpDir();
@@ -265,6 +274,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Reserved suffix checks follow the table's case-insensitive key semantics.
     @Test
     public void parkNamedTailerRejectsExistingMixedCaseSuffixWithoutMutation() {
         File dir = getTmpDir();
@@ -283,16 +293,19 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! Registration participates in the metadata exclusive-lock protocol.
     @Test
     public void namedTailerRegistrationWaitsForExclusiveMetadataLock() throws Exception {
         assertNamedTailerRegistrationWaitsForMetadataLock(false);
     }
 
+    //! Registration also waits behind a maintenance reader's shared metadata lock.
     @Test
     public void namedTailerRegistrationWaitsForSharedMetadataLock() throws Exception {
         assertNamedTailerRegistrationWaitsForMetadataLock(true);
     }
 
+    //! Snapshot locking prevents concurrent registration from exposing partial metadata records.
     @Test
     public void namedTailerIndexesSupportsConcurrentRegistration() throws Exception {
         File dir = getTmpDir();
@@ -332,6 +345,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
+    //! The parked sentinel is durable across Queue reconstruction.
     @Test
     public void parkedNamedTailerRemainsParkedAfterQueueRestart() {
         File dir = getTmpDir();
