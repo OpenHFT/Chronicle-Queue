@@ -175,6 +175,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             storeSupplier = new StoreSupplier();
             pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
             isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
+            //! ContextListenerCoreTest#rejectsEncodedAndEncryptedBuilderModes requires retaining effective builder
+            //! encryption/encoding state because listener registration may occur only after Queue construction.
             encodedOrEncrypted = builder.key() != null || builder.encodingSupplier() != null;
             path = builder.path();
             if (!builder.readOnly())
@@ -276,8 +278,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     static void validateContextListenerCompatibility(boolean encodedOrEncrypted,
                                                      boolean asynchronous,
                                                      boolean doubleBuffered) {
-        //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode pins each classification
-        //! branch; the listener must target the same synchronous Wire as its triggering document.
+        //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode and #rejectsDoubleBuffering pin each
+        //! classification branch; the listener must target the same synchronous Wire as its triggering document.
         if (encodedOrEncrypted)
             throw new UnsupportedOperationException(
                     "contextListener is not supported on encoded or encrypted Enterprise queues");
