@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
@@ -15,6 +16,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -174,6 +176,71 @@ public class StoreAppenderTest extends QueueTestCommon {
                     () -> unusedAppender.writeBytes(Bytes.from("must-fail")));
             assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
             assertFalse("failed append must not recreate the removed generation", publishedFile.exists());
+        }
+    }
+
+    @Test(timeout = 10_000)
+    public void incompletePublishedCycleIsReinitialised() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong time = new AtomicLong();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(time::get)
+                .rollCycle(TEST_DAILY)
+                .timeoutMS(100)
+                .build()) {
+            try (ExcerptAppender appender = queue.createAppender()) {
+                appender.writeText("cycle-0");
+                time.set(TEST_DAILY.lengthInMillis());
+                appender.writeText("cycle-1");
+            }
+
+            final SingleChronicleQueueStore published = queue.storeForCycle(1, queue.epoch(), false, null);
+            final MappedBytes bytes = published.bytes();
+            bytes.writeInt(0, Wires.NOT_COMPLETE);
+            bytes.releaseLast();
+            queue.closeStore(published);
+
+            expectException("Renamed un-acquirable segment file to");
+            try (ExcerptAppender replacement = queue.createAppender()) {
+                replacement.writeText("recovered-cycle-1");
+                assertEquals(1, replacement.cycle());
+            }
+        }
+    }
+
+    @Test(timeout = 10_000)
+    public void stalledAppenderReinitialisesIncompletePublishedCycle() throws IOException {
+        final File directory = queueDirectory.newFolder();
+        final AtomicLong stalledTime = new AtomicLong();
+        final AtomicLong advancingTime = new AtomicLong(TEST_DAILY.lengthInMillis());
+
+        try (SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(stalledTime::get)
+                .rollCycle(TEST_DAILY)
+                .timeoutMS(100)
+                .build();
+             SingleChronicleQueue advancingQueue = SingleChronicleQueueBuilder.binary(directory)
+                     .timeProvider(advancingTime::get)
+                     .rollCycle(TEST_DAILY)
+                     .timeoutMS(100)
+                     .build();
+             ExcerptAppender stalledAppender = stalledQueue.createAppender()) {
+            stalledAppender.writeText("cycle-0");
+            try (ExcerptAppender advancingAppender = advancingQueue.createAppender()) {
+                advancingAppender.writeText("cycle-1");
+            }
+
+            final SingleChronicleQueueStore published = advancingQueue.storeForCycle(
+                    1, advancingQueue.epoch(), false, null);
+            final MappedBytes bytes = published.bytes();
+            bytes.writeInt(0, Wires.NOT_COMPLETE);
+            bytes.releaseLast();
+            advancingQueue.closeStore(published);
+
+            expectException("Renamed un-acquirable segment file to");
+            stalledAppender.writeText("recovered-cycle-1");
+            assertEquals(1, stalledAppender.cycle());
         }
     }
 

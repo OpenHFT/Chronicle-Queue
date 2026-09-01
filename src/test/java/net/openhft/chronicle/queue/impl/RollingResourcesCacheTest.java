@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.Test;
@@ -144,6 +145,19 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
             String name = weeklyCache.resourceFor(cycle).text;
             int parsed = weeklyCache.parseCount(name);
             assertEquals(cycle, parsed);
+        }
+    }
+
+    @Test
+    public void namedWeeklyFormatRoundTripsCycle() {
+        final RollingResourcesCache weeklyCache = new RollingResourcesCache(
+                RollCycles.WEEKLY, RollCycles.WEEKLY.defaultEpoch(), File::new, File::getName);
+        final int current = RollCycles.WEEKLY.current(System::currentTimeMillis,
+                RollCycles.WEEKLY.defaultEpoch());
+
+        for (int cycle = current - 10; cycle <= current + 10; cycle++) {
+            final String name = weeklyCache.resourceFor(cycle).text;
+            assertEquals("weekly filename " + name, cycle, weeklyCache.parseCount(name));
         }
     }
 
