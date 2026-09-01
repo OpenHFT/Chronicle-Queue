@@ -103,16 +103,18 @@ public class RollingResourcesCache {
                 if (parse.isSupported(weekFields.weekBasedYear()) && parse.isSupported(weekFields.weekOfWeekBasedYear())) {
                     int year = Math.toIntExact(parse.getLong(weekFields.weekBasedYear()));
                     int week = Math.toIntExact(parse.getLong(weekFields.weekOfWeekBasedYear()));
-                    LocalDate ld = LocalDate.now()
-                            .withYear(year)
-                            .with(weekFields.weekOfYear(), week)
-                            .with(weekFields.dayOfWeek(), 1);
-                    //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle and
+                    final int rollDayOfWeek = LocalDate.ofEpochDay(epoch / ONE_DAY_IN_MILLIS)
+                            .get(weekFields.dayOfWeek());
+                    LocalDate ld = LocalDate.of(year, 7, 1)
+                            .with(weekFields.weekBasedYear(), year)
+                            .with(weekFields.weekOfWeekBasedYear(), week)
+                            .with(weekFields.dayOfWeek(), rollDayOfWeek);
+                    //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsLocaleYearBoundaries and
                     //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer fail when a week-formatted filename
-                    //! is returned as an epoch-day number. Directory listings publish parsed filenames as cycle
-                    //! numbers; applying that seven-times-larger value makes the next appender look for a nonexistent
-                    //! future roll. Convert the resolved first day through the same length-and-epoch geometry as every
-                    //! other format so resourceFor(cycle) and parseCount(name) remain inverses.
+                    //! is reconstructed through the current date, calendar year, or week-of-year. Those fields can
+                    //! select another week at locale/year boundaries. Resolve the parsed week-based fields on the
+                    //! roll epoch's weekday, then apply the same length-and-epoch geometry as every other format so
+                    //! resourceFor(cycle) and parseCount(name) remain inverses.
                     long epochSecond = ld.toEpochDay() * 86400;
                     return Maths.toInt32((epochSecond - (epoch / 1000)) / (length / 1000));
                 }
