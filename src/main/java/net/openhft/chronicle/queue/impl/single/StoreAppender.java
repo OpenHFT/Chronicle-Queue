@@ -987,9 +987,9 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            //! Exact-index writes identify a specific physical destination and must surface EOF for the recovery
-            //! protocol to classify. Passing false keeps the ordinary one-roll retry out of this strict path; no
-            //! separate regression is needed because #1741's exact recovery tests exercise this composed boundary.
+            //! InternalAppenderWriteBytesTest#cannotAppendToPreviousCycle requires an exact-index write to surface
+            //! EOF from its named physical destination. Passing false keeps the ordinary one-roll retry out of this
+            //! strict path; rolling forward would report success at an index the caller did not request.
             openContext(metadata, safeLength, false);
 
             try {
