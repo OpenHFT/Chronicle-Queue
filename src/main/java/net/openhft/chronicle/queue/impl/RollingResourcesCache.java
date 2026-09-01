@@ -109,7 +109,8 @@ public class RollingResourcesCache {
                             .with(weekFields.weekBasedYear(), year)
                             .with(weekFields.weekOfWeekBasedYear(), week)
                             .with(weekFields.dayOfWeek(), rollDayOfWeek);
-                    //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsLocaleYearBoundaries and
+                    //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle,
+                    //! #namedWeeklyFormatRoundTripsLocaleYearBoundaries and
                     //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer fail when a week-formatted filename
                     //! is reconstructed through the current date, calendar year, or week-of-year. Those fields can
                     //! select another week at locale/year boundaries. Resolve the parsed week-based fields on the
