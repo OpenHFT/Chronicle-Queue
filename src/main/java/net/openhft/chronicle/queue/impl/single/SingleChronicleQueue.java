@@ -97,9 +97,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     final File path;
     final String fileAbsolutePath;
-    //! ContextListenerCoreTest#symlinkAliasCannotBypassCallbackGuard requires a canonical physical
-    //! path key so aliases cannot acquire the same Queue lock behind the active callback.
-    private final String contextListenerCallbackKey;
+    @Nullable
+    private volatile String contextListenerCallbackKey;
     // Uses this.closers as a lock. concurrent read, locking for write.
     @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
@@ -182,9 +181,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 //noinspection ResultOfMethodCallIgnored
                 path.mkdirs();
             fileAbsolutePath = path.getAbsolutePath();
-            //! Resolve aliases before entering the JVM-wide callback guard; two spellings of one
-            //! Queue must not wait on the same write lock from inside a callback.
-            contextListenerCallbackKey = path.toPath().toRealPath().toString();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
             // the maximum message size is 1L << 30 so greater overlapSize has no effect
@@ -692,17 +688,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
     void enterContextListenerCallback() {
         final Thread currentThread = Thread.currentThread();
+        final String callbackKey = contextListenerCallbackKey();
         //! secondQueueInstanceOnSamePathFailsImmediatelyDuringCallback mutation-times out if this
         //! path-scoped guard is removed and a second Queue blocks on the non-reentrant write lock.
         final Thread existing = ACTIVE_CONTEXT_LISTENER_CALLBACKS.putIfAbsent(
-                contextListenerCallbackKey, currentThread);
+                callbackKey, currentThread);
         if (existing != null)
             throw new IllegalStateException("A Queue context listener callback is already active for " +
-                    contextListenerCallbackKey + " on thread " + existing.getName());
+                    callbackKey + " on thread " + existing.getName());
     }
 
     void exitContextListenerCallback() {
-        ACTIVE_CONTEXT_LISTENER_CALLBACKS.remove(contextListenerCallbackKey, Thread.currentThread());
+        ACTIVE_CONTEXT_LISTENER_CALLBACKS.remove(contextListenerCallbackKey(), Thread.currentThread());
     }
 
     void throwIfContextListenerCallbackActive() {
@@ -710,9 +707,29 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         //! #capturedAppenderRollbackFromListenerFailsFast, #capturedAppenderNormalisationFromListenerFailsFast,
         //! #capturedAppenderWireAccessFromListenerFailsFast and #capturedAppenderIndexWireAccessFromListenerFailsFast
         //! require rejection before every public mutation or mutable-Wire escape performs a side effect.
-        if (ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey))
+        if (ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey()))
             throw new IllegalStateException("Cannot enter a Queue appender from a context listener callback; " +
                     "write through the supplied method writer instead");
+    }
+
+    private String contextListenerCallbackKey() {
+        String callbackKey = contextListenerCallbackKey;
+        if (callbackKey != null)
+            return callbackKey;
+        synchronized (this) {
+            callbackKey = contextListenerCallbackKey;
+            if (callbackKey == null) {
+                //! ContextListenerCoreTest#symlinkAliasCannotBypassCallbackGuard requires a canonical real-path
+                //! key. Resolve and cache it on first appender/callback use so ordinary Queue construction does not
+                //! acquire a new filesystem lookup or failure mode solely for the optional listener feature.
+                try {
+                    contextListenerCallbackKey = callbackKey = path.toPath().toRealPath().toString();
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Unable to resolve Queue callback path " + path, e);
+                }
+            }
+        }
+        return callbackKey;
     }
 
     // used by enterprise CQ
@@ -1066,7 +1083,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     protected void assertCloseable() {
         //! queueCloseFromListenerFailsBeforeTeardownAndReleasesTheLock prevents callback code from
         //! closing stores and locks still owned by the outer application write.
-        if (ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey))
+        final String callbackKey = contextListenerCallbackKey;
+        if (callbackKey != null && ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(callbackKey))
             throw new IllegalStateException(
                     "Cannot close a Queue from a context listener callback; return from the callback first");
         super.assertCloseable();

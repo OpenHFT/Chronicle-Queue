@@ -276,9 +276,6 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     protected void performClose() {
-        //! No focused regression observes this assignment directly; detach the listener lifecycle
-        //! before releasing its mapped Wires so no later close path can call into torn-down state.
-        contextListenerState = ContextListenerState.NONE;
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
@@ -622,6 +619,8 @@ class StoreAppender extends AbstractCloseable
     public int contextCount() {
         //! rolledBackClockDoesNotRepeatAnOlderContext and exactHistoricalRecoveryDoesNotChangeOrdinaryContext
         //! pin this to the last resolved ordinary destination, not the appender's temporary cycle.
+        //! doubleBufferedAppenderAndDocumentContextCountsAreUnavailable directly requires rejection
+        //! before a buffered flush has selected its physical destination.
         if (queue.doubleBuffer)
             throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
         return isClosed() ? -1 : lastOrdinaryContextCount;
@@ -651,10 +650,9 @@ class StoreAppender extends AbstractCloseable
         queue.throwIfContextListenerCallbackActive();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
-        ContextListenerState listenerState = contextListenerState;
         count++;
         try {
-            return prepareAndReturnWriteContext(metaData, listenerState);
+            return prepareAndReturnWriteContext(metaData);
         } catch (Throwable e) {
             //! listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable requires Error as well as
             //! RuntimeException to restore count; otherwise the next write receives a stale context.
@@ -686,11 +684,11 @@ class StoreAppender extends AbstractCloseable
      * @param metaData indicates if the write context is for metadata
      * @return the prepared {@link StoreAppenderContext} ready for writing
      */
-    private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(
-            boolean metaData, ContextListenerState listenerState) {
+    private StoreAppender.StoreAppenderContext prepareAndReturnWriteContext(boolean metaData) {
         //! ContextListenerCoreTest#metadataDoesNotConsumeAppenderListenerRegistration and
-        //! #appendLockRejectionDoesNotConsumeListenerRegistration require the state chosen after
-        //! preflight to accompany this exact attempt rather than being re-read after locking.
+        //! #appendLockRejectionDoesNotConsumeListenerRegistration require state to be accepted only
+        //! after the applicable lock/destination preflight, not when the public method is entered.
+        ContextListenerState listenerState = contextListenerState;
         if (count > 1) {
             assert metaData == context.metaData;
             acceptContextListenerWriteAttempt(metaData, listenerState);
@@ -769,8 +767,8 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     public DocumentContext acquireWritingDocument(boolean metaData) {
-        //! ContextListenerCoreTest#appenderWriteFromListenerFailsFast requires both document-opening
-        //! APIs to reject before chained-context reuse can expose the outer application document.
+        //! ContextListenerCoreTest#capturedAcquireWritingDocumentFromListenerFailsFast requires this
+        //! entry point to reject before chained-context reuse can expose the outer application document.
         queue.throwIfContextListenerCallbackActive();
         if (!DISABLE_SINGLE_THREADED_CHECK)
             this.threadSafetyCheck(true);
@@ -1117,8 +1115,9 @@ class StoreAppender extends AbstractCloseable
 
     private int nextApplicationHeader() {
         //! ContextListenerCoreTest#sealedHighestRollIsResolvedBeforeDocumentListener and
-        //! #sealedHighestRollIsResolvedBeforeRawListener require metadata to be skipped while
-        //! locating the application header that decides whether notification may begin.
+        //! #sealedHighestRollIsResolvedBeforeRawListener pin destination-before-callback ordering.
+        //! #trailingMetadataIsSkippedBeforeListenerDestination specifically requires ready metadata
+        //! beyond the published application position to be skipped before EOF selects the next cycle.
         positionForNextHeader();
         final Bytes<?> bytes = wire.bytes();
         long position = bytes.writePosition();
@@ -1429,6 +1428,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(@NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
+        //! ContextListenerCoreTest#capturedRawWriteFromListenerFailsFast requires rejection before
+        //! sequential raw output can reacquire the callback's held Queue write lock.
         queue.throwIfContextListenerCallbackActive();
         checkAppendLock();
         ContextListenerState listenerState = contextListenerState;
@@ -1485,8 +1486,8 @@ class StoreAppender extends AbstractCloseable
     @Override
     public void writeBytes(final long index, @NotNull final BytesStore<?, ?> bytes) {
         throwExceptionIfClosed();
-        //! ContextListenerCoreTest#appenderWriteFromListenerFailsFast establishes the general rule:
-        //! captured public write entry points must reject before taking the outer write's lock.
+        //! ContextListenerCoreTest#capturedExactWriteFromListenerFailsFast requires rejection before
+        //! exact recovery can take the callback's held lock or reposition historical appender state.
         queue.throwIfContextListenerCallbackActive();
         checkAppendLock();
         writeLock.lock();
@@ -1916,6 +1917,7 @@ class StoreAppender extends AbstractCloseable
         //! indexedWriteDoesNotNotifyOrConsumeListenerRegistration pins this exact-index path as
         //! recovery infrastructure: it must not invoke or advance ordinary listener state.
         try {
+            int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
             //! canBackfillPreviousCycleAfterEOF and exactBackfillFindsEofInEmptySealedCycle require exact recovery to
             //! handle the intended physical EOF before this call. Passing false keeps Q2's ordinary successor-cycle
@@ -2509,9 +2511,9 @@ class StoreAppender extends AbstractCloseable
 
         @Override
         public int contextCount() {
-            //! ContextListenerCoreTest#rejectsDoubleBuffering requires deterministic rejection for
-            //! every buffered Queue: destination/context selection occurs only when the buffer flushes,
-            //! so exposing a count here would vary with incidental lock contention.
+            //! ContextListenerCoreTest#doubleBufferedAppenderAndDocumentContextCountsAreUnavailable
+            //! requires deterministic rejection for every buffered Queue: destination/context selection
+            //! occurs only when the buffer flushes, so the count cannot depend on incidental contention.
             if (queue.doubleBuffer)
                 throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
             return isClosed ? -1 : StoreAppender.this.contextCount();
