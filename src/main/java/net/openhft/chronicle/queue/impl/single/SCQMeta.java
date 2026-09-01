@@ -9,8 +9,8 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
-//! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll requires nullable,
-//! immutable time projections so maintenance need not expose the mutable package-private SCQRoll.
+//! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll requires LocalTime and
+//! ZoneId projections for persisted geometry while keeping package-private SCQRoll encapsulated.
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalTime;
@@ -76,6 +76,10 @@ public class SCQMeta implements Metadata {
         return sourceId;
     }
 
+    //! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll requires one
+    //! decoded metadata snapshot to project persisted geometry without exposing mutable SCQRoll or
+    //! reopening metadata separately for values that must describe the same Queue configuration.
+
     /**
      * Returns the persisted roll length without exposing the package-private mutable
      * {@link SCQRoll} representation.
@@ -83,8 +87,6 @@ public class SCQMeta implements Metadata {
      * @return the persisted roll length in milliseconds
      */
     public int rollLengthInMillis() {
-        //! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll keeps
-        //! maintenance geometry available without making the mutable SCQRoll type public.
         return roll.length();
     }
 
@@ -95,7 +97,6 @@ public class SCQMeta implements Metadata {
      * @return the persisted roll-file name format
      */
     public String rollFormat() {
-        //! exposesPersistedRollMetadataWithoutExposingSCQRoll discriminates this immutable projection.
         return roll.format();
     }
 
@@ -106,7 +107,6 @@ public class SCQMeta implements Metadata {
      * @return the persisted roll epoch in milliseconds
      */
     public long rollEpoch() {
-        //! exposesPersistedRollMetadataWithoutExposingSCQRoll discriminates this immutable projection.
         return roll.epoch();
     }
 
@@ -117,7 +117,6 @@ public class SCQMeta implements Metadata {
      */
     @Nullable
     public LocalTime rollTime() {
-        //! exposesPersistedRollMetadataWithoutExposingSCQRoll covers the optional local roll boundary.
         return roll.rollTime();
     }
 
@@ -128,7 +127,6 @@ public class SCQMeta implements Metadata {
      */
     @Nullable
     public ZoneId rollTimeZone() {
-        //! exposesPersistedRollMetadataWithoutExposingSCQRoll covers the optional persisted zone.
         return roll.rollTimeZone();
     }
 

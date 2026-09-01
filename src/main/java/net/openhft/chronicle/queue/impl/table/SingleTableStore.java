@@ -334,9 +334,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
         mappedBytes.reserve(this);
         //! SingleTableStoreForEachKeyGuardTest#laterScanSeesEntriesAppendedByAnotherStore requires
-        //! lookup to restore all caller-visible scan bounds after observing cross-instance growth.
+        //! lookup to restore all four caller-visible cursors and limits after observing growth.
         final long previousReadPosition = mappedBytes.readPosition();
         final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWritePosition = mappedBytes.writePosition();
         final long previousWriteLimit = mappedBytes.writeLimit();
         boolean restoreScanState = true;
         try {
@@ -384,7 +385,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
         } finally {
             if (restoreScanState)
-                restoreAfterTableScan(previousReadPosition, previousReadLimit, previousWriteLimit);
+                restoreAfterTableScan(previousReadPosition, previousReadLimit,
+                        previousWritePosition, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -404,11 +406,12 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
         mappedBytes.reserve(this);
-        //! SingleTableStoreForEachKeyGuardTest#scansWhileAnotherStoreAppendsKeys demonstrates that
-        //! a structural scan must save and restore the caller's complete position/limit state;
-        //! leaking the temporary bounds corrupts later binding reads.
+        //! SingleTableStoreForEachKeyGuardTest#laterScanSeesEntriesAppendedByAnotherStore requires a
+        //! structural scan to restore read/write positions and limits while a previously bound value
+        //! remains usable. #scansWhileAnotherStoreAppendsKeys supplies concurrent stress coverage.
         final long previousReadPosition = mappedBytes.readPosition();
         final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWritePosition = mappedBytes.writePosition();
         final long previousWriteLimit = mappedBytes.writeLimit();
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
@@ -428,9 +431,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new IORuntimeException(e);
 
         } finally {
-            //! SingleTableStoreForEachKeyGuardTest#scansWhileAnotherStoreAppendsKeys detects the
-            //! corrupt binding read caused by leaking this scan's positions into later operations.
-            restoreAfterTableScan(previousReadPosition, previousReadLimit, previousWriteLimit);
+            //! laterScanSeesEntriesAppendedByAnotherStore fails if this scan leaks any cursor or
+            //! limit into later binding operations; the concurrent test supplies stress coverage.
+            restoreAfterTableScan(previousReadPosition, previousReadLimit,
+                    previousWritePosition, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -461,9 +465,11 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         mappedBytes.readLimit(scanLimit);
     }
 
-    private void restoreAfterTableScan(long readPosition, long readLimit, long writeLimit) {
+    private void restoreAfterTableScan(long readPosition, long readLimit,
+                                       long writePosition, long writeLimit) {
         mappedBytes.readPosition(0);
         mappedBytes.readLimit(readLimit);
+        mappedBytes.writePosition(writePosition);
         mappedBytes.writeLimit(writeLimit);
         mappedBytes.readPosition(readPosition);
     }
