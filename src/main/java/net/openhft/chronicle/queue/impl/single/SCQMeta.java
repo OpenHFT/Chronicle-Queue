@@ -9,12 +9,6 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
-//! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll requires LocalTime and
-//! ZoneId projections for persisted geometry while keeping package-private SCQRoll encapsulated.
-import org.jetbrains.annotations.Nullable;
-
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.Objects;
 
 /**
@@ -74,60 +68,6 @@ public class SCQMeta implements Metadata {
      */
     public int sourceId() {
         return sourceId;
-    }
-
-    //! SCQMetaRollMetadataTest#exposesPersistedRollMetadataWithoutExposingSCQRoll requires one
-    //! decoded metadata snapshot to project persisted geometry without exposing mutable SCQRoll or
-    //! reopening metadata separately for values that must describe the same Queue configuration.
-
-    /**
-     * Returns the persisted roll length without exposing the package-private mutable
-     * {@link SCQRoll} representation.
-     *
-     * @return the persisted roll length in milliseconds
-     */
-    public int rollLengthInMillis() {
-        return roll.length();
-    }
-
-    /**
-     * Returns the persisted roll-file name format without exposing the package-private mutable
-     * {@link SCQRoll} representation.
-     *
-     * @return the persisted roll-file name format
-     */
-    public String rollFormat() {
-        return roll.format();
-    }
-
-    /**
-     * Returns the persisted roll epoch without exposing the package-private mutable
-     * {@link SCQRoll} representation.
-     *
-     * @return the persisted roll epoch in milliseconds
-     */
-    public long rollEpoch() {
-        return roll.epoch();
-    }
-
-    /**
-     * Returns the persisted local roll time, when the queue uses time-zone-aware rolling.
-     *
-     * @return the persisted local roll time, or {@code null} when none is configured
-     */
-    @Nullable
-    public LocalTime rollTime() {
-        return roll.rollTime();
-    }
-
-    /**
-     * Returns the persisted roll time zone, when the queue uses time-zone-aware rolling.
-     *
-     * @return the persisted roll time zone, or {@code null} when none is configured
-     */
-    @Nullable
-    public ZoneId rollTimeZone() {
-        return roll.rollTimeZone();
     }
 
     /**
