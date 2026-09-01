@@ -107,7 +107,14 @@ public class RollingResourcesCache {
                             .withYear(year)
                             .with(weekFields.weekOfYear(), week)
                             .with(weekFields.dayOfWeek(), 1);
-                    return Math.toIntExact(ld.toEpochDay());
+                    //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle and
+                    //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer fail when a week-formatted filename
+                    //! is returned as an epoch-day number. Directory listings publish parsed filenames as cycle
+                    //! numbers; applying that seven-times-larger value makes the next appender look for a nonexistent
+                    //! future roll. Convert the resolved first day through the same length-and-epoch geometry as every
+                    //! other format so resourceFor(cycle) and parseCount(name) remain inverses.
+                    long epochSecond = ld.toEpochDay() * 86400;
+                    return Maths.toInt32((epochSecond - (epoch / 1000)) / (length / 1000));
                 }
                 throw new UnsupportedOperationException("Unable to parse " + name + " using format " + format);
             }

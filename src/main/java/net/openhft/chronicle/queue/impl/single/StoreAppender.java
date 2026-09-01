@@ -704,8 +704,13 @@ class StoreAppender extends AbstractCloseable
             //! Equality means another writer already published this generation. Opening it as
             //! existing-only prevents an ordinary write from recreating a removed current roll; both deletion
             //! regressions above fail if equality is allowed to use CREATE.
+            //! incompletePublishedCycleIsReinitialised, stalledAppenderReinitialisesIncompletePublishedCycle and
+            //! StoreTailerTest's
+            //! shouldHaltAtPartiallyInitialisedRollCycle require REINITIALIZE_EXISTING rather than READ_ONLY:
+            //! it still refuses an absent pathname, but preserves Queue's established recovery of an existing
+            //! generation whose first header never completed.
             setWireIfNull(targetCycle, publishedCycleMustExist
-                    ? WireStoreSupplier.CreateStrategy.READ_ONLY
+                    ? WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING
                     : WireStoreSupplier.CreateStrategy.CREATE);
             return;
         }
@@ -724,8 +729,11 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void requirePublishedCycle(int publishedCycle) {
-        try (SingleChronicleQueueStore ignored = queue.storeForCycle(
-                publishedCycle, queue.epoch(), false, null)) {
+        //! stalledAppenderReinitialisesIncompletePublishedCycle mutation-fails if the transition
+        //! probe merely reads the published generation: an existing but interrupted first header is recoverable,
+        //! while REINITIALIZE_EXISTING still returns null instead of creating a genuinely absent pathname.
+        try (SingleChronicleQueueStore ignored = queue.pool.acquire(
+                publishedCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING, null)) {
             if (ignored == null)
                 throw missingPublishedCycle(publishedCycle);
         }
