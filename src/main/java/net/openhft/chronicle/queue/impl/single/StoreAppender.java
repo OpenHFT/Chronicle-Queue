@@ -700,8 +700,6 @@ class StoreAppender extends AbstractCloseable
         // rollback while still allowing a writer to advance normally.
         final int targetCycle = Math.max(queue.cycle(), lastExistingCycle);
         final boolean publishedCycleMustExist = lastExistingCycle >= 0 && targetCycle == lastExistingCycle;
-        if (publishedCycleMustExist)
-            requirePublishedCycle(lastExistingCycle);
         if (wire == null) {
             //! Equality means another writer already published this generation. Opening it as
             //! existing-only prevents an ordinary write from recreating a removed current roll; both deletion
@@ -712,8 +710,17 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
-        if (cycle < targetCycle)
+        if (cycle < targetCycle) {
+            //! steadyStateOrdinaryAppendsDoNotReacquirePublishedCycle demonstrates that checking
+            //! the current published roll on every append repeatedly reserves and releases the mapped store.
+            //! Appenders normally complete entirely through mapped memory; introducing filesystem/store-pool work
+            //! into that path adds latency outliers even when average throughput looks acceptable (and made
+            //! Chronicle-FIX bulk replay reach its heartbeat timeout). Validate existence only at a cycle transition;
+            //! the wire-null path above does so by opening the published generation READ_ONLY rather than CREATE.
+            if (publishedCycleMustExist)
+                requirePublishedCycle(lastExistingCycle);
             rollCycleTo(targetCycle, false, publishedCycleMustExist);
+        }
     }
 
     private void requirePublishedCycle(int publishedCycle) {
