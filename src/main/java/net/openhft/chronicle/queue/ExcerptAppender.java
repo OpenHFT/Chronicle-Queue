@@ -83,10 +83,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * write lock before that appender's first data document in a cycle. Queue resolves the actual
      * monotonic destination, including one permitted advance past EOF, before the callback. It is
      * not called for metadata, explicit-index writes or append-locked queues. Callback failure
-     * poisons the current cycle until a later roll; it is never retried in place. A restarted
-     * appender can write context again in an existing cycle. Context listeners are not supported
-     * with double buffering, asynchronous output, encoding or encryption, and the caller retains
-     * ownership of the listener.
+     * poisons this appender's current listener lifecycle until a later roll; it is never retried in
+     * place. During a callback, appender entry through the same canonical Queue path is rejected in
+     * this JVM. A restarted appender can write context again in an existing cycle. Context listeners
+     * are not supported with double buffering, asynchronous output, encoding or encryption, and the
+     * caller retains ownership of the listener.
      */
     @NotNull
     @Override
