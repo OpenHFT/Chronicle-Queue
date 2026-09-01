@@ -48,34 +48,47 @@ public class SingleTableStoreForEachKeyGuardTest extends QueueTestCommon {
 
             try (SingleTableStore<Metadata.NoMeta> scanner = new SingleTableStore<>(
                     WireType.BINARY_LIGHT, scannerBytes, Metadata.NoMeta.INSTANCE)) {
-                final String latestKey = "later-key";
-                final long latestOffset;
-                try (LongValue value = writer.acquireValueFor(latestKey, 2)) {
-                    assertEquals(2, value.getValue());
-                    latestOffset = ((Byteable) value).offset();
+                try (LongValue boundInitial = scanner.getValueFor("initial-key")) {
+                    assertNotNull(boundInitial);
+                    final String latestKey = "later-key";
+                    final long latestOffset;
+                    try (LongValue value = writer.acquireValueFor(latestKey, 2)) {
+                        assertEquals(2, value.getValue());
+                        latestOffset = ((Byteable) value).offset();
+                    }
+                    assertTrue(latestOffset > 0);
+
+                    // Model a local limit captured while another store was still appending the entry.
+                    final long staleWriteLimit = latestOffset - 1;
+                    scannerBytes.writePosition(staleWriteLimit);
+                    scannerBytes.writeLimit(staleWriteLimit);
+                    final long originalReadPosition = scannerBytes.readPosition();
+                    final long originalReadLimit = scannerBytes.readLimit();
+
+                    try (LongValue value = scanner.getValueFor(latestKey)) {
+                        assertNotNull(value);
+                        assertEquals(2, value.getValue());
+                    }
+                    assertEquals(originalReadPosition, scannerBytes.readPosition());
+                    assertEquals(originalReadLimit, scannerBytes.readLimit());
+                    assertEquals(staleWriteLimit, scannerBytes.writePosition());
+                    assertEquals(staleWriteLimit, scannerBytes.writeLimit());
+                    assertEquals(1, boundInitial.getValue());
+
+                    scannerBytes.writePosition(staleWriteLimit);
+                    scannerBytes.writeLimit(staleWriteLimit);
+                    Set<String> keys = new HashSet<>();
+                    scanner.forEachKey(keys, (result, key, value) -> {
+                        result.add(key.toString());
+                        value.int64();
+                    });
+                    assertTrue(keys.contains(latestKey));
+                    assertEquals(originalReadPosition, scannerBytes.readPosition());
+                    assertEquals(originalReadLimit, scannerBytes.readLimit());
+                    assertEquals(staleWriteLimit, scannerBytes.writePosition());
+                    assertEquals(staleWriteLimit, scannerBytes.writeLimit());
+                    assertEquals(1, boundInitial.getValue());
                 }
-                assertTrue(latestOffset > 0);
-
-                // Model a local limit captured while another store was still appending the entry.
-                final long staleWriteLimit = latestOffset - 1;
-                scannerBytes.writePosition(staleWriteLimit);
-                scannerBytes.writeLimit(staleWriteLimit);
-
-                try (LongValue value = scanner.getValueFor(latestKey)) {
-                    assertNotNull(value);
-                    assertEquals(2, value.getValue());
-                }
-                assertEquals(staleWriteLimit, scannerBytes.writeLimit());
-
-                scannerBytes.writePosition(staleWriteLimit);
-                scannerBytes.writeLimit(staleWriteLimit);
-                Set<String> keys = new HashSet<>();
-                scanner.forEachKey(keys, (result, key, value) -> {
-                    result.add(key.toString());
-                    value.int64();
-                });
-                assertTrue(keys.contains(latestKey));
-                assertEquals(staleWriteLimit, scannerBytes.writeLimit());
             }
         }
     }

@@ -1319,9 +1319,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the numeric cycle encoded by the filename
      */
     public int cycleForFile(@NotNull File file) {
-        //! SCQMetaRollMetadataTest#cycleForFileUsesTheQueueRollGeometry and CQE's
-        //! ArchiveRollFilesEligibilityTest#destructivePlanningRejectsFilenameOrderThatDisagreesWithCycles
-        //! require Queue's persisted geometry; lexical filename order is not a safe deletion key.
+        //! SCQMetaRollMetadataTest#cycleForFileUsesTheQueueRollGeometry requires Queue's persisted
+        //! geometry; downstream maintenance consumes this seam because lexical filename order is
+        //! not a safe deletion key.
         final String name = file.getName();
         if (!name.endsWith(SUFFIX))
             throw new IllegalArgumentException("Not a Queue roll file: " + file);
