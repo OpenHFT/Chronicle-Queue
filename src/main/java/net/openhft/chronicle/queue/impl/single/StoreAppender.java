@@ -718,6 +718,8 @@ class StoreAppender extends AbstractCloseable
         if (cycle < targetCycle) {
             //! steadyStateAppenderAndTailerReusePublishedCycleStore demonstrates that checking
             //! the current published roll on every append repeatedly reserves and releases the mapped store.
+            //! QueueSingleThreadedJLBHBenchmark reports append and tailer percentiles independently so this
+            //! hot-path cost cannot be hidden inside an end-to-end number.
             //! Appenders normally complete entirely through mapped memory; introducing filesystem/store-pool work
             //! into that path adds latency outliers even when average throughput looks acceptable (and made
             //! Chronicle-FIX bulk replay reach its heartbeat timeout). Validate existence only at a cycle transition;
