@@ -651,7 +651,7 @@ class StoreAppender extends AbstractCloseable
         queue.throwIfContextListenerCallbackActive();
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
-        ContextListenerState listenerState = startContextListenerWriteAttempt(metaData);
+        ContextListenerState listenerState = contextListenerState;
         count++;
         try {
             return prepareAndReturnWriteContext(metaData, listenerState);
@@ -663,12 +663,13 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private ContextListenerState startContextListenerWriteAttempt(boolean metaData) {
-        ContextListenerState state = contextListenerState;
+    private ContextListenerState acceptContextListenerWriteAttempt(
+            boolean metaData, ContextListenerState state) {
         // Metadata and exact-index recovery are listener-free and do not consume the ordinary
         // output registration window.
-        //! metadataDoesNotConsumeAppenderListenerRegistration mutation-fails if metadata selects
-        //! NONE or marks the appender's ordinary listener state as started.
+        //! metadataDoesNotConsumeAppenderListenerRegistration and
+        //! secondEofLeavesListenerRegistrationOpen require state mutation only after ordinary
+        //! destination preflight succeeds; metadata and a rejected destination leave it unchanged.
         if (metaData)
             return state;
         if (state == ContextListenerState.UNSET)
@@ -692,6 +693,7 @@ class StoreAppender extends AbstractCloseable
         //! preflight to accompany this exact attempt rather than being re-read after locking.
         if (count > 1) {
             assert metaData == context.metaData;
+            acceptContextListenerWriteAttempt(metaData, listenerState);
             return context;
         }
 
@@ -699,6 +701,7 @@ class StoreAppender extends AbstractCloseable
 
         if (shouldPrepareDoubleBuffer) {
             prepareDoubleBuffer();
+            acceptContextListenerWriteAttempt(metaData, listenerState);
         } else {
             writeLock.lock();
 
@@ -708,6 +711,7 @@ class StoreAppender extends AbstractCloseable
                     //! sealedHighestRollIsResolvedBeforeDocumentListener mutation-fails if the
                     //! callback observes a cycle before QUEUE-146 resolves EOF and the actual destination.
                     resolveOrdinaryAppendDestination();
+                    acceptContextListenerWriteAttempt(false, listenerState);
                     if (listenerState.beforeDocument(false, lastOrdinaryContextCount))
                         resetPosition();
                     assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -720,16 +724,18 @@ class StoreAppender extends AbstractCloseable
                     resetPosition();
                     assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
                     openContext(metaData, safeLength, true);
-                    if (!metaData)
+                    if (!metaData) {
+                        acceptContextListenerWriteAttempt(false, listenerState);
                         lastOrdinaryContextCount = cycle;
+                    }
                 }
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
             } catch (Throwable e) {
                 //! ContextListenerCoreTest#listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable
-                //! requires Error as well as RuntimeException to release the cross-process write lock;
-                //! leaking it stalls every appender in every process until lock-timeout recovery.
+                //! requires Error as well as RuntimeException to restore count, roll back the held
+                //! document, release the table write lock and leave this appender usable.
                 writeLock.unlock();
                 throw Jvm.rethrow(e);
             }
@@ -1425,19 +1431,21 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         queue.throwIfContextListenerCallbackActive();
         checkAppendLock();
-        ContextListenerState listenerState = startContextListenerWriteAttempt(false);
+        ContextListenerState listenerState = contextListenerState;
         writeLock.lock();
         try {
             if (listenerState.requiresDestinationPreflight(false)) {
                 //! sealedHighestRollIsResolvedBeforeRawListener pins sequential raw writes to the
                 //! same resolved destination and notification ordering as document writes.
                 resolveOrdinaryAppendDestination();
+                acceptContextListenerWriteAttempt(false, listenerState);
                 if (listenerState.beforeRawDocument(lastOrdinaryContextCount))
                     resetPosition();
                 this.positionOfHeader = writeHeader(queue.overlapSize());
             } else {
                 moveToCycleForAppend();
                 this.positionOfHeader = writeHeaderForOrdinaryAppend(queue.overlapSize());
+                acceptContextListenerWriteAttempt(false, listenerState);
                 lastOrdinaryContextCount = cycle;
             }
 

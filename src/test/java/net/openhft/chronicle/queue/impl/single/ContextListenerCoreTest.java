@@ -435,6 +435,25 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test(timeout = 5_000)
+    public void acquireAppenderFromListenerFailsFast() {
+        // Pre-populate the thread-local cache so this distinguishes rejection from construction.
+        final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> queueRef.get().acquireAppender())
+                .build()) {
+            queueRef.set(queue);
+            final StoreAppender cached = (StoreAppender) queue.acquireAppender();
+
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> cached.writeMessage("message", "first"));
+            assertTrue(failure.getMessage().contains("supplied method writer"));
+            assertThrows(IllegalStateException.class,
+                    () -> cached.writeMessage("message", "blocked"));
+        }
+    }
+
+    @Test(timeout = 5_000)
     public void queueCloseFromListenerFailsBeforeTeardownAndReleasesTheLock() {
         // Pins close rejection before teardown and verifies normal close after callback unwinding.
         final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
@@ -686,6 +705,31 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test
+    public void secondEofLeavesListenerRegistrationOpen() {
+        AtomicInteger callbacks = new AtomicInteger();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir()).build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            int sealedCycle = queue.cycle();
+            sealCycle(queue, sealedCycle);
+            sealCycle(queue, sealedCycle + 1);
+            queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+
+            assertThrows(WriteAfterEOFException.class,
+                    () -> appender.writeMessage("message", "must-fail"));
+            appender.contextListener(Events.class, writer -> {
+                callbacks.incrementAndGet();
+                writer.context(new ServiceContext("queue"));
+            });
+
+            timeProvider.advanceMillis(2L * TEST_SECONDLY.lengthInMillis());
+            appender.writeMessage("message", "accepted");
+            assertEquals(1, callbacks.get());
+        }
+    }
+
+    @Test
     public void unclosedListenerDocumentPoisonsOnlyTheCurrentRoll() {
         // Mutation-removing the open-document check changes the failure and leaves invalid header state.
         AtomicInteger callbacks = new AtomicInteger();
@@ -796,7 +840,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test(timeout = 5_000)
     public void otherThreadUsingSamePathFailsImmediatelyDuringCallback() throws Exception {
-        // Pins process-wide path isolation rather than a thread-local-only callback guard.
+        // Pins JVM-wide path isolation rather than a thread-local-only callback guard.
         File path = getTmpDir();
         CountDownLatch callbackStarted = new CountDownLatch(1);
         CountDownLatch releaseCallback = new CountDownLatch(1);
@@ -1001,13 +1045,26 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void rejectsEveryUnsupportedEffectiveQueueMode() {
-        // Mutation-removing any compatibility branch admits a mode without same-Wire ordering.
+        // Directly pins the mode-classification helper; builder integration is covered separately.
         assertThrows(UnsupportedOperationException.class,
                 () -> SingleChronicleQueue.validateContextListenerCompatibility(true, false, false));
         assertThrows(UnsupportedOperationException.class,
                 () -> SingleChronicleQueue.validateContextListenerCompatibility(false, true, false));
         assertThrows(UnsupportedOperationException.class,
                 () -> SingleChronicleQueue.validateContextListenerCompatibility(false, false, true));
+    }
+
+    @Test
+    public void rejectsEncodedAndEncryptedBuilderModes() {
+        assertThrows(UnsupportedOperationException.class, () -> builder(getTmpDir())
+                .aesEncryption(new byte[16])
+                .contextListener(Events.class, writer -> { })
+                .build());
+
+        assertThrows(UnsupportedOperationException.class, () -> builder(getTmpDir())
+                .codingSuppliers(() -> (input, output) -> { }, () -> (input, output) -> { })
+                .contextListener(Events.class, writer -> { })
+                .build());
     }
 
     @Test

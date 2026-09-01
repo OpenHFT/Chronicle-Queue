@@ -102,6 +102,9 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     void onWriteAttempt() {
         if (listener == null)
             return;
+        //! metadataDoesNotConsumeAppenderListenerRegistration and
+        //! appendLockRejectionDoesNotConsumeListenerRegistration require registration to close only
+        //! after an ordinary write has passed its non-mutating append-lock preflight.
         if (status == Status.IN_PROGRESS)
             throw new IllegalStateException("Cannot write to the appender from within a ContextListener; " +
                     "write through the supplied method writer instead");
@@ -122,6 +125,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
 
     private boolean notifyIfNeeded(int actualContextCount) {
         StoreAppender appender = this.appender;
+        //! Defensive invariant: Queue's monotonic destination selector should make this unreachable;
+        //! accepting a backwards value would attach application data to context from a later cycle.
         if (actualContextCount < contextCount)
             throw new IllegalStateException("Queue context count moved backwards from " +
                     contextCount + " to " + actualContextCount);
@@ -192,6 +197,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
 
     @Override
     public DocumentContext writingDocument(boolean metaData) {
+        //! writesContextBeforeDataAndAllowsRetainingWriter requires callback-time writes to use the
+        //! held Queue document, then retained-writer calls to delegate to ordinary appender output.
         return status == Status.IN_PROGRESS
                 ? acquireWritingDocument(metaData)
                 : appender.writingDocument(metaData);
@@ -260,6 +267,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
     @Override
     public void rollbackOnClose() {
         requireCallback();
+        //! listenerRollbackThenResetPoisonsContextAndAutomaticCloseIsHarmless requires rollback
+        //! intent to survive the later reset and automatic close bookkeeping.
         listenerRolledBack = true;
         context.rollbackOnClose();
     }
@@ -276,6 +285,8 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
         if (nesting == 0)
             throw new IllegalStateException("No ContextListener document is open");
         StoreAppender.StoreAppenderContext context = this.context;
+        //! listenerClosePreservesNestingForDocumentWrite and listenerCanHoldOneDocumentWhileWritingContext
+        //! require chained and nested closes to retain the one held document until its outer close.
         if (context.chainedElement())
             return;
         if (nesting > 1) {

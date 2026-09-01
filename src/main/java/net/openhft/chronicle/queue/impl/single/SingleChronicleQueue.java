@@ -81,8 +81,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     //! ContextListenerCoreTest#secondAppenderReentryFailsImmediatelyAndReleasesTheQueueLock,
     //! #secondQueueInstanceOnSamePathFailsImmediatelyDuringCallback,
     //! #symlinkAliasCannotBypassCallbackGuard and #otherThreadUsingSamePathFailsImmediatelyDuringCallback
-    //! require process-wide physical-Queue ownership; a per-instance or thread-local guard can deadlock
-    //! on the non-reentrant cross-process write lock instead of rejecting the callback escape.
+    //! require JVM-wide ownership keyed by canonical real path; a per-instance or thread-local guard
+    //! can wait on the callback's already-held cross-process write lock instead of rejecting the escape.
     private static final Map<String, Thread> ACTIVE_CONTEXT_LISTENER_CALLBACKS = new ConcurrentHashMap<>();
 
     @NotNull
@@ -106,8 +106,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final StoreSupplier storeSupplier;
     private final long epoch;
     private final boolean isBuffered;
-    //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode requires listener
-    //! compatibility to include enterprise encoding/encryption selected by the effective builder.
+    //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode pins classification, while
+    //! #rejectsEncodedAndEncryptedBuilderModes exercises effective builder encryption and encoding.
     private final boolean encodedOrEncrypted;
     @NotNull
     private final WireType wireType;
@@ -182,8 +182,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 //noinspection ResultOfMethodCallIgnored
                 path.mkdirs();
             fileAbsolutePath = path.getAbsolutePath();
-            //! Resolve aliases before entering the process-wide callback guard; two spellings of
-            //! one Queue must not contend on the non-reentrant write lock from inside a callback.
+            //! Resolve aliases before entering the JVM-wide callback guard; two spellings of one
+            //! Queue must not wait on the same write lock from inside a callback.
             contextListenerCallbackKey = path.toPath().toRealPath().toString();
             wireType = builder.wireType();
             blockSize = builder.blockSize();
@@ -280,8 +280,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     static void validateContextListenerCompatibility(boolean encodedOrEncrypted,
                                                      boolean asynchronous,
                                                      boolean doubleBuffered) {
-        //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode pins these exclusions:
-        //! the listener must target the same synchronous physical Wire as its triggering document.
+        //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode pins each classification
+        //! branch; the listener must target the same synchronous Wire as its triggering document.
         if (encodedOrEncrypted)
             throw new UnsupportedOperationException(
                     "contextListener is not supported on encoded or encrypted Enterprise queues");
@@ -729,9 +729,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @SuppressWarnings("deprecation")
     @NotNull
     public ExcerptAppender acquireAppender() {
-        //! ContextListenerCoreTest#appenderCreationFromListenerFailsFast requires the cached public
-        //! acquisition path to reject before it can expose an appender bound to the active Queue lock.
-        throwIfContextListenerCallbackActive();
         return ThreadLocalAppender.acquireThreadLocalAppender(this);
     }
 
@@ -746,8 +743,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
         queue.throwExceptionIfClosed();
-        //! ContextListenerCoreTest#appenderCreationFromListenerFailsFast requires the shared
-        //! construction/acquisition path to reject before consulting or creating thread-local state.
+        //! ContextListenerCoreTest#acquireAppenderFromListenerFailsFast pre-populates the thread-local
+        //! cache and requires this shared path to reject before returning or constructing an appender.
         queue.throwIfContextListenerCallbackActive();
         if (queue.readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
