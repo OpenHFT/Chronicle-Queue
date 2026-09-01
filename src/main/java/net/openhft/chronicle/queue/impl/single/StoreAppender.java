@@ -751,19 +751,22 @@ class StoreAppender extends AbstractCloseable
     private long writeHeaderForOrdinaryAppend(final long safeLength) {
         //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle and
         //! sequentialWriteBytesRollsForwardPastSealedCurrentCycle require the same single retry for both ordinary
-        //! entry points. secondConsecutiveEofIsPropagated fails if the retry becomes a loop: a second seal indicates
-        //! inconsistent state and must remain visible. eofAdvanceRejectsCycleOverflowBeforeMutation requires the
-        //! cycle overflow check before any roll creation or publication.
+        //! entry points. They establish an observed END_OF_DATA boundary, not crash durability.
         try {
             return writeHeader(safeLength);
         } catch (WriteAfterEOFException ignored) {
+            //! Defensive compatibility: no current regression makes advanceOrdinaryAppendCycle fail after EOF.
+            //! Clear an older Wire's transient inside-header state so such a failure cannot strand this appender;
+            //! remove this branch when the minimum Wire version guarantees that cleanup itself.
             // Older Wire versions leave transient acquisition state set after observing EOF.
-            // Clear that state without altering the durable seal before selecting the next roll.
+            // Clear that state without altering the observed EOF seal before selecting the next roll.
             ((InternalWire) wire).forceNotInsideHeader();
             advanceOrdinaryAppendCycle();
             try {
                 return writeHeader(safeLength);
             } catch (WriteAfterEOFException secondEOF) {
+                //! secondConsecutiveEofIsPropagated fails if the retry becomes a loop and verifies that cleanup
+                //! leaves the appender reusable after the second observed seal is propagated.
                 ((InternalWire) wire).forceNotInsideHeader();
                 throw secondEOF;
             }
@@ -771,6 +774,9 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void advanceOrdinaryAppendCycle() {
+        //! eofAdvanceRejectsCycleOverflowBeforeMutation requires overflow rejection before roll creation or
+        //! publication. The source already reported END_OF_DATA, so rollCycleTo suppresses its ordinary reseal;
+        //! the flag is a defensive format invariant rather than an independently discriminated branch.
         // Reject overflow before creating or publishing a roll. The triggering EOF already seals
         // the source generation, so this transition must not write a second seal there.
         if (cycle == Integer.MAX_VALUE)
