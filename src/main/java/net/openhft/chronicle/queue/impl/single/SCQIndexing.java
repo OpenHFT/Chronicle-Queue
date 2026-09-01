@@ -350,10 +350,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         if (index2Index.getVolatileValue() == NOT_INITIALIZED)
             return null;
 
-        //! Internal index traversal may run while a context callback owns the Queue write lock.
-        //! Use the private appender view: ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
-        //! would otherwise re-enter the guarded public mutable-Wire accessor.
-        Wire wireForIndex = wireForIndex(ec);
+        Wire wireForIndex = ec.wireForIndex();
         LongArrayValues index2index = getIndex2index(wireForIndex);
         long primaryOffset = toAddress0(index);
 

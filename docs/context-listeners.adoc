@@ -47,7 +47,8 @@ context again when it starts in an existing roll cycle. Context records should b
 idempotent.
 
 //! rolledBackClockDoesNotRepeatAnOlderContext and exactHistoricalRecoveryDoesNotChangeOrdinaryContext
-//! pin ordinary-cycle identity; rejectsDoubleBuffering pins the separate availability restriction.
+//! pin ordinary-cycle identity; doubleBufferedAppenderAndDocumentContextCountsAreUnavailable pins
+//! the separate count-availability restriction at both public surfaces.
 For Queue, `ExcerptAppender.contextCount()` is `-1` before the first ordinary destination is
 selected and after close; otherwise it is the last actual ordinary destination cycle. It never
 moves backwards when an exact recovery temporarily positions the appender on a historical cycle.

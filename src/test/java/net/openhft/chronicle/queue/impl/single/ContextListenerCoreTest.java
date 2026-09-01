@@ -416,6 +416,21 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test(timeout = 5_000)
+    public void capturedAcquireWritingDocumentFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(appender -> appender.acquireWritingDocument(false));
+    }
+
+    @Test(timeout = 5_000)
+    public void capturedRawWriteFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(appender -> writeRaw(appender, "recursive"));
+    }
+
+    @Test(timeout = 5_000)
+    public void capturedExactWriteFromListenerFailsFast() {
+        assertCapturedAppenderMutationFails(appender -> writeExact(appender, "recursive"));
+    }
+
+    @Test(timeout = 5_000)
     public void appenderCreationFromListenerFailsFast() {
         // Pins the common new-appender guard before a second appender can block on the write lock.
         final AtomicReference<SingleChronicleQueue> queueRef = new AtomicReference<>();
@@ -605,6 +620,37 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             writeRaw(appender, "after");
 
             assertEquals(2, callbacks.get());
+            assertEquals(sealedCycle + 1, appender.contextCount());
+            assertDocumentCycles(queue, sealedCycle, sealedCycle, sealedCycle + 1, sealedCycle + 1);
+        }
+    }
+
+    @Test
+    public void trailingMetadataIsSkippedBeforeListenerDestination() {
+        AtomicInteger callbacks = new AtomicInteger();
+        AtomicReference<StoreAppender> appenderReference = new AtomicReference<>();
+        AtomicInteger observedContext = new AtomicInteger(-1);
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    callbacks.incrementAndGet();
+                    observedContext.set(appenderReference.get().contextCount());
+                    writer.context(new ServiceContext("queue"));
+                })
+                .build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+            appenderReference.set(appender);
+            appender.writeMessage("message", "before");
+            int sealedCycle = appender.cycle();
+            try (DocumentContext metadata = appender.writingDocument(true)) {
+                metadata.wire().write("header").text("trailing-metadata");
+            }
+            sealCurrentCycle(appender);
+
+            appender.writeMessage("message", "after");
+
+            assertEquals(2, callbacks.get());
+            assertEquals(sealedCycle + 1, observedContext.get());
             assertEquals(sealedCycle + 1, appender.contextCount());
             assertDocumentCycles(queue, sealedCycle, sealedCycle, sealedCycle + 1, sealedCycle + 1);
         }
@@ -1044,6 +1090,19 @@ public class ContextListenerCoreTest extends QueueTestCommon {
     }
 
     @Test
+    public void doubleBufferedAppenderAndDocumentContextCountsAreUnavailable() {
+        try (ChronicleQueue queue = builder(getTmpDir()).doubleBuffer(true).build()) {
+            StoreAppender appender = (StoreAppender) queue.createAppender();
+
+            assertThrows(IndexNotAvailableException.class, appender::contextCount);
+            try (DocumentContext document = appender.writingDocument()) {
+                assertThrows(IndexNotAvailableException.class, document::contextCount);
+                document.rollbackOnClose();
+            }
+        }
+    }
+
+    @Test
     public void rejectsEveryUnsupportedEffectiveQueueMode() {
         // Directly pins the mode-classification helper; builder integration is covered separately.
         assertThrows(UnsupportedOperationException.class,
@@ -1206,6 +1265,15 @@ public class ContextListenerCoreTest extends QueueTestCommon {
         Bytes<?> payload = binaryPayload(value);
         try {
             appender.writeBytes(payload);
+        } finally {
+            payload.releaseLast();
+        }
+    }
+
+    private static void writeExact(StoreAppender appender, String value) {
+        Bytes<?> payload = binaryPayload(value);
+        try {
+            appender.writeBytes(0L, payload);
         } finally {
             payload.releaseLast();
         }
