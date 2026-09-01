@@ -716,14 +716,11 @@ class StoreAppender extends AbstractCloseable
         }
 
         if (cycle < targetCycle) {
-            //! steadyStateAppenderAndTailerReusePublishedCycleStore demonstrates that checking
-            //! the current published roll on every append repeatedly reserves and releases the mapped store.
-            //! QueueSingleThreadedJLBHBenchmark reports append and tailer percentiles independently so this
-            //! hot-path cost cannot be hidden inside an end-to-end number.
-            //! Appenders normally complete entirely through mapped memory; introducing filesystem/store-pool work
-            //! into that path adds latency outliers even when average throughput looks acceptable (and made
-            //! Chronicle-FIX bulk replay reach its heartbeat timeout). Validate existence only at a cycle transition;
-            //! the wire-null path above does so by opening the published generation READ_ONLY rather than CREATE.
+            //! steadyStateAppenderAndTailerReusePublishedCycleStore requires same-cycle writes to
+            //! reuse the already-acquired store. Reopening it would add store-pool and filesystem
+            //! work without changing the selected destination. Validate existence only at a cycle
+            //! transition; the wire-null path opens a published generation with
+            //! REINITIALIZE_EXISTING so an interrupted file can recover but an absent one is not created.
             if (publishedCycleMustExist)
                 requirePublishedCycle(lastExistingCycle);
             rollCycleTo(targetCycle, false, publishedCycleMustExist);
@@ -914,7 +911,9 @@ class StoreAppender extends AbstractCloseable
         if (wire == null)
             setWireIfNull(cycle);
 
-        /// if the header number has changed then we will have roll
+        //! This is an implementation note, not JDK Markdown documentation. Keeping the inherited
+        //! `///` form would make its meaning compiler-version dependent when this hunk is shipped.
+        // If the header number has changed, the appender has rolled.
         if (this.cycle != cycle)
             rollCycleTo(cycle, this.cycle > cycle);
 

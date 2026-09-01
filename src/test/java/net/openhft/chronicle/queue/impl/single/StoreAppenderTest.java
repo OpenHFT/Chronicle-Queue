@@ -135,8 +135,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
             final long stalledWritePositionBefore = ((StoreAppender) stalledWriter).store.writePosition();
 
-            //! When wall time equals neither a newer nor the published cycle, an ordinary append
-            //! must still open the published maximum as existing-only and fail if it disappeared.
+            // When wall time equals neither a newer nor the published cycle, an ordinary append
+            // must still open the published maximum as existing-only and fail if it disappeared.
             final IllegalStateException failure = assertThrows(IllegalStateException.class,
                     () -> stalledWriter.writeBytes(Bytes.from("must-fail")));
             assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
@@ -170,8 +170,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertEquals(1, stalledQueue.lastPublishedCycle());
             assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
 
-            //! A first ordinary write follows the same existing-only rule as an already-live
-            //! appender when its target is the published maximum.
+            // A first ordinary write follows the same existing-only rule as an already-live
+            // appender when its target is the published maximum.
             final IllegalStateException failure = assertThrows(IllegalStateException.class,
                     () -> unusedAppender.writeBytes(Bytes.from("must-fail")));
             assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
