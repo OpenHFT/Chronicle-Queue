@@ -183,7 +183,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
-    // Parking an ordinary consumer resets only its durable position to the never-read sentinel.
+    // Parking an ordinary consumer resets only its persisted position to the never-read sentinel.
     @Test
     public void parkNamedTailerResetsExistingNonReplicatedTailer() {
         File dir = getTmpDir();
@@ -326,7 +326,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         assertNamedTailerRegistrationWaitsForMetadataLock(true);
     }
 
-    // Snapshot locking prevents concurrent registration from exposing partial metadata records.
+    // Repeated snapshots remain usable while another Queue registers tailers under the same lock protocol.
     @Test
     public void namedTailerIndexesSupportsConcurrentRegistration() throws Exception {
         File dir = getTmpDir();
@@ -366,7 +366,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
         }
     }
 
-    // The parked sentinel is durable across Queue reconstruction.
+    // The parked sentinel remains visible after a clean Queue reconstruction.
     @Test
     public void parkedNamedTailerRemainsParkedAfterQueueRestart() {
         File dir = getTmpDir();

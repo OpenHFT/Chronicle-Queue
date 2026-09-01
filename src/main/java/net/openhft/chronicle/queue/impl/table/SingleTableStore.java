@@ -29,10 +29,6 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
-//! SingleTableStoreSharedLockTimeoutTest#positiveTimeoutAcquiresAContendedLockAfterRelease and
-//! #zeroTimeoutPerformsOneAttemptWhenTheStructuralLockIsHeld require monotonic bounded waiting.
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -129,32 +125,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     }
 
     /**
-     * Executes a code block with a shared structural lock, waiting for no longer than the
-     * supplied timeout. This overload is intended for off-critical-path metadata snapshots whose
-     * caller owns the timeout policy.
-     *
-     * @param file          the table-store file to lock
-     * @param timeoutMillis maximum time to wait in milliseconds; zero performs one attempt
-     * @param code          the function to execute while the lock is held
-     * @param target        supplier of the function target
-     * @param <T>           target type
-     * @param <R>           result type
-     * @return the result of applying {@code code}
-     * @throws IllegalArgumentException if {@code timeoutMillis} is negative
-     */
-    public static <T, R> R doWithSharedLock(@NotNull final File file,
-                                            final long timeoutMillis,
-                                            @NotNull final Function<T, ? extends R> code,
-                                            @NotNull final Supplier<T> target) {
-        //! negativeSharedLockTimeoutIsRejected keeps invalid policy input distinct from lock
-        //! contention, while callerCanSupplySharedLockTimeout and
-        //! zeroTimeoutPerformsOneAttemptWhenTheStructuralLockIsHeld pin one attempt at zero.
-        if (timeoutMillis < 0)
-            throw new IllegalArgumentException("timeoutMillis must not be negative");
-        return doWithLock(file, code, target, true, timeoutMillis);
-    }
-
-    /**
      * Executes a code block with an exclusive lock on the specified file.
      *
      * @param file   The file to lock.
@@ -185,24 +155,13 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                                        @NotNull final Function<T, ? extends R> code,
                                        @NotNull final Supplier<T> target,
                                        final boolean shared) {
-        return doWithLock(file, code, target, shared, timeoutMS);
-    }
-
-    private static <T, R> R doWithLock(@NotNull final File file,
-                                       @NotNull final Function<T, ? extends R> code,
-                                       @NotNull final Supplier<T> target,
-                                       final boolean shared,
-                                       final long timeoutMillis) {
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
-        final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
-        final long startNanos = System.nanoTime();
+        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
         final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-            //! callerCanSupplySharedLockTimeout fails if a zero timeout skips the initial tryLock;
-            //! positiveTimeoutAcquiresAContendedLockAfterRelease requires bounded retries thereafter.
-            for (int count = 1; ; count++) {
+            for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
                 try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
@@ -217,17 +176,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                         }
                     }
                 }
-                final long remainingNanos = timeoutNanos - (System.nanoTime() - startNanos);
-                //! SingleTableStoreSharedLockTimeoutTest#positiveTimeoutAcquiresAContendedLockAfterRelease
-                //! requires retries to use only the remaining monotonic budget; an unconditional
-                //! quadratic pause can overshoot the caller's bound or miss a timely lock release.
-                if (remainingNanos <= 0)
-                    break;
-                final long backoffMillis = Math.min(250L, (long) count * count);
-                final long delayNanos = Math.min(
-                        TimeUnit.MILLISECONDS.toNanos(backoffMillis),
-                        remainingNanos);
-                LockSupport.parkNanos(delayNanos);
+                int delay = Math.min(250, count * count);
+                Jvm.pause(delay);
             }
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
@@ -356,7 +306,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             }
             if (!createIfAbsent) {
                 //! TableStoreTest#getValueForDoesNotCreateMissingKey demonstrates that lookup must
-                //! return before the legacy acquire path appends a durable table entry.
+                //! return before the legacy acquire path appends a persistent metadata entry.
                 return null;
             }
             if (mappedBytes.isBackingFileReadOnly())

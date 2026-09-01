@@ -1373,8 +1373,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public NavigableMap<String, Long> namedTailerIndexes() {
         //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesSupportsConcurrentRegistration,
         //! #namedTailerRegistrationWaitsForExclusiveMetadataLock and
-        //! #namedTailerRegistrationWaitsForSharedMetadataLock require one structural lock around
-        //! the complete snapshot and prove it composes with registration's existing lock protocol.
+        //! #namedTailerRegistrationWaitsForSharedMetadataLock require traversal to hold the same
+        //! structural lock as registration. The concurrent test establishes eventual visibility;
+        //! it does not claim independently observable atomicity between metadata keys.
         if (!metaStore.readOnly())
             return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
         //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithoutMetadataHasNoNamedTailers demonstrates
@@ -1499,7 +1500,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
             //! parkNamedTailerDoesNotCreateMissingTailer requires lookup-only semantics: parking
-            //! an unknown consumer must not create a durable retention record.
+            //! an unknown consumer must not create a persisted retention record.
             LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
             if (longValue == null)
                 return NamedTailerParkResult.NOT_FOUND;
@@ -1507,8 +1508,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             //! #parkedNamedTailerRemainsParkedAfterQueueRestart,
             //! ParkNamedTailerResumeBehaviourTest#parkedTailerResumesFromOldestSurvivingRollAfterRestart
             //! and #parkedTailerReadsSameFirstEntryAsNeverReadTailer demonstrate why parking writes
-            //! the durable never-read sentinel: it survives restart and resumes from the oldest roll
-            //! that still exists, discarding older backlog.
+            //! the persisted never-read sentinel: it is visible after a clean restart and resumes
+            //! from the oldest roll that still exists, discarding older backlog.
             longValue.setOrderedValue(0);
             return NamedTailerParkResult.PARKED;
         }
