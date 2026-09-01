@@ -5,12 +5,14 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
@@ -22,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
@@ -171,6 +174,39 @@ public class StoreAppenderTest extends QueueTestCommon {
                     () -> unusedAppender.writeBytes(Bytes.from("must-fail")));
             assertTrue(failure.getMessage().contains("Highest/current roll 1 disappeared"));
             assertFalse("failed append must not recreate the removed generation", publishedFile.exists());
+        }
+    }
+
+    @Test(timeout = 10_000)
+    public void steadyStateOrdinaryAppendsDoNotReacquirePublishedCycle() throws IOException {
+        final AtomicInteger acquisitions = new AtomicInteger();
+        final StoreFileListener listener = new StoreFileListener() {
+            @Override
+            public void onAcquired(int cycle, File file) {
+                acquisitions.incrementAndGet();
+            }
+
+            @Override
+            public void onReleased(int cycle, File file) {
+                // No action required: this regression counts unnecessary acquisitions.
+            }
+        };
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .storeFileListener(listener)
+                .build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeText("warm-up");
+            BackgroundResourceReleaser.releasePendingResources();
+            acquisitions.set(0);
+
+            // Approximately one second on the reference review host: long enough to exercise the
+            // steady-state path repeatedly without making the assertion depend on wall-clock timing.
+            for (int i = 0; i < 2_000_000; i++)
+                appender.writeText("message-" + i);
+
+            BackgroundResourceReleaser.releasePendingResources();
+            assertEquals("steady-state appends must reuse the appender's open store", 0, acquisitions.get());
         }
     }
 
