@@ -711,7 +711,7 @@ class StoreAppender extends AbstractCloseable
         }
 
         if (cycle < targetCycle) {
-            //! steadyStateOrdinaryAppendsDoNotReacquirePublishedCycle demonstrates that checking
+            //! steadyStateAppenderAndTailerReusePublishedCycleStore demonstrates that checking
             //! the current published roll on every append repeatedly reserves and releases the mapped store.
             //! Appenders normally complete entirely through mapped memory; introducing filesystem/store-pool work
             //! into that path adds latency outliers even when average throughput looks acceptable (and made

@@ -178,7 +178,8 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test(timeout = 10_000)
-    public void steadyStateOrdinaryAppendsDoNotReacquirePublishedCycle() throws IOException {
+    public void steadyStateAppenderAndTailerReusePublishedCycleStore() throws IOException {
+        final int messageCount = 2_000_000;
         final AtomicInteger acquisitions = new AtomicInteger();
         final StoreFileListener listener = new StoreFileListener() {
             @Override
@@ -202,11 +203,32 @@ public class StoreAppenderTest extends QueueTestCommon {
 
             // Approximately one second on the reference review host: long enough to exercise the
             // steady-state path repeatedly without making the assertion depend on wall-clock timing.
-            for (int i = 0; i < 2_000_000; i++)
+            for (int i = 0; i < messageCount; i++)
                 appender.writeText("message-" + i);
 
             BackgroundResourceReleaser.releasePendingResources();
             assertEquals("steady-state appends must reuse the appender's open store", 0, acquisitions.get());
+
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                try (DocumentContext warmUp = tailer.readingDocument()) {
+                    assertTrue("test precondition: the first document must be readable", warmUp.isPresent());
+                }
+                BackgroundResourceReleaser.releasePendingResources();
+                acquisitions.set(0);
+
+                int read = 1;
+                while (true) {
+                    try (DocumentContext document = tailer.readingDocument()) {
+                        if (!document.isPresent())
+                            break;
+                        read++;
+                    }
+                }
+
+                BackgroundResourceReleaser.releasePendingResources();
+                assertEquals(messageCount + 1, read);
+                assertEquals("steady-state tailing must reuse the tailer's open store", 0, acquisitions.get());
+            }
         }
     }
 
