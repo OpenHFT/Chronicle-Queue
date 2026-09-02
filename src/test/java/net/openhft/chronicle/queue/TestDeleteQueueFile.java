@@ -13,7 +13,6 @@ import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -92,7 +91,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
     public void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
@@ -143,7 +141,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
     public void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
