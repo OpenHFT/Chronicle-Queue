@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
@@ -69,21 +70,28 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @SuppressWarnings("unused")
     @UsedViaReflection
     private SingleTableStore(@NotNull final WireIn wire) {
-        this.wireType = Objects.requireNonNull(wire.read(MetaDataField.wireType).object(WireType.class));
-        this.mappedBytes = (MappedBytes) (wire.bytes());
-        this.mappedFile = mappedBytes.mappedFile();
+        try {
+            this.wireType = Objects.requireNonNull(wire.read(MetaDataField.wireType).object(WireType.class));
+            this.mappedBytes = (MappedBytes) (wire.bytes());
+            this.mappedFile = mappedBytes.mappedFile();
 
-        wire.consumePadding();
-        if (wire.bytes().readRemaining() > 0) {
-            this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
-        } else {
-            @SuppressWarnings("unchecked")
-            T instance = (T) Metadata.NoMeta.INSTANCE;
-            this.metadata = instance;
+            wire.consumePadding();
+            if (wire.bytes().readRemaining() > 0) {
+                this.metadata = Objects.requireNonNull(wire.read(MetaDataField.metadata).typedMarshallable());
+            } else {
+                @SuppressWarnings("unchecked")
+                T instance = (T) Metadata.NoMeta.INSTANCE;
+                this.metadata = instance;
+            }
+
+            mappedWire = wireType.apply(mappedBytes);
+            mappedWire.usePadding(true);
+        } catch (RuntimeException | Error e) {
+            // AbstractCloseable registered this instance before the read started. The caller never
+            // receives a reference that it could close, so close it here.
+            close();
+            throw e;
         }
-
-        mappedWire = wireType.apply(mappedBytes);
-        mappedWire.usePadding(true);
 
         singleThreadedCheckDisabled(true);
     }
@@ -142,6 +150,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     /**
      * Handles file locking and executes the provided code block.
+     * <p>
+     * Only a failure to take the lock is retried, until {@code chronicle.table.store.timeoutMS} expires.
+     * A failure thrown by the code block propagates to the caller unchanged.
      *
      * @param file    The file to lock.
      * @param code    The function to execute.
@@ -162,10 +173,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
             for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
-                try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
-                    if (fileLock != null) {
-                        return code.apply(target.get());
-                    }
+                FileLock fileLock = null;
+                try {
+                    fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared);
                 } catch (IOException | OverlappingFileLockException e) {
                     // failed to acquire the lock, wait until other operation completes
                     if (count > 9) {
@@ -176,13 +186,38 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                         }
                     }
                 }
+                if (fileLock != null) {
+                    // the body runs outside the catch above, so that a failure inside it is never
+                    // mistaken for lock contention and retried
+                    try {
+                        return code.apply(target.get());
+                    } catch (Throwable t) {
+                        throw new BodyFailed(t);
+                    } finally {
+                        // release quietly, so that a failure here cannot replace a failure from the body
+                        Closeable.closeQuietly(fileLock);
+                    }
+                }
                 int delay = Math.min(250, count * count);
                 Jvm.pause(delay);
             }
+        } catch (BodyFailed e) {
+            throw Jvm.rethrow(e.getCause());
         } catch (IOException e) {
-            throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
+            throw new IllegalStateException("Could not take the " + type + " file lock on " + file, e);
         }
-        throw new IllegalStateException("Unable to claim exclusive " + type + " lock on file " + file);
+        throw new IllegalStateException("Unable to claim the " + type + " lock on file " + file);
+    }
+
+    /**
+     * Carries a failure thrown by the locked body past the handlers that exist for the lock itself.
+     */
+    private static final class BodyFailed extends RuntimeException {
+        private static final long serialVersionUID = 0L;
+
+        BodyFailed(Throwable cause) {
+            super(cause);
+        }
     }
 
     @NotNull
@@ -217,7 +252,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     @Override
     protected void performClose() {
-        mappedBytes.close();
+        // mappedBytes is null when the deserialization constructor failed before it assigned the field
+        if (mappedBytes != null)
+            mappedBytes.close();
     }
 
     /**
@@ -283,6 +320,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     break;
                 final long readPosition = mappedBytes.readPosition();
                 final int length = Wires.lengthOf(header);
+                if (length <= 0 || readPosition + length > mappedBytes.readLimit())
+                    throw new CorruptTableStoreException(file(), "the record at " + (readPosition - 4)
+                            + " declares a length of " + length + ", which does not fit inside the read limit of "
+                            + mappedBytes.readLimit());
                 final ValueIn valueIn = readEventIfNameEquals(mappedWire, key);
                 if (valueIn != null) {
                     return valueIn.int64ForBinding(null);
