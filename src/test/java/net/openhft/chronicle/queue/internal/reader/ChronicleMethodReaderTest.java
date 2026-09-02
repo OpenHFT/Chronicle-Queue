@@ -17,7 +17,6 @@ import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -204,12 +203,44 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
-        basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
+        // #1150: every exclusion pattern must apply (a message is dropped if it matches ANY of them),
+        // consistently with the plain text reader. The method reader renders each excerpt as a
+        // multi-line DTO document (e.g. "method2: {\n  text: goodbye,\n ...}"), so patterns are matched
+        // against that rendered text; here the two patterns between them cover both message kinds.
+        basicReaderMethodReader().withExclusionRegex(".*goodbye.*").withExclusionRegex(".*hello.*").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+    }
+
+    @Test
+    public void multipleExclusionRegexDropOnlyMessagesMatchingOne() {
+        // A single exclusion pattern removes only its matching messages; the rest (12 of 24) pass.
+        basicReaderMethodReader().withExclusionRegex(".*goodbye.*").execute();
+
+        long remaining = capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count();
+        assertEquals(12L, remaining);
+        capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
+    }
+
+    @Test
+    public void shouldFilterByMultipleInclusionRegexMethodReader() {
+        // #1150 also names shouldFilterByMultipleInclusionRegex for method readers. Multiple inclusion
+        // patterns must ALL match for a message to pass (the same PatternFilterMessageConsumer used by
+        // the plain text reader), applied against the method reader's rendered multi-line DTO. Here only
+        // the "goodbye" excerpts contain "bye" as well as an "o", so exactly those 12 of 24 survive.
+        basicReaderMethodReader()
+                .withInclusionRegex(".*bye.*")
+                .withInclusionRegex(".*o.*")
+                .execute();
+
+        long remaining = capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count();
+        assertEquals(12L, remaining);
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
+                .forEach(msg -> assertThat(msg, containsString("goodbye")));
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
+                .forEach(msg -> assertThat(msg, not(containsString("hello"))));
     }
 
     @Test
