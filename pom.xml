@@ -386,6 +386,21 @@
                         </configuration>
                     </execution>
 
+                    <!-- Consumer-gated roll-file retention; pass CLI args via -Dexec.args, e.g.
+                         -Dexec.args="/var/queues (rootDir and flags)". See RollFileCleanupMain for flags. -->
+                    <execution>
+                        <id>RollFileCleanup</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <mainClass>net.openhft.chronicle.queue.main.RollFileCleanupMain</mainClass>
+                            <!-- test scope so an slf4j binding is present and Jvm.warn/debug show -->
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
+
                 </executions>
             </plugin>
 

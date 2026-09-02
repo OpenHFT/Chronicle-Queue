@@ -1814,6 +1814,14 @@ class StoreTailer extends AbstractCloseable
             return StoreTailer.this.sourceId();
         }
 
+        @Override
+        public long contextCount() {
+            // negative = no known context (absent document, or queried after close); a valid
+            // count is always positive and never 0
+            long index = index();
+            return isPresent() && index != Long.MIN_VALUE ? queue.rollCycle().toCycle(index) : -1;
+        }
+
         /**
          * Closes the context, and if necessary, increments the index after reading a document.
          */

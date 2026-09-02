@@ -97,4 +97,6 @@ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.internal.main.Intern
 
 This will produce a list of removable roll file candidates listed per line.
 
+For operational clean-up that also protects stopped named tailers by their persisted positions, see link:roll-file-cleanup.adoc[Roll File Cleanup].
+
 <<../README.adoc#,Back to Chronicle Queue>>
