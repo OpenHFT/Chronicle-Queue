@@ -1,5 +1,9 @@
 # Guidance for agents working on Chronicle Queue
 
+## Formatting
+
+* Wrap new or changed lines at 144 characters. Do not reflow unchanged lines solely to meet this limit.
+
 ## Time-bounded reviewer notes
 
 `//!` has a deliberate lifecycle that differs from an ordinary `//` comment:
