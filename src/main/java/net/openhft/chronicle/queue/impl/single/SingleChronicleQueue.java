@@ -338,8 +338,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Refreshes the directory listing, ensuring it is up-to-date.
-     * Throws an exception if the queue has been closed.
+     * {@inheritDoc}
      */
     @Override
     public void refreshDirectoryListing() {
@@ -1126,10 +1125,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the last cycle available in the queue by setting the first and last cycle
-     * and then retrieving the maximum created cycle from the directory listing.
+     * Refreshes the directory listing when necessary and returns the highest cycle published by the queue. Closed
+     * historical rolls may be removed, but the published maximum cannot move backwards while Queue metadata remains.
      *
-     * @return the last cycle in the queue
+     * @return the highest published cycle, or {@code Integer.MIN_VALUE} if no cycles have been published
+     * @throws IllegalStateException if a writable directory refresh finds that the published maximum is missing
+     *                               while Queue metadata remains
      */
     @Override
     public int lastCycle() {
@@ -1145,9 +1146,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     int lastPublishedCycle() {
         //! ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing and
         //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fail if
-        //! this delegates to lastCycle(); preOpenedListingsPublishBoundsFromSharedValues and
-        //! publishedModificationRefreshesAnotherListingsCurrentBounds establish that the mapped
-        //! maximum already carries the cooperating-writer publication needed here.
+        //! this delegates to lastCycle(): both require the mapped maximum without a directory refresh.
         return directoryListing.getMaxCreatedCycle();
     }
 
