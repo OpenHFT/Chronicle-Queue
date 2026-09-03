@@ -15,7 +15,10 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>2026.7-SNAPSHOT</version>
+    <!-- //! This coordinated artifact line publishes the mapped highest-cycle contract used by the
+         //! QUEUE-146 stack; retaining 2026.7 would publish the changed Queue behaviour under the
+         //! superseded release coordinate. Maven coordinates have no Java-level discriminator. -->
+    <version>2026.10-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -65,6 +68,9 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
+            <!-- //! Context-listener compilation requires Wire's new lifecycle API; remove this
+                 //! direct pin once the BOM includes the coordinated QUEUE-144 Wire artifact. -->
+            <version>2026.10-SNAPSHOT</version>
         </dependency>
 
         <dependency>
