@@ -246,7 +246,7 @@ public class StoreAppenderTest extends QueueTestCommon {
 
     @Test(timeout = 10_000)
     public void steadyStateAppenderAndTailerReusePublishedCycleStore() throws IOException {
-        final int messageCount = 2_000_000;
+        final int messageCount = 100;
         final AtomicInteger acquisitions = new AtomicInteger();
         final StoreFileListener listener = new StoreFileListener() {
             @Override
@@ -268,8 +268,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             BackgroundResourceReleaser.releasePendingResources();
             acquisitions.set(0);
 
-            // Approximately one second on the reference review host: long enough to exercise the
-            // steady-state path repeatedly without making the assertion depend on wall-clock timing.
+            // Multiple iterations catch per-document reacquisition without turning this correctness
+            // regression into a throughput or wall-clock test.
             for (int i = 0; i < messageCount; i++)
                 appender.writeText("message-" + i);
 

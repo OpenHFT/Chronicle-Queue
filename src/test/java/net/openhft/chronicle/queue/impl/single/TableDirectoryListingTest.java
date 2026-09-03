@@ -122,9 +122,11 @@ public class TableDirectoryListingTest extends QueueTestCommon {
                 SystemTimeProvider.INSTANCE);
         try {
             failedListing.init();
+            final long refreshTime = failedListing.lastRefreshTimeMS();
             failedListing.refresh(true);
             assertEquals(7, failedListing.getMaxCreatedCycle());
             assertEquals(7, failedListing.getMinCreatedCycle());
+            assertEquals(refreshTime, failedListing.lastRefreshTimeMS());
         } finally {
             failedListing.close();
         }
