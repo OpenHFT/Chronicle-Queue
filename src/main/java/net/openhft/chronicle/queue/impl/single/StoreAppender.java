@@ -33,6 +33,7 @@ import java.nio.BufferOverflowException;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
+import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
 import static net.openhft.chronicle.wire.Wires.*;
 
 /**
@@ -98,14 +99,16 @@ class StoreAppender extends AbstractCloseable
 
         try {
             int lastExistingCycle = queue.lastCycle();
-            int firstCycle = queue.firstCycle();
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty reopens an appender at Integer.MAX_VALUE;
+            //! only the semantic first-cycle value distinguishes that valid roll from an empty Queue here.
+            int firstCycle = queue.firstPublishedCycle();
             long start = System.nanoTime();
             int scannedCycle = Integer.MIN_VALUE;
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
                 // Process cycles and handle EOF markers
-                if (firstCycle != Integer.MAX_VALUE) {
+                if (firstCycle != UNSET_CONTEXT) {
                     // Backing down until EOF-ed cycle is encountered
                     for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
@@ -678,6 +681,8 @@ class StoreAppender extends AbstractCloseable
     }
 
     private void setWireIfNull(final int cycle, WireStoreSupplier.CreateStrategy createStrategy) {
+        //! unusedAppenderDoesNotCreateDeletedPublishedMaximum requires a caller-selected acquisition strategy: the
+        //! previous CREATE-only helper would recreate an absent generation already published in Queue metadata.
         normaliseEOFs0(cycle);
 
         setCycle2(cycle, createStrategy);
@@ -690,23 +695,18 @@ class StoreAppender extends AbstractCloseable
      * writer. Time-provider rollback must not move an appender back into a historical roll.
      */
     private void moveToCycleForAppend() {
-        //! deletingOldestHistoricalRollPreservesPublishedMaximum, deletingHighestRollWithMetadataFailsClosed and
-        //! deletingWholeQueueOfflineAllowsClockSelectedInitialCycle distinguish supported historical retention,
-        //! forbidden removal of the published maximum, and genuine offline Queue replacement. The shared maximum
-        //! therefore remains authoritative while metadata exists; only a target newer than it may be created.
-        //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum and
-        //! unusedAppenderDoesNotCreateDeletedPublishedMaximum cover both live-wire and first-write equality paths.
-        final int lastExistingCycle = queue.lastPublishedCycle();
+        //! deletingOldestHistoricalRollPreservesPublishedMaximum and
+        //! deletingWholeQueueOfflineAllowsClockSelectedInitialCycle distinguish a retained Queue with a published
+        //! high-water mark from a genuinely new Queue. The shared maximum therefore remains the ordinary-write floor
+        //! while metadata exists; only a newer target may be created.
+        final int publishedCycle = queue.lastPublishedCycle();
+        final boolean hasPublishedCycle = publishedCycle != UNSET_CONTEXT;
         // Supported retention keeps the published maximum; taking it with time prevents clock
         // rollback while still allowing a writer to advance normally.
-        final int targetCycle = Math.max(queue.cycle(), lastExistingCycle);
-        final boolean publishedCycleMustExist = lastExistingCycle >= 0 && targetCycle == lastExistingCycle;
+        final int targetCycle = hasPublishedCycle ? Math.max(queue.cycle(), publishedCycle) : queue.cycle();
+        final boolean publishedCycleMustExist = hasPublishedCycle && targetCycle == publishedCycle;
         if (wire == null) {
-            //! Equality means another writer already published this generation. Opening it as
-            //! existing-only prevents an ordinary write from recreating a removed current roll; both deletion
-            //! regressions above fail if equality is allowed to use CREATE.
-            //! incompletePublishedCycleIsReinitialised, stalledAppenderReinitialisesIncompletePublishedCycle and
-            //! StoreTailerTest's
+            //! incompletePublishedCycleIsReinitialised, stalledAppenderReinitialisesIncompletePublishedCycle and StoreTailerTest's
             //! shouldHaltAtPartiallyInitialisedRollCycle require REINITIALIZE_EXISTING rather than READ_ONLY:
             //! it still refuses an absent pathname, but preserves Queue's established recovery of an existing
             //! generation whose first header never completed.
@@ -716,22 +716,23 @@ class StoreAppender extends AbstractCloseable
             return;
         }
 
+        //! steadyStateAppenderAndTailerReusePublishedCycleStore requires the strict-forward guard: same-cycle writes
+        //! must reuse the acquired store rather than repeat store-pool and filesystem work for every document. A
+        //! missing published destination is therefore checked when an appender opens or transitions, not by adding
+        //! a pathname check to each append on an already-current mapped store.
         if (cycle < targetCycle) {
-            //! steadyStateAppenderAndTailerReusePublishedCycleStore requires same-cycle writes to
-            //! reuse the already-acquired store. Reopening it would add store-pool and filesystem
-            //! work without changing the selected destination. Validate existence only at a cycle
-            //! transition; the wire-null path opens a published generation with
-            //! REINITIALIZE_EXISTING so an interrupted file can recover but an absent one is not created.
             if (publishedCycleMustExist)
-                requirePublishedCycle(lastExistingCycle);
+                requirePublishedCycle(publishedCycle);
             rollCycleTo(targetCycle, false, publishedCycleMustExist);
         }
     }
 
     private void requirePublishedCycle(int publishedCycle) {
-        //! stalledAppenderReinitialisesIncompletePublishedCycle mutation-fails if the transition
-        //! probe merely reads the published generation: an existing but interrupted first header is recoverable,
-        //! while REINITIALIZE_EXISTING still returns null instead of creating a genuinely absent pathname.
+        //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum requires a known-missing destination to fail before
+        //! rollCycleTo seals the appender's current store, so the transition needs this separate preflight.
+        //! stalledAppenderReinitialisesIncompletePublishedCycle mutation-fails if that probe merely reads the
+        //! published generation: an interrupted first header is recoverable, while REINITIALIZE_EXISTING still
+        //! returns null instead of creating a genuinely absent pathname.
         try (SingleChronicleQueueStore ignored = queue.pool.acquire(
                 publishedCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING, null)) {
             if (ignored == null)
@@ -955,8 +956,6 @@ class StoreAppender extends AbstractCloseable
         if (wire == null)
             setWireIfNull(cycle);
 
-        //! This is an implementation note, not JDK Markdown documentation. Keeping the inherited
-        //! `///` form would make its meaning compiler-version dependent when this hunk is shipped.
         // If the header number has changed, the appender has rolled.
         if (this.cycle != cycle)
             rollCycleTo(cycle, this.cycle > cycle);
@@ -1103,14 +1102,6 @@ class StoreAppender extends AbstractCloseable
 
     private void rollCycleTo(final int cycle, boolean suppressEOF, boolean existingOnly) {
 
-        //! testRefreshDirectoryListingAfterHistoricalDeletion, tailerToEndWorksInFaceOfDeletedHistoricalStoreFile,
-        //! tailerToEndFromEndWorksInFaceOfDeletedStoreFile, deleteFileFromUnderTailerTest_EndOfHistoricalRange and
-        //! testToEndAfterOfflineQueueDeletion exercise the distinction between removable historical rolls and the
-        //! published maximum. Using lastCycle() here can refresh to a transiently lower physical bound and either
-        //! move the appender backwards or dereference a missing store before the fail-closed check.
-        //! testCountExcerptsWhenTheCycleIsRolled, testRollCycle and testRead2 also pin the publication/mod-count
-        //! consequences of using the mapped maximum rather than refreshing the directory during rollover.
-
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
             throw new AssertionError();
@@ -1120,19 +1111,25 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
         }
 
-        //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fails if rollover consults
-        //! lastCycle(): the refresh both adds filesystem I/O and may replace the cross-process publication with a
-        //! transient physical observation. The existing-only strategy makes a missing published generation fail
-        //! before CREATE can silently replace it.
-        int lastExistingCycle = queue.lastPublishedCycle();
+        //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fails if rollover calls
+        //! lastCycle(): a directory refresh can replace the cooperating writer's destination with an unrelated
+        //! unreported filename and adds filesystem I/O to the append path. testCountExcerptsWhenTheCycleIsRolled,
+        //! testRollCycle and testRead2 pin the corresponding publication and modification-count effects of using the
+        //! mapped maximum here.
+        int lastPublishedCycle = queue.lastPublishedCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
-        if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
-            setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
+        if (lastPublishedCycle != UNSET_CONTEXT
+                && lastPublishedCycle < cycle
+                && lastPublishedCycle != this.cycle) {
+            setCycle2(lastPublishedCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
             if (store == null)
-                throw missingPublishedCycle(lastExistingCycle);
+                throw missingPublishedCycle(lastPublishedCycle);
             rollCycleTo(cycle);
         } else {
+            //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum requires an equality transition to open the
+            //! published target without CREATE; otherwise a removed generation is silently replaced after the
+            //! source store has been sealed.
             setCycle2(cycle, existingOnly
                     ? WireStoreSupplier.CreateStrategy.READ_ONLY
                     : WireStoreSupplier.CreateStrategy.CREATE);

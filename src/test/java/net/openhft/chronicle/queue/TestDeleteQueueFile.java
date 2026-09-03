@@ -290,14 +290,13 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private void progressivelyTruncateOldRollCycles(QueueWithCycleDetails queueWithCycleDetails) {
         try {
             int deletedUpTo = 0;
-            // previously used for debug output; removed to avoid commented code smell
+            // Retain the published/current roll so every refresh stays within the supported deletion contract.
             while (queueWithCycleDetails.rollCycles.size() > 1) {
                 Jvm.startup().on(TestDeleteQueueFile.class, "Deleting from " + deletedUpTo + " to " + (deletedUpTo + CYCLES_TO_DELETE_PER_ITERATION));
                 final int cyclesThisIteration = Math.min(CYCLES_TO_DELETE_PER_ITERATION,
                         queueWithCycleDetails.rollCycles.size() - 1);
                 for (int i = 0; i < cyclesThisIteration; i++) {
                     final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(0);
-                    // debug trace removed; keep deletion behaviour unchanged
                     Files.delete(Paths.get(rollCycleDetails.filename));
                     deletedUpTo++;
                 }
@@ -314,6 +313,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             int numberOfCycles = queueWithCycleDetails.rollCycles.size();
             int deleted = 0;
             while (queueWithCycleDetails.rollCycles.size() > 1) {
+                // Choose only among historical rolls; the final entry is the published/current roll.
                 final int index = ThreadLocalRandom.current().nextInt(0, queueWithCycleDetails.rollCycles.size() - 1);
                 final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(index);
                 deleted++;
@@ -403,14 +403,27 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
 
         private DocumentContext readingDocumentWithRetries(ExcerptTailer excerptTailer) {
-            DocumentContext documentContext = null;
-            for (int i = 0; i < 2; i++) {
-                documentContext = excerptTailer.readingDocument();
-                if (documentContext.isPresent()) {
-                    break;
-                }
+            while (true) {
+                final DocumentContext documentContext = excerptTailer.readingDocument();
+                if (documentContext.isPresent() || reachedAvailableBoundary(excerptTailer) || !running.get())
+                    return documentContext;
+
+                documentContext.close();
+                Jvm.nanoPause();
             }
-            return documentContext;
+        }
+
+        private boolean reachedAvailableBoundary(ExcerptTailer tailer) {
+            final long lastReadIndex = tailer.lastReadIndex();
+            if (direction == TailerDirection.FORWARD) {
+                final OptionalLong last = lastAvailableIndex();
+                return !last.isPresent() || lastReadIndex >= last.getAsLong();
+            }
+            if (direction == TailerDirection.BACKWARD) {
+                final OptionalLong first = firstAvailableIndex();
+                return !first.isPresent() || lastReadIndex <= first.getAsLong();
+            }
+            return true;
         }
 
         private OptionalLong lastAvailableIndex() {
@@ -479,7 +492,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
             ExcerptTailer tailer = queue.createTailer();
 
-            // Delete only historical stores; the retained current store contains the ten readable records.
+            // The tailer's mapped first roll remains readable; refresh then skips the deleted second roll and
+            // reaches the ten records in the retained current roll.
             Files.delete(Paths.get(firstCycle.filename));
             Files.delete(Paths.get(secondCycle.filename));
 
