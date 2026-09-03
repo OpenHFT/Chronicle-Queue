@@ -33,6 +33,7 @@ import java.nio.BufferOverflowException;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
+import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
 import static net.openhft.chronicle.wire.Wires.*;
 
 /**
@@ -98,14 +99,14 @@ class StoreAppender extends AbstractCloseable
 
         try {
             int lastExistingCycle = queue.lastCycle();
-            int firstCycle = queue.firstCycle();
+            int firstCycle = queue.firstPublishedCycle();
             long start = System.nanoTime();
             int scannedCycle = Integer.MIN_VALUE;
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
                 // Process cycles and handle EOF markers
-                if (firstCycle != Integer.MAX_VALUE) {
+                if (firstCycle != UNSET_CONTEXT) {
                     // Backing down until EOF-ed cycle is encountered
                     for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
@@ -645,9 +646,9 @@ class StoreAppender extends AbstractCloseable
      * @param cycle the target cycle up to which EOF normalization should occur
      */
     private void normaliseEOFs0(int cycle) {
-        int first = queue.firstCycle();
+        int first = queue.firstPublishedCycle();
 
-        if (first == Integer.MAX_VALUE)
+        if (first == UNSET_CONTEXT)
             return;
 
         final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
@@ -696,10 +697,11 @@ class StoreAppender extends AbstractCloseable
         //! high-water mark from a genuinely new Queue. The shared maximum therefore remains the ordinary-write floor
         //! while metadata exists; only a newer target may be created.
         final int publishedCycle = queue.lastPublishedCycle();
+        final boolean hasPublishedCycle = publishedCycle != UNSET_CONTEXT;
         // Supported retention keeps the published maximum; taking it with time prevents clock
         // rollback while still allowing a writer to advance normally.
-        final int targetCycle = Math.max(queue.cycle(), publishedCycle);
-        final boolean publishedCycleMustExist = publishedCycle >= 0 && targetCycle == publishedCycle;
+        final int targetCycle = hasPublishedCycle ? Math.max(queue.cycle(), publishedCycle) : queue.cycle();
+        final boolean publishedCycleMustExist = hasPublishedCycle && targetCycle == publishedCycle;
         if (wire == null) {
             //! incompletePublishedCycleIsReinitialised, stalledAppenderReinitialisesIncompletePublishedCycle and
             //! StoreTailerTest's
@@ -1069,7 +1071,9 @@ class StoreAppender extends AbstractCloseable
         int lastPublishedCycle = queue.lastPublishedCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
-        if (lastPublishedCycle < cycle && lastPublishedCycle != this.cycle && lastPublishedCycle >= 0) {
+        if (lastPublishedCycle != UNSET_CONTEXT
+                && lastPublishedCycle < cycle
+                && lastPublishedCycle != this.cycle) {
             setCycle2(lastPublishedCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
             if (store == null)
                 throw missingPublishedCycle(lastPublishedCycle);

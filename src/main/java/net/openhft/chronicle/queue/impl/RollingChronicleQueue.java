@@ -42,10 +42,13 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     @Nullable
     SingleChronicleQueueStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent, SingleChronicleQueueStore oldStore);
 
+    //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty documents why callers must use the maximum cycle to
+    //! distinguish an empty Queue: Integer.MAX_VALUE is both the legacy public sentinel here and a valid UInt31 cycle.
     /**
      * Finds and returns the first cycle number in the queue.
      *
-     * @return the first cycle number, or {@code Integer.MAX_VALUE} if no cycles are found.
+     * @return the first cycle number, or {@code Integer.MAX_VALUE} if no cycles are found; compare with
+     *         {@link #lastCycle()} when {@code Integer.MAX_VALUE} must be distinguished from an empty Queue
      */
     int firstCycle();
 
