@@ -705,8 +705,7 @@ class StoreAppender extends AbstractCloseable
         final int targetCycle = hasPublishedCycle ? Math.max(queue.cycle(), publishedCycle) : queue.cycle();
         final boolean publishedCycleMustExist = hasPublishedCycle && targetCycle == publishedCycle;
         if (wire == null) {
-            //! incompletePublishedCycleIsReinitialised, stalledAppenderReinitialisesIncompletePublishedCycle and
-            //! StoreTailerTest's
+            //! incompletePublishedCycleIsReinitialised, stalledAppenderReinitialisesIncompletePublishedCycle and StoreTailerTest's
             //! shouldHaltAtPartiallyInitialisedRollCycle require REINITIALIZE_EXISTING rather than READ_ONLY:
             //! it still refuses an absent pathname, but preserves Queue's established recovery of an existing
             //! generation whose first header never completed.

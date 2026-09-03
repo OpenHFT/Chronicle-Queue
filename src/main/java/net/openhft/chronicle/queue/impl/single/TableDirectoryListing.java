@@ -113,8 +113,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     @Override
     public void refresh(final boolean force) {
 
-        if (!force)
+        if (!force) {
             return;
+        }
 
         while (true) {
             throwExceptionIfClosed();
