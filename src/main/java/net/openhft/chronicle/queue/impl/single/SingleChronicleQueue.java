@@ -453,6 +453,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 if (commonStore != null)
                     sb.append(commonStore.dump(wireType));
             }
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires termination before incrementing the
+            //! highest UInt31 cycle, because int overflow would otherwise restart this loop at Integer.MIN_VALUE.
+            if (i == max)
+                break;
         }
         return sb.toString();
     }

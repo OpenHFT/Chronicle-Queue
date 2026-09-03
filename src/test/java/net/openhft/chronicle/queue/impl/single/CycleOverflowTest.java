@@ -16,6 +16,7 @@ import java.io.File;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class CycleOverflowTest extends QueueTestCommon {
 
@@ -60,6 +61,7 @@ public class CycleOverflowTest extends QueueTestCommon {
                 assertEquals(Integer.MAX_VALUE, queue.firstCycle());
                 assertEquals(Integer.MAX_VALUE, queue.lastCycle());
                 assertEquals(firstIndex, queue.firstIndex());
+                assertTrue(queue.dump().contains("maximum cycle"));
                 try (ExcerptAppender appender = queue.createAppender()) {
                     appender.writeText("after restart");
                 }
