@@ -99,6 +99,8 @@ class StoreAppender extends AbstractCloseable
 
         try {
             int lastExistingCycle = queue.lastCycle();
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty reopens an appender at Integer.MAX_VALUE;
+            //! only the semantic first-cycle value distinguishes that valid roll from an empty Queue here.
             int firstCycle = queue.firstPublishedCycle();
             long start = System.nanoTime();
             int scannedCycle = Integer.MIN_VALUE;
@@ -646,9 +648,9 @@ class StoreAppender extends AbstractCloseable
      * @param cycle the target cycle up to which EOF normalization should occur
      */
     private void normaliseEOFs0(int cycle) {
-        int first = queue.firstPublishedCycle();
+        int first = queue.firstCycle();
 
-        if (first == UNSET_CONTEXT)
+        if (first == Integer.MAX_VALUE)
             return;
 
         final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
