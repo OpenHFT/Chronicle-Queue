@@ -82,8 +82,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
             //! freshListingReportsUnsetMaximum fails if a newly allocated mapped long is exposed as cycle zero.
-            //! metadataContainsNoSeparateWriteFloor also pins the compatibility decision that the existing shared
-            //! maximum, rather than a new persistent key, is the sole ordinary-write publication.
             // A newly allocated LongValue contains Long.MIN_VALUE; its int cast is cycle zero,
             // so normalise the sentinel before any reader can mistake it for a published roll.
             maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MAX_CYCLE);
@@ -115,16 +113,13 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         if (!force)
             return;
 
-        throwExceptionIfClosed();
-        tableStore.throwExceptionIfClosed();
-
         while (true) {
-            //! failedDirectoryListingDoesNotResetPublishedBounds requires list()==null to leave both publications
-            //! unchanged and retryable; treating an enumeration failure as an empty Queue can move writers backwards.
-            //! legacyPublicationAfterRefreshIsVisibleWithoutAnotherEvent and
-            //! refreshRetriesWhenLegacyMinimumIsPublishedAfterMaximumCas require observing min/max/modCount around
-            //! the scan and CAS-publishing both bounds, because older writers publish min, max, then modCount without
-            //! participating in a new lock protocol.
+            throwExceptionIfClosed();
+            tableStore.throwExceptionIfClosed();
+            Jvm.safepoint();
+            //! refreshRetriesWhenLegacyMinimumIsPublishedAfterMaximumCas requires observing min, max and modCount
+            //! around the scan and CAS-publishing both bounds. Older writers publish min, max, then modCount without
+            //! participating in a new lock protocol, so a partial legacy publication must force another scan.
             // Writers from before QUEUE-146 do not take a table lock. Observe both legacy publication
             // fields around the filesystem scan and retry if such a writer moves either one while the
             // scan is in progress.
@@ -133,6 +128,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             final long observedLegacyMax = maxCycleValue.getVolatileValue();
 
             final String[] fileNamesList = queuePath.toFile().list();
+            //! failedDirectoryListingDoesNotResetPublishedBounds fails if list()==null is treated as an empty Queue:
+            //! that would replace valid shared bounds with sentinels and could move ordinary writers backwards.
             // A failed directory read is not evidence that the Queue is empty. Preserve the
             // published bounds and leave the refresh timestamp unchanged so a later call retries.
             if (fileNamesList == null)
@@ -168,9 +165,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             // Supported maintenance retains the highest/current roll. Losing it while metadata
             // survives is an inconsistent Queue, not permission to move ordinary writes backward.
             //! refreshRejectsMissingPublishedMaximum and refreshRejectsMissingLegacyPublication fail if a scan may
-            //! lower the mapped maximum while metadata survives. historicalDeletionAndLowerRecreationPreservePublishedMaximum
-            //! and lowerRecreatedCycleIsPublishedToAnotherOpenListing show that only the physical minimum may move
-            //! in both directions during supported historical recovery.
+            //! lower the mapped maximum while metadata survives.
             if (observedLegacyMax != UNSET_MAX_CYCLE && max < observedLegacyMax)
                 throw new IllegalStateException("Highest/current roll " + observedLegacyMax
                         + " disappeared while Queue metadata remains");
@@ -194,6 +189,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             modCount.addAtomicValue(1);
             break;
         }
+        //! failedDirectoryListingDoesNotResetPublishedBounds also requires a failed scan to remain retryable.
+        //! Assigning the refresh time only after successful publication prevents an automatic refresh from being
+        //! suppressed by a directory read that returned no listing.
         lastRefreshTimeMS = time.currentTimeMillis();
     }
 
@@ -215,10 +213,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     @Override
     public void onRoll(int cycle) {
-        //! publishedModificationRefreshesAnotherListingsCurrentBounds,
-        //! preOpenedListingsPublishBoundsFromSharedValues and lowerRecreatedCycleIsPublishedToAnotherOpenListing
-        //! require every cooperating writer to publish directly into the shared min/max values. A local cache or a
-        //! max-only update leaves already-open Queue instances with inconsistent physical bounds.
         minCycleValue.setMinValue(cycle);
         maxCycleValue.setMaxValue(cycle);
         modCount.addAtomicValue(1);
