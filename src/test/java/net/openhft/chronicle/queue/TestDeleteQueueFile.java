@@ -44,23 +44,23 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private final Path tempQueueDir = getTmpDir().toPath();
 
     @Test
-    public void testRefreshDirectoryListingWillUpdateFirstAndLastIndicesCorrectly() throws IOException {
+    public void testRefreshDirectoryListingAfterHistoricalDeletion() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
 
-            // delete the first and last files
+            // Delete only the oldest historical generation; the published maximum remains current.
             Files.delete(Paths.get(queueWithCycleDetails.rollCycles.get(0).filename));
-            Files.delete(Paths.get(queueWithCycleDetails.rollCycles.get(2).filename));
 
             final SingleChronicleQueue queue = queueWithCycleDetails.queue;
             queue.refreshDirectoryListing();
 
             RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
+            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
             assertEquals(toHexString(secondCycle.firstIndex), toHexString(queue.firstIndex()));
-            assertEquals(toHexString(secondCycle.lastIndex), toHexString(queue.lastIndex()));
+            assertEquals(toHexString(thirdCycle.lastIndex), toHexString(queue.lastIndex()));
 
-            // and create a tailer it should only read data in second file
+            // A new tailer starts at the oldest surviving historical roll.
             ExcerptTailer excerptTailer2 = queue.createTailer();
             assertEquals(toHexString(secondCycle.firstIndex), toHexString(excerptTailer2.index()));
             readText(excerptTailer2, "test2");
@@ -119,7 +119,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void tailerToEndWorksInFaceOfDeletedStoreFile() throws IOException {
+    public void tailerToEndWorksInFaceOfDeletedHistoricalStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
 
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(3, null)) {
@@ -135,11 +135,11 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
             assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
 
-            // delete the last store
-            Files.delete(Paths.get(thirdCycle.filename));
+            // Delete only the interior historical store; the current/latest store remains present.
+            Files.delete(Paths.get(secondCycle.filename));
 
             // should be at correct index
-            assertEquals(toHexString(secondCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
+            assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
         }
     }
 
@@ -161,11 +161,11 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             assertEquals(toHexString(firstCycle.firstIndex), toHexString(tailer.toStart().index()));
             assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
 
-            // delete the last store
-            Files.delete(Paths.get(thirdCycle.filename));
+            // Delete only the interior historical store; the current/latest store remains present.
+            Files.delete(Paths.get(secondCycle.filename));
 
             // should be at correct index
-            assertEquals(toHexString(secondCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
+            assertEquals(toHexString(thirdCycle.lastIndex + 1), toHexString(tailer.toEnd().index()));
         }
     }
 
@@ -245,8 +245,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void deleteFileFromUnderTailerTest_EndOfRange() throws IOException {
-        deleteFileFromUnderTailerTest(10, 8);
+    public void deleteFileFromUnderTailerTest_EndOfHistoricalRange() throws IOException {
+        deleteFileFromUnderTailerTest(10, 7);
     }
 
     private void deleteFileFromUnderTailerTest(int numberOfCycles, int currentCycleIndex) throws IOException {
@@ -290,12 +290,13 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private void progressivelyTruncateOldRollCycles(QueueWithCycleDetails queueWithCycleDetails) {
         try {
             int deletedUpTo = 0;
-            // previously used for debug output; removed to avoid commented code smell
-            while (!queueWithCycleDetails.rollCycles.isEmpty()) {
+            // Retain the published/current roll so every refresh stays within the supported deletion contract.
+            while (queueWithCycleDetails.rollCycles.size() > 1) {
                 Jvm.startup().on(TestDeleteQueueFile.class, "Deleting from " + deletedUpTo + " to " + (deletedUpTo + CYCLES_TO_DELETE_PER_ITERATION));
-                for (int i = 0; i < CYCLES_TO_DELETE_PER_ITERATION; i++) {
+                final int cyclesThisIteration = Math.min(CYCLES_TO_DELETE_PER_ITERATION,
+                        queueWithCycleDetails.rollCycles.size() - 1);
+                for (int i = 0; i < cyclesThisIteration; i++) {
                     final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(0);
-                    // debug trace removed; keep deletion behaviour unchanged
                     Files.delete(Paths.get(rollCycleDetails.filename));
                     deletedUpTo++;
                 }
@@ -312,8 +313,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             int numberOfCycles = queueWithCycleDetails.rollCycles.size();
             int deleted = 0;
             while (queueWithCycleDetails.rollCycles.size() > 1) {
-                // Don't delete the first cycle, we can't deal with that yet
-                final int index = ThreadLocalRandom.current().nextInt(1, queueWithCycleDetails.rollCycles.size());
+                // Choose only among historical rolls; the final entry is the published/current roll.
+                final int index = ThreadLocalRandom.current().nextInt(0, queueWithCycleDetails.rollCycles.size() - 1);
                 final RollCycleDetails rollCycleDetails = queueWithCycleDetails.rollCycles.remove(index);
                 deleted++;
                 Jvm.startup().on(TestDeleteQueueFile.class, "Deleting " + rollCycleDetails.rollCycle + ": " + rollCycleDetails.filename + " (" + deleted + "/" + numberOfCycles + "), firstIndex=" + toHexString(rollCycleDetails.firstIndex) + ", lastIndex=" + toHexString(rollCycleDetails.lastIndex));
@@ -402,14 +403,27 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
 
         private DocumentContext readingDocumentWithRetries(ExcerptTailer excerptTailer) {
-            DocumentContext documentContext = null;
-            for (int i = 0; i < 2; i++) {
-                documentContext = excerptTailer.readingDocument();
-                if (documentContext.isPresent()) {
-                    break;
-                }
+            while (true) {
+                final DocumentContext documentContext = excerptTailer.readingDocument();
+                if (documentContext.isPresent() || reachedAvailableBoundary(excerptTailer) || !running.get())
+                    return documentContext;
+
+                documentContext.close();
+                Jvm.nanoPause();
             }
-            return documentContext;
+        }
+
+        private boolean reachedAvailableBoundary(ExcerptTailer tailer) {
+            final long lastReadIndex = tailer.lastReadIndex();
+            if (direction == TailerDirection.FORWARD) {
+                final OptionalLong last = lastAvailableIndex();
+                return !last.isPresent() || lastReadIndex >= last.getAsLong();
+            }
+            if (direction == TailerDirection.BACKWARD) {
+                final OptionalLong first = firstAvailableIndex();
+                return !first.isPresent() || lastReadIndex <= first.getAsLong();
+            }
+            return true;
         }
 
         private OptionalLong lastAvailableIndex() {
@@ -476,14 +490,12 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         ) {
             RollCycleDetails firstCycle = queueWithCycleDetails.rollCycles.get(0);
             RollCycleDetails secondCycle = queueWithCycleDetails.rollCycles.get(1);
-            RollCycleDetails thirdCycle = queueWithCycleDetails.rollCycles.get(2);
-
             ExcerptTailer tailer = queue.createTailer();
 
-            // delete the store files
+            // The tailer's mapped first roll remains readable; refresh then skips the deleted second roll and
+            // reaches the ten records in the retained current roll.
             Files.delete(Paths.get(firstCycle.filename));
             Files.delete(Paths.get(secondCycle.filename));
-            Files.delete(Paths.get(thirdCycle.filename));
 
             int counter = 0;
             while (true) {
@@ -494,7 +506,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                     counter++;
                 }
             }
-            assertEquals(10, counter); // we still get 10 because the current store is in memory
+            assertEquals(20, counter);
         }
     }
 
