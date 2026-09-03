@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.function.ToIntFunction;
 
 import static net.openhft.chronicle.queue.impl.single.TableDirectoryListing.*;
+import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
 
 /**
  * The {@code FileSystemDirectoryListing} class is responsible for managing the listing of files
@@ -25,7 +26,9 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     private final ToIntFunction<String> fileNameToCycleFunction;
     private final TimeProvider time;
     private int minCreatedCycle = Integer.MAX_VALUE;
-    private int maxCreatedCycle = Integer.MIN_VALUE;
+    //! fileSystemListingDistinguishesMaximumCycleFromUnset requires the same semantic sentinel as the mapped
+    //! implementation so read-only fallback and table-backed queues expose one internal cycle domain.
+    private int maxCreatedCycle = UNSET_CONTEXT;
     private long lastRefreshTimeMS;
 
     /**
@@ -81,13 +84,13 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
         }
 
         // Update the minimum and maximum cycles based on the filenames
-        int min = UNSET_MIN_CYCLE;
+        int min = INITIAL_MIN_CYCLE;
         if (!INITIAL_MIN_FILENAME.equals(minFilename))
-            min = fileNameToCycleFunction.applyAsInt(minFilename);
+            min = requireCycle(fileNameToCycleFunction.applyAsInt(minFilename), "filesystem minimum");
 
-        int max = UNSET_MAX_CYCLE;
+        int max = UNSET_CONTEXT;
         if (!INITIAL_MAX_FILENAME.equals(maxFilename))
-            max = fileNameToCycleFunction.applyAsInt(maxFilename);
+            max = requireCycle(fileNameToCycleFunction.applyAsInt(maxFilename), "filesystem maximum");
 
         minCreatedCycle = min;
         maxCreatedCycle = max;
@@ -110,7 +113,9 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
      */
     @Override
     public int getMinCreatedCycle() {
-        return minCreatedCycle;
+        //! fileSystemListingDistinguishesMaximumCycleFromUnset requires maximum, not Integer.MAX_VALUE minimum, to
+        //! distinguish an empty listing from a listing whose only valid UInt31 cycle is Integer.MAX_VALUE.
+        return maxCreatedCycle == UNSET_CONTEXT ? UNSET_CONTEXT : minCreatedCycle;
     }
 
     /**
@@ -143,7 +148,8 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
      */
     @Override
     public void onRoll(int cycle) {
-        minCreatedCycle = Math.min(minCreatedCycle, cycle);
-        maxCreatedCycle = Math.max(maxCreatedCycle, cycle);
+        final int validCycle = requireCycle(cycle, "roll cycle");
+        minCreatedCycle = Math.min(minCreatedCycle, validCycle);
+        maxCreatedCycle = Math.max(maxCreatedCycle, validCycle);
     }
 }

@@ -49,6 +49,7 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
 import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
 import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
@@ -1033,8 +1034,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long firstIndex() {
-        int cycle = firstCycle();
-        if (cycle == Integer.MAX_VALUE)
+        //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires internal emptiness to use UNSET_CONTEXT
+        //! rather than the public firstCycle() sentinel, because Integer.MAX_VALUE is itself a valid UInt31 cycle.
+        final int cycle = firstPublishedCycle();
+        if (cycle == UNSET_CONTEXT)
             return Long.MAX_VALUE;
 
         return rollCycle().toIndex(cycle, 0);
@@ -1111,6 +1114,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public int firstCycle() {
+        final int firstCycle = firstPublishedCycle();
+        //! SingleCQFormatTest#testEmptyDirectory preserves the established public empty-Queue sentinel while the
+        //! internal representation uses UNSET_CONTEXT and can distinguish a real Integer.MAX_VALUE cycle.
+        return firstCycle == UNSET_CONTEXT ? Integer.MAX_VALUE : firstCycle;
+    }
+
+    int firstPublishedCycle() {
         setFirstAndLastCycle();
         return directoryListing.getMinCreatedCycle();
     }
@@ -1135,13 +1145,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public int lastCycle() {
         setFirstAndLastCycle();
-        return directoryListing.getMaxCreatedCycle();
+        final int lastCycle = directoryListing.getMaxCreatedCycle();
+        //! SingleCQFormatTest#testEmptyDirectory preserves the established public lastCycle() sentinel even though
+        //! internal consumers and contextCount() use Wire's canonical UNSET_CONTEXT value.
+        return lastCycle == UNSET_CONTEXT ? Integer.MIN_VALUE : lastCycle;
     }
 
     /**
      * Returns the latest cycle published by a cooperating writer without the periodic filesystem
      * refresh performed by {@link #lastCycle()}. This distinction keeps the append hot path from
      * scanning the queue directory.
+     *
+     * @return the latest UInt31 cycle, or {@link MarshallableOut#UNSET_CONTEXT} if none is published
      */
     int lastPublishedCycle() {
         //! ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing and

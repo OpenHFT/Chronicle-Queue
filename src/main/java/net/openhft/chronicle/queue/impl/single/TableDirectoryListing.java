@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -16,6 +17,8 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.function.ToIntFunction;
 
+import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
+
 /**
  * TableDirectoryListing manages the cycle metadata for a Chronicle Queue stored in a table.
  * This class is responsible for keeping track of the minimum and maximum cycle numbers created in the queue.
@@ -27,8 +30,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private static final String HIGHEST_CREATED_CYCLE = "listing.highestCycle";
     private static final String LOWEST_CREATED_CYCLE = "listing.lowestCycle";
     private static final String MOD_COUNT = "listing.modCount";
-    static final int UNSET_MAX_CYCLE = Integer.MIN_VALUE;
-    static final int UNSET_MIN_CYCLE = Integer.MAX_VALUE;
+    private static final int LEGACY_UNSET_MAX_CYCLE = Integer.MIN_VALUE;
+    static final int INITIAL_MIN_CYCLE = Integer.MAX_VALUE;
     static final String INITIAL_MIN_FILENAME = Character.toString(Character.MAX_VALUE);
     static final String INITIAL_MAX_FILENAME = Character.toString(Character.MIN_VALUE);
     private final TableStore<?> tableStore;
@@ -81,11 +84,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
-            //! freshListingReportsUnsetMaximum fails if a newly allocated mapped long is exposed as cycle zero.
-            // A newly allocated LongValue contains Long.MIN_VALUE; its int cast is cycle zero,
-            // so normalise the sentinel before any reader can mistake it for a published roll.
-            maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MAX_CYCLE);
-            minCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_MIN_CYCLE);
+            //! freshListingReportsUnsetCycle requires the legacy mapped empty-Queue representation as well as the
+            //! decoded UNSET_CONTEXT result. Retain these compatibility writes so older processes do not narrow a
+            //! newly allocated Long.MIN_VALUE to cycle zero.
+            maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, LEGACY_UNSET_MAX_CYCLE);
+            minCycleValue.compareAndSwapValue(Long.MIN_VALUE, INITIAL_MIN_CYCLE);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
             }
@@ -124,8 +127,12 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             // fields around the filesystem scan and retry if such a writer moves either one while the
             // scan is in progress.
             final long observedModCount = modCount.getVolatileValue();
-            final long observedLegacyMin = minCycleValue.getVolatileValue();
-            final long observedLegacyMax = maxCycleValue.getVolatileValue();
+            final long observedStoredMin = minCycleValue.getVolatileValue();
+            final long observedStoredMax = maxCycleValue.getVolatileValue();
+            //! readOnlyListingDecodesRawStorageSentinelAsUnset and persistedCyclesOutsideDomainFailClosed require
+            //! every mapped long to be decoded and range checked before it participates in cycle arithmetic.
+            final int observedMax = decodeMaxCycle(observedStoredMax);
+            decodeMinCycle(observedStoredMin, observedMax);
 
             final String[] fileNamesList = queuePath.toFile().list();
             //! failedDirectoryListingDoesNotResetPublishedBounds fails if list()==null is treated as an empty Queue:
@@ -147,32 +154,34 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                 }
             }
 
-            int min = UNSET_MIN_CYCLE;
+            int min = INITIAL_MIN_CYCLE;
             if (!INITIAL_MIN_FILENAME.equals(minFilename))
-                min = fileNameToCycleFunction.applyAsInt(minFilename);
+                min = requireCycle(fileNameToCycleFunction.applyAsInt(minFilename), LOWEST_CREATED_CYCLE);
 
-            int max = UNSET_MAX_CYCLE;
+            int max = UNSET_CONTEXT;
             if (!INITIAL_MAX_FILENAME.equals(maxFilename))
-                max = fileNameToCycleFunction.applyAsInt(maxFilename);
+                max = requireCycle(fileNameToCycleFunction.applyAsInt(maxFilename), HIGHEST_CREATED_CYCLE);
 
             if (observedModCount != modCount.getVolatileValue()
-                    || observedLegacyMin != minCycleValue.getVolatileValue()
-                    || observedLegacyMax != maxCycleValue.getVolatileValue()) {
+                    || observedStoredMin != minCycleValue.getVolatileValue()
+                    || observedStoredMax != maxCycleValue.getVolatileValue()) {
                 Jvm.nanoPause();
                 continue;
             }
 
             // Supported maintenance retains the highest/current roll. Losing it while metadata
             // survives is an inconsistent Queue, not permission to move ordinary writes backward.
-            //! refreshRejectsMissingPublishedMaximum and refreshRejectsMissingLegacyPublication fail if a scan may
-            //! lower the mapped maximum while metadata survives.
-            if (observedLegacyMax != UNSET_MAX_CYCLE && max < observedLegacyMax)
-                throw new IllegalStateException("Highest/current roll " + observedLegacyMax
+            //! refreshRejectsMissingPublishedMaximum, refreshRejectsMissingLegacyPublication and
+            //! publishedCycleZeroMissingItsFileFailsClosed fail if a scan may lower the mapped maximum while
+            //! metadata survives. The explicit UNSET_CONTEXT comparison keeps published cycle zero in this check.
+            if (observedMax != UNSET_CONTEXT && max < observedMax)
+                throw new IllegalStateException("Highest/current roll " + observedMax
                         + " disappeared while Queue metadata remains");
 
             // The CAS closes the remaining check/publication window for a legacy writer. A
             // failed CAS means its publication won and the directory must be scanned again.
-            if (!maxCycleValue.compareAndSwapValue(observedLegacyMax, max)) {
+            final long storedMax = max == UNSET_CONTEXT ? LEGACY_UNSET_MAX_CYCLE : max;
+            if (!maxCycleValue.compareAndSwapValue(observedStoredMax, storedMax)) {
                 Jvm.nanoPause();
                 continue;
             }
@@ -181,7 +190,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             // the maximum CAS above without changing maximum yet. Publish both physical bounds
             // symmetrically; if either observed value moved, rescan rather than overwriting the
             // legacy writer's lower bound with a stale (possibly empty-directory) result.
-            if (!minCycleValue.compareAndSwapValue(observedLegacyMin, min)) {
+            if (!minCycleValue.compareAndSwapValue(observedStoredMin, min)) {
                 Jvm.nanoPause();
                 continue;
             }
@@ -213,8 +222,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     @Override
     public void onRoll(int cycle) {
-        minCycleValue.setMinValue(cycle);
-        maxCycleValue.setMaxValue(cycle);
+        //! onRollRejectsCyclesOutsideUInt31 ensures invalid in-process values cannot enter the same mapped fields
+        //! whose restart path now rejects corrupt persisted values.
+        final int validCycle = requireCycle(cycle, "roll cycle");
+        minCycleValue.setMinValue(validCycle);
+        maxCycleValue.setMaxValue(validCycle);
         modCount.addAtomicValue(1);
     }
 
@@ -281,7 +293,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * @return The maximum cycle value.
      */
     private int getMaxCycleValue() {
-        return (int) maxCycleValue.getVolatileValue();
+        //! freshListingReportsUnsetCycle, readOnlyListingDecodesRawStorageSentinelAsUnset,
+        //! readOnlyListingHidesPartiallyPublishedCycleZero, unsetToCycleZeroPublicationSurvivesReopen and
+        //! persistedCyclesOutsideDomainFailClosed require storage sentinels and corrupt values to be handled before
+        //! narrowing. Writable initialisation is only compatibility canonicalisation, not a prerequisite for reads.
+        return decodeMaxCycle(maxCycleValue.getVolatileValue());
     }
 
     /**
@@ -290,6 +306,40 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * @return The minimum cycle value.
      */
     private int getMinCycleValue() {
-        return (int) minCycleValue.getVolatileValue();
+        //! maximumCycleRoundTripsAsAValidMinimum requires the decoded maximum to carry empty/non-empty state:
+        //! Integer.MAX_VALUE remains both the legacy stored minimum sentinel and a valid UInt31 cycle.
+        while (true) {
+            final long storedMax = maxCycleValue.getVolatileValue();
+            final int maximum = decodeMaxCycle(storedMax);
+            final long storedMin = minCycleValue.getVolatileValue();
+            if (storedMax == maxCycleValue.getVolatileValue())
+                return decodeMinCycle(storedMin, maximum);
+            Jvm.nanoPause();
+        }
+    }
+
+    private static int decodeMaxCycle(final long storedCycle) {
+        if (storedCycle == Long.MIN_VALUE
+                || storedCycle == LEGACY_UNSET_MAX_CYCLE
+                || storedCycle == UNSET_CONTEXT)
+            return UNSET_CONTEXT;
+        return requireCycle(storedCycle, HIGHEST_CREATED_CYCLE);
+    }
+
+    private static int decodeMinCycle(final long storedCycle, final int maximumCycle) {
+        if (maximumCycle == UNSET_CONTEXT) {
+            if (storedCycle != Long.MIN_VALUE && storedCycle != UNSET_CONTEXT)
+                requireCycle(storedCycle, LOWEST_CREATED_CYCLE);
+            return UNSET_CONTEXT;
+        }
+        return requireCycle(storedCycle, LOWEST_CREATED_CYCLE);
+    }
+
+    static int requireCycle(final long cycle, final String fieldName) {
+        try {
+            return Maths.toUInt31(cycle);
+        } catch (ArithmeticException e) {
+            throw new IllegalStateException("Invalid UInt31 cycle in " + fieldName + ": " + cycle, e);
+        }
     }
 }
