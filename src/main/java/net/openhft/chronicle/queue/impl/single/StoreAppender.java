@@ -575,8 +575,8 @@ class StoreAppender extends AbstractCloseable
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
                 //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle fails if document acquisition bypasses
-                //! the bounded EOF-aware header path: a routine ordinary write then remains pinned behind a durable
-                //! seal instead of advancing exactly once.
+                //! the bounded EOF-aware header path. stalledWriterAdvancesOnceFromPublishedSealedCycle additionally
+                //! requires moveToCycleForAppend above to select the published destination before EOF advances once.
                 openContext(metaData, safeLength, true);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
@@ -756,11 +756,11 @@ class StoreAppender extends AbstractCloseable
         try {
             return writeHeader(safeLength);
         } catch (WriteAfterEOFException ignored) {
-            //! Defensive compatibility: no current regression makes advanceOrdinaryAppendCycle fail after EOF.
-            //! Clear an older Wire's transient inside-header state so such a failure cannot strand this appender;
-            //! remove this branch when the minimum Wire version guarantees that cleanup itself.
-            // Older Wire versions leave transient acquisition state set after observing EOF.
-            // Clear that state without altering the observed EOF seal before selecting the next roll.
+            //! Current Wire clears insideHeader before throwing, so tests against that dependency cannot discriminate
+            //! this compatibility call. Older binary-compatible Wire versions leave the transient state set; clearing
+            //! it before cycle selection prevents a subsequent rollover failure from stranding this appender. Remove
+            //! the fallback when the minimum Wire version guarantees its own cleanup.
+            // Clear transient acquisition state without altering the durable EOF before selecting the next roll.
             ((InternalWire) wire).forceNotInsideHeader();
             advanceOrdinaryAppendCycle();
             try {
