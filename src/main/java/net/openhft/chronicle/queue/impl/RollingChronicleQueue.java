@@ -49,10 +49,14 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      */
     int firstCycle();
 
+    //! StoreAppenderTest#deletingHighestRollWithMetadataFailsClosed demonstrates why the last cycle is the published
+    //! maximum, not a physical maximum that may move backwards after unsupported deletion of the current roll.
     /**
-     * Finds and returns the last cycle number available in the queue.
+     * Finds and returns the highest cycle published by the queue.
      *
-     * @return the last cycle number, or {@code Integer.MIN_VALUE} if no cycles are found.
+     * @return the highest published cycle, or {@code Integer.MIN_VALUE} if no cycles have been published
+     * @throws IllegalStateException if a writable directory refresh finds that the published maximum is missing
+     *                               while Queue metadata remains
      */
     int lastCycle();
 
