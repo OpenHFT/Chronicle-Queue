@@ -129,8 +129,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             final long observedModCount = modCount.getVolatileValue();
             final long observedStoredMin = minCycleValue.getVolatileValue();
             final long observedStoredMax = maxCycleValue.getVolatileValue();
-            //! readOnlyListingDecodesRawStorageSentinelAsUnset and persistedCyclesOutsideDomainFailClosed require
-            //! every mapped long to be decoded and range checked before it participates in cycle arithmetic.
+            //! persistedCyclesOutsideDomainFailClosed requires every mapped long to be decoded and range checked
+            //! before it participates in cycle arithmetic.
             final int observedMax = decodeMaxCycle(observedStoredMax);
             decodeMinCycle(observedStoredMin, observedMax);
 
@@ -156,11 +156,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
             int min = INITIAL_MIN_CYCLE;
             if (!INITIAL_MIN_FILENAME.equals(minFilename))
-                min = requireCycle(fileNameToCycleFunction.applyAsInt(minFilename), LOWEST_CREATED_CYCLE);
+                min = fileNameToCycleFunction.applyAsInt(minFilename);
 
             int max = UNSET_CONTEXT;
             if (!INITIAL_MAX_FILENAME.equals(maxFilename))
-                max = requireCycle(fileNameToCycleFunction.applyAsInt(maxFilename), HIGHEST_CREATED_CYCLE);
+                max = fileNameToCycleFunction.applyAsInt(maxFilename);
 
             if (observedModCount != modCount.getVolatileValue()
                     || observedStoredMin != minCycleValue.getVolatileValue()

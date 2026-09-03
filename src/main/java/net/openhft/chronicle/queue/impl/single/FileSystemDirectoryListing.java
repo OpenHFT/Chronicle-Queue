@@ -86,11 +86,11 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
         // Update the minimum and maximum cycles based on the filenames
         int min = INITIAL_MIN_CYCLE;
         if (!INITIAL_MIN_FILENAME.equals(minFilename))
-            min = requireCycle(fileNameToCycleFunction.applyAsInt(minFilename), "filesystem minimum");
+            min = fileNameToCycleFunction.applyAsInt(minFilename);
 
         int max = UNSET_CONTEXT;
         if (!INITIAL_MAX_FILENAME.equals(maxFilename))
-            max = requireCycle(fileNameToCycleFunction.applyAsInt(maxFilename), "filesystem maximum");
+            max = fileNameToCycleFunction.applyAsInt(maxFilename);
 
         minCreatedCycle = min;
         maxCreatedCycle = max;
@@ -148,6 +148,8 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
      */
     @Override
     public void onRoll(int cycle) {
+        //! fileSystemListingDistinguishesMaximumCycleFromUnset also requires invalid in-process cycle values to be
+        //! rejected before they can collide with the semantic unset state.
         final int validCycle = requireCycle(cycle, "roll cycle");
         minCreatedCycle = Math.min(minCreatedCycle, validCycle);
         maxCreatedCycle = Math.max(maxCreatedCycle, validCycle);

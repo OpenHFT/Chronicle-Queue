@@ -334,6 +334,10 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMinCreatedCycle());
         assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
         assertEquals(Integer.MAX_VALUE, persistedCycle("listing.lowestCycle"));
+
+        listing.refresh(true);
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
+        assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
     }
 
     @Test
