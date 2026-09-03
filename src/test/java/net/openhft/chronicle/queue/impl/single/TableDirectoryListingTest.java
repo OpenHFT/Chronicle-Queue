@@ -332,12 +332,20 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     public void freshListingReportsUnsetCycle() {
         assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
         assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMinCreatedCycle());
-        assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
+        assertEquals(MarshallableOut.UNSET_CONTEXT, persistedCycle("listing.highestCycle"));
         assertEquals(Integer.MAX_VALUE, persistedCycle("listing.lowestCycle"));
 
         listing.refresh(true);
         assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
-        assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
+        assertEquals(MarshallableOut.UNSET_CONTEXT, persistedCycle("listing.highestCycle"));
+    }
+
+    @Test
+    public void readOnlyListingDecodesLegacyUnsetCycle() {
+        setPersistedCycle("listing.highestCycle", Integer.MIN_VALUE);
+
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMinCreatedCycle());
     }
 
     @Test

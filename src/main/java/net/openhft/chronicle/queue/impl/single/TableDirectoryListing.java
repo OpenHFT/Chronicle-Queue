@@ -84,10 +84,10 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
-            //! freshListingReportsUnsetCycle requires the legacy mapped empty-Queue representation as well as the
-            //! decoded UNSET_CONTEXT result. Retain these compatibility writes so older processes do not narrow a
-            //! newly allocated Long.MIN_VALUE to cycle zero.
-            maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, LEGACY_UNSET_MAX_CYCLE);
+            //! freshListingReportsUnsetCycle requires a newly allocated Long.MIN_VALUE to be replaced before another
+            //! process can narrow it to cycle zero. New writers persist the domain's UNSET_CONTEXT value; the decoder
+            //! separately accepts the Integer.MIN_VALUE representation written by develop's empty refresh.
+            maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_CONTEXT);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, INITIAL_MIN_CYCLE);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
@@ -180,8 +180,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
             // The CAS closes the remaining check/publication window for a legacy writer. A
             // failed CAS means its publication won and the directory must be scanned again.
-            final long storedMax = max == UNSET_CONTEXT ? LEGACY_UNSET_MAX_CYCLE : max;
-            if (!maxCycleValue.compareAndSwapValue(observedStoredMax, storedMax)) {
+            //! freshListingReportsUnsetCycle also requires an empty refresh to retain the domain sentinel rather than
+            //! reintroduce develop's Integer.MIN_VALUE representation.
+            if (!maxCycleValue.compareAndSwapValue(observedStoredMax, max)) {
                 Jvm.nanoPause();
                 continue;
             }
@@ -293,10 +294,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * @return The maximum cycle value.
      */
     private int getMaxCycleValue() {
-        //! freshListingReportsUnsetCycle, readOnlyListingDecodesRawStorageSentinelAsUnset,
+        //! freshListingReportsUnsetCycle, readOnlyListingDecodesLegacyUnsetCycle,
+        //! readOnlyListingDecodesRawStorageSentinelAsUnset,
         //! readOnlyListingHidesPartiallyPublishedCycleZero, unsetToCycleZeroPublicationSurvivesReopen and
         //! persistedCyclesOutsideDomainFailClosed require storage sentinels and corrupt values to be handled before
-        //! narrowing. Writable initialisation is only compatibility canonicalisation, not a prerequisite for reads.
+        //! narrowing. Writable initialisation reduces the observation window but is not a prerequisite for reads.
         return decodeMaxCycle(maxCycleValue.getVolatileValue());
     }
 
