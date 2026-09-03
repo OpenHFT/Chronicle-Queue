@@ -244,7 +244,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCleanupDir() throws Throwable {
+    public void testCleanupDir() {
         if (OS.isWindows())
             FlakyTestRunner.builder(this::testCleanupDir0).build().run();
         else
@@ -1755,7 +1755,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testToEndAfterOfflineQueueDeletion() throws IOException {
+    public void testToEndAfterOfflineQueueDeletion() {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
@@ -3541,7 +3541,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return clock;
     }
 
-    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException, InterruptedException {
+    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException {
         String time = Instant.ofEpochMilli(clock.get()).toString();
 
         final Random random = new Random(0xDEADBEEF);
