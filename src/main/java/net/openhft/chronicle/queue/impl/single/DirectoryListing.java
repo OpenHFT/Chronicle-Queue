@@ -52,14 +52,16 @@ public interface DirectoryListing extends Closeable {
     /**
      * Returns the minimum cycle number created so far.
      *
-     * @return The minimum cycle number.
+     * @return the minimum UInt31 cycle, or {@link net.openhft.chronicle.wire.MarshallableOut#UNSET_CONTEXT}
+     *         if no cycle has been published
      */
     int getMinCreatedCycle();
 
     /**
      * Returns the maximum cycle number created so far.
      *
-     * @return The maximum cycle number.
+     * @return the maximum UInt31 cycle, or {@link net.openhft.chronicle.wire.MarshallableOut#UNSET_CONTEXT}
+     *         if no cycle has been published
      */
     int getMaxCreatedCycle();
 

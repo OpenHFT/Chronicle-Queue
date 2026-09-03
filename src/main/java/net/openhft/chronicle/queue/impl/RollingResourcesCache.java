@@ -103,12 +103,6 @@ public class RollingResourcesCache {
                 if (parse.isSupported(weekFields.weekBasedYear()) && parse.isSupported(weekFields.weekOfWeekBasedYear())) {
                     int year = Math.toIntExact(parse.getLong(weekFields.weekBasedYear()));
                     int week = Math.toIntExact(parse.getLong(weekFields.weekOfWeekBasedYear()));
-                    final int rollDayOfWeek = LocalDate.ofEpochDay(epoch / ONE_DAY_IN_MILLIS)
-                            .get(weekFields.dayOfWeek());
-                    LocalDate ld = LocalDate.of(year, 7, 1)
-                            .with(weekFields.weekBasedYear(), year)
-                            .with(weekFields.weekOfWeekBasedYear(), week)
-                            .with(weekFields.dayOfWeek(), rollDayOfWeek);
                     //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle,
                     //! #namedWeeklyFormatRoundTripsLocaleYearBoundaries and
                     //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer fail when a week-formatted filename
@@ -116,6 +110,12 @@ public class RollingResourcesCache {
                     //! select another week at locale/year boundaries. Resolve the parsed week-based fields on the
                     //! roll epoch's weekday, then apply the same length-and-epoch geometry as every other format so
                     //! resourceFor(cycle) and parseCount(name) remain inverses.
+                    final int rollDayOfWeek = LocalDate.ofEpochDay(epoch / ONE_DAY_IN_MILLIS)
+                            .get(weekFields.dayOfWeek());
+                    LocalDate ld = LocalDate.of(year, 7, 1)
+                            .with(weekFields.weekBasedYear(), year)
+                            .with(weekFields.weekOfWeekBasedYear(), week)
+                            .with(weekFields.dayOfWeek(), rollDayOfWeek);
                     long epochSecond = ld.toEpochDay() * 86400;
                     return Maths.toInt32((epochSecond - (epoch / 1000)) / (length / 1000));
                 }

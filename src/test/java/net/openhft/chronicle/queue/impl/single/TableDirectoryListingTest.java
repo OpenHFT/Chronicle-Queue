@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
@@ -11,6 +12,7 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.wire.MarshallableOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,6 +32,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     private TableStore<Metadata.NoMeta> tablestore;
     private TableStore<Metadata.NoMeta> tablestoreReadOnly;
     private File testDirectory;
+    private File tableFile;
     private File tempFile;
 
     @NotNull
@@ -41,18 +44,18 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     public void setUp() throws IOException {
         testDirectory = testDirectory();
         testDirectory.mkdirs();
-        File tableFile = new File(testDirectory, "dir-list" + SingleTableStore.SUFFIX);
+        tableFile = new File(testDirectory, "dir-list" + SingleTableStore.SUFFIX);
         tablestore = SingleTableBuilder.
                 binary(tableFile, Metadata.NoMeta.INSTANCE).build();
-        tablestoreReadOnly = SingleTableBuilder.
-                binary(tableFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
         SystemTimeProvider time = SystemTimeProvider.INSTANCE;
         listing = new TableDirectoryListing(tablestore,
                 testDirectory.toPath(),
                 f -> Integer.parseInt(f.split("\\.")[0]),
                 time);
-        listingReadOnly = new TableDirectoryListingReadOnly(tablestore, time);
         listing.init();
+        tablestoreReadOnly = SingleTableBuilder.
+                binary(tableFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
+        listingReadOnly = new TableDirectoryListingReadOnly(tablestoreReadOnly, time);
         listingReadOnly.init();
         tempFile = File.createTempFile("foo", "bar");
         tempFile.deleteOnExit();
@@ -60,7 +63,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
     @Override
     public void preAfter() {
-        Closeable.closeQuietly(tablestore, tablestoreReadOnly, listing, listingReadOnly);
+        Closeable.closeQuietly(listing, listingReadOnly, tablestore, tablestoreReadOnly);
     }
 
     @Test(expected = IllegalStateException.class)
@@ -122,9 +125,11 @@ public class TableDirectoryListingTest extends QueueTestCommon {
                 SystemTimeProvider.INSTANCE);
         try {
             failedListing.init();
+            final long refreshTime = failedListing.lastRefreshTimeMS();
             failedListing.refresh(true);
             assertEquals(7, failedListing.getMaxCreatedCycle());
             assertEquals(7, failedListing.getMinCreatedCycle());
+            assertEquals(refreshTime, failedListing.lastRefreshTimeMS());
         } finally {
             failedListing.close();
         }
@@ -324,8 +329,126 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void freshListingReportsUnsetMaximum() {
-        assertEquals(TableDirectoryListing.UNSET_MAX_CYCLE, listing.getMaxCreatedCycle());
+    public void freshListingReportsUnsetCycle() {
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMinCreatedCycle());
+        assertEquals(MarshallableOut.UNSET_CONTEXT, persistedCycle("listing.highestCycle"));
+        assertEquals(Integer.MAX_VALUE, persistedCycle("listing.lowestCycle"));
+
+        listing.refresh(true);
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
+        assertEquals(MarshallableOut.UNSET_CONTEXT, persistedCycle("listing.highestCycle"));
+    }
+
+    @Test
+    public void readOnlyListingDecodesLegacyUnsetCycle() {
+        setPersistedCycle("listing.highestCycle", Integer.MIN_VALUE);
+
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMinCreatedCycle());
+    }
+
+    @Test
+    public void readOnlyListingDecodesRawStorageSentinelAsUnset() {
+        try (MappedBytes bytes = tablestoreReadOnly.bytes()) {
+            assertTrue(bytes.isBackingFileReadOnly());
+        }
+        setPersistedCycle("listing.highestCycle", Long.MIN_VALUE);
+
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMaxCreatedCycle());
+    }
+
+    @Test
+    public void readOnlyListingHidesPartiallyPublishedCycleZero() {
+        setPersistedCycle("listing.highestCycle", Long.MIN_VALUE);
+        setPersistedCycle("listing.lowestCycle", 0);
+        reopenReadOnlyListing();
+
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMinCreatedCycle());
+
+        setPersistedCycle("listing.highestCycle", 0);
+        assertEquals(0, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(0, listingReadOnly.getMinCreatedCycle());
+    }
+
+    @Test
+    public void unsetToCycleZeroPublicationSurvivesReopen() {
+        listing.onRoll(0);
+        assertEquals(0, listing.getMaxCreatedCycle());
+        assertEquals(0, listing.getMinCreatedCycle());
+
+        reopenReadOnlyListing();
+        assertEquals(0, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(0, listingReadOnly.getMinCreatedCycle());
+    }
+
+    @Test
+    public void publishedCycleZeroMissingItsFileFailsClosed() {
+        listing.onRoll(0);
+
+        final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> listing.refresh(true));
+
+        assertTrue(failure.getMessage().contains("Highest/current roll 0 disappeared"));
+        assertEquals(0, listing.getMaxCreatedCycle());
+    }
+
+    @Test
+    public void persistedCyclesOutsideDomainFailClosed() {
+        setPersistedCycle("listing.highestCycle", -2);
+        assertInvalidStoredCycle("listing.highestCycle", -2, listingReadOnly::getMaxCreatedCycle);
+        assertInvalidStoredCycle("listing.highestCycle", -2, () -> listing.refresh(true));
+
+        final long aboveUInt31 = (long) Integer.MAX_VALUE + 1;
+        setPersistedCycle("listing.highestCycle", aboveUInt31);
+        assertInvalidStoredCycle("listing.highestCycle", aboveUInt31, listingReadOnly::getMaxCreatedCycle);
+        assertInvalidStoredCycle("listing.highestCycle", aboveUInt31, () -> listing.refresh(true));
+
+        setPersistedCycle("listing.highestCycle", 0);
+        setPersistedCycle("listing.lowestCycle", -2);
+        assertInvalidStoredCycle("listing.lowestCycle", -2, listingReadOnly::getMinCreatedCycle);
+        assertInvalidStoredCycle("listing.lowestCycle", -2, () -> listing.refresh(true));
+
+        setPersistedCycle("listing.lowestCycle", aboveUInt31);
+        assertInvalidStoredCycle("listing.lowestCycle", aboveUInt31, listingReadOnly::getMinCreatedCycle);
+        assertInvalidStoredCycle("listing.lowestCycle", aboveUInt31, () -> listing.refresh(true));
+    }
+
+    @Test
+    public void maximumCycleRoundTripsAsAValidMinimum() {
+        listing.onRoll(Integer.MAX_VALUE);
+
+        assertEquals(Integer.MAX_VALUE, listing.getMaxCreatedCycle());
+        assertEquals(Integer.MAX_VALUE, listing.getMinCreatedCycle());
+        reopenReadOnlyListing();
+        assertEquals(Integer.MAX_VALUE, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(Integer.MAX_VALUE, listingReadOnly.getMinCreatedCycle());
+    }
+
+    @Test
+    public void onRollRejectsCyclesOutsideUInt31() {
+        assertThrows(IllegalStateException.class, () -> listing.onRoll(MarshallableOut.UNSET_CONTEXT));
+    }
+
+    @Test
+    public void fileSystemListingDistinguishesMaximumCycleFromUnset() {
+        final DirectoryListing fileSystemListing = new FileSystemDirectoryListing(
+                testDirectory,
+                f -> Integer.parseInt(f.split("\\.")[0]),
+                SystemTimeProvider.INSTANCE);
+        try {
+            fileSystemListing.refresh(true);
+            assertEquals(MarshallableOut.UNSET_CONTEXT, fileSystemListing.getMaxCreatedCycle());
+            assertEquals(MarshallableOut.UNSET_CONTEXT, fileSystemListing.getMinCreatedCycle());
+
+            fileSystemListing.onRoll(Integer.MAX_VALUE);
+            assertEquals(Integer.MAX_VALUE, fileSystemListing.getMaxCreatedCycle());
+            assertEquals(Integer.MAX_VALUE, fileSystemListing.getMinCreatedCycle());
+            assertThrows(IllegalStateException.class,
+                    () -> fileSystemListing.onRoll(MarshallableOut.UNSET_CONTEXT));
+        } finally {
+            fileSystemListing.close();
+        }
     }
 
     @Test
@@ -357,5 +480,30 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         } finally {
             value.close();
         }
+    }
+
+    private void setPersistedCycle(final String key, final long cycle) {
+        final LongValue value = tablestore.acquireValueFor(key);
+        try {
+            value.setVolatileValue(cycle);
+        } finally {
+            value.close();
+        }
+    }
+
+    private void reopenReadOnlyListing() {
+        Closeable.closeQuietly(listingReadOnly, tablestoreReadOnly);
+        tablestoreReadOnly = SingleTableBuilder.
+                binary(tableFile, Metadata.NoMeta.INSTANCE).readOnly(true).build();
+        listingReadOnly = new TableDirectoryListingReadOnly(tablestoreReadOnly, SystemTimeProvider.INSTANCE);
+        listingReadOnly.init();
+    }
+
+    private static void assertInvalidStoredCycle(final String fieldName,
+                                                 final long cycle,
+                                                 final Runnable read) {
+        final IllegalStateException failure = assertThrows(IllegalStateException.class, read::run);
+        assertTrue(failure.getMessage().contains(fieldName));
+        assertTrue(failure.getMessage().contains(Long.toString(cycle)));
     }
 }
