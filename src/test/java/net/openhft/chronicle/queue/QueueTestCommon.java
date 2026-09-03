@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -14,6 +15,7 @@ import net.openhft.chronicle.core.threads.CleaningThread;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.queue.util.HugetlbfsTestUtil;
+import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.MessageHistory;
 import org.jetbrains.annotations.NotNull;
@@ -234,6 +236,7 @@ public class QueueTestCommon {
 
         // find any discarded resources.
         AbstractCloseable.waitForCloseablesToClose(100);
+        drainBackgroundCleanup();
 
         if (finishedNormally) {
             assertReferencesReleased();
@@ -245,6 +248,18 @@ public class QueueTestCommon {
     }
 
     protected void preAfter() {
+    }
+
+    /**
+     * Drain background resource releaser and trigger a GC cycle to ensure
+     * mapped file handles queued for async release are fully processed before
+     * leak-check assertions run.
+     */
+    protected void drainBackgroundCleanup() {
+        BackgroundResourceReleaser.releasePendingResources();
+        GcControls.requestGcCycle();
+        GcControls.waitForGcCycle();
+        BackgroundResourceReleaser.releasePendingResources();
     }
 
     protected void tearDown() {

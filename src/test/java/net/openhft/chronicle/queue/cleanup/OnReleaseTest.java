@@ -68,7 +68,9 @@ public class OnReleaseTest extends QueueTestCommon {
                 stp.advanceMillis(66_000);
             }
         } finally {
+            drainBackgroundCleanup();
             IOTools.deleteDirWithFiles(path);
         }
     }
+
 }

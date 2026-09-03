@@ -129,11 +129,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
         ignoreException("seconds to ASYNC");
         ignoreException("Running test with ");
 
-        finishedNormally = false;
         stress0();
-
-        // System.out.println("Test complete");
-        finishedNormally = true;
     }
 
     void run() throws InterruptedException {
