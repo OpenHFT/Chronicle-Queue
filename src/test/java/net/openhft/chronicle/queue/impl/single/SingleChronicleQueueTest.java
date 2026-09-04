@@ -14,7 +14,6 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -25,6 +24,7 @@ import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
@@ -245,17 +245,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void testCleanupDir() {
-        if (OS.isWindows())
-            FlakyTestRunner.builder(this::testCleanupDir0).build().run();
-        else
-            testCleanupDir0();
+        testCleanupDir0();
     }
 
     private void testCleanupDir0() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue =
-                     builder(tmpDir, wireType)
-                             .build();
+                     builder(tmpDir, wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
 
             try (DocumentContext dc = appender.writingDocument()) {
@@ -265,7 +261,14 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         // explicitly call so as to clean and release everything
         afterChecks();
         recordExceptions();
-        IOTools.deleteDirWithFilesOrThrow(tmpDir);
+        try {
+            IOTools.deleteDirWithFilesOrThrow(tmpDir);
+        } catch (Throwable e) {
+            if (OS.isWindows())
+                LoggerFactory.getLogger(getClass()).warn("Failed to cleanup dir", e);
+            else
+                throw Jvm.rethrow(e);
+        }
     }
 
     @Test
