@@ -14,16 +14,24 @@ Example configuration of `rollCycle`:
 * `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
 * `RollCycles.HOURLY` every hour, a new queue file will be created for written events
 
-As new files are created (the queue is rolled) to accommodate events being written to the queue, a persisted data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
-_cycle_ numbers present in the directory.
+As new files are created (the queue is rolled) to accommodate events being written to the queue, a persisted data-structure
+(`directory-listing.cq4t`) is updated with the lowest and highest _cycle_ numbers present in the directory.
 Maintaining this table allows an `ExcerptTailer` to busy-spin waiting for new data to be appended to the queue, without the need to make costly calls to the file-system to check for the existence of new queue files.
 
 The following sections describe how rolling is performed, how the roll cycle interval can be customized, and finally provide some general advice to consider when deciding the rolling schedule.
 
 == How Rolling Works
 
-When the queue reaches the point in time when it should roll, the appender will atomically write an end-of-file (EOF) mark at the end of the current file, to indicate that no other appender should write to it.
+When the queue reaches the point in time when it should roll, the appender will atomically write an end-of-file (EOF) mark at the end
+of the current file, to indicate that no ordinary appender should write to it.
 Likewise, no tailer should read further than this mark.
+
+//! canBackfillPreviousCycleAfterEOF and exactBackfillFindsEofInEmptySealedCycle require the
+//! ordinary-write seal to remain distinguishable from the explicitly invoked exact-recovery path.
+An EOF is not an archival-safety marker when exact-index replication recovery
+is enabled. The validated recovery path can temporarily reopen a sealed roll;
+see xref:replication:replication.adoc[Replication] for the required maintenance
+exclusion and completion contract.
 
 If the process was shut down and later restarted after rolling should have occurred, the appender will try to locate the old file(s) and write the EOF marker.
 However, after a certain timeout, the tailers will act as if there is an EOF mark in the file(s) regardless.
@@ -186,7 +194,14 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
 == Archiving Old Queue Files ★
 
 Over time, it may become necessary to automatically delete or archive old queue files.
-An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete. facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the xref:command-line:command_line_tools.adoc#_archiverollfiles[ArchiveRollFiles utility].
+//! InternalAppenderWriteBytesTest#canBackfillPreviousCycleAfterEOF establishes only that EOF can be reopened.
+//! StoreAppenderTest#historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion establishes the explicit
+//! completion boundary; the surrounding replication and maintenance exclusion remains an integration duty.
+An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete. When
+exact-index recovery is enabled, it must also coordinate with recovery as described in
+xref:replication:replication.adoc[Replication]; EOF and a zero reference count do not by themselves prove permanent immutability. To
+facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the
+xref:command-line:command_line_tools.adoc#_archiverollfiles[ArchiveRollFiles utility].
 
 == General Advice on Rolling
 
