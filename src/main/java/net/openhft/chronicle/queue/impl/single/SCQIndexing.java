@@ -565,8 +565,18 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
+        return linearScanByPosition(wire, toPosition, indexOfNext, startAddress, inclusive, true);
+    }
+
+    private long linearScanByPosition(@NotNull final Wire wire,
+                                      final long toPosition,
+                                      final long indexOfNext,
+                                      final long startAddress,
+                                      boolean inclusive,
+                                      boolean useLastSequenceShortcut) throws EOFException {
         long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
-        long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
+        long index = linearScanByPosition0(
+                wire, toPosition, indexOfNext, startAddress, inclusive, useLastSequenceShortcut);
         if (REPORT_LINEAR_SCAN) {
             printLinearScanTime(index, startAddress, start, "linearScan by position");
         }
@@ -591,6 +601,15 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                long indexOfNext,
                                long startAddress,
                                boolean inclusive) throws EOFException {
+        return linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive, true);
+    }
+
+    private long linearScanByPosition0(@NotNull final Wire wire,
+                                       final long toPosition,
+                                       long indexOfNext,
+                                       long startAddress,
+                                       boolean inclusive,
+                                       boolean useLastSequenceShortcut) throws EOFException {
         linearScanByPositionCount++;
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
@@ -598,9 +617,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         // Optimized path if the `toPosition` is the last written position.
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        long lastIndex = useLastSequenceShortcut
+                ? this.sequence.getSequence(lastAddress)
+                : Sequence.NOT_FOUND;
 
-        i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
+        i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes,
+                lastAddress, lastIndex, useLastSequenceShortcut);
 
         // Scan through the entries until the target position is found or exceeded.
         while (bytes.readPosition() <= toPosition) {
@@ -663,8 +685,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @param lastIndex    The index of the last written entry.
      * @return The starting index for the scan.
      */
-    private long calculateInitialValue(long toPosition, long indexOfNext, long startAddress, Bytes<?> bytes, long lastAddress, long lastIndex) {
-        if (lastAddress > 0 && toPosition == lastAddress
+    private long calculateInitialValue(long toPosition,
+                                       long indexOfNext,
+                                       long startAddress,
+                                       Bytes<?> bytes,
+                                       long lastAddress,
+                                       long lastIndex,
+                                       boolean useLastSequenceShortcut) {
+        if (useLastSequenceShortcut && lastAddress > 0 && toPosition == lastAddress
                 && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
             bytes.readPositionUnlimited(toPosition);
             return lastIndex - 1;
@@ -723,9 +751,24 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     long sequenceForPosition(@NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive) throws StreamCorruptedException {
+        return sequenceForPosition(ec.wireForIndex(), position, inclusive, true);
+    }
+
+    long sequenceForPositionWithoutSequenceShortcut(@NotNull Wire wire,
+                                                     final long position,
+                                                     boolean inclusive) throws StreamCorruptedException {
+        //! StoreAppenderTest#exactPreflightRejectsStaleAliasingEncodedSequence requires exact preflight to use the
+        //! sparse index but not the usual last-position shortcut. That shortcut trusts the lossy paired sequence, so
+        //! a crash can make an older aliased pair validate a newer full write position and misclassify exact-next.
+        return sequenceForPosition(wire, position, inclusive, false);
+    }
+
+    private long sequenceForPosition(@NotNull Wire wire,
+                                     final long position,
+                                     boolean inclusive,
+                                     boolean useLastSequenceShortcut) throws StreamCorruptedException {
         long indexOfNext = 0;
         long lastKnownAddress = 0;
-        @NotNull Wire wire = ec.wireForIndex();
         try {
             final LongArrayValues index2indexArr = getIndex2index(wire);
             int used2 = getUsedAsInt(index2indexArr);
@@ -773,7 +816,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
         try {
             // Perform a linear scan if no exact match is found.
-            return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive);
+            return linearScanByPosition(
+                    wire, position, indexOfNext, lastKnownAddress, inclusive, useLastSequenceShortcut);
         } catch (EOFException e) {
             throw new UncheckedIOException(e);
         }
@@ -967,8 +1011,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             for (int i = 0; i < 128; i++) {
 
                 long address = writePosition.getVolatileValue(0);
+                //! eosOnlyRestartPreservesReadySequenceZeroBeforeOrdinaryAppend reproduces the address-zero crash
+                //! where ready data reaches storage before writePosition. Returning empty here loses that record;
+                //! the existing physical scan can classify it without attempting general index repair.
+                //! restartScansCommittedRecordAfterSparseIndexPublicationWasLost is integration evidence for the
+                //! pre-existing non-zero-address scan and deliberately does not claim this changed branch.
                 if (address == 0)
-                    return -1;
+                    break;
                 long sequence = sequence1.getSequence(address);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;

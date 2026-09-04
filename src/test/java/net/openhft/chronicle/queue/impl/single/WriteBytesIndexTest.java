@@ -41,7 +41,6 @@ public class WriteBytesIndexTest extends QueueTestCommon {
                         ((InternalAppender) a0).writeBytes(index, bytes);
                     }
 
-                    // try a1
                     ((InternalAppender) a1).writeBytes(index, bytes);
                     assertTrue(t1.readBytes(bytes2.clear()));
                     if (!bytes.contentEquals(bytes2)) {

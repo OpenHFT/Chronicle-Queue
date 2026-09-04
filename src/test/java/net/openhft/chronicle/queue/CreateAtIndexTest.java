@@ -18,9 +18,7 @@ import java.io.File;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.single;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
 public class CreateAtIndexTest extends QueueTestCommon {
@@ -28,6 +26,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
     @Test
     public void
     testWriteBytesWithIndex() {
+        ignoreException("Exact-index recovery reopened end-of-data");
         final Bytes<?> HELLO_WORLD = Bytes.from("hello world");
         File tmp = getTmpDir();
         try (ChronicleQueue queue = single(tmp).testBlockSize().rollCycle(TEST_DAILY).build();
@@ -41,37 +40,14 @@ public class CreateAtIndexTest extends QueueTestCommon {
                 .testBlockSize()
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
+            final String before = queue.dump();
 
-            String before = queue.dump();
-            appender.writeBytes(0x421d00000000L, HELLO_WORLD);
-            String after = queue.dump();
-            // the appender's first write normalises EOFs, adding a normalisedEOFsTo record;
-            // assert that delta explicitly, then require the dumps to match once it is masked out
-            assertFalse(before.contains("normalisedEOFsTo"));
-            assertTrue(after.contains("normalisedEOFsTo"));
-            assertEquals(cleanDump(before), cleanDump(after));
+            expectException("Exact-index duplicate differs from published content and was ignored");
+            appender.writeBytes(0x421d00000000L, Bytes.from("ignored duplicate"));
+
+            assertEquals("a published duplicate must not mutate persisted Queue state",
+                    before, queue.dump());
         }
-
-/*
-        TODO FIX
-        if (Jvm.isAssertEnabled()) {
-            try (ChronicleQueue queue = single(tmp)
-                    .testBlockSize()
-                    .build()) {
-                InternalAppender appender = (InternalAppender) queue.acquireAppender();
-
-                String before = queue.dump();
-                try {
-                    appender.writeBytes(0x421d00000000L, Bytes.from("hellooooo world"));
-                    fail();
-                } catch (IllegalStateException e) {
-                    // expected
-                }
-                String after = queue.dump();
-                assertEquals(before, after);
-            }
-        }
-        */
 
         // try too far
         try (ChronicleQueue queue = single(tmp)
@@ -96,13 +72,6 @@ public class CreateAtIndexTest extends QueueTestCommon {
             IOTools.deleteDirWithFiles(tmp, 2);
         } catch (IORuntimeException ignored) {
         }
-    }
-
-    private static String cleanDump(String dump) {
-        return dump
-                .replaceAll("# \\d+ bytes remaining", "# NN bytes remaining")
-                .replaceAll("modCount: (\\d+)", "modCount: 00")
-                .replaceAll("# position: \\d+, header: \\d+\\R--- !!data #binary\\RnormalisedEOFsTo: \\d+\\R", "");
     }
 
     @Test
