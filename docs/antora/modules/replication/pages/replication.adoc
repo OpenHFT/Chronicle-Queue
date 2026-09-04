@@ -33,6 +33,99 @@ At startup, replication locks the `source` queue, and waits for the `sink`(s) to
 If the `sink` has more records, they are replayed back to `source` (this is also known as "back filling") before it is unlocked and made usable again.
 This is done to provide automatic data re-synchronisation after a failover to the `sink`.
 
+//! StoreAppenderTest#ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle,
+//! #sequentialWriteBytesRollsForwardPastSealedCurrentCycle and
+//! InternalAppenderWriteBytesTest#canBackfillPreviousCycleAfterEOF require a narrow distinction: the explicit
+//! exact-next path may reopen a historical seal, while ordinary append always treats EOF as final for that cycle.
+Back-fill can legitimately reopen a roll that the receiving node has already
+sealed. For example, leader A can fail after C received entries that B did not.
+If B is elected leader, time can advance and cause B to seal the incomplete
+older roll before C returns the missing entries. The end-of-data marker records
+B's incomplete local observation; it is not a cluster-wide decision that C's
+data may be discarded. Only the locked, exact-index back-fill path may replace
+that marker. Ordinary Queue appenders never replace it; if they encounter a
+sealed cycle, they roll forward to a writable cycle.
+The Queue recovery warning includes queue path, cycle and index. Replication
+should log its source and peer host context around this operation.
+
+If a back-fill attempt leaves its requested entry incomplete, CQE restarts by
+replaying that same index. A new Queue instance can replace the incomplete
+header and complete the entry. The incomplete header does not retain whether
+the failed attempt opened an end-of-data marker, so resealing the roll remains
+a separate back-fill completion responsibility.
+
+This recovery does not rewind consumers that have already advanced beyond the
+reopened cycle. Enterprise back-fill completes before the replacement source is
+unlocked for normal use.
+
+//! historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion and
+//! eofRestorationFailureIsNotReportedAsSuccess establish Queue's explicit, fail-closed
+//! normalisation boundary. Retry, shared completion and maintenance exclusion remain caller-owned.
+For maintenance purposes, EOF therefore means _hard-sealed against ordinary
+writes_, not permanently immutable. Queue does not publish a persisted
+"no exact recovery is in progress or can be retried" marker. EOF, stable file
+identity, file age and a zero local reference count are not, separately or
+together, sufficient proof that a roll may be archived or deleted. A system
+that enables exact-index recovery must provide an exclusion protocol which
+covers both the maintenance eligibility check and the archive/delete action,
+and which remains held until recovery has been retried and EOF normalisation
+has completed.
+
+CQE owns retry, EOF normalisation and completion ordering for the supported
+replication use case: it retries a failed exact-index back-fill after restart,
+calls `normaliseEOFs()` before publishing back-fill completion, and keeps
+ordinary source writes excluded until then. Queue-wide archive/delete exclusion
+still requires coordination with maintenance and is not supplied by EOF or CQE
+completion alone. Another internal caller of exact-index `writeBytes` assumes
+the same retry and normalisation responsibilities.
+
+//! InternalAppenderWriteBytesTest#exactWriteReplacesAnIncompleteRequestedEntryAfterQueueRestart,
+//! InternalAppenderWriteBytesTest#canBackfillPreviousCycleAfterEOF,
+//! InternalAppenderWriteBytesTest#publishedDuplicatePayloadsAreComparedWithoutMutation,
+//! StoreAppenderTest#publishedDuplicateDoesNotAdoptLaterReadyCrashRecord and
+//! StoreAppenderTest#exactWriteAdoptsReadyFirstRecordRetryBeforeWritingNext distinguish incomplete entries, EOF, authoritative
+//! published duplicates and ready unpublished crash records. Keep those decisions explicit instead of treating
+//! final Queue contents as publication-order evidence.
+Queue inspects the requested exact index, skipping user and sparse-index
+metadata because metadata does not consume an index. If the slot contains EOF,
+Queue replaces that word with one compare-and-swap, commits the data and any
+addressable sparse-index entry, and leaves the roll open for the remaining
+back-fill. CQE restores EOF once, during completion normalisation, so a normal
+multi-entry back-fill emits at most the one EOF-reopen warning. A published
+index is authoritative. An exact write for that index compares the supplied
+payload with the stored record without overwriting it or throwing: equal
+content is reported at debug level, while different content produces a warning
+with hex dumps of both versions and the supplied message is ignored. A ready
+first-writer record left beyond write-position publication is instead adopted
+without overwriting its payload. Otherwise a new index must be exactly next; a
+gap is rejected.
+
+//! StoreAppenderTest#exactWriteDoesNotRecreateDeletedPublishedMaximum and
+//! StoreAppenderTest#exactWriteRejectsAbsentCycleWithinPublishedRange require missing physical state within the
+//! retained published bounds to fail closed. Treating it as a new empty roll can recreate unsupported deletion.
+An exact write may create an absent roll outside Queue's retained published
+bounds. It rejects an absent highest roll, and an absent interior roll within
+those bounds, because the persisted state cannot distinguish unsupported
+deletion from a never-created sparse generation.
+
+Current queue files are padded, keeping every header—including end-of-data—
+four-byte aligned for atomic replacement. Legacy `dataVersion == 0` stores are
+unpadded and remain readable, but exact-index mutation rejects them before
+changing the recovery cursor, EOF, write position or payload.
+
+//! exactRecoveryRejectsUnsupportedSequenceBeforeCreatingRoll fixes the present declared-capacity
+//! boundary; non-indexed continuation is deliberately outside this change.
+Exact replication currently supports only indices within the roll cycle's
+declared `maxMessagesPerCycle()` range. Extending physical sequences beyond the
+sparse-index capacity, including non-indexed continuation and linear lookup,
+is separate future work.
+
+//! exactRecoveryFailsIfTheEofMarkerChangesBeforeCas requires the validated aligned header to be
+//! replaced once while Queue owns its write lock; no transport or Wire recovery contract is implied.
+EOF recovery is implemented in Queue by validating the exact index and then
+performing the aligned header compare-and-swap while holding Queue's write
+lock. It does not depend on a Wire EOF-recovery operation.
+
 The set of hosts onto which the queue is replicated, is defined as a `cluster`.
 The configuration for a cluster is as follows:
 
