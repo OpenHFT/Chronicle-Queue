@@ -622,7 +622,8 @@ class StoreAppender extends AbstractCloseable
         //! doubleBufferedAppenderAndDocumentContextCountsAreUnavailable directly requires rejection
         //! before a buffered flush has selected its physical destination.
         if (queue.doubleBuffer)
-            throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
+            throw new IndexNotAvailableException("Context count is unavailable when double buffering because "
+                    + "the target cycle is selected when the buffer is flushed");
         return isClosed() ? -1 : lastOrdinaryContextCount;
     }
 
@@ -2515,7 +2516,8 @@ class StoreAppender extends AbstractCloseable
             //! requires deterministic rejection for every buffered Queue: destination/context selection
             //! occurs only when the buffer flushes, so the count cannot depend on incidental contention.
             if (queue.doubleBuffer)
-                throw new IndexNotAvailableException("Context count is unavailable when double buffering because the target cycle is selected when the buffer is flushed");
+                throw new IndexNotAvailableException("Context count is unavailable when double buffering because "
+                        + "the target cycle is selected when the buffer is flushed");
             return isClosed ? -1 : StoreAppender.this.contextCount();
         }
 
