@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.util.ClassNotFoundRuntimeException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
@@ -81,6 +82,11 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
 
     @NotNull
     public TableStore<T> build() {
+        //! Table stores require a bounded, addressable long representation. Text-family wires can write a binding outside
+        //! the declared body, while auto-detect cannot define a write format. RAW retains its bounded legacy initial-open
+        //! path; its pre-existing typed-header reopen limitation is separate. SingleTableStoreCorruptRecordTest
+        //! #unsupportedWireTypesAreRejectedBeforeCreatingAFile proves fail-fast has no filesystem side effect.
+        SingleTableStore.requireSupportedWireType(wireType);
         if (readOnly) {
             if (!file.exists())
                 throw new IORuntimeException("Metadata file not found in readOnly mode");
@@ -97,7 +103,10 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         }
 
         MappedBytes bytes = null;
-        boolean built = false;
+        //! The builder owns this mapping until a complete TableStore is returned; every earlier failure must close it.
+        //! SingleTableBuilderCorruptMetadataTest#failedHeaderDecodePreservesTheFileAndReleasesTheMapping fails if this
+        //! ownership guard is removed, because the failed mapping keeps the table-store file open on affected platforms.
+        boolean handedOver = false;
         try {
             if (!readOnly && file.createNewFile() && !file.canWrite()) {
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
@@ -134,53 +143,125 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                     }
                 }, () -> null);
             }
-            built = true;
+            //! Transfer mapping ownership only after the locked body returns a complete store; doing so earlier leaks failures
+            //! from first-header decoding or metadata override. The
+            //! SingleTableBuilderCorruptMetadataTest#metadataOverrideFailureRetainsIdentityAndReleasesTheMapping test
+            //! discriminates this ordering.
+            handedOver = true;
             return store;
         } catch (IOException e) {
             throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
         } finally {
             if (bytes != null) {
-                bytes.singleThreadedCheckReset();
-                // no table store took ownership of the mapping, so nothing else will release it
-                if (!built)
-                    bytes.close();
+                // A provisional store closes the same mapping when construction fails after deserialisation.
+                if (!bytes.isClosed()) {
+                    bytes.singleThreadedCheckReset();
+                    // no table store took ownership of the mapping, so nothing else will release it
+                    if (!handedOver)
+                        bytes.close();
+                }
             }
         }
     }
 
     @NotNull
     private TableStore<T> readTableStore(Wire wire) throws StreamCorruptedException {
+        final TableStore<T> existing = decodeTableStore(wire);
+        boolean handedOver = false;
+        try {
+            //! Metadata override is caller policy, not evidence that bytes on disk are corrupt; it must retain its original
+            //! failure type. SingleTableBuilderCorruptMetadataTest#metadataOverrideFailureRetainsIdentityAndReleasesTheMapping
+            //! fails if override is moved back inside first-header corruption translation.
+            metadata.overrideFrom(existing.metadata());
+            handedOver = true;
+            return existing;
+        } finally {
+            //! Deserialisation can create a TableStore before a later policy failure, so close that provisional owner unless
+            //! returned. SingleTableBuilderCorruptMetadataTest#metadataOverrideFailureRetainsIdentityAndReleasesTheMapping
+            //! fails if this cleanup is removed.
+            if (!handedOver)
+                Closeable.closeQuietly(existing);
+        }
+    }
+
+    @NotNull
+    @SuppressWarnings("unchecked")
+    private TableStore<T> decodeTableStore(Wire wire) throws StreamCorruptedException {
+        Object decoded = null;
         TableStore<T> existing = null;
         boolean handedOver = false;
         try {
+            //! Confine corruption translation to failures that identify the bounded on-disk header or its required type.
+            //! Persisted constructors are application hooks, so an arbitrary RuntimeException from one must retain Wire's
+            //! original failure chain rather than being relabelled as disk corruption.
+            //! SingleTableBuilderCorruptMetadataTest#unknownTypeAliasIsReportedAsCorruption and
+            //! #nestedMetadataAliasAndConstructorFailuresAreNotMisreportedAsCorruption discriminate the outer/nested
+            //! classification boundary;
+            //! SingleChronicleQueueCorruptMetadataTest#aCorruptFirstHeaderFailsWithoutWaitingForTheTableStoreLock
+            //! fails if the terminal decode failure is allowed to re-enter lock acquisition.
             wire.readFirstHeader();
             // readFirstHeader limits the read to the length that the first header declares
             final long declaredEnd = wire.bytes().readLimit();
 
             final ValueIn valueIn = readTableStoreValue(wire);
-            existing = valueIn.typedMarshallable();
-            if (existing == null)
-                throw new CorruptTableStoreException(file, "the first header holds no table store");
+            decoded = valueIn.typedMarshallable();
+            //! Decode without an inferred TableStore cast, then validate the result explicitly; otherwise a valid typed value
+            //! of the wrong class escapes as ClassCastException and can activate the queue builder's read-only fallback.
+            //! SingleTableBuilderCorruptMetadataTest#nullAndWrongTypedHeaderValuesAreReportedAsCorruption covers both forms.
+            if (!(decoded instanceof TableStore)) {
+                final String actualType = decoded == null ? "null" : decoded.getClass().getName();
+                throw new CorruptTableStoreException(file,
+                        "the first header holds " + actualType + " instead of a table store");
+            }
+            existing = (TableStore<T>) decoded;
 
             // Every later scan of this file uses the declared length. If the length disagrees with
             // the content that it describes, the whole file is misaligned.
+            //! Later record scans begin at the declared end, so a decoded header must consume that boundary exactly; accepting
+            //! trailing or over-consumed bytes misaligns every record.
+            //! SingleChronicleQueueCorruptMetadataTest#aCorruptFirstHeaderThrowsCorruptTableStoreException discriminates the
+            //! declared-versus-consumed check; #anIntactMetadataFileStillBuildsAndReadsBack guards the current healthy encoding.
             final long actualEnd = wire.bytes().readPosition();
             if (actualEnd != declaredEnd)
                 throw new CorruptTableStoreException(file, "the first header declares " + declaredEnd
                         + " bytes but its content ends at " + actualEnd);
 
-            metadata.overrideFrom(existing.metadata());
             handedOver = true;
             return existing;
-        } catch (StreamCorruptedException | BufferUnderflowException | OverlappingFileLockException e) {
-            // a corrupt length can move the read past the mapped region, and the mapping then takes
-            // a file lock that overlaps the lock this thread already holds
+        } catch (CorruptTableStoreException e) {
+            throw e;
+        } catch (StreamCorruptedException | BufferUnderflowException | ClassNotFoundRuntimeException |
+                 OverlappingFileLockException e) {
+            //! Event-name, type-alias and bounded-underflow failures arise before any caller policy hook and identify an
+            //! unreadable first header. A malformed nested length can also force mapped-chunk acquisition while this file's
+            //! table-store lock is held and surface OverlappingFileLockException at this exact boundary.
+            //! SingleTableBuilderCorruptMetadataTest#malformedFirstEventNameIsReportedAsCorruption
+            //! and SingleChronicleQueueCorruptMetadataTest#aCorruptHeaderBodyIsReportedAsCorruptionAndReleasesTheMapping
+            //! distinguish these parser failures from metadata-constructor and override failures; the nested-constructor
+            //! test proves an application-thrown overlap signal remains outside this direct decode classification.
             throw new CorruptTableStoreException(file, "the first header does not hold a readable table store", e);
+        } catch (RuntimeException e) {
+            final CorruptTableStoreException corruption = findCorruption(e);
+            if (corruption != null)
+                throw corruption;
+            throw e;
         } finally {
-            // the caller takes ownership of the table store only when this method returns it
+            //! A typed value can construct a closeable object before type or boundary validation fails; the outer builder
+            //! cannot close an object it never receives. SingleTableBuilderCorruptMetadataTest
+            //! #wrongCloseableHeaderValueIsClosedOnRejection and
+            //! #partialStoreConstructionIsCorruptionAndReleasesTheMapping exercise the wrong-type and provisional-store
+            //! cleanup edges.
             if (!handedOver)
-                Closeable.closeQuietly(existing);
+                Closeable.closeQuietly(existing != null ? existing : decoded);
         }
+    }
+
+    private CorruptTableStoreException findCorruption(Throwable failure) {
+        for (Throwable cause = failure; cause != null && cause != cause.getCause(); cause = cause.getCause()) {
+            if (cause instanceof CorruptTableStoreException)
+                return (CorruptTableStoreException) cause;
+        }
+        return null;
     }
 
     private ValueIn readTableStoreValue(@NotNull Wire wire) throws StreamCorruptedException {
@@ -196,10 +277,21 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
 
     @NotNull
     private TableStore<T> writeTableStore(MappedBytes bytes, Wire wire) {
-        TableStore<T> store = new SingleTableStore<>(wireType, bytes, metadata);
-        wire.writeEventName("header").object(store);
-        wire.updateFirstHeader();
-        return store;
+        final TableStore<T> store = new SingleTableStore<>(wireType, bytes, metadata);
+        boolean handedOver = false;
+        try {
+            wire.writeEventName("header").object(store);
+            wire.updateFirstHeader();
+            handedOver = true;
+            return store;
+        } finally {
+            //! Construction registers the new store before caller metadata is serialised and the first header is published.
+            //! SingleTableBuilderCorruptMetadataTest#failedInitialMetadataWriteClosesTheProvisionalStore fails through
+            //! resource tracing if metadata serialisation leaves that unreachable store open. Header-publication failure
+            //! follows the same finally edge but has no injectable public seam.
+            if (!handedOver)
+                Closeable.closeQuietly(store);
+        }
     }
 
     @NotNull

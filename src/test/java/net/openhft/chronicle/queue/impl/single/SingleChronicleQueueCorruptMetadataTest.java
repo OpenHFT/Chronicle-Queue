@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.CorruptTableStoreException;
@@ -12,9 +13,9 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -33,25 +34,13 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
     public void aCorruptFirstHeaderFailsWithoutWaitingForTheTableStoreLock() {
         File queueDir = queueWithCorruptMetadataHeader();
 
-        long startMs = System.currentTimeMillis();
+        long startNanos = System.nanoTime();
         Throwable thrown = buildAndCaptureFailure(queueDir);
-        long elapsedMs = System.currentTimeMillis() - startMs;
+        long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
 
         assertTrue("the build took " + elapsedMs + " ms, which is not less than the table store lock timeout of "
-                + TABLE_STORE_TIMEOUT_MS + " ms. Thrown: " + thrown, elapsedMs < TABLE_STORE_TIMEOUT_MS / 5);
-    }
-
-    /**
-     * The reported failure must name the corruption, not a lock that no other process holds.
-     */
-    @Test
-    public void aCorruptFirstHeaderIsReportedAsCorruptionNotAsLockContention() {
-        File queueDir = queueWithCorruptMetadataHeader();
-
-        Throwable thrown = buildAndCaptureFailure(queueDir);
-
-        assertFalse("the failure was reported as lock contention: " + chainOf(thrown),
-                chainOf(thrown).contains("Unable to claim"));
+                        + TABLE_STORE_TIMEOUT_MS + " ms. Thrown: " + thrown,
+                elapsedMs < Math.max(1L, TABLE_STORE_TIMEOUT_MS / 5));
     }
 
     /**
@@ -64,6 +53,22 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
         Throwable thrown = buildAndCaptureFailure(queueDir);
 
         assertEquals("thrown was " + chainOf(thrown), CorruptTableStoreException.class, thrown.getClass());
+        assertTrue("the declared-length guard was not the failing decision: " + thrown,
+                thrown.getMessage().contains("bytes but its content ends at"));
+    }
+
+    /**
+     * Corruption remains in the established I/O exception family, but must not activate the queue
+     * builder's read-only fallback.
+     */
+    @Test
+    public void corruptMetadataBypassesReadonlyFallbackAndRemainsAnIORuntimeException() {
+        File queueDir = queueWithCorruptMetadataHeader();
+
+        Throwable thrown = buildAndCaptureFailure(queueDir, true);
+
+        assertEquals("thrown was " + chainOf(thrown), CorruptTableStoreException.class, thrown.getClass());
+        assertTrue("corruption left the established I/O exception family", thrown instanceof IORuntimeException);
     }
 
     /**
@@ -102,7 +107,11 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
     }
 
     private Throwable buildAndCaptureFailure(File queueDir) {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+        return buildAndCaptureFailure(queueDir, false);
+    }
+
+    private Throwable buildAndCaptureFailure(File queueDir, boolean readOnly) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).readOnly(readOnly).build()) {
             fail("the build accepted a corrupt metadata file: " + queue);
             return null;
         } catch (AssertionError e) {

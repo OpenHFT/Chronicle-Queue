@@ -19,6 +19,7 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.impl.table.CorruptTableStoreException;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
@@ -32,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.reflect.Constructor;
 import java.nio.file.Path;
 import java.time.LocalTime;
@@ -564,9 +566,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         validateRollCycle(metapath);
         SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle(), epoch(), rollTime, rollTimeZone),
                 sourceId());
+        final boolean readOnly = readOnly();
         try {
-
-            boolean readOnly = readOnly();
             metaStore = SingleTableBuilder.binary(metapath, metadata).readOnly(readOnly).build();
             // check if metadata was overridden
             SCQMeta newMeta = metaStore.metadata();
@@ -583,18 +584,37 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             rollTime = newMeta.roll().rollTime();
             rollTimeZone = newMeta.roll().rollTimeZone();
             epoch = newMeta.roll().epoch();
+        //! Corruption remains an IORuntimeException for caller compatibility but must never enter the legacy read-only fallback:
+        //! a synthetic store would hide the damaged metadata rather than make it readable. The
+        //! SingleChronicleQueueCorruptMetadataTest#corruptMetadataBypassesReadonlyFallbackAndRemainsAnIORuntimeException test
+        //! fails if this catch is removed or reordered.
+        } catch (CorruptTableStoreException ex) {
+            throw ex;
         } catch (IORuntimeException ex) {
-            // readonly=true and file doesn't exist
-            if (OS.isWindows())
-                throw ex; // we cant have a read-only table store on windows so we have no option but to throw the ex.
-            if (ex.getMessage().equals("Metadata file not found in readOnly mode"))
-                Jvm.warn().on(getClass(), "Failback to readonly tablestore " + ex);
-            else
-                Jvm.warn().on(getClass(), "Failback to readonly tablestore", ex);
+            //! Read-only fallback exists for unavailable or not-yet-published metadata, not for arbitrary decode failures.
+            //! Falling back after a parser failure hides corrupt content behind synthetic metadata.
+            //! ReadWriteTest#testNotInitializedMetadataFile and #testNonWriteableFilesSetToReadOnly retain the intended
+            //! availability cases; the corruption tests prove malformed content still escapes.
+            final boolean missing = "Metadata file not found in readOnly mode".equals(ex.getMessage());
+            final boolean notInitialized =
+                    "Metadata file found in readOnly mode, but not initialized yet".equals(ex.getMessage());
+            final boolean inaccessible = hasCause(ex, FileNotFoundException.class);
+            if (OS.isWindows() || (!missing && !notInitialized && !inaccessible))
+                throw ex;
+
+            Jvm.warn().on(getClass(), "Failback to readonly tablestore " + ex);
 
             // Fallback to read-only table store if metadata file is not found
             metaStore = new ReadonlyTableStore<>(metadata);
         }
+    }
+
+    private static boolean hasCause(Throwable failure, Class<? extends Throwable> causeType) {
+        for (Throwable cause = failure; cause != null && cause != cause.getCause(); cause = cause.getCause()) {
+            if (causeType.isInstance(cause))
+                return true;
+        }
+        return false;
     }
 
     /**
