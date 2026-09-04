@@ -570,6 +570,7 @@ class StoreAppender extends AbstractCloseable
                 //! documents to use the same no-backward destination selector as sequential byte writes; retaining
                 //! the former local-clock selection lets the two public append paths choose different generations.
                 moveToCycleForAppend();
+
                 long safeLength = queue.overlapSize();
                 resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -746,6 +747,45 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
+     * Writes a header for the current wire, ensuring the correct position and header number
+     * is set for the next write operation.
+     *
+     * @param safeLength the safe length of data that can be written
+     * @return the position of the written header
+     */
+    private long writeHeader(final long safeLength) {
+        Bytes<?> bytes = wire.bytes();
+        // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
+        long pos = positionOfHeader;
+        long lastPos = store.writePosition();
+        if (pos < lastPos) {
+            // queue moved since we last touched it - recalculate header number
+
+            try {
+                wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
+            } catch (StreamCorruptedException ex) {
+                Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
+            }
+        }
+        int header = bytes.readVolatileInt(lastPos);
+        assert header != NOT_INITIALIZED;
+        lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
+        bytes.writePosition(lastPos);
+        return wire.enterHeader(safeLength);
+    }
+
+    private void advanceOrdinaryAppendCycle() {
+        //! eofAdvanceRejectsCycleOverflowBeforeMutation requires overflow rejection before roll creation or
+        //! publication. The source already reported END_OF_DATA, so rollCycleTo suppresses its ordinary reseal;
+        //! the flag is a defensive format invariant rather than an independently discriminated branch.
+        // Reject overflow before creating or publishing a roll. The triggering EOF already seals
+        // the source generation, so this transition must not write a second seal there.
+        if (cycle == Integer.MAX_VALUE)
+            throw new IllegalStateException("Cannot advance ordinary append beyond cycle " + cycle);
+        rollCycleTo(cycle + 1, true);
+    }
+
+    /**
      * Opens an ordinary header. END_OF_DATA advances to cycle + 1 exactly once. A second EOF
      * indicates inconsistent state and is propagated. Exact-index writes do not use this path.
      */
@@ -774,38 +814,6 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void advanceOrdinaryAppendCycle() {
-        //! eofAdvanceRejectsCycleOverflowBeforeMutation requires overflow rejection before roll creation or
-        //! publication. The source already reported END_OF_DATA, so rollCycleTo suppresses its ordinary reseal;
-        //! the flag is a defensive format invariant rather than an independently discriminated branch.
-        // Reject overflow before creating or publishing a roll. The triggering EOF already seals
-        // the source generation, so this transition must not write a second seal there.
-        if (cycle == Integer.MAX_VALUE)
-            throw new IllegalStateException("Cannot advance ordinary append beyond cycle " + cycle);
-        rollCycleTo(cycle + 1, true);
-    }
-
-    private long writeHeader(final long safeLength) {
-        Bytes<?> bytes = wire.bytes();
-        // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
-        long pos = positionOfHeader;
-        long lastPos = store.writePosition();
-        if (pos < lastPos) {
-            // queue moved since we last touched it - recalculate header number
-
-            try {
-                wire.headerNumber(queue.rollCycle().toIndex(cycle, store.lastSequenceNumber(this)));
-            } catch (StreamCorruptedException ex) {
-                Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
-            }
-        }
-        int header = bytes.readVolatileInt(lastPos);
-        assert header != NOT_INITIALIZED;
-        lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
-        bytes.writePosition(lastPos);
-        return wire.enterHeader(safeLength);
-    }
-
     /**
      * Opens a new write context for appending data, setting up the necessary parameters such as
      * the header, write position, and metadata flag.
@@ -815,9 +823,7 @@ class StoreAppender extends AbstractCloseable
      * @param rollAtEndOfData  whether this ordinary append may advance once past a sealed roll;
      *                         exact-index writes pass {@code false} and remain strict
      */
-    private void openContext(final boolean metaData,
-                             final long safeLength,
-                             final boolean rollAtEndOfData) {
+    private void openContext(final boolean metaData, final long safeLength, final boolean rollAtEndOfData) {
         assert wire != null;
         //! Exact-index recovery must remain strict while ordinary documents may cross one EOF. Keeping the policy as
         //! an explicit argument prevents writeBytesInternal() from accidentally inheriting the ordinary retry when
