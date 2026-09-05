@@ -20,8 +20,9 @@ public interface InternalAppender extends ExcerptAppender {
     //! retry, physical recovery and completion responsibilities. Without them a replication caller could treat EOF
     //! as immutable or acknowledge a backfill before resealing it; the implementation decisions are justified beside
     //! their respective branches rather than by this interface-level documentation note.
-    //! InternalAppenderWriteBytesTest#publishedDuplicatePayloadsAreComparedWithoutMutation requires this contract to
-    //! state that duplicate comparison is diagnostic and never rejects or overwrites an already-published record.
+    //! InternalAppenderWriteBytesTest#publishedDuplicatePayloadsAreComparedWithoutMutation and
+    //! StoreAppenderTest#readyCrashDuplicatesCompareMatchingAndDifferentPayloads require this contract to state that
+    //! duplicate comparison is diagnostic and never rejects or overwrites either a published or ready crash record.
     //! exactWriteDoesNotRecreateDeletedPublishedMaximum and exactWriteRejectsAbsentCycleWithinPublishedRange require
     //! the same contract to distinguish a creatable new sparse roll from missing retained publication state.
     /**
@@ -35,7 +36,8 @@ public interface InternalAppender extends ExcerptAppender {
      * <p>
      * Queue serialises concurrent backfill appenders with its write lock. A published index is
      * authoritative and treated as already applied; a gap is rejected. A duplicate is compared
-     * with the published payload: equal content is reported at debug level, while different
+     * with the existing payload, including a ready crash record not yet published: equal content is
+     * reported at debug level (silent when disabled), while different
      * content is warned with both payloads as hex and the supplied duplicate is ignored.
      * An absent roll may be created only outside the retained published bounds. An absent
      * highest roll or interior roll within those bounds is rejected because Queue cannot
@@ -55,8 +57,11 @@ public interface InternalAppender extends ExcerptAppender {
      *     <dt>Less than or equal to the last index published before this call</dt>
      *     <dd>The supplied payload is compared with the authoritative published record and is
      *     never written. Equal content produces a debug message; different content produces a
-     *     warning with both payloads as hex. A distinct ready first-writer record left beyond the
-     *     write-position publication boundary is adopted successfully without overwriting it.</dd>
+     *     warning with both payloads as hex.</dd>
+     *
+     *     <dt>A ready record beyond the write-position publication boundary</dt>
+     *     <dd>The requested ready record is compared using the same diagnostic policy and adopted
+     *     successfully without overwriting it. Publication stops at that requested record.</dd>
      * </dl>
      *
      * @param index the exact queue index to append at
