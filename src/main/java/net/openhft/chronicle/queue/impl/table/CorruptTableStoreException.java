@@ -3,19 +3,24 @@
  */
 package net.openhft.chronicle.queue.impl.table;
 
+import net.openhft.chronicle.core.io.IORuntimeException;
+
 import java.io.File;
 
+//! Keep corruption in the established IORuntimeException family so existing broad caller catches remain compatible.
+//! SingleChronicleQueueCorruptMetadataTest#corruptMetadataBypassesReadonlyFallbackAndRemainsAnIORuntimeException
+//! fails if the queue builder hides this subtype behind its read-only fallback or the subtype leaves that family.
 /**
  * Thrown when a table store file cannot be read because its content is not consistent.
  * <p>
  * The queue throws this as soon as it finds the fault. It does not retry, because no
  * number of retries makes a corrupt file readable.
  * <p>
- * This is not an {@link net.openhft.chronicle.core.io.IORuntimeException}. The queue builder
- * catches that type and falls back to a read-only table store. Corruption must not take that
- * path.
+ * This subtype remains an {@link IORuntimeException} so existing broad I/O failure handlers
+ * continue to catch it. Queue construction nevertheless propagates corruption instead of
+ * activating the legacy read-only table-store fallback.
  */
-public class CorruptTableStoreException extends IllegalStateException {
+public class CorruptTableStoreException extends IORuntimeException {
     private static final long serialVersionUID = 0L;
 
     /**
