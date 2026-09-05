@@ -10,6 +10,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.core.values.LongValue;
@@ -34,6 +35,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +45,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.DateTimeException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.TreeSet;
 import java.util.concurrent.Semaphore;
@@ -885,6 +889,7 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
+            expectException("Exact-index duplicate differs from ready content and was ignored");
             ((InternalAppender) appender).writeBytes(firstIndex, Bytes.from("retry-not-overwrite"));
             assertEquals(firstIndex, appender.lastIndexAppended());
             assertEquals(1, queue.entryCount());
@@ -897,6 +902,103 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertNextBytes(tailer, result, "first");
             assertNextBytes(tailer, result, "second");
             assertFalse(tailer.readBytes(result.clear()));
+        }
+    }
+
+    @Test
+    public void readyCrashDuplicatesCompareMatchingAndDifferentPayloads() throws IOException {
+        for (boolean publishedPrefix : new boolean[]{false, true}) {
+            assertReadyCrashDuplicateDiagnostic(publishedPrefix, true, true);
+            assertReadyCrashDuplicateDiagnostic(publishedPrefix, false, true);
+        }
+    }
+
+    @Test
+    public void readyCrashDuplicateEqualityIsSilentWhenDebugDisabled() throws IOException {
+        assertReadyCrashDuplicateDiagnostic(false, true, false);
+        assertReadyCrashDuplicateDiagnostic(false, false, false);
+    }
+
+    private void assertReadyCrashDuplicateDiagnostic(boolean publishedPrefix, boolean matching, boolean debugEnabled) throws IOException {
+        // As in restartPublishesReadyRecordLeftBeyondWritePosition, model interrupted publication rather than
+        // the fully published state assumed by the optional acquisition-time index consistency diagnostic.
+        QueueSystemProperties.CHECK_INDEX = false;
+        final File directory = queueDirectory.newFolder();
+        final long requestedIndex = TEST4_DAILY.toIndex(0, publishedPrefix ? 1 : 0);
+        final long requestedPosition;
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0).rollCycle(TEST4_DAILY).testBlockSize().build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            if (publishedPrefix) {
+                appender.writeBytes(Bytes.from("published prefix"));
+            } else {
+                try (SingleChronicleQueueStore empty = queue.storeForCycle(0, queue.epoch(), true, null)) {
+                    assertNotNull(empty);
+                }
+            }
+            requestedPosition = commitRecordWithoutPublishing(queue, 0, Bytes.from("hello world"));
+            commitRecordWithoutPublishing(queue, 0, Bytes.from("later ready record"));
+        }
+
+        final List<String> debugMessages = new ArrayList<>();
+        final List<String> warningMessages = new ArrayList<>();
+        final ExceptionHandler debugHandler = new ExceptionHandler() {
+            @Override
+            public void on(Logger logger, String message, Throwable thrown) {
+                debugMessages.add(message);
+            }
+
+            @Override
+            public boolean isEnabled(Class<?> type) {
+                return debugEnabled;
+            }
+        };
+        final Bytes<?> supplied = Bytes.from(matching ? "hello world" : "HELLO WORLD");
+        final Bytes<?> result = Bytes.elasticHeapByteBuffer();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> 0).rollCycle(TEST4_DAILY).testBlockSize().build();
+             ExcerptAppender excerptAppender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            final long readPosition = supplied.readPosition();
+            final long readLimit = supplied.readLimit();
+            final long writePosition = supplied.writePosition();
+            final long writeLimit = supplied.writeLimit();
+            Jvm.setThreadLocalExceptionHandlers(null,
+                    (logger, message, thrown) -> warningMessages.add(message), debugHandler);
+            try {
+                appender.writeBytes(requestedIndex, supplied);
+            } finally {
+                Jvm.setThreadLocalExceptionHandlers(null, null, null);
+            }
+            assertEquals(readPosition, supplied.readPosition());
+            assertEquals(readLimit, supplied.readLimit());
+            assertEquals(writePosition, supplied.writePosition());
+            assertEquals(writeLimit, supplied.writeLimit());
+            assertEquals("only the requested ready record is adopted", requestedPosition, appender.store.writePosition());
+            assertEquals(requestedIndex, appender.lastIndexAppended());
+            assertTrue(tailer.moveToIndex(requestedIndex));
+            assertNextBytes(tailer, result, "hello world");
+            assertNextBytes(tailer, result, "later ready record");
+        } finally {
+            supplied.releaseLast();
+            result.releaseLast();
+        }
+
+        debugMessages.removeIf(message -> !message.contains("Exact-index duplicate"));
+        assertEquals(matching && debugEnabled ? 1 : 0, debugMessages.size());
+        assertEquals(matching ? 0 : 1, warningMessages.size());
+        if (matching && debugEnabled)
+            assertTrue(debugMessages.get(0).contains("duplicate matches ready content and was ignored"));
+        if (!matching) {
+            final String warning = warningMessages.get(0);
+            assertTrue(warning.contains("duplicate differs from ready content and was ignored"));
+            assertTrue(warning.contains("\nexisting:\n"));
+            assertTrue(warning.contains("\nsupplied:\n"));
+            final String normalisedHex = warning.replaceAll("\\s+", " ");
+            assertTrue(normalisedHex.contains("68 65 6c 6c 6f 20 77 6f"));
+            assertTrue(normalisedHex.contains("48 45 4c 4c 4f 20 57 4f"));
         }
     }
 
@@ -1309,6 +1411,36 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertEquals(historicalWritePositionBefore, writePosition(queue, 0));
             assertEquals(listingModCountBefore, queue.tableStoreGet("listing.modCount"));
             assertArrayEquals(cycleFileNamesBefore, cycleFileNames(directory));
+        }
+    }
+
+    @Test
+    public void cachedCycleEnumerationRejectsDeletedBoundaries() throws IOException {
+        assumeFalse(OS.isWindows());
+        for (int deletedCycle : new int[]{0, 1}) {
+            final File directory = queueDirectory.newFolder();
+            final AtomicLong clock = new AtomicLong();
+            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                    .timeProvider(clock::get).rollCycle(TEST4_DAILY).testBlockSize().build();
+                 ExcerptAppender excerptAppender = queue.createAppender()) {
+                final StoreAppender appender = (StoreAppender) excerptAppender;
+                appender.writeText("cycle-zero");
+                final File cycleZero = appender.store.file();
+                clock.set(TEST4_DAILY.lengthInMillis());
+                appender.writeText("cycle-one");
+                final File boundary = deletedCycle == 0 ? cycleZero : appender.store.file();
+                assertEquals(2, queue.listCyclesBetween(0, 1).size());
+                final long modCount = queue.tableStoreGet("listing.modCount");
+                Files.delete(boundary.toPath());
+
+                final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                        () -> queue.listCyclesBetween(0, 1));
+
+                assertTrue(failure.getMessage().contains("file not found"));
+                assertFalse(boundary.exists());
+                assertEquals(modCount, queue.tableStoreGet("listing.modCount"));
+                assertEquals(1, queue.lastPublishedCycle());
+            }
         }
     }
 
@@ -1791,7 +1923,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         assertEquals(expected, result.toString());
     }
 
-    private static void commitRecordWithoutPublishing(SingleChronicleQueue queue,
+    private static long commitRecordWithoutPublishing(SingleChronicleQueue queue,
                                                        int cycle,
                                                        Bytes<?> payload) {
         try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, 0, false, null);
@@ -1803,14 +1935,15 @@ public class StoreAppenderTest extends QueueTestCommon {
                 final int header = bytes.readVolatileInt(position);
                 if (header == NOT_INITIALIZED)
                     break;
-                assertTrue("expected metadata before the free slot at " + position,
-                        isReadyMetaData(header));
+                assertTrue("expected a ready record before the free slot at " + position,
+                        isReadyData(header) || isReadyMetaData(header));
                 position += SPB_HEADER_SIZE + lengthOf(header);
             }
             final long length = payload.readRemaining();
             bytes.write(position + SPB_HEADER_SIZE, payload, payload.readPosition(), length);
             bytes.writeOrderedInt(position, (int) length);
             assertTrue(isReadyData(bytes.readVolatileInt(position)));
+            return position;
         }
     }
 

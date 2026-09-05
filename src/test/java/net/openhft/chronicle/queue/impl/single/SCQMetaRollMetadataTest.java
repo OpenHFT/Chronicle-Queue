@@ -5,6 +5,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.Test;
 
@@ -16,6 +18,38 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
 public class SCQMetaRollMetadataTest extends QueueTestCommon {
+
+    @Test
+    public void cycleForFileUsesPersistedNonZeroEpochAfterRestart() {
+        for (RollCycle rollCycle : new RollCycle[]{TestRollCycles.TEST_DAILY, TestRollCycles.TEST_HOURLY, RollCycles.WEEKLY}) {
+            final File directory = getTmpDir();
+            final long epoch = rollCycle.defaultEpoch() + 3L * rollCycle.lengthInMillis();
+            final SetTimeProvider time = new SetTimeProvider();
+            time.currentTimeMillis(epoch);
+            final File firstRoll;
+            final File laterRoll;
+            try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(directory)
+                    .rollCycle(rollCycle).epoch(epoch).timeProvider(time).testBlockSize().build()) {
+                final StoreAppender appender = (StoreAppender) queue.acquireAppender();
+                appender.writeText("cycle-zero");
+                firstRoll = appender.store.file();
+                time.advanceMillis(2L * rollCycle.lengthInMillis());
+                appender.writeText("cycle-two");
+                laterRoll = appender.store.file();
+            }
+
+            // Deliberately omit the roll cycle and epoch so metadata must supply both on restart.
+            expectException("Overriding roll epoch from existing metadata, was 0, overriding to " + epoch);
+            try (SingleChronicleQueue reopened = SingleChronicleQueueBuilder.single(directory)
+                    .timeProvider(time).testBlockSize().build()) {
+                assertEquals(epoch, reopened.epoch());
+                assertEquals(rollCycle.lengthInMillis(), reopened.rollCycle().lengthInMillis());
+                assertEquals(rollCycle.format(), reopened.rollCycle().format());
+                assertEquals(0, reopened.cycleForFile(firstRoll));
+                assertEquals(2, reopened.cycleForFile(laterRoll));
+            }
+        }
+    }
 
     // Cycle parsing must use the Queue's persisted format and reject non-roll paths.
     @Test
