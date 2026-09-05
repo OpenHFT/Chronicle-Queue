@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.wire.AbstractWire;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.DocumentWritten;
 import net.openhft.chronicle.wire.MarshallableOut;
@@ -18,12 +19,16 @@ import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WriteAfterEOFException;
+import net.openhft.chronicle.wire.domestic.InternalWire;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
@@ -318,6 +323,113 @@ public class ContextListenerCoreTest extends QueueTestCommon {
                 "# index: 200000001\n" +
                 "message: second\n" +
                 "# no more messages at 8000000000000000\n", dump(path));
+    }
+
+    @Test(timeout = 5_000)
+    public void documentApplicationHeaderFailureDoesNotRepeatSuccessfulListener() {
+        assertApplicationHeaderFailureRetainsSuccessfulListener(false, new IllegalStateException("application header failure"));
+        assertApplicationHeaderFailureRetainsSuccessfulListener(false, new AssertionError("application header error"));
+    }
+
+    @Test(timeout = 5_000)
+    public void rawApplicationHeaderFailureDoesNotRepeatSuccessfulListener() {
+        assertApplicationHeaderFailureRetainsSuccessfulListener(true, new IllegalStateException("application header failure"));
+        assertApplicationHeaderFailureRetainsSuccessfulListener(true, new AssertionError("application header error"));
+    }
+
+    private void assertApplicationHeaderFailureRetainsSuccessfulListener(boolean raw, Throwable injectedFailure) {
+        final AtomicInteger callbacks = new AtomicInteger();
+        final AtomicReference<StoreAppender> appenderReference = new AtomicReference<>();
+        final AtomicReference<Wire> underlyingWire = new AtomicReference<>();
+        final AtomicBoolean injected = new AtomicBoolean();
+        final AtomicLong committedContextPosition = new AtomicLong();
+
+        try (SingleChronicleQueue queue = builder(getTmpDir())
+                .contextListener(Events.class, writer -> {
+                    callbacks.incrementAndGet();
+                    writer.context(new ServiceContext("checkpoint"));
+                    final StoreAppender appender = appenderReference.get();
+                    committedContextPosition.set(appender.store.writePosition());
+                    underlyingWire.set(failNextApplicationHeader(appender, injectedFailure, injected));
+                }).build()) {
+            final StoreAppender appender = (StoreAppender) queue.acquireAppender();
+            appenderReference.set(appender);
+
+            final Throwable observed = assertThrows(injectedFailure.getClass(), () -> {
+                if (raw)
+                    writeRaw(appender, "must-not-be-written");
+                else
+                    appender.writeMessage("message", "must-not-be-written");
+            });
+
+            assertSame("the failure must originate after the successful callback", injectedFailure, observed);
+            assertTrue(injected.get());
+            assertEquals(1, callbacks.get());
+            assertEquals(committedContextPosition.get(), appender.store.writePosition());
+            assertEquals(1, queue.entryCount());
+            assertEquals(queue.cycle(), appender.contextCount());
+            assertFalse(queue.writeLock().locked());
+            assertEquals(0, appenderNestingCount(appender));
+            assertTrue(appender.writingIsComplete());
+            assertFalse(((AbstractWire) underlyingWire.get()).isInsideHeader());
+
+            if (raw)
+                writeRaw(appender, "accepted");
+            else
+                appender.writeMessage("message", "accepted");
+
+            assertEquals("retry must retain successful listener state", 1, callbacks.get());
+            assertEquals(2, queue.entryCount());
+            assertFalse(queue.writeLock().locked());
+            assertEquals(0, appenderNestingCount(appender));
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                try (DocumentContext document = tailer.readingDocument()) {
+                    assertTrue(document.isPresent());
+                    assertEquals("checkpoint", document.wire().read("context").object(ServiceContext.class).name);
+                }
+                try (DocumentContext document = tailer.readingDocument()) {
+                    assertTrue(document.isPresent());
+                    assertEquals("accepted", document.wire().read("message").text());
+                }
+                try (DocumentContext absent = tailer.readingDocument()) {
+                    assertFalse(absent.isPresent());
+                }
+            }
+        }
+    }
+
+    private static Wire failNextApplicationHeader(StoreAppender appender, Throwable failure, AtomicBoolean injected) {
+        try {
+            final Field field = StoreAppender.class.getDeclaredField("wire");
+            field.setAccessible(true);
+            final Wire delegate = (Wire) field.get(appender);
+            final Wire failingWire = (Wire) Proxy.newProxyInstance(Wire.class.getClassLoader(),
+                    new Class<?>[]{Wire.class, InternalWire.class}, (proxy, method, args) -> {
+                        // Installed only after the listener document commits. Reject acquisition before any
+                        // application header is written, as a capacity failure at enterHeader would do.
+                        if (method.getName().equals("enterHeader") && injected.compareAndSet(false, true))
+                            throw failure;
+                        try {
+                            return method.invoke(delegate, args);
+                        } catch (InvocationTargetException invocationFailure) {
+                            throw invocationFailure.getCause();
+                        }
+                    });
+            field.set(appender, failingWire);
+            return delegate;
+        } catch (ReflectiveOperationException reflectionFailure) {
+            throw new AssertionError("Unable to inject application-header acquisition failure", reflectionFailure);
+        }
+    }
+
+    private static int appenderNestingCount(StoreAppender appender) {
+        try {
+            final Field field = StoreAppender.class.getDeclaredField("count");
+            field.setAccessible(true);
+            return field.getInt(appender);
+        } catch (ReflectiveOperationException reflectionFailure) {
+            throw new AssertionError("Unable to inspect appender nesting after failure", reflectionFailure);
+        }
     }
 
     @Test(timeout = 5_000)

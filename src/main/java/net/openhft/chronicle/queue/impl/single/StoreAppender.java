@@ -655,8 +655,10 @@ class StoreAppender extends AbstractCloseable
         try {
             return prepareAndReturnWriteContext(metaData);
         } catch (Throwable e) {
-            //! listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable requires Error as well as
-            //! RuntimeException to restore count; otherwise the next write receives a stale context.
+            //! listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable and
+            //! documentApplicationHeaderFailureDoesNotRepeatSuccessfulListener require Error as well as
+            //! RuntimeException to restore count, including failure after successful listener output;
+            //! otherwise the next write receives a stale context.
             count--;
             throw Jvm.rethrow(e);
         }
@@ -716,13 +718,19 @@ class StoreAppender extends AbstractCloseable
                     assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
                     openContext(metaData, safeLength, false);
                 } else {
-                    //! ContextListenerCoreTest#metadataDoesNotConsumeAppenderListenerRegistration and
-                    //! #indexedWriteDoesNotNotifyOrConsumeListenerRegistration require listener-free
-                    //! paths to preserve positioning without advancing listener lifecycle state.
+                    //! writingDocumentIgnoresClockRollback and stalledWriterFollowsAnotherWriterToLaterCycle
+                    //! preserve Q1 destination selection for listener-free documents. Retaining a separate
+                    //! clock-only branch here would move ordinary writers below the published high-water mark.
                     moveToCycleForAppend();
                     resetPosition();
                     assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+                    //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle and
+                    //! stalledWriterAdvancesOnceFromPublishedSealedCycle preserve Q2's one-EOF transition after Q1
+                    //! selects the authoritative destination, even when no listener is configured.
                     openContext(metaData, safeLength, true);
+                    //! ContextListenerCoreTest#metadataDoesNotConsumeAppenderListenerRegistration leaves metadata
+                    //! outside ordinary lifecycle state; #secondEofLeavesListenerRegistrationOpen requires the
+                    //! ordinary header to be acquired before a listener-free appender closes registration.
                     if (!metaData) {
                         acceptContextListenerWriteAttempt(false, listenerState);
                         lastOrdinaryContextCount = cycle;
@@ -733,8 +741,9 @@ class StoreAppender extends AbstractCloseable
                 wire.bytes().readPosition(wire.bytes().writePosition());
             } catch (Throwable e) {
                 //! ContextListenerCoreTest#listenerErrorRollsBackHeldDocumentAndLeavesAppenderUsable
-                //! requires Error as well as RuntimeException to restore count, roll back the held
-                //! document, release the table write lock and leave this appender usable.
+                //! covers failure inside the callback; #documentApplicationHeaderFailureDoesNotRepeatSuccessfulListener
+                //! covers the later application acquisition. Both require this lock to be released on Throwable,
+                //! while the outer catch restores count; only failed listener output is rolled back by its lifecycle.
                 writeLock.unlock();
                 throw Jvm.rethrow(e);
             }
@@ -1088,13 +1097,6 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Writes a header for the current wire, ensuring the correct position and header number
-     * is set for the next write operation.
-     *
-     * @param safeLength the safe length of data that can be written
-     * @return the position of the written header
-     */
-    /**
      * Selects the authoritative ordinary-write destination without opening an application header.
      * QUEUE-144 invokes context listeners only after this method has fixed the actual cycle.
      */
@@ -1132,6 +1134,13 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
+    /**
+     * Writes a header for the current wire, ensuring the correct position and header number
+     * is set for the next write operation.
+     *
+     * @param safeLength the safe length of data that can be written
+     * @return the position of the written header
+     */
     private long writeHeader(final long safeLength) {
         //! canBackfillPreviousCycleAfterEOF and exactWriteReplacesAnIncompleteRequestedEntryWithAWarning require
         //! exact recovery to inspect the next physical header before Wire opens or overwrites it. Ordinary writes
@@ -1445,7 +1454,11 @@ class StoreAppender extends AbstractCloseable
                     resetPosition();
                 this.positionOfHeader = writeHeader(queue.overlapSize());
             } else {
+                //! sequentialWriteBytesIgnoresClockRollback preserves Q1 selection for listener-free byte writes;
+                //! choosing from wall time alone would diverge from the ordinary document path.
                 moveToCycleForAppend();
+                //! sequentialWriteBytesRollsForwardPastSealedCurrentCycle preserves Q2's bounded EOF retry for this
+                //! caller. Listener preflight must not leave ordinary listener-free bytes stranded behind a seal.
                 this.positionOfHeader = writeHeaderForOrdinaryAppend(queue.overlapSize());
                 acceptContextListenerWriteAttempt(false, listenerState);
                 lastOrdinaryContextCount = cycle;
@@ -1462,6 +1475,8 @@ class StoreAppender extends AbstractCloseable
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         } finally {
+            //! ContextListenerCoreTest#rawApplicationHeaderFailureDoesNotRepeatSuccessfulListener requires this
+            //! release even when the listener committed successfully and subsequent application acquisition failed.
             writeLock.unlock();
         }
     }
@@ -2105,8 +2120,9 @@ class StoreAppender extends AbstractCloseable
 
             // If the sequence numbers don't match, log an error and perform a linear scan
             if (seq1 != seq2) {
-                //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter requires
-                //! this internal diagnostic scan to avoid the guarded public wireForIndex() escape.
+                //! No current listener test discriminates this error-only scan: healthy publication keeps seq1 and
+                //! seq2 equal. Retain internal Wire access so diagnosing a mismatched index during a callback does
+                //! not throw the public re-entry error before reporting the original index inconsistency.
                 final long seq3 = store.indexing
                         .linearScanByPosition(wireForIndex, position, 0, 0, true);
                 Jvm.error().on(getClass(),

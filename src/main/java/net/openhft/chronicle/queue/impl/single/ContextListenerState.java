@@ -159,6 +159,10 @@ final class ContextListenerState extends DocumentContextHolder implements Marsha
                     throw new IllegalStateException("Queue context listener rolled back its output document");
                 if (listenerDocumentIsOpen())
                     throw new IllegalStateException("Queue context listener returned with an unclosed document");
+                //! ContextListenerCoreTest#documentApplicationHeaderFailureDoesNotRepeatSuccessfulListener and
+                //! #rawApplicationHeaderFailureDoesNotRepeatSuccessfulListener require committed context to remain
+                //! successful if the subsequent application header cannot be acquired. Rearming on that outer
+                //! failure would repeat already-committed context when the application retries in the same cycle.
                 status = Status.SUCCEEDED;
                 return true;
             } catch (Throwable callbackFailure) {
