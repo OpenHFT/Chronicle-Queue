@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
@@ -16,7 +17,9 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteAfterEOFException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,13 +27,16 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
@@ -528,6 +534,197 @@ public class StoreAppenderTest extends QueueTestCommon {
                  ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText("published-by-child");
             }
+        }
+    }
+
+    @Test
+    public void ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("before seal");
+            final int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+
+            appender.writeText("after seal");
+
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(2, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void stalledWriterAdvancesOnceFromPublishedSealedCycle() throws IOException {
+        final AtomicLong publishingClock = new AtomicLong();
+        final AtomicLong stalledClock = new AtomicLong();
+        final File directory = queueDirectory.newFolder();
+
+        try (SingleChronicleQueue publishingQueue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(publishingClock::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             SingleChronicleQueue stalledQueue = SingleChronicleQueueBuilder.binary(directory)
+                     .timeProvider(stalledClock::get)
+                     .rollCycle(TEST_DAILY)
+                     .build();
+             ExcerptAppender publishingExcerpt = publishingQueue.createAppender();
+             ExcerptAppender stalledExcerpt = stalledQueue.createAppender()) {
+            final StoreAppender publishingWriter = (StoreAppender) publishingExcerpt;
+            final StoreAppender stalledWriter = (StoreAppender) stalledExcerpt;
+
+            stalledWriter.writeText("cycle-0");
+            final File cycleZeroFile = stalledWriter.currentFile();
+            assertEquals(0, stalledWriter.cycle());
+
+            publishingClock.set(3L * TEST_DAILY.lengthInMillis());
+            publishingWriter.writeText("cycle-3");
+            final File cycleThreeFile = publishingWriter.currentFile();
+            assertEquals(3, publishingWriter.cycle());
+            sealCurrentCycle(publishingWriter);
+
+            stalledWriter.writeText("cycle-4");
+            final File cycleFourFile = stalledWriter.currentFile();
+
+            assertEquals("the stalled clock must not select an intermediate cycle", 4, stalledWriter.cycle());
+            assertEquals(4, stalledQueue.lastPublishedCycle());
+            assertEquals(3, stalledQueue.entryCount());
+            assertTrue(cycleZeroFile.exists());
+            assertTrue(cycleThreeFile.exists());
+            assertTrue(cycleFourFile.exists());
+            assertEquals("cycles 1 and 2 must not be created", 3, cycleFileNames(directory).length);
+        }
+    }
+
+    @Test
+    public void sequentialWriteBytesRollsForwardPastSealedCurrentCycle() throws IOException {
+        final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
+        clock.addAndGet(-clock.get() % ONE_DAY);
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeBytes(Bytes.from("before seal"));
+            final int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+
+            appender.writeBytes(Bytes.from("after seal"));
+
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(2, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void secondConsecutiveEofIsPropagated() throws IOException {
+        final AtomicLong clock = new AtomicLong();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(clock::get)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("before seals");
+            final int sealedCycle = appender.cycle();
+            sealCurrentCycle(appender);
+            sealCycle(queue, sealedCycle + 1);
+
+            // Keep the first sealed roll as the selected active cycle. The ordinary append may
+            // advance once, but the unexpected second EOF must escape instead of looping.
+            queue.tableStoreAcquire("listing.highestCycle", sealedCycle)
+                    .setVolatileValue(sealedCycle);
+
+            assertThrows(WriteAfterEOFException.class,
+                    () -> appender.writeText("must fail at second EOF"));
+            assertEquals(sealedCycle + 1, appender.cycle());
+            assertEquals(1, queue.entryCount());
+
+            // The failed acquisition must not poison the mapped Wire retained by the appender.
+            appender.writeText("after propagated EOF");
+            assertEquals(sealedCycle + 2, appender.cycle());
+            assertEquals(2, queue.entryCount());
+        }
+    }
+
+    @Test
+    public void eofAdvanceRejectsCycleOverflowBeforeMutation() throws IOException {
+        final long clock = (long) Integer.MAX_VALUE * TEST_DAILY.lengthInMillis();
+        final File directory = queueDirectory.newFolder();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .timeProvider(() -> clock)
+                .rollCycle(TEST_DAILY)
+                .build();
+             ExcerptAppender excerptAppender = queue.createAppender()) {
+            final StoreAppender appender = (StoreAppender) excerptAppender;
+            appender.writeText("last cycle");
+            assertEquals(Integer.MAX_VALUE, appender.cycle());
+            sealCurrentCycle(appender);
+
+            final long publishedCycleBefore = queue.lastPublishedCycle();
+            final long listingModCountBefore = queue.tableStoreGet("listing.modCount");
+            final String[] cycleFileNamesBefore = cycleFileNames(directory);
+            final long sourceWritePositionBefore = appender.store.writePosition();
+            final int eofWordBefore = readWordAfterLastEntry(appender.store);
+            assertEquals(Wires.END_OF_DATA, eofWordBefore);
+
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> appender.writeText("must not wrap"));
+            assertTrue(failure.getMessage().contains("Cannot advance ordinary append"));
+            assertEquals(Integer.MAX_VALUE, appender.cycle());
+            assertEquals(publishedCycleBefore, queue.lastPublishedCycle());
+            assertEquals(listingModCountBefore, queue.tableStoreGet("listing.modCount"));
+            assertArrayEquals(cycleFileNamesBefore, cycleFileNames(directory));
+            assertEquals(sourceWritePositionBefore, appender.store.writePosition());
+            assertEquals(eofWordBefore, readWordAfterLastEntry(appender.store));
+        }
+    }
+
+    private static String[] cycleFileNames(File directory) {
+        final String[] names = directory.list((ignored, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+        assertNotNull(names);
+        Arrays.sort(names);
+        return names;
+    }
+
+    private static int readWordAfterLastEntry(SingleChronicleQueueStore store) {
+        try (MappedBytes bytes = store.bytes()) {
+            final long lastEntryPosition = store.writePosition();
+            final int lastEntryHeader = bytes.readVolatileInt(lastEntryPosition);
+            long nextHeaderPosition = lastEntryPosition + Wires.lengthOf(lastEntryHeader) + Wires.SPB_HEADER_SIZE;
+            if (store.dataVersion() > 0)
+                nextHeaderPosition += BytesUtil.padOffset(nextHeaderPosition);
+            return bytes.readVolatileInt(nextHeaderPosition);
+        }
+    }
+
+    private static void sealCurrentCycle(StoreAppender appender) {
+        final SingleChronicleQueueStore store = appender.store;
+        if (store == null)
+            throw new AssertionError("Appender has no current store");
+
+        try (MappedBytes bytes = store.bytes()) {
+            final Wire wire = appender.queue().wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue("test precondition: current roll must be sealed",
+                    store.writeEOF(wire, appender.queue().timeoutMS));
+        }
+    }
+
+    private static void sealCycle(SingleChronicleQueue queue, int cycle) {
+        try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), true, null);
+             MappedBytes bytes = store.bytes()) {
+            final Wire wire = queue.wireType().apply(bytes);
+            wire.usePadding(store.dataVersion() > 0);
+            assertTrue("test precondition: next roll must be sealed",
+                    store.writeEOF(wire, queue.timeoutMS));
         }
     }
 

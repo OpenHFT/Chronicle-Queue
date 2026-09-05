@@ -575,8 +575,10 @@ class StoreAppender extends AbstractCloseable
                 resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
-                // sets the writeLimit based on the safeLength
-                openContext(metaData, safeLength);
+                //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle fails if document acquisition bypasses
+                //! the bounded EOF-aware header path. stalledWriterAdvancesOnceFromPublishedSealedCycle additionally
+                //! requires moveToCycleForAppend above to select the published destination before EOF advances once.
+                openContext(metaData, safeLength, true);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
@@ -748,11 +750,10 @@ class StoreAppender extends AbstractCloseable
      * Writes a header for the current wire, ensuring the correct position and header number
      * is set for the next write operation.
      *
-     * @param wire       the {@link Wire} to write the header to
      * @param safeLength the safe length of data that can be written
      * @return the position of the written header
      */
-    private long writeHeader(@NotNull final Wire wire, final long safeLength) {
+    private long writeHeader(final long safeLength) {
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
         long pos = positionOfHeader;
@@ -773,16 +774,63 @@ class StoreAppender extends AbstractCloseable
         return wire.enterHeader(safeLength);
     }
 
+    private void advanceOrdinaryAppendCycle() {
+        //! eofAdvanceRejectsCycleOverflowBeforeMutation requires overflow rejection before roll creation or
+        //! publication. The source already reported END_OF_DATA, so rollCycleTo suppresses its ordinary reseal;
+        //! the flag is a defensive format invariant rather than an independently discriminated branch.
+        // Reject overflow before creating or publishing a roll. The triggering EOF already seals
+        // the source generation, so this transition must not write a second seal there.
+        if (cycle == Integer.MAX_VALUE)
+            throw new IllegalStateException("Cannot advance ordinary append beyond cycle " + cycle);
+        rollCycleTo(cycle + 1, true);
+    }
+
+    /**
+     * Opens an ordinary header. END_OF_DATA advances to cycle + 1 exactly once. A second EOF
+     * indicates inconsistent state and is propagated. Exact-index writes do not use this path.
+     */
+    private long writeHeaderForOrdinaryAppend(final long safeLength) {
+        //! ordinaryWritingDocumentRollsForwardPastSealedCurrentCycle and
+        //! sequentialWriteBytesRollsForwardPastSealedCurrentCycle require the same single retry for both ordinary
+        //! entry points. They establish an observed END_OF_DATA boundary, not crash durability.
+        try {
+            return writeHeader(safeLength);
+        } catch (WriteAfterEOFException ignored) {
+            //! Current Wire clears insideHeader before throwing, so tests against that dependency cannot discriminate
+            //! this compatibility call. Older binary-compatible Wire versions leave the transient state set; clearing
+            //! it before cycle selection prevents a subsequent rollover failure from stranding this appender. Remove
+            //! the fallback when the minimum Wire version guarantees its own cleanup.
+            // Clear transient acquisition state without altering the durable EOF before selecting the next roll.
+            ((InternalWire) wire).forceNotInsideHeader();
+            advanceOrdinaryAppendCycle();
+            try {
+                return writeHeader(safeLength);
+            } catch (WriteAfterEOFException secondEOF) {
+                //! secondConsecutiveEofIsPropagated fails if the retry becomes a loop and verifies that cleanup
+                //! leaves the appender reusable after the second observed seal is propagated.
+                ((InternalWire) wire).forceNotInsideHeader();
+                throw secondEOF;
+            }
+        }
+    }
+
     /**
      * Opens a new write context for appending data, setting up the necessary parameters such as
      * the header, write position, and metadata flag.
      *
-     * @param metaData   indicates if the context is for metadata
-     * @param safeLength the maximum length of data that can be safely written
+     * @param metaData         indicates if the context is for metadata
+     * @param safeLength       the maximum length of data that can be safely written
+     * @param rollAtEndOfData  whether this ordinary append may advance once past a sealed roll;
+     *                         exact-index writes pass {@code false} and remain strict
      */
-    private void openContext(final boolean metaData, final long safeLength) {
+    private void openContext(final boolean metaData, final long safeLength, final boolean rollAtEndOfData) {
         assert wire != null;
-        this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
+        //! Exact-index recovery must remain strict while ordinary documents may cross one EOF. Keeping the policy as
+        //! an explicit argument prevents writeBytesInternal() from accidentally inheriting the ordinary retry when
+        //! the two paths share context construction.
+        this.positionOfHeader = rollAtEndOfData
+                ? writeHeaderForOrdinaryAppend(safeLength)
+                : writeHeader(safeLength);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
@@ -847,8 +895,10 @@ class StoreAppender extends AbstractCloseable
             //! sequentialWriteBytesIgnoresClockRollback fails if this entry point retains the former clock-only
             //! selection: bytes would move backwards while writingDocument() follows the shared published maximum.
             moveToCycleForAppend();
-
-            this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
+            //! sequentialWriteBytesRollsForwardPastSealedCurrentCycle proves sequential byte appends need the same
+            //! bounded EOF transition as ordinary document writes; calling writeHeader() directly leaves this path
+            //! behind the seal.
+            this.positionOfHeader = writeHeaderForOrdinaryAppend((int) queue.overlapSize());
 
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
@@ -948,7 +998,10 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            openContext(metadata, safeLength);
+            //! InternalAppenderWriteBytesTest#cannotAppendToPreviousCycle requires an exact-index write to surface
+            //! EOF from its named physical destination. Passing false keeps the ordinary one-roll retry out of this
+            //! strict path; rolling forward would report success at an index the caller did not request.
+            openContext(metadata, safeLength, false);
 
             try {
                 final Bytes<?> bytes0 = context.wire().bytes();

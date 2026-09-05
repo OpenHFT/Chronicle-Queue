@@ -14,7 +14,6 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -245,17 +244,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
 
     @Test
     public void testCleanupDir() {
-        if (OS.isWindows())
-            FlakyTestRunner.builder(this::testCleanupDir0).build().run();
-        else
-            testCleanupDir0();
+        testCleanupDir0();
     }
 
     private void testCleanupDir0() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue =
-                     builder(tmpDir, wireType)
-                             .build();
+                     builder(tmpDir, wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
 
             try (DocumentContext dc = appender.writingDocument()) {
@@ -265,7 +260,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         // explicitly call so as to clean and release everything
         afterChecks();
         recordExceptions();
-        IOTools.deleteDirWithFilesOrThrow(tmpDir);
+        // Retry only deletion on Windows, where released mappings can briefly remain locked.
+        // A persistent deletion failure or any unrelated error must still fail the test.
+        if (OS.isWindows())
+            IOTools.deleteDirWithFilesOrWait(5_000, tmpDir);
+        else
+            IOTools.deleteDirWithFilesOrThrow(tmpDir);
+        assertFalse("the closed Queue directory must be deletable", tmpDir.exists());
     }
 
     @Test
