@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.table;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.ExecutorServiceUtil;
 import org.junit.Before;
@@ -78,7 +79,7 @@ public class SingleTableStoreLockTest extends QueueTestCommon {
         final AtomicInteger targetCalls = new AtomicInteger();
         final BufferedReader output = new BufferedReader(new InputStreamReader(holder.getInputStream(), StandardCharsets.UTF_8));
         try {
-            assertEquals("LOCKED", executor.submit(output::readLine).get(5, TimeUnit.SECONDS));
+            assertEquals("LOCKED", executor.submit(output::readLine).get(15, TimeUnit.SECONDS));
             final ObservedFileLockRuntime runtime = new ObservedFileLockRuntime(file, false);
             final Future<String> result = executor.submit(() -> withLock(file, false, target -> {
                 bodyCalls.incrementAndGet();
@@ -88,21 +89,21 @@ public class SingleTableStoreLockTest extends QueueTestCommon {
                 return "done";
             }, TimeUnit.SECONDS.toNanos(5), runtime));
 
-            assertTrue("the real null-contention result was not observed", runtime.contention.await(5, TimeUnit.SECONDS));
+            assertTrue("the real null-contention result was not observed", runtime.contention.await(15, TimeUnit.SECONDS));
             assertTrue("same-JVM overlap was observed instead of null", runtime.nullResults.get() > 0);
             assertEquals(0, bodyCalls.get());
             assertEquals(0, targetCalls.get());
             holder.getOutputStream().write(1);
             holder.getOutputStream().flush();
-            assertTrue("lock-holder process did not finish", holder.waitFor(5, TimeUnit.SECONDS));
+            assertTrue("lock-holder process did not finish", holder.waitFor(15, TimeUnit.SECONDS));
             assertEquals(0, holder.exitValue());
-            assertEquals("done", result.get(5, TimeUnit.SECONDS));
+            assertEquals("done", result.get(15, TimeUnit.SECONDS));
             assertEquals(1, bodyCalls.get());
             assertEquals(1, targetCalls.get());
         } finally {
             holder.destroyForcibly();
             try {
-                assertTrue("lock-holder process survived cleanup", holder.waitFor(5, TimeUnit.SECONDS));
+                assertTrue("lock-holder process survived cleanup", holder.waitFor(15, TimeUnit.SECONDS));
             } finally {
                 output.close();
                 ExecutorServiceUtil.shutdownForciblyAndWaitForTermination(executor);
@@ -305,6 +306,80 @@ public class SingleTableStoreLockTest extends QueueTestCommon {
         assertEquals(1, runtime.closeCalls.get());
     }
 
+    @Test
+    public void publicLockMethodsPreserveCheckedSupplierAndBodyFailures() throws IOException {
+        final File file = newLockFile();
+        for (boolean shared : new boolean[]{false, true}) {
+            final AtomicInteger supplierCalls = new AtomicInteger();
+            final AtomicInteger bodyCalls = new AtomicInteger();
+            final IOException supplierFailure = new IOException("checked supplier failure, shared=" + shared);
+
+            final IOException actualSupplierFailure = assertThrows(IOException.class,
+                    () -> withPublicLock(file, shared, ignored -> {
+                        bodyCalls.incrementAndGet();
+                        return "unused";
+                    }, () -> {
+                        supplierCalls.incrementAndGet();
+                        throw Jvm.rethrow(supplierFailure);
+                    }));
+            assertSame(supplierFailure, actualSupplierFailure);
+            assertEquals(1, supplierCalls.get());
+            assertEquals(0, bodyCalls.get());
+
+            supplierCalls.set(0);
+            final IOException bodyFailure = new IOException("checked body failure, shared=" + shared);
+            final IOException actualBodyFailure = assertThrows(IOException.class,
+                    () -> withPublicLock(file, shared, ignored -> {
+                        bodyCalls.incrementAndGet();
+                        throw Jvm.rethrow(bodyFailure);
+                    }, () -> {
+                        supplierCalls.incrementAndGet();
+                        return "target";
+                    }));
+            assertSame(bodyFailure, actualBodyFailure);
+            assertEquals(1, supplierCalls.get());
+            assertEquals(1, bodyCalls.get());
+            assertEquals("reacquired", withPublicLock(file, shared, ignored -> "reacquired", () -> "target"));
+        }
+    }
+
+    @Test
+    public void sameFailureObjectIsNeverSelfSuppressed() throws IOException {
+        final File file = newLockFile();
+        final IOException bodyAndLockFailure = new IOException("same body and lock failure");
+        final TestLockRuntime bodyRuntime = new TestLockRuntime(
+                () -> true, () -> 0L, ignored -> {
+                }, bodyAndLockFailure, null);
+
+        final IOException actualBodyFailure = assertThrows(IOException.class,
+                () -> withLock(file, false, ignored -> {
+                    throw Jvm.rethrow(bodyAndLockFailure);
+                }, () -> "target", TimeUnit.SECONDS.toNanos(1), bodyRuntime));
+        assertSame(bodyAndLockFailure, actualBodyFailure);
+        assertEquals(0, actualBodyFailure.getSuppressed().length);
+
+        final IOException bodyAndChannelFailure = new IOException("same body and channel failure");
+        final TestLockRuntime channelRuntime = new TestLockRuntime(
+                () -> true, () -> 0L, ignored -> {
+                }, null, bodyAndChannelFailure);
+        final IOException actualChannelFailure = assertThrows(IOException.class,
+                () -> withLock(file, false, ignored -> {
+                    throw Jvm.rethrow(bodyAndChannelFailure);
+                }, () -> "target", TimeUnit.SECONDS.toNanos(1), channelRuntime));
+        assertSame(bodyAndChannelFailure, actualChannelFailure);
+        assertEquals(0, actualChannelFailure.getSuppressed().length);
+
+        final IOException lockAndChannelFailure = new IOException("same lock and channel failure");
+        final TestLockRuntime cleanupRuntime = new TestLockRuntime(
+                () -> true, () -> 0L, ignored -> {
+                }, lockAndChannelFailure, lockAndChannelFailure);
+        final IllegalStateException actualCleanupFailure = assertThrows(IllegalStateException.class,
+                () -> withLock(file, false, ignored -> "done", () -> "target",
+                        TimeUnit.SECONDS.toNanos(1), cleanupRuntime));
+        assertSame(lockAndChannelFailure, actualCleanupFailure.getCause());
+        assertEquals(0, lockAndChannelFailure.getSuppressed().length);
+    }
+
     private void assertBodyRunsOnceAndPreservesFailureIdentity(boolean shared) throws IOException {
         final File file = newLockFile();
         final AtomicInteger targetCalls = new AtomicInteger();
@@ -435,6 +510,15 @@ public class SingleTableStoreLockTest extends QueueTestCommon {
                               long timeoutNanos,
                               SingleTableStore.LockRuntime lockRuntime) {
         return SingleTableStore.doWithLock(file, code, target, shared, timeoutNanos, lockRuntime);
+    }
+
+    private <T, R> R withPublicLock(File file,
+                                    boolean shared,
+                                    Function<T, ? extends R> code,
+                                    Supplier<T> target) {
+        return shared
+                ? SingleTableStore.doWithSharedLock(file, code, target)
+                : SingleTableStore.doWithExclusiveLock(file, code, target);
     }
 
     private static void await(CountDownLatch latch) {

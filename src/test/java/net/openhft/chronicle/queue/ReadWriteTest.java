@@ -16,6 +16,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -205,6 +206,31 @@ public class ReadWriteTest extends QueueTestCommon {
             tailer.toEnd();
             long index = tailer.index();
             assertNotEquals(0, index);
+        }
+    }
+
+    @Test
+    public void testNonWriteableDirectoryWithoutMetadataSetsQueueReadOnly() {
+        assumeFalse(OS.isWindows());
+        final File metadata = new File(chroniclePath, "metadata.cq4t");
+        BackgroundResourceReleaser.releasePendingResources();
+        assertTrue("metadata fixture was not removed", metadata.delete());
+        assertTrue("directory permissions could not be changed", chroniclePath.setWritable(false, false));
+        try {
+            assumeFalse("test process can still create files in the directory", Files.isWritable(chroniclePath.toPath()));
+            expectException("Failback to readonly tablestore");
+            expectException("Forcing queue to be readOnly");
+
+            try (ChronicleQueue out = SingleChronicleQueueBuilder
+                    .binary(chroniclePath)
+                    .testBlockSize()
+                    .readOnly(false)
+                    .build()) {
+                final ExcerptTailer tailer = out.createTailer();
+                assertEquals(STR1, tailer.readText());
+            }
+        } finally {
+            assertTrue("directory write permission was not restored", chroniclePath.setWritable(true, false));
         }
     }
 }
