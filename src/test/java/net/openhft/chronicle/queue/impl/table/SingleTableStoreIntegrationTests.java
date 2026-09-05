@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.table;
 
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class SingleTableStoreIntegrationTests extends QueueTestCommon {
 
@@ -40,9 +42,14 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         assertEquals(1, context.newQueueInstance().tableStoreGet("a"));
     }
 
+    // Historical tableStoreGet remains get-or-create even though getValueFor is lookup-only.
     @Test
     public void getMissingKeyWithoutDefault() {
-        assertEquals(Long.MIN_VALUE, context.newQueueInstance().tableStoreGet("test"));
+        SingleChronicleQueue queue = context.newQueueInstance();
+        assertEquals(Long.MIN_VALUE, queue.tableStoreGet("test"));
+        try (LongValue value = queue.metaStore().getValueFor("test")) {
+            assertNotNull(value);
+        }
     }
 
     @Test

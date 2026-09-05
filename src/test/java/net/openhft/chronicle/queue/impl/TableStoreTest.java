@@ -76,6 +76,25 @@ public class TableStoreTest extends QueueTestCommon {
         }
     }
 
+    // A missing optional value must remain absent until the explicit acquire operation.
+    @Test
+    public void getValueForDoesNotCreateMissingKey() throws IOException {
+        final File dir = tempDir("table-store-get");
+        dir.mkdir();
+        final File tableFile = Files.createTempFile(dir.toPath(), "table", SingleTableStore.SUFFIX).toFile();
+
+        try (TableStore<Metadata.NoMeta> table = SingleTableBuilder.binary(tableFile, Metadata.NoMeta.INSTANCE).build()) {
+            assertNull(table.getValueFor("missing"));
+            try (LongValue value = table.acquireValueFor("missing", 17L)) {
+                assertEquals(17L, value.getValue());
+            }
+            try (LongValue value = table.getValueFor("missing")) {
+                assertNotNull(value);
+                assertEquals(17L, value.getValue());
+            }
+        }
+    }
+
     @Test
     public void acquireValueForReadOnly() throws IOException {
 
@@ -96,4 +115,5 @@ public class TableStoreTest extends QueueTestCommon {
             assertThrows(IllegalStateException.class, () -> table.acquireValueFor("d"));
         }
     }
+
 }
