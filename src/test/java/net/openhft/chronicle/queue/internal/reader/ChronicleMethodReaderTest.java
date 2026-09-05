@@ -17,7 +17,6 @@ import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -135,7 +134,6 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        //.peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
         // "hello"
@@ -149,7 +147,6 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        //.peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
         // "hello"
@@ -198,16 +195,27 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-//                        .peek(System.out::println)
                         .count();
         assertEquals(12, msgCount);
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
-        basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
+        // The regex applies to the complete multiline DTO, not just its text field.
+        basicReaderMethodReader().withExclusionRegex("goodbye").execute();
+        assertEquals(12L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, containsString("hello")));
+        capturedOutput.clear();
+
+        basicReaderMethodReader().withExclusionRegex("hello").execute();
+        assertEquals(12L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, containsString("goodbye")));
+        capturedOutput.clear();
+
+        basicReaderMethodReader().withExclusionRegex("goodbye").withExclusionRegex("hello").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
