@@ -82,6 +82,7 @@ the same retry and normalisation responsibilities.
 //! InternalAppenderWriteBytesTest#exactWriteReplacesAnIncompleteRequestedEntryAfterQueueRestart,
 //! InternalAppenderWriteBytesTest#canBackfillPreviousCycleAfterEOF,
 //! InternalAppenderWriteBytesTest#publishedDuplicatePayloadsAreComparedWithoutMutation,
+//! StoreAppenderTest#readyCrashDuplicatesCompareMatchingAndDifferentPayloads,
 //! StoreAppenderTest#publishedDuplicateDoesNotAdoptLaterReadyCrashRecord and
 //! StoreAppenderTest#exactWriteAdoptsReadyFirstRecordRetryBeforeWritingNext distinguish incomplete entries, EOF, authoritative
 //! published duplicates and ready unpublished crash records. Keep those decisions explicit instead of treating
@@ -96,8 +97,11 @@ index is authoritative. An exact write for that index compares the supplied
 payload with the stored record without overwriting it or throwing: equal
 content is reported at debug level, while different content produces a warning
 with hex dumps of both versions and the supplied message is ignored. A ready
-first-writer record left beyond write-position publication is instead adopted
-without overwriting its payload. Otherwise a new index must be exactly next; a
+first-writer record left beyond write-position publication is compared using
+the same diagnostic policy and adopted without overwriting its payload.
+Equal retries are silent when debug logging is disabled, whether the existing
+record was already published or is being adopted after a crash.
+Otherwise a new index must be exactly next; a
 gap is rejected.
 
 //! StoreAppenderTest#exactWriteDoesNotRecreateDeletedPublishedMaximum and

@@ -2099,12 +2099,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             final NavigableSet<Long> cycles = cycleTreeSnapshot(false).cachedCycles;
             final NavigableSet<Long> selected = new TreeSet<>(
                     cycles.subSet((long) lowerCycle, true, (long) upperCycle, true));
-            //! SingleChronicleQueueTest#testCountExceptsWithRubbishData preserves the established endpoint failure
-            //! contract. Returning a partial or empty subset after the tree representation changed would make an
-            //! invalid count range look valid instead of reporting that its physical boundary is absent.
-            if (!selected.contains((long) lowerCycle))
+            //! SingleChronicleQueueTest#testCountExceptsWithRubbishData covers initially absent endpoints, while
+            //! StoreAppenderTest#cachedCycleEnumerationRejectsDeletedBoundaries requires action-time pathname checks
+            //! even when modCount has not invalidated this cached set. Membership alone would return a deleted
+            //! physical boundary as a valid count range. These checks are outside the ordinary append hot path.
+            if (!selected.contains((long) lowerCycle) || !dateCache.resourceFor(lowerCycle).path.exists())
                 throw new IllegalStateException("file not found for lowerCycle=" + lowerCycle);
-            if (!selected.contains((long) upperCycle))
+            if (!selected.contains((long) upperCycle) || !dateCache.resourceFor(upperCycle).path.exists())
                 throw new IllegalStateException("file not found for upperCycle=" + upperCycle);
             return selected;
         }

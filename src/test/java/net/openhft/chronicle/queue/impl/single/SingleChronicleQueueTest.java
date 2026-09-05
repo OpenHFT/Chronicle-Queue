@@ -26,7 +26,6 @@ import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
@@ -263,14 +262,13 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         // explicitly call so as to clean and release everything
         afterChecks();
         recordExceptions();
-        try {
+        // Retry only deletion on Windows, where released mappings can briefly remain locked.
+        // A persistent deletion failure or any unrelated error must still fail the test.
+        if (OS.isWindows())
+            IOTools.deleteDirWithFilesOrWait(5_000, tmpDir);
+        else
             IOTools.deleteDirWithFilesOrThrow(tmpDir);
-        } catch (Throwable e) {
-            if (OS.isWindows())
-                LoggerFactory.getLogger(getClass()).warn("Failed to cleanup dir", e);
-            else
-                throw Jvm.rethrow(e);
-        }
+        assertFalse("the closed Queue directory must be deletable", tmpDir.exists());
     }
 
     @Test
