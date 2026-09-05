@@ -24,8 +24,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
-//! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithMetadataUsesPersistedDirectoryListing
-//! distinguishes the read-only mapped table from the no-metadata fallback at construction.
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
@@ -1319,9 +1317,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * @return the numeric cycle encoded by the filename
      */
     public int cycleForFile(@NotNull File file) {
-        //! SCQMetaRollMetadataTest#cycleForFileUsesTheQueueRollGeometry requires Queue's persisted
-        //! geometry; downstream maintenance consumes this seam because lexical filename order is
-        //! not a safe deletion key.
+        //! SCQMetaRollMetadataTest#cycleForFileUsesTheQueueRollGeometry checks the configured filename format, while
+        //! #cycleForFileUsesPersistedNonZeroEpochAfterRestart requires the persisted epoch and period after reopening.
+        //! Reconstructing a default-epoch parser would give maintenance the wrong numeric deletion boundary even if
+        //! it recognises the filename; lexical ordering is not a substitute for the Queue's stored geometry.
         final String name = file.getName();
         if (!name.endsWith(SUFFIX))
             throw new IllegalArgumentException("Not a Queue roll file: " + file);
