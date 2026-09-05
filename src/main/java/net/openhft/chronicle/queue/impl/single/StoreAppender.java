@@ -1521,6 +1521,7 @@ class StoreAppender extends AbstractCloseable
                 }
 
                 long lastPhysicalSequence = lastPublishedSequence;
+                long requestedReadyPosition = -1;
                 long position = publishedPosition
                         + lengthOf(bytes.readVolatileInt(publishedPosition)) + SPB_HEADER_SIZE;
                 for (; ; ) {
@@ -1533,7 +1534,20 @@ class StoreAppender extends AbstractCloseable
                         if (++lastPhysicalSequence >= rollCycle.maxMessagesPerCycle())
                             throw new IllegalStateException("Physical sequence exceeds maxMessagesPerCycle in cycle "
                                     + cycle + " for queue=" + queue.fileAbsolutePath());
+                        if (lastPhysicalSequence == requestedSequence)
+                            requestedReadyPosition = position;
                     } else if (!isReadyMetaData(header)) {
+                        //! readyCrashDuplicatesCompareMatchingAndDifferentPayloads and
+                        //! readyCrashDuplicateEqualityIsSilentWhenDebugDisabled require the same diagnostic policy
+                        //! for a ready crash record as for a published duplicate. Compare only the requested record,
+                        //! after classifying the complete physical prefix and before adoption changes publication;
+                        //! silently adopting a different payload would hide a divergent retry.
+                        if (requestedReadyPosition >= 0) {
+                            bytes.readLimit(requestedReadyPosition + SPB_HEADER_SIZE
+                                    + lengthOf(bytes.readVolatileInt(requestedReadyPosition)));
+                            bytes.readPosition(requestedReadyPosition);
+                            compareExistingEntry(cycle, requestedSequence, bytes, suppliedBytes, "ready");
+                        }
                         return new ExactIndexState(true, publishedPosition, lastPublishedSequence,
                                 lastPhysicalSequence, header);
                     }
@@ -1559,7 +1573,7 @@ class StoreAppender extends AbstractCloseable
                 warnUnableToComparePublishedEntry(cycle, sequenceNumber, suppliedBytes, scanResult);
                 return;
             }
-            comparePublishedEntry(cycle, sequenceNumber, existingBytes, suppliedBytes);
+            compareExistingEntry(cycle, sequenceNumber, existingBytes, suppliedBytes, "published");
 
         } finally {
             existingBytes.readPosition(savedReadPosition);
@@ -1568,28 +1582,31 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private void comparePublishedEntry(final int cycle,
-                                       final long sequenceNumber,
-                                       @NotNull final Bytes<?> existingBytes,
-                                       @NotNull final BytesStore<?, ?> suppliedBytes) {
+    private void compareExistingEntry(final int cycle,
+                                      final long sequenceNumber,
+                                      @NotNull final Bytes<?> existingBytes,
+                                      @NotNull final BytesStore<?, ?> suppliedBytes,
+                                      final String recordState) {
         final int header = existingBytes.readVolatileInt();
         assert isReadyData(header);
         final int existingLength = lengthOf(header);
         final long suppliedLength = suppliedBytes.readRemaining();
         final long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
         //! InternalAppenderWriteBytesTest#publishedDuplicatePayloadsAreComparedWithoutMutation distinguishes both
-        //! outcomes. Equal content is debug-only (and therefore silent when debug is disabled); different content
-        //! warns with both hex dumps, but neither path throws or overwrites the authoritative published record.
+        //! outcomes for published data; readyCrashDuplicatesCompareMatchingAndDifferentPayloads requires parity
+        //! for ready crash data. readyCrashDuplicateEqualityIsSilentWhenDebugDisabled pins the debug guard:
+        //! equal content is silent when disabled, while different content still warns with both hex dumps.
+        //! Neither path throws or overwrites the authoritative existing record.
         if (existingLength == suppliedLength
                 && existingBytes.equalBytes(suppliedBytes, existingLength)) {
             if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "Exact-index duplicate matches published content and was ignored: queue="
+                Jvm.debug().on(getClass(), "Exact-index duplicate matches " + recordState + " content and was ignored: queue="
                         + queue.fileAbsolutePath() + ", cycle=" + cycle + ", index=0x" + Long.toHexString(index)
                         + ", length=" + existingLength);
             return;
         }
 
-        Jvm.warn().on(getClass(), "Exact-index duplicate differs from published content and was ignored: queue="
+        Jvm.warn().on(getClass(), "Exact-index duplicate differs from " + recordState + " content and was ignored: queue="
                 + queue.fileAbsolutePath() + ", cycle=" + cycle + ", index=0x" + Long.toHexString(index)
                 + ", existingLength=" + existingLength + ", suppliedLength=" + suppliedLength
                 + "\nexisting:\n" + existingBytes.toHexString(existingLength)
