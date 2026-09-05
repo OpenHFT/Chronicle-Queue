@@ -3,6 +3,8 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -392,6 +394,31 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return indexing.lastSequenceNumber(ec);
     }
 
+    long lastPublishedSequenceNumber(Wire wire) {
+        throwExceptionIfClosedInSetter();
+        final long publishedPosition = writePosition.getVolatileValue();
+        //! InternalAppenderWriteBytesTest#exactBackfillFindsEofInEmptySealedCycle requires zero to mean that no data
+        //! sequence has been published even when metadata and EOF follow the store header. Scanning position zero as
+        //! application data would invent a published boundary and reject the valid sequence-zero recovery as old.
+        if (publishedPosition == 0)
+            return -1;
+
+        //! StoreAppenderTest#sameCycleGapDoesNotPublishReadyCrashRecord,
+        //! #publishedDuplicateDoesNotAdoptLaterReadyCrashRecord,
+        //! #exactPreflightScansPublishedBoundaryWhenEncodedSequenceWasLost and
+        //! #exactPreflightRejectsStaleAliasingEncodedSequence require preflight to derive the sequence from the full
+        //! published position without repairing sparse indexes. RollCycleEncodeSequence retains only low position
+        //! bits, so a stale pre-crash pair can alias a later write position and falsely report an earlier sequence;
+        //! accepting that fast path rejects the true exact-next index as a gap. The sparse index bounds this
+        //! exact-only physical scan, while disabling its last-position shortcut makes it read-only and independent
+        //! of the lossy pair.
+        try {
+            return indexing.sequenceForPositionWithoutSequenceShortcut(wire, publishedPosition, true);
+        } catch (StreamCorruptedException e) {
+            throw Jvm.rethrow(e);
+        }
+    }
+
     /**
      * Returns a string representation of the store's current state, including details about indexing,
      * write position, mapped file, and whether the store is closed.
@@ -518,6 +545,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         // If unable to reserve bytes, create a new instance of MappedBytes and try again
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
             Wire wire0 = WireType.valueOf(wire).apply(bytes);
+            //! StoreAppenderTest#writeEofReplacementUsesStorePadding forces this replacement-Wire
+            //! branch and requires it to inherit the store's physical padding mode. Exact-recovery
+            //! preflight tests reject legacy targets earlier and do not execute this fallback.
+            wire0.usePadding(dataVersion > 0);
             return writeEOFAndShrink(wire0, timeoutMS);
 
         } catch (Exception e) {

@@ -15,6 +15,7 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueSystemProperties;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
@@ -30,6 +31,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.time.DateTimeException;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
@@ -109,17 +113,32 @@ class StoreAppender extends AbstractCloseable
             try {
                 // Process cycles and handle EOF markers
                 if (firstCycle != UNSET_CONTEXT) {
+                    //! constructionSealsEveryRollBelowTheFirstSealedRoll fails if the back-scan excludes the first
+                    //! sealed generation. sparseRollsAreTraversedByExistingCycle requires walking actual survivors
+                    //! rather than fabricating every numeric cycle, while
+                    //! NormaliseEOFsTest#deletingOldestPublishedRollDoesNotBlockAReusedQueue is integration evidence
+                    //! for refreshed physical bounds after supported historical deletion; the accepted base already
+                    //! permits that deletion but does not use this physical back-scan.
+                    final ExistingCycles range = enumerateExistingCycles();
+                    firstCycle = range.first;
+                    lastExistingCycle = range.last;
+                    final NavigableSet<Long> existingCycles = range.cycles;
                     // Backing down until EOF-ed cycle is encountered
-                    for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
+                    for (long existingCycle : existingCycles.descendingSet()) {
+                        final int eofCycle = Math.toIntExact(existingCycle);
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
+                        if (wire == null)
+                            break;
                         if (cycleHasEOF()) {
                             // Make sure all older cycles have EOF marker
                             if (eofCycle > firstCycle)
-                                normaliseEOFs0(eofCycle - 1);
+                                normaliseEOFs0(eofCycle);
 
                             // If first non-EOF file is in the past, it's possible it will be replicated/backfilled to
-                            if (eofCycle < lastExistingCycle)
-                                setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, WireStoreSupplier.CreateStrategy.READ_ONLY);
+                            final Long nextExistingCycle = existingCycles.higher(existingCycle);
+                            if (nextExistingCycle != null)
+                                setCycle2(Math.toIntExact(nextExistingCycle),
+                                        WireStoreSupplier.CreateStrategy.READ_ONLY);
                             break;
                         }
                     }
@@ -377,6 +396,20 @@ class StoreAppender extends AbstractCloseable
      * @param createStrategy The strategy used to create a new store.
      */
     private void setCycle2(final int cycle, final WireStoreSupplier.CreateStrategy createStrategy) {
+        setCycle2(cycle, createStrategy, true);
+    }
+
+    private void setCycle2StrictExisting(final int cycle) {
+        //! StoreAppenderTest#currentMappedGenerationDisappearingAfterEnumerationDoesNotAdvanceCursor requires
+        //! completion to bypass WireStorePool's same-cycle oldStore shortcut. Otherwise an unlinked POSIX inode can
+        //! be resealed through its retained mapping and certified by the cursor even though its pathname disappeared.
+        queue.evictCachedCycleMapping(cycle);
+        setCycle2(cycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING, false);
+    }
+
+    private void setCycle2(final int cycle,
+                           final WireStoreSupplier.CreateStrategy createStrategy,
+                           final boolean reuseCurrentStore) {
         queue.throwExceptionIfClosed();
         if (cycle < 0)
             throw new IllegalArgumentException("You can not have a cycle that starts " +
@@ -386,7 +419,10 @@ class StoreAppender extends AbstractCloseable
 
         SingleChronicleQueueStore oldStore = this.store;
 
-        SingleChronicleQueueStore newStore = storePool.acquire(cycle, createStrategy, oldStore);
+        SingleChronicleQueueStore newStore = storePool.acquire(
+                cycle, createStrategy, reuseCurrentStore ? oldStore : null);
+        if (!reuseCurrentStore && newStore == null)
+            throw missingPhysicalCycle(cycle);
 
         // If the store has changed, update and close the old one
         if (newStore != oldStore) {
@@ -471,6 +507,18 @@ class StoreAppender extends AbstractCloseable
      * @throws UnrecoverableTimeoutException If a timeout occurs during the operation.
      */
     private boolean resetPosition() {
+        if (store == null || wire == null)
+            return false;
+        try {
+            final boolean changed = resetPosition(store.lastSequenceNumber(this));
+            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+            return changed;
+        } catch (StreamCorruptedException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private boolean resetPosition(long lastSequenceNumber) {
         long originalHeaderNumber = wire.headerNumber();
         long INVALID_HEADER_NUMBER = -1;
 
@@ -483,18 +531,15 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> bytes = wire.bytes();
             assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
 
-            final long lastSequenceNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
             assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != INVALID_HEADER_NUMBER ||
                     checkIndex(wire.headerNumber(), positionOfHeader);
 
             bytes.writeLimit(bytes.capacity());
-
-            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
             return originalHeaderNumber != wire.headerNumber();
 
-        } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
+        } catch (@NotNull BufferOverflowException e) {
             throw new AssertionError(e);
         }
     }
@@ -628,13 +673,32 @@ class StoreAppender extends AbstractCloseable
      * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
      */
     public void normaliseEOFs() {
+        normaliseEOFs(null);
+    }
+
+    void normaliseEOFs(@Nullable Runnable afterCycleEnumeration) {
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            // use the getter, not the raw field: after the construction-time back-scan releases its
-            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
-            normaliseEOFs0(cycle());
+            //! restartedHistoricalBackfillLowersEofNormalisationBound and
+            //! historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion require the shared cursor to bring
+            //! every touched historical roll back into completion. currentTimestampBackfillIsNormalisedOnlyAfterItBecomesHistorical,
+            //! futureExactWriteDoesNotAdvanceEofCursorAcrossTimestampCurrentCycle and
+            //! backfillBelowRolledBackHighWaterIsNormalisedAtCompletion require the cap to preserve the effective
+            //! current/future ordinary-write destination until it becomes historical.
+            // CQE retries failed backfills before completion. The shared cursor records the
+            // earliest cycle touched by those attempts; completion seals every such historical
+            // cycle without sealing the effective ordinary-write destination.
+            final int lastPublishedCycle = queue.lastPublishedCycle();
+            final int activeCycle = Math.max(queue.cycle(), lastPublishedCycle);
+            final int normaliseTo = (int) Math.min((long) lastPublishedCycle + 1, activeCycle);
+            //! generationDisappearingAfterEnumerationDoesNotAdvanceCursor uses the package-local
+            //! interleaving hook to replace the physical snapshot before the first mutation.
+            //! currentMappedGenerationDisappearingAfterEnumerationDoesNotAdvanceCursor additionally requires that
+            //! revalidation not reuse an unlinked mapping. They distinguish action-time validation without exposing
+            //! the hook through ExcerptAppender.
+            normaliseEOFs0(normaliseTo, afterCycleEnumeration);
         } finally {
             writeLock.unlock();
             long tookMillis = (System.nanoTime() - start) / 1_000_000;
@@ -650,25 +714,178 @@ class StoreAppender extends AbstractCloseable
      * @param cycle the target cycle up to which EOF normalization should occur
      */
     private void normaliseEOFs0(int cycle) {
-        int first = queue.firstCycle();
+        normaliseEOFs0(cycle, null);
+    }
 
-        if (first == Integer.MAX_VALUE)
+    private void normaliseEOFs0(int cycle, @Nullable Runnable afterCycleEnumeration) {
+        final int publishedFirst = queue.firstPublishedCycleWithoutRefresh();
+        if (publishedFirst == UNSET_CONTEXT)
             return;
+        final LongValue normalisedEOFsTo = queue.tableStoreAcquire(
+                NORMALISED_EOFS_TO_TABLESTORE_KEY, publishedFirst);
+        final long storedNormalisedEOFsTo = normalisedEOFsTo.getVolatileValue();
+        //! corruptedEofNormalisationCursorFailsBeforeMutation requires the persisted long to be validated before it
+        //! becomes a Queue cycle or a directory refresh updates listing metadata. Narrowing first can alias a corrupt
+        //! value into UInt31 and then report completion while skipping historical rolls; unlike directory metadata,
+        //! this cursor has no legacy unset encoding.
+        if (storedNormalisedEOFsTo < 0 || storedNormalisedEOFsTo > Integer.MAX_VALUE)
+            throw new IllegalStateException("Invalid EOF normalisation cycle " + storedNormalisedEOFsTo
+                    + " for queue=" + queue.fileAbsolutePath());
 
-        final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
-        int eofCycle = Math.max(first, (int) normalisedEOFsTo.getVolatileValue());
+        //! sparseRollsAreTraversedByExistingCycle,
+        //! cachedCycleTreeDoesNotHideMalformedPhysicalRoll and
+        //! duplicateLogicalCycleFilenameFailsNormalisationWithoutMutation require a fresh snapshot of every physical
+        //! generation. Numeric iteration invents gaps, while a listing.modCount-keyed cache can hide external files
+        //! and canonical-key filtering can omit aliases before validation.
+        final ExistingCycles range = enumerateExistingCycles();
+        final int first = range.first;
+        if (range.isEmpty())
+            return;
+        final NavigableSet<Long> existingCycles = range.cycles;
+        final int eofCycle = Math.max(first, Math.toIntExact(storedNormalisedEOFsTo));
+        if (afterCycleEnumeration != null)
+            afterCycleEnumeration.run();
         if (Jvm.isDebugEnabled(StoreAppender.class)) {
             Jvm.debug().on(StoreAppender.class, "Normalising from cycle " + eofCycle);
         }
 
-        for (; eofCycle < Math.min(queue.cycle(), cycle); ++eofCycle) {
-            setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING);
-            if (wire != null) {
-                assert queue.writeLock().locked();
-                store.writeEOF(wire, timeoutMS());
-                normalisedEOFsTo.setMaxValue(eofCycle);
-            }
+        //! restartRetriesIncompleteHistoricalRecoveryAndNormalisesEof and
+        //! historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion require each survivor below the cap to
+        //! be sealed before advancing the cursor. eofRestorationFailureIsNotReportedAsSuccess,
+        //! generationDisappearingAfterEnumerationDoesNotAdvanceCursor and
+        //! currentMappedGenerationDisappearingAfterEnumerationDoesNotAdvanceCursor require mutation failure or
+        //! disappearance to abort completion; otherwise CQE could acknowledge recovery while a historical roll
+        //! remains writable or absent by pathname.
+        final int activeCycle = Math.max(queue.cycle(), queue.lastPublishedCycle());
+        final int normaliseTo = Math.min(activeCycle, cycle);
+        for (long existingCycle : existingCycles) {
+            if (existingCycle < eofCycle)
+                continue;
+            if (existingCycle >= normaliseTo)
+                break;
+
+            final int cycleToNormalise = Math.toIntExact(existingCycle);
+            setCycle2StrictExisting(cycleToNormalise);
+            assert queue.writeLock().locked();
+            ensureEndOfData("Unable to normalise end-of-data: queue="
+                    + queue.fileAbsolutePath() + ", cycle=" + cycleToNormalise);
         }
+        //! sparseRollsAreTraversedByExistingCycle requires the cursor to advance across physically absent gaps only
+        //! after every surviving roll below the cap has been sealed. Publishing each observed cycle separately would
+        //! repeatedly rescan large sparse ranges; publishing before the loop completed could certify an unsealed roll.
+        // The directory enumeration proves that every skipped cycle is absent.
+        normalisedEOFsTo.setMaxValue(normaliseTo);
+    }
+
+    private ExistingCycles enumerateExistingCycles() {
+        RuntimeException initialFailure = null;
+        ExistingCycles range = null;
+        try {
+            range = enumerateExistingCycles0();
+        } catch (RuntimeException failure) {
+            initialFailure = failure;
+        }
+        if (range != null && range.hasBothBoundaries())
+            return range;
+
+        final boolean initiallyObservedPublishedBounds = range != null && !range.isEmpty();
+        try {
+            //! cachedCycleTreeDoesNotHideMalformedPhysicalRoll and
+            //! duplicateLogicalCycleFilenameFailsNormalisationWithoutMutation require a failed filename scan to
+            //! retry the physical snapshot without first publishing directory metadata. A parseable alias can make
+            //! refresh() increment listing.modCount even though completion must fail without persistent mutation.
+            if (initialFailure == null)
+                queue.refreshDirectoryListing();
+            range = enumerateExistingCycles0();
+        } catch (RuntimeException refreshedFailure) {
+            //! malformedPhysicalRollNameFailsNormalisationWithoutAdvancingCursor requires parsing
+            //! or enumeration failure to retain its cause after the one permitted refresh. A
+            //! fabricated endpoint set could certify completion while omitting touched history.
+            if (initialFailure != null)
+                refreshedFailure.addSuppressed(initialFailure);
+            throw new IllegalStateException("Cannot enumerate physical roll generations after refresh: queue="
+                    + queue.fileAbsolutePath(), refreshedFailure);
+        }
+        requireConsistentRefreshedRange(initiallyObservedPublishedBounds, range,
+                queue.fileAbsolutePath(), initialFailure);
+        return range;
+    }
+
+    private ExistingCycles enumerateExistingCycles0() {
+        //! exactEofRecoveryAtMaximumCycleIsRejectedBeforeMutation and
+        //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty require physical enumeration to use semantic
+        //! publication state. The public firstCycle() maps an empty Queue to Integer.MAX_VALUE and cannot distinguish
+        //! that sentinel from the last valid UInt31 cycle.
+        final int first = queue.firstPublishedCycleWithoutRefresh();
+        if (first == UNSET_CONTEXT)
+            return ExistingCycles.empty();
+        final int last = queue.lastPublishedCycle();
+        try {
+            return new ExistingCycles(first, last, queue.listFreshPhysicalCycles());
+        } catch (DateTimeException incompatibleRollFilename) {
+            //! malformedPhysicalRollNameFailsNormalisationWithoutAdvancingCursor and
+            //! nonCanonicalWeeklyRollFailsNormalisationWithoutAdvancingCursor require even a single-file parse or
+            //! canonical-name failure to abort. Treating first == last as proof fabricates a generation that was
+            //! never validated and can advance the completion cursor falsely.
+            throw new IllegalStateException("Cannot enumerate all roll cycles with the persisted roll format: queue="
+                    + queue.fileAbsolutePath() + ", first=" + first + ", last=" + last,
+                    incompatibleRollFilename);
+        }
+    }
+
+    static void requireConsistentRefreshedRange(boolean initiallyObservedPublishedBounds,
+                                                ExistingCycles range,
+                                                String queuePath,
+                                                RuntimeException initialFailure) {
+        //! refreshedEmptyPhysicalRangeFailsClosed requires a nonempty initial observation that
+        //! disappears during refresh to fail without publishing completion. The original failure
+        //! remains attached so callers can distinguish stale bounds from malformed names.
+        if (range.hasBothBoundaries()
+                && !(initiallyObservedPublishedBounds && range.isEmpty()))
+            return;
+        final IllegalStateException failure = new IllegalStateException(
+                "Directory bounds remained inconsistent after refresh: queue=" + queuePath
+                        + ", first=" + range.first + ", last=" + range.last
+                        + ", observedCycles=" + range.cycles);
+        if (initialFailure != null)
+            failure.addSuppressed(initialFailure);
+        throw failure;
+    }
+
+    static final class ExistingCycles {
+        private final int first;
+        private final int last;
+        private final NavigableSet<Long> cycles;
+
+        ExistingCycles(int first, int last, NavigableSet<Long> cycles) {
+            this.first = first;
+            this.last = last;
+            this.cycles = cycles;
+        }
+
+        private static ExistingCycles empty() {
+            return new ExistingCycles(UNSET_CONTEXT, UNSET_CONTEXT, new TreeSet<>());
+        }
+
+        private boolean hasBothBoundaries() {
+            return isEmpty()
+                    || (!cycles.isEmpty() && cycles.first() == first && cycles.last() == last);
+        }
+
+        private boolean isEmpty() {
+            return first == UNSET_CONTEXT;
+        }
+    }
+
+    private void recordBackfillNormalisation(final int recoveredCycle) {
+        //! ordinaryAppenderRollsForwardAfterHistoricalIndexedRecovery proves that lowering the completion cursor for
+        //! an exact historical write must not lower the ordinary destination; the shared maximum continues to choose
+        //! the live roll while a later completion can still reseal the recovered history.
+        // Lower the shared cursor even when clock rollback makes this the active high-water cycle.
+        // normaliseEOFs0() excludes that active roll; retaining the lower bound lets a later
+        // completion seal it after a newer roll is published.
+        queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, recoveredCycle)
+                .setMinValue(recoveredCycle);
     }
 
     /**
@@ -684,6 +901,12 @@ class StoreAppender extends AbstractCloseable
     private void setWireIfNull(final int cycle, WireStoreSupplier.CreateStrategy createStrategy) {
         //! unusedAppenderDoesNotCreateDeletedPublishedMaximum requires a caller-selected acquisition strategy: the
         //! previous CREATE-only helper would recreate an absent generation already published in Queue metadata.
+        //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum and
+        //! unusedAppenderDoesNotCreateDeletedPublishedMaximum require an existing-only target to
+        //! be rejected before EOF normalisation can reinterpret its stale physical bounds.
+        if (createStrategy == WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING
+                && !queue.cycleFileExists(cycle))
+            throw missingPublishedCycle(cycle);
         normaliseEOFs0(cycle);
 
         setCycle2(cycle, createStrategy);
@@ -746,6 +969,11 @@ class StoreAppender extends AbstractCloseable
                 + " disappeared while Queue metadata remains");
     }
 
+    private IllegalStateException missingPhysicalCycle(int missingCycle) {
+        return new IllegalStateException("Roll generation disappeared while normalising EOF: queue="
+                + queue.fileAbsolutePath() + ", cycle=" + missingCycle);
+    }
+
     /**
      * Writes a header for the current wire, ensuring the correct position and header number
      * is set for the next write operation.
@@ -754,11 +982,25 @@ class StoreAppender extends AbstractCloseable
      * @return the position of the written header
      */
     private long writeHeader(final long safeLength) {
+        //! canBackfillPreviousCycleAfterEOF and exactWriteReplacesAnIncompleteRequestedEntryWithAWarning require
+        //! exact recovery to inspect the next physical header before Wire opens or overwrites it. Ordinary writes
+        //! still call this combined helper; splitting positioning from enterHeader changes no ordinary semantics.
+        positionForNextHeader();
+        return wire.enterHeader(safeLength);
+    }
+
+    /**
+     * Positions at the next physical header without opening it. Exact recovery must inspect that
+     * header before deciding whether it may replace EOF or an incomplete record.
+     */
+    private void positionForNextHeader() {
+        //! exactBackfillFindsEofAfterSecondaryIndexMetadata,
+        //! exactBackfillFindsEofAfterTrailingUserMetadata and exactBackfillFindsEofInEmptySealedCycle require the
+        //! position to be derived from the published record and then scanned across non-indexed metadata.
         Bytes<?> bytes = wire.bytes();
         // writePosition points at the last record in the queue, so we can just skip it and we're ready for write
-        long pos = positionOfHeader;
         long lastPos = store.writePosition();
-        if (pos < lastPos) {
+        if (positionOfHeader < lastPos) {
             // queue moved since we last touched it - recalculate header number
 
             try {
@@ -767,11 +1009,116 @@ class StoreAppender extends AbstractCloseable
                 Jvm.warn().on(getClass(), "Couldn't find last sequence", ex);
             }
         }
-        int header = bytes.readVolatileInt(lastPos);
+        final int header = bytes.readVolatileInt(lastPos);
         assert header != NOT_INITIALIZED;
-        lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
+        lastPos += lengthOf(header) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
-        return wire.enterHeader(safeLength);
+    }
+
+    /**
+     * Inspects the requested index, skipping metadata because it does not consume an index.
+     * Opens the requested slot for exact recovery. EOF is deliberately left open so a CQE backfill
+     * can append the rest of that cycle without reopening and warning for every entry; the caller
+     * must invoke {@link #normaliseEOFs()} before publishing backfill completion.
+     */
+    private void prepareExactIndexRecovery(final long recoveryIndex) {
+        assert writeLock.locked();
+
+        final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+        final Bytes<?> bytes = wire.bytes();
+        positionForNextHeader();
+        long recoveryPosition = bytes.writePosition();
+        for (; ; ) {
+            // Exact-index recovery is rejected for legacy unpadded stores before this method.
+            recoveryPosition += BytesUtil.padOffset(recoveryPosition);
+            final int header = bytes.readVolatileInt(recoveryPosition);
+            if (header == NOT_INITIALIZED) {
+                //! exactWriteInitializesUnusedRequestedEntryWithoutWarning is integration-preservation evidence that
+                //! an unused exact-next slot opens without a recovery warning while still entering the completion
+                //! range; the accepted base already writes an unused slot, but does not record that obligation.
+                recordBackfillNormalisation(recoveryCycle);
+                bytes.writePosition(recoveryPosition);
+                return;
+            }
+            if (header == END_OF_DATA) {
+                //! exactEofRecoveryAtMaximumCycleIsRejectedBeforeMutation fails if exact recovery opens the final
+                //! UInt31 roll. There is no successor which can make that roll historical, so completion's active
+                //! cycle exclusion cannot safely reseal it. The read-only preflight normally rejects first; this
+                //! check remains as fail-closed protection against a non-cooperating change after that inspection.
+                if (recoveryCycle == Integer.MAX_VALUE)
+                    throw maximumCycleRecoveryFailure(recoveryIndex);
+                //! canBackfillPreviousCycleAfterEOF requires only the observed EOF word to be reopened, with the
+                //! touched cycle recorded before mutation so completion can reseal it after a later failure.
+                recordBackfillNormalisation(recoveryCycle);
+                bytes.writePosition(recoveryPosition);
+                replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
+                warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
+                        recoveryPosition, header);
+                return;
+            }
+            if ((header & NOT_COMPLETE) != 0) {
+                //! exactWriteReplacesAnIncompleteRequestedEntryAfterQueueRestart requires the exact-next incomplete
+                //! header to be cleared in place and warned once; it is neither a published duplicate nor corruption.
+                recordBackfillNormalisation(recoveryCycle);
+                bytes.writePosition(recoveryPosition);
+                warnExactIndexRecovery("replaced incomplete header", recoveryIndex,
+                        recoveryPosition, header);
+                // Clear the failed header here so Wire.enterHeader does not emit a second warning.
+                bytes.writeVolatileInt(recoveryPosition, NOT_INITIALIZED);
+                return;
+            }
+            if (isReadyMetaData(header)) {
+                //! exactBackfillCanAddASecondaryIndexBeforeResealing and
+                //! exactBackfillFindsEofAfterTrailingUserMetadata require ready metadata to consume physical bytes
+                //! without consuming the requested Queue index.
+                recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
+                continue;
+            }
+            if (isReadyData(header)) {
+                //! The exactIndexStateWithoutMutation() preflight and capped publishUnpublishedRecords() consume
+                //! every ready record needed by a valid request while the shared write lock is held, so no
+                //! cooperative test can reach this branch. Retain the failure for mapped-file corruption or a
+                //! writer which bypasses that lock; treating the record as a free slot would overwrite ready data.
+                // publishUnpublishedRecords() runs before this scan while the write lock is
+                // held, so ready data beyond the published position indicates corruption.
+                throw new IllegalStateException("Ready data record after the published write position at "
+                        + recoveryPosition + " in " + queue.fileAbsolutePath());
+            }
+            //! Cooperative writers cannot produce another terminal word while the Queue write lock is held, so no
+            //! current test discriminates this residual corruption guard. Treating an unknown ready/reserved word as
+            //! a free slot would overwrite physical state whose Queue-index meaning has not been established.
+            throw new IllegalStateException("Unexpected recovery header 0x" + Integer.toHexString(header));
+        }
+    }
+
+    private IllegalStateException maximumCycleRecoveryFailure(final long recoveryIndex) {
+        return new IllegalStateException("Cannot reopen end-of-data in the final UInt31 cycle for exact-index "
+                + "recovery: queue=" + queue.fileAbsolutePath()
+                + ", index=0x" + Long.toHexString(recoveryIndex));
+    }
+
+    private void warnExactIndexRecovery(final String action, final long recoveryIndex,
+                                        final long recoveryPosition, final int header) {
+        final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
+        Jvm.warn().on(getClass(), "Exact-index recovery " + action + ": queue="
+                + queue.fileAbsolutePath()
+                + ", cycle=" + recoveryCycle
+                + ", index=0x" + Long.toHexString(recoveryIndex)
+                + ", position=" + recoveryPosition
+                + ", header=0x" + Integer.toHexString(header));
+    }
+
+    /**
+     * Performs the single atomic mutation that opens a sealed roll for exact-index recovery.
+     * Package visibility permits the failed-CAS invariant to be tested without reflection.
+     */
+    static void replaceEndOfDataMarkerForRecovery(Bytes<?> bytes, long recoveryPosition) {
+        //! StoreAppenderTest#exactRecoveryFailsIfTheEofMarkerChangesBeforeCas directly discriminates the expected-word
+        //! compare-and-swap. An unconditional write could reopen a header changed after inspection and overwrite a
+        //! concurrent or corrupt terminal state instead of failing closed.
+        if (!bytes.compareAndSwapInt(recoveryPosition, END_OF_DATA, NOT_INITIALIZED))
+            throw new IllegalStateException("End-of-data changed while starting exact-index recovery at "
+                    + recoveryPosition);
     }
 
     private void advanceOrdinaryAppendCycle() {
@@ -849,6 +1196,11 @@ class StoreAppender extends AbstractCloseable
 
         try {
             long pos = positionOfHeader;
+            //! eosOnlyRestartPreservesReadySequenceZeroBeforeOrdinaryAppend proves zero can also mean a ready first
+            //! record whose write position was not published. Let lastSequenceNumber() perform its physical scan
+            //! instead of asserting against the empty-store sentinel.
+            if (pos == 0)
+                return true;
 
             long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
             long seq2 = store.sequenceForPosition(this, pos, true);
@@ -905,10 +1257,9 @@ class StoreAppender extends AbstractCloseable
             Bytes<?> wireBytes = wire.bytes();
             wireBytes.write(bytes);
             wire.updateHeader(positionOfHeader, false, 0);
-            lastIndex(wire.headerNumber());
-            lastPosition = positionOfHeader;
-            store.writePosition(positionOfHeader);
-            writeIndexForPosition(lastIndex, positionOfHeader);
+            //! writeBytesAndIndexFiveTimesTest and testIndexQueue require ordinary byte appends to publish local
+            //! position, mapped writePosition and sparse index through the same ordering used by exact recovery.
+            recordCommittedData(wire.headerNumber(), positionOfHeader);
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         } finally {
@@ -946,6 +1297,14 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
+    void ensureEndOfData(final String failureMessage) {
+        //! eofRestorationFailureIsNotReportedAsSuccess fails if a false writeEOF result is accepted without proving
+        //! that another writer installed EOF. Completion must either observe that seal or propagate failure.
+        if (store.writeEOF(wire, timeoutMS()) || cycleHasEOF())
+            return;
+        throw new IllegalStateException(failureMessage);
+    }
+
     /**
      * Appends bytes without write lock. Should only be used if write lock is acquired externally. Never use without write locking as it WILL corrupt
      * the queue file and cause data loss.
@@ -957,7 +1316,65 @@ class StoreAppender extends AbstractCloseable
     protected void writeBytesInternal(final long index, @NotNull final BytesStore<?, ?> bytes) {
         checkAppendLock(true);
 
-        final int cycle = queue.rollCycle().toCycle(index);
+        //! exactRecoveryRejectsUnsupportedSequenceBeforeCreatingRoll and
+        //! rejectedExactGapIntoExistingLaterRollDoesNotSealTheCurrentRoll require capacity and gap classification
+        //! before roll selection can create a file, seal the current roll or publish a cycle.
+        //! ordinaryAppenderContinuesInCurrentCycleAfterIndexedWriteToUnsealedRoll is integration-preservation
+        //! evidence that a valid exact write does not disturb the ordinary destination; the accepted base also
+        //! keeps that destination.
+        final RollCycle rollCycle = queue.rollCycle();
+        final int cycle = rollCycle.toCycle(index);
+        final long sequenceNumber = rollCycle.toSequenceNumber(index);
+        if (sequenceNumber >= rollCycle.maxMessagesPerCycle())
+            throw new IllegalArgumentException("Exact-index sequence " + sequenceNumber
+                    + " is outside maxMessagesPerCycle=" + rollCycle.maxMessagesPerCycle()
+                    + " for index=0x" + Long.toHexString(index));
+
+        //! sameCycleGapDoesNotPublishReadyCrashRecord and
+        //! publishedDuplicateDoesNotAdoptLaterReadyCrashRecord require every exact request, including one for the
+        //! appender's current roll, to classify published and physical state through a read-only view first. Deferring
+        //! this until after resetPosition() and crash-record adoption makes a rejected gap or old duplicate publish
+        //! unrelated ready data.
+        final ExactIndexState exactIndexState = exactIndexStateWithoutMutation(
+                cycle, sequenceNumber, bytes);
+        //! exactWriteDoesNotRecreateDeletedPublishedMaximum and
+        //! exactWriteRejectsAbsentCycleWithinPublishedRange require absence to remain distinct from an existing
+        //! empty store. The published maximum is authoritative, and an absent interior generation is ambiguous
+        //! between a deliberate sparse gap and unsupported deletion; only targets outside the retained bounds may
+        //! be created without persisted per-cycle provenance.
+        if (!exactIndexState.targetExists)
+            requireAbsentExactTargetCanBeCreated(cycle);
+        //! publishedDuplicatePayloadsAreComparedWithoutMutation and CreateAtIndexTest#testWriteBytesWithIndex require
+        //! a published duplicate to be compared before returning: equal content is debug-only, while different
+        //! content warns with both hex dumps and is ignored. Comparing after roll selection could seal or move the
+        //! source appender merely to diagnose an already-applied index.
+        //! StoreAppenderInternalWriteBytesTest#internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates,
+        //! #internalWriteBytesShouldBeIdempotent and WriteBytesIndexTest#writeMultipleAppenders retain the broader
+        //! independent-Queue, per-entry reopen and live-tailer compatibility coverage.
+        //! independentQueueExactWritersReplayAcrossCyclesAndRestart adds deterministic sparse-cycle completion and
+        //! full Queue-object restart coverage. Together with CreateAtIndexTest#testWriteBytesWithIndex, these tests
+        //! consolidate the narrower deleted cannotOverwriteExistingEntries_DifferentQueueInstance and
+        //! writeBytesAndIndexFiveTimesWithOverwriteTest cases. They are integration-preservation tests rather than
+        //! accepted-base discriminators. In every case the first published record remains authoritative.
+        if (exactIndexState.hasPublishedIndex()
+                && index <= exactIndexState.publishedIndex(rollCycle, cycle))
+            return;
+
+        final long nextIndexInTarget = exactIndexState.nextPhysicalIndex(rollCycle, cycle);
+        //! InternalAppenderWriteBytesTest#cannotWriteToNonZeroIndexOfNewRollCycleWithoutMutation and
+        //! rejectedExactGapIntoExistingLaterRollDoesNotSealTheCurrentRoll require the physical next-index comparison
+        //! beside the rejection itself and before roll selection. Deferring it could create the target or seal and
+        //! move the source appender even though the requested sequence leaves a gap.
+        if (index > nextIndexInTarget)
+            throw new IllegalIndexException(index, nextIndexInTarget - 1);
+
+        //! exactEofRecoveryAtMaximumCycleIsRejectedBeforeMutation requires the terminal EOF decision to be made
+        //! through the read-only preflight. Reaching prepareExactIndexRecovery() first could move this appender and
+        //! lower the shared completion cursor even though the final UInt31 roll can never become historical.
+        if (cycle == Integer.MAX_VALUE
+                && index == nextIndexInTarget
+                && exactIndexState.terminalHeader == END_OF_DATA)
+            throw maximumCycleRecoveryFailure(index);
 
         if (wire == null)
             setWireIfNull(cycle);
@@ -966,22 +1383,37 @@ class StoreAppender extends AbstractCloseable
         if (this.cycle != cycle)
             rollCycleTo(cycle, this.cycle > cycle);
 
-        // in case our cached headerNumber is incorrect.
-        resetPosition();
+        requirePaddedExactStore(store, cycle);
+
+        //! exactPreflightRejectsStaleAliasingEncodedSequence requires mutation to retain the full-position result
+        //! from preflight. Calling the general resetPosition() here would re-read the lossy paired sequence and could
+        //! reject a valid exact-next request after the read-only classification had already proved its boundary.
+        resetPosition(exactIndexState.lastPublishedSequence);
+        final long adoptedIndex = publishUnpublishedRecords(cycle, index, exactIndexState);
+        //! exactWriteAdoptsReadyFirstRecordRetryBeforeWritingNext and
+        //! restartPublishesReadyRecordLeftBeyondWritePosition require ready crash records to be published before
+        //! opening an exact-next slot. Capping publication at the requested index prevents an older ready duplicate
+        //! from adopting unrelated later records; gap and published-duplicate classification already completed
+        //! without mutation.
+        if (index == adoptedIndex)
+            return;
 
         long headerNumber = wire.headerNumber();
 
-        boolean isNextIndex = index == headerNumber + 1;
-        if (!isNextIndex) {
-            if (index > headerNumber + 1)
-                throw new IllegalIndexException(index, headerNumber);
-
-            // this can happen when using queue replication when we are back filling from a number of sinks at them same time
-            // its normal behaviour in the is use case so should not be a WARN
-            if (Jvm.isDebugEnabled(getClass()))
-                Jvm.debug().on(getClass(), "Trying to overwrite index " + Long.toHexString(index) + " which is before the end of the queue");
+        //! The read-only preflight and this recheck execute under the shared Queue write lock, so a cooperative test
+        //! cannot change headerNumber between them. Retain the bounds for a non-cooperating mapped writer: accepting a
+        //! later header would skip a gap, while overwriting an earlier one would violate first-writer authority.
+        if (index > headerNumber + 1)
+            throw new IllegalIndexException(index, headerNumber);
+        //! The shared lock makes publication after preflight unreachable for cooperating writers, so no deterministic
+        //! Queue test discriminates this fallback. A writer bypassing that lock can still publish first; compare its
+        //! authoritative record and ignore the supplied duplicate rather than overwrite it or throw.
+        if (index <= headerNumber) {
+            comparePublishedEntry(store, wire, cycle, sequenceNumber, bytes);
             return;
         }
+
+        prepareExactIndexRecovery(index);
 
         writeBytesInternal(bytes, false);
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
@@ -991,6 +1423,309 @@ class StoreAppender extends AbstractCloseable
         if (!isIndex) {
             throw new IllegalStateException("index: " + index + ", header: " + headerNumber);
         }
+
+    }
+
+    /**
+     * Publishes ready data left beyond the store write position when a writer stopped between
+     * making a header ready and {@link #recordCommittedData(long, long)}. Publication stops at the
+     * requested ready record, or at the final predecessor of an exact-next request, so replaying an
+     * older index cannot publish unrelated later data.
+     */
+    private long publishUnpublishedRecords(final int cycle,
+                                           final long requestedIndex,
+                                           final ExactIndexState exactIndexState) {
+        //! exactWriteAdoptsReadyFirstRecordRetryBeforeWritingNext and
+        //! restartPublishesReadyRecordLeftBeyondWritePosition cover interruptions where a ready record precedes
+        //! writePosition publication. Publish only through the requested ready record, or through all contiguous
+        //! predecessors of an exact-next request. Publishing every physical record would let an old duplicate adopt
+        //! unrelated later data. General sparse-index repair remains out of scope.
+        final RollCycle rollCycle = queue.rollCycle();
+        final long requestedSequence = rollCycle.toSequenceNumber(requestedIndex);
+        final long sequenceToPublish = Math.min(requestedSequence, exactIndexState.lastPhysicalSequence);
+        if (sequenceToPublish <= exactIndexState.lastPublishedSequence)
+            return Long.MIN_VALUE;
+
+        final Bytes<?> bytes = wire.bytes();
+        final long publishedPosition = store.writePosition();
+        //! The Queue write lock prevents a cooperative discriminator for an action-time publication change. Retain
+        //! this comparison for a non-cooperating mapped writer; indexing from a stale position could publish the wrong
+        //! physical record after preflight had classified another boundary.
+        if (publishedPosition != exactIndexState.publishedPosition)
+            throw new IllegalStateException("Exact-index target changed after preflight: queue="
+                    + queue.fileAbsolutePath() + ", cycle=" + cycle);
+        long position = publishedPosition
+                + lengthOf(bytes.readVolatileInt(publishedPosition)) + SPB_HEADER_SIZE;
+        long lastReadyDataPosition = -1;
+        long readySequence = exactIndexState.lastPublishedSequence;
+        for (; ; ) {
+            position += BytesUtil.padOffset(position);
+            final int header = bytes.readVolatileInt(position);
+            if (isReadyData(header)) {
+                lastReadyDataPosition = position;
+                if (++readySequence == sequenceToPublish)
+                    break;
+            } else if (!isReadyMetaData(header)) {
+                break;
+            }
+            position += SPB_HEADER_SIZE + lengthOf(header);
+        }
+        //! The same lock prevents a cooperative test from changing the scanned ready-record prefix. Fail closed if a
+        //! non-cooperating writer does so: publishing a shorter or different prefix would assign the requested Queue
+        //! sequence to physical data that preflight did not validate.
+        if (lastReadyDataPosition < 0 || readySequence != sequenceToPublish)
+            throw new IllegalStateException("Exact-index physical state changed after preflight: queue="
+                    + queue.fileAbsolutePath() + ", cycle=" + cycle);
+
+        final long lastIndex = rollCycle.toIndex(cycle, readySequence);
+        try {
+            recordBackfillNormalisation(cycle);
+            wire.headerNumber(lastIndex);
+            recordCommittedData(lastIndex, lastReadyDataPosition);
+            return lastIndex;
+        } catch (StreamCorruptedException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    /**
+     * Reads the publication boundary, contiguous physical records and terminal header through a
+     * private read-only view, so every duplicate or gap can be classified before this appender
+     * rolls, seals or publishes anything.
+     */
+    private ExactIndexState exactIndexStateWithoutMutation(final int cycle,
+                                                           final long requestedSequence,
+                                                           @NotNull final BytesStore<?, ?> suppliedBytes) {
+        final RollCycle rollCycle = queue.rollCycle();
+        try (SingleChronicleQueueStore target = queue.storeForCycle(cycle, queue.epoch(), false, null)) {
+            if (target == null)
+                return ExactIndexState.absent();
+            requirePaddedExactStore(target, cycle);
+            try (MappedBytes bytes = target.bytes()) {
+                final long publishedPosition = target.writePosition();
+                final Wire preflightWire = queue.wireType().apply(bytes);
+                preflightWire.usePadding(target.dataVersion() > 0);
+                final long lastPublishedSequence = target.lastPublishedSequenceNumber(preflightWire);
+                //! Supported publication cannot produce an out-of-capacity sequence, so no cooperative test reaches
+                //! this guard. Validate the persisted scan result before composing a Queue index; accepting a corrupt
+                //! negative or oversized value could alias the exact-next boundary and authorize the wrong slot.
+                if (lastPublishedSequence < -1
+                        || lastPublishedSequence >= rollCycle.maxMessagesPerCycle())
+                    throw new IllegalStateException("Invalid published sequence " + lastPublishedSequence
+                            + " in cycle " + cycle + " for queue=" + queue.fileAbsolutePath());
+
+                if (requestedSequence <= lastPublishedSequence) {
+                    comparePublishedEntry(target, preflightWire, cycle, requestedSequence, suppliedBytes);
+                    return new ExactIndexState(true, publishedPosition, lastPublishedSequence,
+                            lastPublishedSequence, NOT_INITIALIZED);
+                }
+
+                long lastPhysicalSequence = lastPublishedSequence;
+                long requestedReadyPosition = -1;
+                long position = publishedPosition
+                        + lengthOf(bytes.readVolatileInt(publishedPosition)) + SPB_HEADER_SIZE;
+                for (; ; ) {
+                    position += BytesUtil.padOffset(position);
+                    final int header = bytes.readVolatileInt(position);
+                    if (isReadyData(header)) {
+                        //! No supported writer can place more ready records than maxMessagesPerCycle, so there is no
+                        //! cooperative discriminator. Stop before incrementing beyond the declared sequence domain;
+                        //! otherwise corrupt physical data could wrap or authorize an unsupported exact index.
+                        if (++lastPhysicalSequence >= rollCycle.maxMessagesPerCycle())
+                            throw new IllegalStateException("Physical sequence exceeds maxMessagesPerCycle in cycle "
+                                    + cycle + " for queue=" + queue.fileAbsolutePath());
+                        if (lastPhysicalSequence == requestedSequence)
+                            requestedReadyPosition = position;
+                    } else if (!isReadyMetaData(header)) {
+                        //! readyCrashDuplicatesCompareMatchingAndDifferentPayloads and
+                        //! readyCrashDuplicateEqualityIsSilentWhenDebugDisabled require the same diagnostic policy
+                        //! for a ready crash record as for a published duplicate. Compare only the requested record,
+                        //! after classifying the complete physical prefix and before adoption changes publication;
+                        //! silently adopting a different payload would hide a divergent retry.
+                        if (requestedReadyPosition >= 0) {
+                            bytes.readLimit(requestedReadyPosition + SPB_HEADER_SIZE
+                                    + lengthOf(bytes.readVolatileInt(requestedReadyPosition)));
+                            bytes.readPosition(requestedReadyPosition);
+                            compareExistingEntry(cycle, requestedSequence, bytes, suppliedBytes, "ready");
+                        }
+                        return new ExactIndexState(true, publishedPosition, lastPublishedSequence,
+                                lastPhysicalSequence, header);
+                    }
+                    position += SPB_HEADER_SIZE + lengthOf(header);
+                }
+            }
+        }
+    }
+
+    private void comparePublishedEntry(@NotNull final SingleChronicleQueueStore target,
+                                       @NotNull final Wire comparisonWire,
+                                       final int cycle,
+                                       final long sequenceNumber,
+                                       @NotNull final BytesStore<?, ?> suppliedBytes) {
+        final Bytes<?> existingBytes = comparisonWire.bytes();
+        final long savedReadPosition = existingBytes.readPosition();
+        final long savedReadLimit = existingBytes.readLimit();
+        final long savedWritePosition = existingBytes.writePosition();
+        try {
+            final ExcerptContext comparisonContext = new WireExcerptContext(comparisonWire, timeoutMS());
+            final ScanResult scanResult = target.moveToIndexForRead(comparisonContext, sequenceNumber);
+            if (scanResult != ScanResult.FOUND) {
+                warnUnableToComparePublishedEntry(cycle, sequenceNumber, suppliedBytes, scanResult);
+                return;
+            }
+            compareExistingEntry(cycle, sequenceNumber, existingBytes, suppliedBytes, "published");
+
+        } finally {
+            existingBytes.readPosition(savedReadPosition);
+            existingBytes.readLimit(savedReadLimit);
+            existingBytes.writePosition(savedWritePosition);
+        }
+    }
+
+    private void compareExistingEntry(final int cycle,
+                                      final long sequenceNumber,
+                                      @NotNull final Bytes<?> existingBytes,
+                                      @NotNull final BytesStore<?, ?> suppliedBytes,
+                                      final String recordState) {
+        final int header = existingBytes.readVolatileInt();
+        assert isReadyData(header);
+        final int existingLength = lengthOf(header);
+        final long suppliedLength = suppliedBytes.readRemaining();
+        final long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
+        //! InternalAppenderWriteBytesTest#publishedDuplicatePayloadsAreComparedWithoutMutation distinguishes both
+        //! outcomes for published data; readyCrashDuplicatesCompareMatchingAndDifferentPayloads requires parity
+        //! for ready crash data. readyCrashDuplicateEqualityIsSilentWhenDebugDisabled pins the debug guard:
+        //! equal content is silent when disabled, while different content still warns with both hex dumps.
+        //! Neither path throws or overwrites the authoritative existing record.
+        if (existingLength == suppliedLength
+                && existingBytes.equalBytes(suppliedBytes, existingLength)) {
+            if (Jvm.isDebugEnabled(getClass()))
+                Jvm.debug().on(getClass(), "Exact-index duplicate matches " + recordState + " content and was ignored: queue="
+                        + queue.fileAbsolutePath() + ", cycle=" + cycle + ", index=0x" + Long.toHexString(index)
+                        + ", length=" + existingLength);
+            return;
+        }
+
+        Jvm.warn().on(getClass(), "Exact-index duplicate differs from " + recordState + " content and was ignored: queue="
+                + queue.fileAbsolutePath() + ", cycle=" + cycle + ", index=0x" + Long.toHexString(index)
+                + ", existingLength=" + existingLength + ", suppliedLength=" + suppliedLength
+                + "\nexisting:\n" + existingBytes.toHexString(existingLength)
+                + "\nsupplied:\n" + toHexDump(suppliedBytes, suppliedLength));
+    }
+
+    private void warnUnableToComparePublishedEntry(final int cycle,
+                                                   final long sequenceNumber,
+                                                   @NotNull final BytesStore<?, ?> suppliedBytes,
+                                                   @NotNull final ScanResult reason) {
+        //! A cooperative Queue cannot publish an index which its own read path cannot find, so no deterministic valid
+        //! input reaches this branch. Preserve the non-throwing duplicate contract while warning that corruption or a
+        //! non-cooperating writer prevented the requested comparison; the supplied payload remains ignored.
+        final long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
+        Jvm.warn().on(getClass(), "Exact-index duplicate could not be compared and was ignored: queue="
+                + queue.fileAbsolutePath() + ", cycle=" + cycle + ", index=0x" + Long.toHexString(index)
+                + ", suppliedLength=" + suppliedBytes.readRemaining() + ", reason=" + reason
+                + "\nsupplied:\n" + toHexDump(suppliedBytes, suppliedBytes.readRemaining()));
+    }
+
+    private static String toHexDump(@NotNull final BytesStore<?, ?> bytesStore,
+                                    final long length) {
+        if (bytesStore instanceof Bytes)
+            return ((Bytes<?>) bytesStore).toHexString(length);
+
+        final Bytes<?> bytes = bytesStore.bytesForRead();
+        try {
+            bytes.readPosition(bytesStore.readPosition());
+            return bytes.toHexString(length);
+        } finally {
+            bytes.releaseLast();
+        }
+    }
+
+    private static final class WireExcerptContext implements ExcerptContext {
+        @NotNull
+        private final Wire wire;
+        private final long timeoutMS;
+
+        private WireExcerptContext(@NotNull final Wire wire, final long timeoutMS) {
+            this.wire = wire;
+            this.timeoutMS = timeoutMS;
+        }
+
+        @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
+        public Wire wireForIndex() {
+            return wire;
+        }
+
+        @Override
+        public long timeoutMS() {
+            return timeoutMS;
+        }
+    }
+
+    private static final class ExactIndexState {
+        private final boolean targetExists;
+        private final long publishedPosition;
+        private final long lastPublishedSequence;
+        private final long lastPhysicalSequence;
+        private final int terminalHeader;
+
+        private ExactIndexState(boolean targetExists,
+                                long publishedPosition,
+                                long lastPublishedSequence,
+                                long lastPhysicalSequence,
+                                int terminalHeader) {
+            this.targetExists = targetExists;
+            this.publishedPosition = publishedPosition;
+            this.lastPublishedSequence = lastPublishedSequence;
+            this.lastPhysicalSequence = lastPhysicalSequence;
+            this.terminalHeader = terminalHeader;
+        }
+
+        private static ExactIndexState absent() {
+            return new ExactIndexState(false, 0, -1, -1, NOT_INITIALIZED);
+        }
+
+        private boolean hasPublishedIndex() {
+            return lastPublishedSequence >= 0;
+        }
+
+        private long publishedIndex(RollCycle rollCycle, int cycle) {
+            return rollCycle.toIndex(cycle, lastPublishedSequence);
+        }
+
+        private long nextPhysicalIndex(RollCycle rollCycle, int cycle) {
+            return rollCycle.toIndex(cycle, lastPhysicalSequence + 1);
+        }
+    }
+
+    private void requireAbsentExactTargetCanBeCreated(final int targetCycle) {
+        final int publishedLast = queue.lastPublishedCycle();
+        if (publishedLast == UNSET_CONTEXT)
+            return;
+        final int publishedFirst = queue.firstPublishedCycleWithoutRefresh();
+        if (targetCycle < publishedFirst || targetCycle > publishedLast)
+            return;
+        if (targetCycle == publishedLast)
+            throw missingPublishedCycle(targetCycle);
+        throw new IllegalStateException("Cannot create absent exact-index cycle " + targetCycle
+                + " within retained published range " + publishedFirst + ".." + publishedLast
+                + " for queue=" + queue.fileAbsolutePath());
+    }
+
+    private void requirePaddedExactStore(final SingleChronicleQueueStore target, final int cycle) {
+        //! exactRecoveryRejectsLegacyUnpaddedStore and
+        //! crossCycleExactRecoveryRejectsLegacyTargetBeforeRollover require exact-index recovery
+        //! to reject the target's unpadded physical format before roll selection or mutation.
+        //! They do not exercise SingleChronicleQueueStore's replacement-Wire EOF fallback.
+        if (target.dataVersion() == 0)
+            throw new UnsupportedOperationException("Exact-index recovery is not supported for "
+                    + "legacy unpadded queue stores: queue=" + queue.fileAbsolutePath()
+                    + ", cycle=" + cycle);
     }
 
     private void writeBytesInternal(@NotNull final BytesStore<?, ?> bytes, boolean metadata) {
@@ -998,9 +1733,10 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            //! InternalAppenderWriteBytesTest#cannotAppendToPreviousCycle requires an exact-index write to surface
-            //! EOF from its named physical destination. Passing false keeps the ordinary one-roll retry out of this
-            //! strict path; rolling forward would report success at an index the caller did not request.
+            //! canBackfillPreviousCycleAfterEOF and exactBackfillFindsEofInEmptySealedCycle require exact recovery to
+            //! handle the intended physical EOF before this call. Passing false keeps Q2's ordinary successor-cycle
+            //! retry out of the exact path; enabling it here would report success at an index the caller did not
+            //! request and canBackfillPreviousCycleAfterEOF would no longer remain in the recovered cycle.
             openContext(metadata, safeLength, false);
 
             try {
@@ -1155,6 +1891,16 @@ class StoreAppender extends AbstractCloseable
     void writeIndexForPosition(final long index, final long position) throws StreamCorruptedException {
         long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
         store.setPositionForSequenceNumber(this, sequenceNumber, position);
+    }
+
+    private void recordCommittedData(final long index, final long position) throws StreamCorruptedException {
+        //! testIndexQueue and writeBytesAndIndexFiveTimesTest pin the common final state for ordinary, context and
+        //! exact writes. Keeping one helper prevents those paths publishing different subsets; the tests do not
+        //! independently stop between assignments or establish crash durability for this precise order.
+        lastPosition = position;
+        lastIndex(index);
+        store.writePosition(position);
+        writeIndexForPosition(index, position);
     }
 
     /**
@@ -1489,17 +2235,19 @@ class StoreAppender extends AbstractCloseable
                 throw e;
             }
 
-            lastPosition = positionOfHeader;
-
             if (!metaData) {
-                lastIndex(wire.headerNumber());
-                store.writePosition(positionOfHeader);
-                if (lastIndex != Long.MIN_VALUE) {
-                    writeIndexForPosition(lastIndex, positionOfHeader);
-                    if (queue.appenderListener != null) {
-                        callAppenderListener();
-                    }
+                //! writeBytesAndIndexFiveTimesTest exercises the context-close route as well as direct bytes. Reuse
+                //! recordCommittedData() for data only; metadata consumes physical space but must not publish a queue
+                //! index or writePosition as application data.
+                //! eosOnlyRestartPreservesReadySequenceZeroBeforeOrdinaryAppend also requires this path to publish
+                //! sequence zero: updateHeader() has made the data header ready and assigned its queue index, while a
+                //! lastIndex sentinel guard here would hide the first valid record from restart recovery.
+                recordCommittedData(wire.headerNumber(), positionOfHeader);
+                if (queue.appenderListener != null) {
+                    callAppenderListener();
                 }
+            } else {
+                lastPosition = positionOfHeader;
             }
         }
 

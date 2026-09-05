@@ -35,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.*;
 import java.security.SecureRandom;
 import java.text.ParseException;
+import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -945,6 +946,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return pool.listCyclesBetween(lowerCycle, upperCycle);
     }
 
+    NavigableSet<Long> listFreshPhysicalCycles() {
+        //! StoreAppenderTest#cachedCycleTreeDoesNotHideMalformedPhysicalRoll and
+        //! #duplicateLogicalCycleFilenameFailsNormalisationWithoutMutation require constructor and completion scans
+        //! to bypass the directory-modification cache and validate every current .cq4 filename. A cached endpoint
+        //! match is not a physical snapshot because external maintenance does not update listing.modCount.
+        return storeSupplier.freshPhysicalCycles();
+    }
+
+    void evictCachedCycleMapping(int cycle) {
+        storeSupplier.evictCycleMapping(cycle);
+    }
+
     /**
      * Adds a {@link Closeable} listener that will be closed when this queue is closed.
      *
@@ -1129,6 +1142,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return directoryListing.getMinCreatedCycle();
     }
 
+    int firstPublishedCycleWithoutRefresh() {
+        //! StoreAppenderTest#corruptedEofNormalisationCursorFailsBeforeMutation requires completion to validate its
+        //! persisted cursor before a filesystem refresh can publish a new listing modification count. The mapped
+        //! minimum supplies only the cursor's safe default; physical bounds are still refreshed and validated after
+        //! the cursor has been accepted.
+        return directoryListing.getMinCreatedCycle();
+    }
+
     /**
      * allows the appenders to inform the queue that they have rolled
      *
@@ -1167,6 +1188,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fail if
         //! this delegates to lastCycle(): both require the mapped maximum without a directory refresh.
         return directoryListing.getMaxCreatedCycle();
+    }
+
+    boolean cycleFileExists(final int cycle) {
+        //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum and
+        //! unusedAppenderDoesNotCreateDeletedPublishedMaximum require a wire-null appender to
+        //! distinguish a missing published pathname before recovery scans stale directory bounds.
+        return dateCache.resourceFor(cycle).path.isFile();
     }
 
     /**
@@ -1378,16 +1406,21 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final class CachedCycleTree {
         private final long directoryModCount;
         private final NavigableMap<Long, File> cachedCycleTree;
+        private final NavigableSet<Long> cachedCycles;
 
         /**
          * Constructs a CachedCycleTree with the specified directory modification count and cached cycle tree.
          *
          * @param directoryModCount the modification count of the directory
          * @param cachedCycleTree   the cached map of cycles to files
+         * @param cachedCycles      the parsed Queue cycles represented by the files
          */
-        CachedCycleTree(final long directoryModCount, final NavigableMap<Long, File> cachedCycleTree) {
+        CachedCycleTree(final long directoryModCount,
+                        final NavigableMap<Long, File> cachedCycleTree,
+                        final NavigableSet<Long> cachedCycles) {
             this.directoryModCount = directoryModCount;
             this.cachedCycleTree = cachedCycleTree;
+            this.cachedCycles = cachedCycles;
         }
     }
 
@@ -1456,8 +1489,22 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 try {
                     mappedBytes = mappedFileCache.get(path);
                 } catch (FileNotFoundException e) {
+                    //! There is no deterministic hook inside the existence/open race: a supported writer holds the
+                    //! Queue lock, while external maintenance does not. If the path vanishes after the initial check,
+                    //! an existing-only acquisition must return absent instead of recreating it through createFile();
+                    //! otherwise completion could certify a different generation from the one it enumerated.
+                    if (createStrategy != CreateStrategy.CREATE)
+                        return null;
                     createFile(path);
                     mappedBytes = mappedFileCache.get(path);
+                }
+                //! There is likewise no deterministic hook between cache acquisition and this pathname recheck.
+                //! A POSIX unlink can leave mappedBytes usable, so strict completion must reject that stale mapping
+                //! before reading or writing EOF rather than report success for an inode no longer in the directory.
+                if (createStrategy == CreateStrategy.REINITIALIZE_EXISTING && !path.isFile()) {
+                    mappedBytes.close();
+                    mappedFileCache.remove(path);
+                    return null;
                 }
                 mappedBytes.singleThreadedCheckDisabled(true);
                 mappedBytes.chunkCount(chunkCount);
@@ -1630,7 +1677,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          * @return a NavigableMap of cycle numbers and their corresponding files
          */
         @NotNull
-        private NavigableMap<Long, File> cycleTree(final boolean force) {
+        private CachedCycleTree cycleTreeSnapshot(final boolean force) {
 
             final File parentFile = path;
 
@@ -1644,13 +1691,37 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                 final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
                 final NavigableMap<Long, File> tree = new TreeMap<>();
+                final NavigableSet<Long> cycles = new TreeSet<>();
 
                 final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
-                if (files != null)
-                    for (File file : files)
-                        tree.put(dateCache.toLong(file), file);
+                if (files != null) {
+                    for (File file : files) {
+                        final String rollName = fileToText().apply(file);
+                        final int cycle = dateCache.parseCount(rollName);
+                        final String canonicalName = dateCache.resourceFor(cycle).text;
+                        //! StoreAppenderTest#duplicateLogicalCycleFilenameFailsNormalisationWithoutMutation requires
+                        //! every physical name to be the canonical inverse of its parsed Queue cycle. Checking only
+                        //! ordering-key uniqueness lets a coarse custom format map two different dates to one cycle,
+                        //! after which a TreeSet silently omits one file and completion publishes a false cursor.
+                        if (!rollName.equals(canonicalName))
+                            throw new DateTimeException("Non-canonical roll name " + rollName
+                                    + "; cycle " + cycle + " is " + canonicalName);
+                        // Exact canonical inversion makes distinct physical names mapping to one cycle impossible.
+                        cycles.add((long) cycle);
 
-                cachedValue = new CachedCycleTree(directoryModCount, tree);
+                        final long orderingKey = dateCache.toLong(file);
+                        //! Canonical roll names are one-to-one for supported formats, so no current test can reach
+                        //! this second duplicate-key guard after the cycle/name checks above. Retain it for a custom
+                        //! format whose distinct canonical names resolve to one ordering key: silently replacing a
+                        //! physical generation would make tailing and completion disagree about that position.
+                        final File previous = tree.put(orderingKey, file);
+                        if (previous != null)
+                            throw new IllegalStateException("Roll files resolve to the same ordering key "
+                                    + orderingKey + ": " + previous + " and " + file);
+                    }
+                }
+
+                cachedValue = new CachedCycleTree(directoryModCount, tree, cycles);
 
                 while (true) {
                     final CachedCycleTree existing = cachedTree.get();
@@ -1666,7 +1737,25 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
             }
 
-            return cachedValue.cachedCycleTree;
+            return cachedValue;
+        }
+
+        @NotNull
+        private NavigableMap<Long, File> cycleTree(final boolean force) {
+            return cycleTreeSnapshot(force).cachedCycleTree;
+        }
+
+        private NavigableSet<Long> freshPhysicalCycles() {
+            return new TreeSet<>(cycleTreeSnapshot(true).cachedCycles);
+        }
+
+        private void evictCycleMapping(int cycle) {
+            //! No deterministic cross-platform test can replace a roll pathname between the physical snapshot and
+            //! cache lookup. Evict before strict reacquisition so a recreated pathname cannot resolve to the former
+            //! inode's cached mapping; sealing that mapping would falsely certify a generation not present in the
+            //! snapshot. StoreAppenderTest#currentMappedGenerationDisappearingAfterEnumerationDoesNotAdvanceCursor
+            //! separately discriminates bypassing WireStorePool's same-cycle oldStore shortcut.
+            mappedFileCache.remove(dateCache.resourceFor(cycle).path);
         }
 
         /**
@@ -1748,12 +1837,23 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) {
             throwExceptionIfClosed();
 
-            final NavigableMap<Long, File> tree = cycleTree(false);
-            final Long lowerKey = toKey(lowerCycle, "lowerCycle");
-            final Long upperKey = toKey(upperCycle, "upperCycle");
-            assert lowerKey != null;
-            assert upperKey != null;
-            return tree.subMap(lowerKey, true, upperKey, true).navigableKeySet();
+            //! StoreAppenderTest#dailyNonZeroEpochEnumeratesCycleZero,
+            //! #hourlyNonZeroEpochEnumeratesCycleZero and #weeklyNonZeroEpochEnumeratesCycleZero require this public
+            //! supplier contract to return Queue cycle numbers. The tree keys are absolute time buckets used only
+            //! for ordering; filtering by those keys can also exclude a non-canonical alias before validation.
+            //! Return the validated logical-cycle subset instead.
+            final NavigableSet<Long> cycles = cycleTreeSnapshot(false).cachedCycles;
+            final NavigableSet<Long> selected = new TreeSet<>(
+                    cycles.subSet((long) lowerCycle, true, (long) upperCycle, true));
+            //! SingleChronicleQueueTest#testCountExceptsWithRubbishData covers initially absent endpoints, while
+            //! StoreAppenderTest#cachedCycleEnumerationRejectsDeletedBoundaries requires action-time pathname checks
+            //! even when modCount has not invalidated this cached set. Membership alone would return a deleted
+            //! physical boundary as a valid count range. These checks are outside the ordinary append hot path.
+            if (!selected.contains((long) lowerCycle) || !dateCache.resourceFor(lowerCycle).path.exists())
+                throw new IllegalStateException("file not found for lowerCycle=" + lowerCycle);
+            if (!selected.contains((long) upperCycle) || !dateCache.resourceFor(upperCycle).path.exists())
+                throw new IllegalStateException("file not found for upperCycle=" + upperCycle);
+            return selected;
         }
 
         /**
@@ -1770,18 +1870,5 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return !store.isClosed() && cycle >= directoryListing.getMinCreatedCycle() && cycle <= directoryListing.getMaxCreatedCycle();
         }
 
-        /**
-         * Converts a cycle number to a key used in the cycle tree.
-         *
-         * @param cyle the cycle number
-         * @param m    the label to use in case of an error
-         * @return the key for the cycle tree
-         */
-        private Long toKey(int cyle, String m) {
-            final File file = dateCache.resourceFor(cyle).path;
-            if (!file.exists())
-                throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
-            return dateCache.toLong(file);
-        }
     }
 }

@@ -9,6 +9,7 @@ import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -98,30 +99,7 @@ public class RollingResourcesCache {
     private int parseCount0(@NotNull String name) {
         try {
             TemporalAccessor parse = formatter.parse(name);
-            if (!parse.isSupported(ChronoField.EPOCH_DAY)) {
-                final WeekFields weekFields = WeekFields.of(formatter.getLocale());
-                if (parse.isSupported(weekFields.weekBasedYear()) && parse.isSupported(weekFields.weekOfWeekBasedYear())) {
-                    int year = Math.toIntExact(parse.getLong(weekFields.weekBasedYear()));
-                    int week = Math.toIntExact(parse.getLong(weekFields.weekOfWeekBasedYear()));
-                    //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle,
-                    //! #namedWeeklyFormatRoundTripsLocaleYearBoundaries and
-                    //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer fail when a week-formatted filename
-                    //! is reconstructed through the current date, calendar year, or week-of-year. Those fields can
-                    //! select another week at locale/year boundaries. Resolve the parsed week-based fields on the
-                    //! roll epoch's weekday, then apply the same length-and-epoch geometry as every other format so
-                    //! resourceFor(cycle) and parseCount(name) remain inverses.
-                    final int rollDayOfWeek = LocalDate.ofEpochDay(epoch / ONE_DAY_IN_MILLIS)
-                            .get(weekFields.dayOfWeek());
-                    LocalDate ld = LocalDate.of(year, 7, 1)
-                            .with(weekFields.weekBasedYear(), year)
-                            .with(weekFields.weekOfWeekBasedYear(), week)
-                            .with(weekFields.dayOfWeek(), rollDayOfWeek);
-                    long epochSecond = ld.toEpochDay() * 86400;
-                    return Maths.toInt32((epochSecond - (epoch / 1000)) / (length / 1000));
-                }
-                throw new UnsupportedOperationException("Unable to parse " + name + " using format " + format);
-            }
-            long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
+            long epochDay = resolveEpochDay(parse, name) * 86400;
             if (parse.isSupported(ChronoField.SECOND_OF_DAY))
                 epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
 
@@ -132,20 +110,52 @@ public class RollingResourcesCache {
         }
     }
 
+    private long resolveEpochDay(TemporalAccessor parse, String name) {
+        if (parse.isSupported(ChronoField.EPOCH_DAY))
+            return parse.getLong(ChronoField.EPOCH_DAY);
+
+        final WeekFields weekFields = WeekFields.of(formatter.getLocale());
+        if (!parse.isSupported(weekFields.weekBasedYear()) || !parse.isSupported(weekFields.weekOfWeekBasedYear()))
+            throw new UnsupportedOperationException("Unable to parse " + name + " using format " + format);
+
+        //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle,
+        //! #namedWeeklyFormatRoundTripsLocaleYearBoundaries,
+        //! #nonCanonicalNamedWeeksAreRejected and
+        //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer fail when a week-formatted filename is reconstructed
+        //! through the current date, calendar year, or week-of-year, or when cycle-tree ordering reads EPOCH_DAY
+        //! directly. Resolve the parsed week-based fields once for both parseCount() and toLong(), on the roll epoch's
+        //! weekday, then reject a week/year pair which formats to another canonical roll name. Without that check an
+        //! alias such as 2021W53 can collide with 2022W01 during physical roll enumeration.
+        final int year = Math.toIntExact(parse.getLong(weekFields.weekBasedYear()));
+        final int week = Math.toIntExact(parse.getLong(weekFields.weekOfWeekBasedYear()));
+        final int rollDayOfWeek = LocalDate.ofEpochDay(epoch / ONE_DAY_IN_MILLIS)
+                .get(weekFields.dayOfWeek());
+        final LocalDate resolved = LocalDate.of(year, 7, 1)
+                .with(weekFields.weekBasedYear(), year)
+                .with(weekFields.weekOfWeekBasedYear(), week)
+                .with(weekFields.dayOfWeek(), rollDayOfWeek);
+        if (resolved.get(weekFields.weekBasedYear()) != year
+                || resolved.get(weekFields.weekOfWeekBasedYear()) != week
+                || !name.equals(formatter.format(resolved)))
+            throw new DateTimeException("Non-canonical roll name " + name + " for format " + format);
+        return resolved.toEpochDay();
+    }
+
     public Long toLong(File file) {
         final Long cachedValue = filenameToTimestampCache.get(file);
         if (cachedValue != null) {
             return cachedValue;
         }
 
-        final TemporalAccessor parse = formatter.parse(fileToName.apply(file));
+        final String name = fileToName.apply(file);
+        final TemporalAccessor parse = formatter.parse(name);
         final long value;
         if (length == ONE_DAY_IN_MILLIS) {
             value = parse.getLong(ChronoField.EPOCH_DAY);
         } else if (length < ONE_DAY_IN_MILLIS) {
             value = Instant.from(parse).toEpochMilli() / length;
         } else {
-            long daysSinceEpoch = parse.getLong(ChronoField.EPOCH_DAY);
+            long daysSinceEpoch = resolveEpochDay(parse, name);
             long adjShift = daysSinceEpoch < 0 ? -1 : 0;
             value = adjShift + ((daysSinceEpoch * 86400) / (length / 1000));
         }
