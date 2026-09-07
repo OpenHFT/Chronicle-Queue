@@ -33,6 +33,7 @@ import java.nio.BufferOverflowException;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
+import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
 import static net.openhft.chronicle.wire.Wires.*;
 
 /**
@@ -98,14 +99,18 @@ class StoreAppender extends AbstractCloseable
 
         try {
             int lastExistingCycle = queue.lastCycle();
-            int firstCycle = queue.firstCycle();
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty supplies maximum-cycle integration evidence;
+            //! it does not discriminate this constructor's scan alone, since a sole maximum roll has no older roll
+            //! to seal. Retain semantic emptiness here so that valid roll still receives the constructor's normal
+            //! store inspection/reset lifecycle rather than silently bypassing it as an empty Queue.
+            int firstCycle = queue.firstPublishedCycle();
             long start = System.nanoTime();
             int scannedCycle = Integer.MIN_VALUE;
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
                 // Process cycles and handle EOF markers
-                if (firstCycle != Integer.MAX_VALUE) {
+                if (firstCycle != UNSET_CONTEXT) {
                     // Backing down until EOF-ed cycle is encountered
                     for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);

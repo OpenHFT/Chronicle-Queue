@@ -29,7 +29,6 @@ import org.junit.runners.Parameterized.Parameters;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -245,7 +244,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCleanupDir() throws Throwable {
+    public void testCleanupDir() {
         if (OS.isWindows())
             FlakyTestRunner.builder(this::testCleanupDir0).build().run();
         else
@@ -1756,7 +1755,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testToEndOnDeletedQueueFiles() throws IOException {
+    public void testToEndAfterOfflineQueueDeletion() {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
@@ -1766,31 +1765,19 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         try (ChronicleQueue q = builder(dir, wireType).build();
              ExcerptAppender append = q.createAppender()) {
             append.writeDocument(w -> w.write("test").text("before text"));
+        }
 
-            ExcerptTailer tailer = q.createTailer(named ? "named" : null);
+        assertTrue("offline deletion must remove the complete Queue directory", IOTools.deleteDirWithFiles(dir));
+        assertTrue("test precondition: recreate the directory for a genuinely new Queue", dir.mkdirs());
 
-            // move to the end even though it doesn't exist yet.
+        try (ChronicleQueue q2 = builder(dir, wireType).build();
+             ExcerptAppender q2Appender = q2.createAppender()) {
+            final ExcerptTailer tailer = q2.createTailer(named ? "named" : null);
             tailer.toEnd();
+            assertEquals(TailerState.UNINITIALISED, tailer.state());
+            q2Appender.writeDocument(w -> w.write("test").text("new queue text"));
 
-            append.writeDocument(w -> w.write("test").text("text"));
-
-            assertTrue(tailer.readDocument(w -> w.read("test").text("text", Assert::assertEquals)));
-
-            try (Stream<Path> cq4Files = Files.find(dir.toPath(), 1, (p, basicFileAttributes) -> p.toString().endsWith("cq4"), FileVisitOption.FOLLOW_LINKS)) {
-                final List<Path> unDeletable = cq4Files.filter(path -> !path.toFile().delete())
-                        .collect(Collectors.toList());
-                assertTrue("Unable to delete" + unDeletable, unDeletable.isEmpty());
-            }
-
-            try (ChronicleQueue q2 = builder(dir, wireType).build();
-                 final ExcerptAppender q2Appender = q2.createAppender()) {
-                tailer = q2.createTailer(named ? "named" : null);
-                tailer.toEnd();
-                assertEquals(TailerState.UNINITIALISED, tailer.state());
-                q2Appender.writeDocument(w -> w.write("test").text("before text"));
-
-                assertTrue(tailer.readDocument(w -> w.read("test").text("before text", Assert::assertEquals)));
-            }
+            assertTrue(tailer.readDocument(w -> w.read("test").text("new queue text", Assert::assertEquals)));
         }
     }
 
@@ -3554,7 +3541,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         return clock;
     }
 
-    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException, InterruptedException {
+    private boolean doMappedSegmentUnmappedRollTest(AtomicLong clock, StringBuilder builder) throws IOException {
         String time = Instant.ofEpochMilli(clock.get()).toString();
 
         final Random random = new Random(0xDEADBEEF);
