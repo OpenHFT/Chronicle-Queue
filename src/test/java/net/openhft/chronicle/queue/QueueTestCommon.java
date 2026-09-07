@@ -228,20 +228,37 @@ public class QueueTestCommon {
 
     @After
     public void afterChecks() {
-        preAfter();
-        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
-        CleaningThread.performCleanup(Thread.currentThread());
+        Throwable failure = null;
+        try {
+            preAfter();
+            SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+            CleaningThread.performCleanup(Thread.currentThread());
 
-        // find any discarded resources.
-        AbstractCloseable.waitForCloseablesToClose(100);
+            // find any discarded resources.
+            AbstractCloseable.waitForCloseablesToClose(100);
 
-        if (finishedNormally) {
-            assertReferencesReleased();
-            checkThreadDump();
-            checkExceptions();
+            if (finishedNormally) {
+                assertReferencesReleased();
+                checkThreadDump();
+                checkExceptions();
+            }
+        } catch (RuntimeException | Error e) {
+            failure = e;
+            throw e;
+        } finally {
+            // A failed leak/thread check must not bypass fixture cleanup or leave recording handlers installed.
+            try {
+                tearDown();
+            } catch (RuntimeException | Error cleanupFailure) {
+                if (failure == null)
+                    throw cleanupFailure;
+                if (failure != cleanupFailure)
+                    failure.addSuppressed(cleanupFailure);
+            } finally {
+                SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+                Jvm.resetExceptionHandlers();
+            }
         }
-
-        tearDown();
     }
 
     protected void preAfter() {
