@@ -239,6 +239,23 @@ See the respective `package-info.java` files for details.
 
 == Chronicle Queue Versions and Remarkable Changes
 
+=== End-position lookup from the sequence tracker
+
+Direct `SCQIndexing.sequenceForPosition(Long.MAX_VALUE, ...)` lookups first consult the sequence tracker.
+When its encoded position bits match the captured `writePosition`, the forward scan starts at that position,
+avoiding a sparse-index lookup and the intervening records. A consistent tracker can be stale, so the scan
+still discovers subsequent complete data records, skips metadata and stops before an incomplete record.
+
+A mismatched pair gets at most 128 attempts without scheduler yields before indexed recovery.
+An unavailable tracker falls back immediately. `lastSequenceNumber()` uses the indexed fallback directly
+after its own tracker attempts, so a logical lookup does not spend two retry budgets.
+
+This is a narrow follow-up to https://github.com/OpenHFT/Chronicle-Queue/issues/1704[issue #1704],
+not a reduction in the ordinary `ChronicleQueue.lastIndex()` tail-check count or a claim of measured public-API latency improvement.
+`SequenceForPositionFastPathTest` counts actual header reads and checks scan origins, retry budgets and recovery.
+Its finite-position and ordinary-last-sequence cases preserve existing inclusive and tail-check behaviour.
+These test-only counters do not depend on latency logging or add instrumentation to production lookups.
+
 === Changes from Version 4 to Version 5
 
 In Chronicle Queue v5 tailers are now read-only, in Chronicle Queue v4 we had the concept of lazy indexing, where appenders would not write indexes but instead the indexing could be done by the tailer.

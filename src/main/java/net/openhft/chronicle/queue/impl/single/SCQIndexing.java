@@ -46,6 +46,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
     private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
+    private static final int MAX_SEQUENCE_RETRIES = 128;
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
@@ -723,6 +724,43 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     long sequenceForPosition(@NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive) throws StreamCorruptedException {
+        //! Direct end-position lookups need not revisit the sparse index when the tracker supplies a scan origin.
+        //! SequenceForPositionFastPathTest#consistentTrackerSkipsSparseIndex and #inclusiveEndLookupAlsoUsesTracker
+        //! distinguish this path by its first scanned position, one data header and no index-document reads.
+        //! The pair can be consistent but stale: #staleTrackerRecoversDataPastMetadataButNotIncompleteTail requires
+        //! the forward recovery walk, so returning the tracked sequence without scanning would lose completed records.
+        if (position == Long.MAX_VALUE && sequence != null) {
+            Sequence sequence1 = this.sequence;
+            for (int retry = 0; retry < MAX_SEQUENCE_RETRIES; retry++) {
+                long address = writePosition.getVolatileValue();
+                //! Zero is not an authoritative empty result for direct lookups: existing indexed recovery is retained.
+                //! SequenceForPositionFastPathTest#zeroWritePositionStillAllowsDirectIndexedRecovery covers this case.
+                if (address == 0)
+                    break;
+                // Position is published separately from the ordered encoded sequence/position-bits update.
+                // getSequence validates those bits against this captured address; it is not an atomic two-long read.
+                long sequence = sequence1.getSequence(address);
+                //! Retry a mismatched pair without yielding; persistent mismatch also represents an abandoned update.
+                //! SequenceForPositionFastPathTest#retryThenSuccessUsesTracker and
+                //! #persistentMismatchUsesOneRetryBudgetForDirectLookup check success and bounded indexed recovery;
+                //! #notFoundUsesIndexedFallbackWithoutRetrying distinguishes an unavailable tracker from a transient mismatch.
+                //! #lastRetryCanStillUseTracker and #retryRereadsTheWritePosition cover the last attempt and a changing position.
+                if (sequence == Sequence.NOT_FOUND_RETRY)
+                    continue;
+                if (sequence == Sequence.NOT_FOUND)
+                    break;
+                try {
+                    return linearScanByPosition(ec.wireForIndex(), position, sequence, address, inclusive);
+                } catch (EOFException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }
+        }
+        return sequenceForPositionFromIndex(ec, position, inclusive);
+    }
+
+    private long sequenceForPositionFromIndex(@NotNull ExcerptContext ec, long position, boolean inclusive)
+            throws StreamCorruptedException {
         long indexOfNext = 0;
         long lastKnownAddress = 0;
         @NotNull Wire wire = ec.wireForIndex();
@@ -964,7 +1002,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         Sequence sequence1 = this.sequence;
         if (sequence1 != null) {
-            for (int i = 0; i < 128; i++) {
+            for (int i = 0; i < MAX_SEQUENCE_RETRIES; i++) {
 
                 long address = writePosition.getVolatileValue(0);
                 if (address == 0)
@@ -983,7 +1021,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             }
         }
 
-        return sequenceForPosition(ec, Long.MAX_VALUE, false);
+        //! This caller has already spent its tracker budget; do not enter the direct lookup's retry loop again.
+        //! SequenceForPositionFastPathTest#persistentMismatchUsesOneRetryBudgetForLastSequenceNumber requires
+        //! exactly one budget before indexed recovery, including when no live writer can repair the tracker.
+        return sequenceForPositionFromIndex(ec, Long.MAX_VALUE, false);
     }
 
     /**
