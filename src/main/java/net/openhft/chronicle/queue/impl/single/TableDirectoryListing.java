@@ -93,9 +93,24 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Acquires the necessary LongValues (maxCycle, minCycle, modCount) from the table store.
      */
     protected void initLongValues() {
-        maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
-        minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
-        modCount = tableStore.acquireValueFor(MOD_COUNT);
+        //! DirectoryPublicationBoundaryTest#readOnlyRetryClosesEveryReturnedBinding fails if a retry overwrites a
+        //! binding returned before a later acquisition failed. Acquire transactionally; callers cannot release a
+        //! partially assigned field after it has been lost. Allocation failures before return belong to ValueIn.
+        LongValue maximum = null;
+        LongValue minimum = null;
+        LongValue modifications = null;
+        try {
+            maximum = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
+            minimum = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
+            modifications = tableStore.acquireValueFor(MOD_COUNT);
+        } catch (RuntimeException | Error failure) {
+            Closeable.closeQuietly(maximum, minimum, modifications);
+            throw failure;
+        }
+        Closeable.closeQuietly(maxCycleValue, minCycleValue, modCount);
+        maxCycleValue = maximum;
+        minCycleValue = minimum;
+        modCount = modifications;
     }
 
     /**
