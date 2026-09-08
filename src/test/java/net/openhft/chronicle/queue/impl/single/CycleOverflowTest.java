@@ -28,7 +28,8 @@ public class CycleOverflowTest extends QueueTestCommon {
                 appender.writeText(Integer.toString(i));
             }
 
-            assertThrows(IllegalStateException.class,
+            assertThrows("Writing beyond the cycle's maximum message count must be rejected",
+                    IllegalStateException.class,
                     () -> appender.writeText(Long.toString(rollCycle.maxMessagesPerCycle())));
         } finally {
             IOTools.deleteDirWithFiles(path);
