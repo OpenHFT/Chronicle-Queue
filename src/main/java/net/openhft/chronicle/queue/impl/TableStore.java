@@ -66,6 +66,8 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      * unpredictable results in case of multiple processes/threads trying to acquire values for the same key.
      * In addition, it allows to batch multiple {@link #acquireValueFor(CharSequence)} calls, to atomically acquire
      * multiple values.
+     * <p>
+     * Only a failure to take the lock is retried. A failure thrown by the code block propagates to the caller.
      *
      * @param code code block to execute using locked table store
      * @param <R>  result type
