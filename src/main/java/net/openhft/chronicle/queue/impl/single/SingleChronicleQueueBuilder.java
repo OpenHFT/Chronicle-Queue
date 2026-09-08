@@ -19,8 +19,10 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
+import net.openhft.chronicle.queue.impl.table.CorruptTableStoreException;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.TableStoreUnavailableException;
 import net.openhft.chronicle.queue.internal.domestic.QueueOffsetSpec;
 import net.openhft.chronicle.threads.MediumEventLoop;
 import net.openhft.chronicle.threads.Pauser;
@@ -556,45 +558,60 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Initializes the metadata for the queue, including roll cycle and metadata overrides.
-     * If in read-only mode and the metadata file is not found, falls back to a read-only table store.
+     * Initializes the queue metadata and applies its persisted roll-cycle and source-id overrides.
+     * On non-Windows platforms, a provenance-bearing table-store availability failure while opening or awaiting the
+     * metadata file uses caller-supplied metadata through a synthetic read-only store. This includes a writable request
+     * whose metadata file cannot be opened for writing. Corrupt content and failures after the store has opened propagate.
      */
     protected void initializeMetadata() {
         File metapath = metapath();
         validateRollCycle(metapath);
         SCQMeta metadata = new SCQMeta(new SCQRoll(rollCycle(), epoch(), rollTime, rollTimeZone),
                 sourceId());
+        final boolean readOnly = readOnly();
         try {
-
-            boolean readOnly = readOnly();
             metaStore = SingleTableBuilder.binary(metapath, metadata).readOnly(readOnly).build();
-            // check if metadata was overridden
-            SCQMeta newMeta = metaStore.metadata();
-            sourceId(newMeta.sourceId());
-
-            // If the roll cycle has been overridden, adjust it
-            String format = newMeta.roll().format();
-            if (!format.equals(rollCycle().format())) {
-                // roll cycle changed
-                overrideRollCycleForFileName(format);
-            }
-
-            // if it was overridden - reset
-            rollTime = newMeta.roll().rollTime();
-            rollTimeZone = newMeta.roll().rollTimeZone();
-            epoch = newMeta.roll().epoch();
-        } catch (IORuntimeException ex) {
-            // readonly=true and file doesn't exist
+        //! Corruption remains an IORuntimeException for caller compatibility but must never enter the legacy read-only fallback:
+        //! a synthetic store would hide the damaged metadata rather than make it readable. The
+        //! SingleChronicleQueueCorruptMetadataTest#corruptMetadataBypassesReadonlyFallbackAndRemainsAnIORuntimeException test
+        //! fails if this catch is removed or reordered.
+        } catch (CorruptTableStoreException ex) {
+            throw ex;
+        } catch (TableStoreUnavailableException ex) {
+            //! Fall back only on non-Windows for the dedicated availability failure emitted while opening or awaiting the
+            //! metadata file. A writable request whose existing metadata is not writable deliberately becomes read-only.
+            //! Walking arbitrary decoder causes for FileNotFoundException lets persisted constructors disguise malformed
+            //! content as absence. SingleChronicleQueueCorruptMetadataTest
+            //! #nestedFileNotFoundFromMetadataDoesNotActivateReadonlyFallback and
+            //! ReadWriteTest#testNonWriteableFilesSetToReadOnly discriminate the provenance boundary.
             if (OS.isWindows())
-                throw ex; // we cant have a read-only table store on windows so we have no option but to throw the ex.
-            if (ex.getMessage().equals("Metadata file not found in readOnly mode"))
-                Jvm.warn().on(getClass(), "Failback to readonly tablestore " + ex);
-            else
-                Jvm.warn().on(getClass(), "Failback to readonly tablestore", ex);
+                throw ex;
+
+            Jvm.warn().on(getClass(), "Failback to readonly tablestore " + ex);
 
             // Fallback to read-only table store if metadata file is not found
             metaStore = new ReadonlyTableStore<>(metadata);
         }
+
+        //! Keep availability handling around the provenance-known build call only. Metadata access and roll/source overrides
+        //! are extensible post-open policy; a TableStoreUnavailableException thrown there must not activate synthetic fallback.
+        //! SingleChronicleQueueCorruptMetadataTest#metadataAccessorUnavailabilityDoesNotActivateReadonlyFallback
+        //! discriminates this catch-scope boundary.
+        // check if metadata was overridden
+        SCQMeta newMeta = metaStore.metadata();
+        sourceId(newMeta.sourceId());
+
+        // If the roll cycle has been overridden, adjust it
+        String format = newMeta.roll().format();
+        if (!format.equals(rollCycle().format())) {
+            // roll cycle changed
+            overrideRollCycleForFileName(format);
+        }
+
+        // if it was overridden - reset
+        rollTime = newMeta.roll().rollTime();
+        rollTimeZone = newMeta.roll().rollTimeZone();
+        epoch = newMeta.roll().epoch();
     }
 
     /**
@@ -1487,9 +1504,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     protected void preBuild() {
         try {
             initializeMetadata();
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
+            //! Metadata access remains extensible after the store opens and can throw any Throwable through sneaky-throw APIs.
+            //! Close the assigned store without replacing its exact failure.
+            //! SingleChronicleQueueCorruptMetadataTest#metadataAccessorFailuresRetainIdentityAndReleaseTheMapping
+            //! covers Error and checked-exception identities.
             Closeable.closeQuietly(metaStore);
-            throw ex;
+            throw Jvm.rethrow(ex);
         }
         if ((epoch == null || epoch == 0) && (rollTime != null && rollTimeZone != null))
             // Reset roll time if epoch is unset but rollTime and rollTimeZone are provided

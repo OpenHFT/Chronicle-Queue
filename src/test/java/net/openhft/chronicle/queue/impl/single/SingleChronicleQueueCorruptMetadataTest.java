@@ -4,17 +4,33 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.CorruptTableStoreException;
+import net.openhft.chronicle.queue.impl.table.Metadata;
+import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
+import net.openhft.chronicle.queue.impl.table.TableStoreUnavailableException;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
+import org.jetbrains.annotations.NotNull;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Constructor;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -33,25 +49,13 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
     public void aCorruptFirstHeaderFailsWithoutWaitingForTheTableStoreLock() {
         File queueDir = queueWithCorruptMetadataHeader();
 
-        long startMs = System.currentTimeMillis();
+        long startNanos = System.nanoTime();
         Throwable thrown = buildAndCaptureFailure(queueDir);
-        long elapsedMs = System.currentTimeMillis() - startMs;
+        long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
 
         assertTrue("the build took " + elapsedMs + " ms, which is not less than the table store lock timeout of "
-                + TABLE_STORE_TIMEOUT_MS + " ms. Thrown: " + thrown, elapsedMs < TABLE_STORE_TIMEOUT_MS / 5);
-    }
-
-    /**
-     * The reported failure must name the corruption, not a lock that no other process holds.
-     */
-    @Test
-    public void aCorruptFirstHeaderIsReportedAsCorruptionNotAsLockContention() {
-        File queueDir = queueWithCorruptMetadataHeader();
-
-        Throwable thrown = buildAndCaptureFailure(queueDir);
-
-        assertFalse("the failure was reported as lock contention: " + chainOf(thrown),
-                chainOf(thrown).contains("Unable to claim"));
+                        + TABLE_STORE_TIMEOUT_MS + " ms. Thrown: " + thrown,
+                elapsedMs < Math.max(1L, TABLE_STORE_TIMEOUT_MS / 5));
     }
 
     /**
@@ -64,6 +68,136 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
         Throwable thrown = buildAndCaptureFailure(queueDir);
 
         assertEquals("thrown was " + chainOf(thrown), CorruptTableStoreException.class, thrown.getClass());
+        assertTrue("the declared-length guard was not the failing decision: " + thrown,
+                thrown.getMessage().contains("length does not match its decoded content"));
+    }
+
+    /**
+     * Corruption remains in the established I/O exception family, but must not activate the queue
+     * builder's read-only fallback.
+     */
+    @Test
+    public void corruptMetadataBypassesReadonlyFallbackAndRemainsAnIORuntimeException() {
+        File queueDir = queueWithCorruptMetadataHeader();
+
+        Throwable thrown = buildAndCaptureFailure(queueDir, true);
+
+        assertEquals("thrown was " + chainOf(thrown), CorruptTableStoreException.class, thrown.getClass());
+        assertTrue("corruption left the established I/O exception family", thrown instanceof IORuntimeException);
+    }
+
+    @Test
+    public void nestedFileNotFoundFromMetadataDoesNotActivateReadonlyFallback() {
+        final File queueDir = getTmpDir();
+        assertTrue("could not create queue directory " + queueDir, queueDir.mkdirs() || queueDir.isDirectory());
+        final File metadataFile = new File(queueDir, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        NestedFileNotFoundMetadata.FAILURE = null;
+        try (net.openhft.chronicle.queue.impl.TableStore<NestedFileNotFoundMetadata> setupStore =
+                     SingleTableBuilder.binary(metadataFile, new NestedFileNotFoundMetadata()).build()) {
+            // The first open writes a valid table-store header for the extensible metadata fixture.
+            assertTrue("metadata fixture store was closed during construction", !setupStore.isClosed());
+        }
+
+        final FileNotFoundException nested = new FileNotFoundException("constructor sentinel");
+        NestedFileNotFoundMetadata.FAILURE = new IORuntimeException(nested);
+        try {
+            final IORuntimeException thrown = assertThrows(IORuntimeException.class,
+                    () -> {
+                        try (ChronicleQueue unexpectedQueue = SingleChronicleQueueBuilder
+                                .binary(queueDir)
+                                .readOnly(true)
+                                .build()) {
+                            fail("decoder failure activated metadata-unavailable fallback: " + unexpectedQueue);
+                        }
+                    });
+            assertFalse("decoder failure activated metadata-unavailable fallback",
+                    thrown instanceof TableStoreUnavailableException);
+            assertSame("the constructor's nested cause was discarded", nested, rootCause(thrown));
+        } finally {
+            NestedFileNotFoundMetadata.FAILURE = null;
+        }
+    }
+
+    @Test
+    public void constructorAvailabilitySignalDoesNotActivateReadonlyFallback() {
+        final File queueDir = getTmpDir();
+        assertTrue("could not create queue directory " + queueDir, queueDir.mkdirs() || queueDir.isDirectory());
+        final File metadataFile = new File(queueDir, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        NestedFileNotFoundMetadata.FAILURE = null;
+        try (net.openhft.chronicle.queue.impl.TableStore<NestedFileNotFoundMetadata> setupStore =
+                     SingleTableBuilder.binary(metadataFile, new NestedFileNotFoundMetadata()).build()) {
+            assertFalse("metadata fixture store was closed during construction", setupStore.isClosed());
+        }
+
+        final TableStoreUnavailableException fabricated = unavailable(metadataFile, "constructor sentinel");
+        NestedFileNotFoundMetadata.FAILURE = fabricated;
+        try {
+            final IORuntimeException thrown = assertThrows(IORuntimeException.class,
+                    () -> SingleChronicleQueueBuilder.binary(queueDir).readOnly(true).build());
+            assertFalse("constructor signal activated metadata-unavailable fallback",
+                    thrown instanceof TableStoreUnavailableException);
+            assertSame("the constructor's signal was discarded", fabricated, rootCause(thrown));
+        } finally {
+            NestedFileNotFoundMetadata.FAILURE = null;
+        }
+    }
+
+    @Test
+    public void metadataAccessorUnavailabilityDoesNotActivateReadonlyFallback() {
+        Assume.assumeFalse("Windows deliberately does not use the synthetic read-only fallback", OS.isWindows());
+        final File queueDir = getTmpDir();
+        assertTrue("could not create queue directory " + queueDir, queueDir.mkdirs() || queueDir.isDirectory());
+        final File metadataFile = new File(queueDir, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(queueDir).readOnly(true);
+        AccessFailingSCQMeta.FAILURE = null;
+        final AccessFailingSCQMeta fixture = new AccessFailingSCQMeta(
+                new SCQRoll(builder.rollCycle(), builder.epoch(), null, null), builder.sourceId());
+        try (net.openhft.chronicle.queue.impl.TableStore<AccessFailingSCQMeta> setupStore =
+                     SingleTableBuilder.binary(metadataFile, fixture).build()) {
+            assertFalse("metadata fixture store was closed during construction", setupStore.isClosed());
+        }
+
+        final TableStoreUnavailableException expected = unavailable(metadataFile, "accessor sentinel");
+        AccessFailingSCQMeta.FAILURE = expected;
+        try {
+            final TableStoreUnavailableException actual = assertThrows(
+                    TableStoreUnavailableException.class, builder::initializeMetadata);
+            assertSame("post-open availability signal activated fallback", expected, actual);
+        } finally {
+            AccessFailingSCQMeta.FAILURE = null;
+            Closeable.closeQuietly(builder.metaStore());
+        }
+    }
+
+    @Test
+    public void metadataAccessorFailuresRetainIdentityAndReleaseTheMapping() {
+        assertMetadataAccessorFailureRetainsIdentity(new AssertionError("metadata accessor error"), "error");
+        assertMetadataAccessorFailureRetainsIdentity(new IOException("metadata accessor checked failure"), "checked");
+    }
+
+    private void assertMetadataAccessorFailureRetainsIdentity(Throwable expected, String stem) {
+        final File queueDir = new File(getTmpDir(), stem);
+        assertTrue("could not create queue directory " + queueDir, queueDir.mkdirs() || queueDir.isDirectory());
+        final File metadataFile = new File(queueDir, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(queueDir).readOnly(true);
+        AccessFailingSCQMeta.FAILURE = null;
+        final AccessFailingSCQMeta fixture = new AccessFailingSCQMeta(
+                new SCQRoll(builder.rollCycle(), builder.epoch(), null, null), builder.sourceId());
+        try (net.openhft.chronicle.queue.impl.TableStore<AccessFailingSCQMeta> setupStore =
+                     SingleTableBuilder.binary(metadataFile, fixture).build()) {
+            assertFalse("metadata fixture store was closed during construction", setupStore.isClosed());
+        }
+
+        AccessFailingSCQMeta.FAILURE = expected;
+        try {
+            final Throwable actual = assertThrows(expected.getClass(), builder::build);
+            assertSame("metadata accessor failure was wrapped or replaced", expected, actual);
+            BackgroundResourceReleaser.releasePendingResources();
+            assertTrue("failed queue build retained the metadata mapping", metadataFile.delete());
+        } finally {
+            AccessFailingSCQMeta.FAILURE = null;
+            Closeable.closeQuietly(builder.metaStore());
+        }
     }
 
     /**
@@ -102,7 +236,11 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
     }
 
     private Throwable buildAndCaptureFailure(File queueDir) {
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+        return buildAndCaptureFailure(queueDir, false);
+    }
+
+    private Throwable buildAndCaptureFailure(File queueDir, boolean readOnly) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).readOnly(readOnly).build()) {
             fail("the build accepted a corrupt metadata file: " + queue);
             return null;
         } catch (AssertionError e) {
@@ -157,5 +295,61 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
         for (Throwable t = thrown; t != null; t = t.getCause())
             sb.append(t).append(" <- ");
         return sb.toString();
+    }
+
+    private Throwable rootCause(Throwable failure) {
+        Throwable result = failure;
+        while (result.getCause() != null && result.getCause() != result)
+            result = result.getCause();
+        return result;
+    }
+
+    private TableStoreUnavailableException unavailable(File file, String message) {
+        try {
+            final Constructor<TableStoreUnavailableException> constructor =
+                    TableStoreUnavailableException.class.getDeclaredConstructor(File.class, String.class);
+            constructor.setAccessible(true);
+            return constructor.newInstance(file, message);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("could not create the package-owned availability signal", e);
+        }
+    }
+
+    public static final class NestedFileNotFoundMetadata implements Metadata {
+        private static RuntimeException FAILURE;
+
+        public NestedFileNotFoundMetadata() {
+        }
+
+        @SuppressWarnings("unused")
+        public NestedFileNotFoundMetadata(@NotNull WireIn wire) {
+            if (FAILURE != null)
+                throw FAILURE;
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull WireOut wire) {
+            // No persisted fields are needed to exercise exception provenance.
+        }
+    }
+
+    public static final class AccessFailingSCQMeta extends SCQMeta {
+        private static Throwable FAILURE;
+
+        AccessFailingSCQMeta(@NotNull SCQRoll roll, int sourceId) {
+            super(roll, sourceId);
+        }
+
+        @SuppressWarnings("unused")
+        AccessFailingSCQMeta(@NotNull WireIn wire) {
+            super(wire);
+        }
+
+        @Override
+        public int sourceId() {
+            if (FAILURE != null)
+                throw Jvm.rethrow(FAILURE);
+            return super.sourceId();
+        }
     }
 }
