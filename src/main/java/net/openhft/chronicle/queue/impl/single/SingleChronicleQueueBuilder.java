@@ -139,6 +139,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
+    @NotNull
+    private ContextListenerConfiguration contextListenerConfiguration = ContextListenerConfiguration.NONE;
     private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
@@ -370,6 +372,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
+        validateContextListenerCompatibility();
         preBuild();
 
         SingleChronicleQueue chronicleQueue;
@@ -384,6 +387,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         postBuild(chronicleQueue);
 
         return chronicleQueue;
+    }
+
+    private void validateContextListenerCompatibility() {
+        if (!contextListenerConfiguration.configured())
+            return;
+        if (key != null || encodingSupplier != null)
+            throw new UnsupportedOperationException("contextListener is not supported on encoded or encrypted Enterprise queues");
+        if (writeBufferMode == BufferMode.Asynchronous)
+            throw new UnsupportedOperationException("contextListener is not supported on asynchronous Enterprise write buffers");
     }
 
     /**
@@ -1265,12 +1277,12 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Returns the {@link TimeProvider} for the queue. If not explicitly set, it defaults to the
-     * {@link SystemTimeProvider#INSTANCE}.
+     * current {@link SystemTimeProvider#CLOCK}.
      *
      * @return the time provider used by the queue
      */
     public TimeProvider timeProvider() {
-        return timeProvider == null ? SystemTimeProvider.INSTANCE : timeProvider;
+        return timeProvider == null ? SystemTimeProvider.CLOCK : timeProvider;
     }
 
     /**
@@ -1617,6 +1629,81 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public AppenderListener appenderListener() {
         return appenderListener;
+    }
+
+    /**
+     * Sets a listener to be called before an appender writes to a newly-created output context.
+     * For Queue, the output context is a newly-created roll file.
+     * <p>
+     * Context records are synthetic and do not record {@link MessageHistory} by default. A listener
+     * may write history explicitly if that context has a real causal history, but normal usage
+     * assumes no history is written.
+     * <p>
+     * The supplied writer emits normal method-writer documents. Do not enable this listener on a
+     * queue whose readers require one fixed raw payload format unless those readers explicitly
+     * tolerate the context records.
+     * <p>
+     * A context record is advisory, not guaranteed session state: it is not written when appending
+     * to an existing non-empty roll file, for example after restart or failover into the middle of a
+     * roll. The callback runs while the queue write lock is held, so it must be allocation-light,
+     * must not block, and must not perform slow I/O.
+     * <p>
+     * The listener is called on first use of a new, empty queue roll file as well as on later
+     * new-roll callbacks. Context that must exist before the first appender write is application
+     * state and must be written by the application as it is built; this listener is not a
+     * construction-time callback. On callback, the listener can dump the current state and resend
+     * any previously written context that new readers may rely on. If there is no context to write
+     * for that callback, it may return without writing anything; Queue treats the context as handled
+     * and does not write a placeholder record. For a low-latency resend, clear
+     * any local "already sent" assumptions first and then write the missing context while one
+     * {@link net.openhft.chronicle.wire.DocumentContext} is held, if the supplied writer also exposes
+     * {@link net.openhft.chronicle.wire.DocumentWritten}.
+     * <p>
+     * The listener instance is owned by every queue built by this builder and is closed when each
+     * queue is closed if it implements {@link java.lang.AutoCloseable}. Do not reuse or clone a
+     * builder configured with a closeable listener instance for several queues. Use
+     * {@link #contextListenerSupplier(Class, Supplier)} when a builder may be reused or cloned.
+     *
+     * @param writerType event interface type for the supplied method writer
+     * @param listener   listener to call for new output contexts
+     * @param <T>        event interface type
+     * @return the current builder instance for method chaining
+     */
+    public <T> SingleChronicleQueueBuilder contextListener(@NotNull Class<T> writerType,
+                                                            @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        contextListenerConfiguration = ContextListenerConfiguration.of(writerType, listener);
+        return this;
+    }
+
+    /**
+     * Sets a factory to create a queue-owned listener for each queue built from this builder.
+     * Use this form when the builder may be reused or cloned, especially when the listener owns
+     * closeable state.
+     *
+     * @param writerType       event interface type for the supplied method writer
+     * @param listenerSupplier creates one listener for each built queue
+     * @param <T>              event interface type
+     * @return the current builder instance for method chaining
+     */
+    public <T> SingleChronicleQueueBuilder contextListenerSupplier(@NotNull Class<T> writerType,
+                                                                    @NotNull Supplier<? extends MarshallableOut.ContextListener<? super T>> listenerSupplier) {
+        contextListenerConfiguration = ContextListenerConfiguration.supplied(writerType, listenerSupplier);
+        return this;
+    }
+
+    /**
+     * Returns the listener instance configured by {@link #contextListener(Class, MarshallableOut.ContextListener)}.
+     *
+     * @return the listener, or {@code null} if none is configured or the supplier form is used
+     */
+    @Nullable
+    public MarshallableOut.ContextListener<?> contextListener() {
+        return contextListenerConfiguration.listener();
+    }
+
+    @NotNull
+    ContextListenerConfiguration contextListenerConfiguration() {
+        return contextListenerConfiguration;
     }
 
     /**

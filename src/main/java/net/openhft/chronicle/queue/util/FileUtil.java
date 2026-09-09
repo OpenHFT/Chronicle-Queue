@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
+import net.openhft.chronicle.queue.internal.util.InternalRollFileCleanup;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -60,6 +61,35 @@ public final class FileUtil {
     @NotNull
     public static Stream<File> removableRollFileCandidates(@NotNull File baseDir) {
         return InternalFileUtil.removableRollFileCandidates(baseDir);
+    }
+
+    /**
+     * Returns a stream of roll files removable from the given single-queue {@code baseDir} by
+     * <em>named-tailer position</em>: a roll is removable only when it is both older than the last
+     * {@code keepLastCycles} roll-cycle numbers and already read past by <em>every</em> named tailer
+     * registered against the queue. The keep window is based on cycle numbers, not the count of files
+     * present on disk, so sparse queues with idle cycles can retain fewer than {@code keepLastCycles}
+     * files.
+     * <p>
+     * Unlike {@link #removableRollFileCandidates(File)}, which protects only processes
+     * <em>currently</em> reading the queue, this protects every registered named tailer by its
+     * persisted index - so a reader that is stopped (for example a gateway restarting) does not lose
+     * rolls it is known not to have read once it has committed a real (non-zero) index. A tailer at
+     * index {@code 0} is treated as parked or never-read and does not pin files, so size
+     * {@code keepLastCycles} to cover those readers. Files are returned earliest first and can be
+     * removed in that order.
+     *
+     * @param baseDir        the queue directory to scan
+     * @param keepLastCycles the minimum number of most-recent roll-cycle numbers always kept ({@code >= 1})
+     * @return a Stream of removable roll files, earliest first
+     * @throws IllegalArgumentException if {@code baseDir} is not an existing queue directory (one
+     *                                  holding a roll file or the queue metadata file) - a typo'd
+     *                                  path fails rather than silently gaining a queue skeleton
+     */
+    @NotNull
+    public static Stream<File> removableRollFileCandidatesByTailerPosition(@NotNull File baseDir,
+                                                                           int keepLastCycles) {
+        return InternalRollFileCleanup.analyse(baseDir, keepLastCycles).removable().stream();
     }
 
     /**

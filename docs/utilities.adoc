@@ -144,6 +144,10 @@ To display the help documentation:
 $ mvn exec:java -Dexec.mainClass="net.openhft.chronicle.queue.ChronicleReaderMain"  -Dexec.args="-h"
 ....
 
+== Roll File Cleanup utility
+
+For named-tailer-position-based roll-file retention and operational clean-up, see link:roll-file-cleanup.adoc[Roll File Cleanup].
+
 == Packaging
 
 For convenience, this tool can be packaged for deployment to a server environment.
