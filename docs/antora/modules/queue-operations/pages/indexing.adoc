@@ -56,7 +56,7 @@ queue.lastIndex()
 
 This will return the index of the last data present in the queue (or -1 for an empty queue).
 
-WARNING: If the queue is being written to concurrently it’s possible the value may be an under-estimate, as subsequent entries may have been written even before it was returned.
+WARNING: If the queue is being written to concurrently it's possible the value may be an under-estimate, as subsequent entries may have been written even before it was returned.
 
 [#_tail_from_index]
 == Tail from Index

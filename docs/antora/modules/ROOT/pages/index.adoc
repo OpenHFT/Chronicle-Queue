@@ -33,10 +33,10 @@ Tailing ::
 Learn how to read from a queue.
 Performance tuning ::
 As every environment is different, this chapter points out key factors to obtain the best performance with Chronicle Queue.
-★ Replication ::
+Replication (Enterprise) ::
 Replication is an Enterprise feature allowing queues to be automatically replicated across machines or cores.
 This chapter teaches how that is accomplished.
-★ Encryption ::
+Encryption (Enterprise) ::
 Learn how to protect the contents of a Chronicle Queue with encryption.
 
 === Runnable Demos
@@ -74,7 +74,7 @@ The following features are implemented by Chronicle Queue Enterprise:
 * Multi-master queues which are ordered for events in a node, but not between nodes.
 
 This documentation covers the open source functionality but is also extended by a few chapters describing enterprise specific features.
-These sections are clearly marked with a star-symbol (★) and include:
+These sections are clearly marked with an Enterprise marker and include:
 
 * Encryption of message queues and messages.
 
