@@ -67,6 +67,7 @@ public class QueueTestCommonCleanupTest extends QueueTestCommon {
     private static File failDirectoryDeletion(File dir, int failures) {
         // Model File.delete() returning false while keeping real directory contents and existence checks.
         return new File(dir.getPath()) {
+            private static final long serialVersionUID = 1L;
             private int failuresRemaining = failures;
 
             @Override
