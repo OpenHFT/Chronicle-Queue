@@ -41,7 +41,7 @@ import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final long FUTURE_TIMEOUT_SECONDS = 30L;
-    private static final int FILE_CLOSE_RETRY_COUNT = 10;
+    private static final long FILE_CLOSE_TIMEOUT_MS = 5_500L;
     private static final long FILE_CLOSE_RETRY_PAUSE_MS = 10L;
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
@@ -49,11 +49,18 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
 
-    private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
-            new NamedThreadFactory("test"));
+    private final ExecutorService threadPool;
     private final TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private final AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
     private File queuePath;
+
+    public AppenderFileHandleLeakTest() {
+        this(Executors.newFixedThreadPool(THREAD_COUNT, new NamedThreadFactory("test")));
+    }
+
+    AppenderFileHandleLeakTest(ExecutorService threadPool) {
+        this.threadPool = threadPool;
+    }
 
     private static void readMessage(final ChronicleQueue queue,
                                     final boolean manuallyReleaseResources,
@@ -90,23 +97,23 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         appender.writeBytes(b -> b.writeInt(j));
     }
 
-    /**
-     * These only run on Linux because {@link MappedFileUtil#getAllMappedFiles()} only works
-     * on Linux
-     */
     @Before
     public void setUp() {
-        assumeTrue(OS.isLinux());
-        System.gc();
         queuePath = getTmpDir();
+    }
+
+    private static void prepareMappingInspection() {
+        // MappedFileUtil inspects /proc; explicit ownership checks are portable.
+        assumeTrue(OS.isLinux());
+        GcControls.requestGcCycle();
     }
 
     @Test
     public void closedAppenderAndTailerMappingsShouldBeReclaimedAfterGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
+        prepareMappingInspection();
         finishedNormally = false;
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
 
-            GcControls.requestGcCycle();
             Thread.sleep(100);
             final List<ExcerptTailer> gcGuard = Collections.synchronizedList(new ArrayList<>());
 
@@ -178,7 +185,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     @Test
     public void tailerShouldReleaseFileHandlesAsQueueRolls() throws InterruptedException {
 
-        System.gc();
+        prepareMappingInspection();
         Thread.sleep(100);
         final int messagesPerThread = 10;
         try (ChronicleQueue queue = createQueue(currentTime::get);
@@ -229,6 +236,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Test
     public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+        prepareMappingInspection();
         FlakyTestRunner.<RuntimeException>builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
@@ -250,6 +258,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
     @Test
     public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
+        prepareMappingInspection();
         FlakyTestRunner.<RuntimeException>builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
@@ -293,7 +302,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                     return onlyCurrentRollCycleIsOpen(absolutePathToCurrentRollCycle);
                 })
                 .message("Files that are not the table store or the current roll cycle (" + currentRollCycleName + ") remain open")
-                .maxTimeToWaitMs(5_500)
+                .maxTimeToWaitMs(FILE_CLOSE_TIMEOUT_MS)
                 .checkIntervalMs(1_000)
                 .run();
     }
@@ -315,16 +324,24 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     protected void preAfter() {
         threadPool.shutdownNow();
         boolean interrupted = Thread.interrupted();
+        final long deadline = System.nanoTime() + SECONDS.toNanos(5L);
         try {
-            assertTrue("Appender test workers did not terminate within 5 seconds",
-                    threadPool.awaitTermination(5L, SECONDS));
-        } catch (InterruptedException e) {
-            interrupted = true;
-            throw new AssertionError(e);
+            while (!threadPool.isTerminated()) {
+                final long remaining = deadline - System.nanoTime();
+                assertTrue("Appender test workers did not terminate within 5 seconds", remaining > 0);
+                try {
+                    threadPool.awaitTermination(remaining, TimeUnit.NANOSECONDS);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
         } finally {
-            BackgroundResourceReleaser.releasePendingResources();
-            if (interrupted)
-                Thread.currentThread().interrupt();
+            try {
+                BackgroundResourceReleaser.releasePendingResources();
+            } finally {
+                if (interrupted)
+                    Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -339,8 +356,9 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     private boolean queueFilesAreAllClosed() {
-        List<String> openQueueFiles = null;
-        for (int i = 0; i < FILE_CLOSE_RETRY_COUNT; i++) {
+        final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(FILE_CLOSE_TIMEOUT_MS);
+        List<String> openQueueFiles;
+        do {
             requestMappingCleanup();
             openQueueFiles = MappedFileUtil.getAllMappedFiles().stream()
                     .filter(str -> str.contains(queuePath.getAbsolutePath()))
@@ -348,7 +366,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             if (openQueueFiles.isEmpty())
                 return true;
             Jvm.pause(FILE_CLOSE_RETRY_PAUSE_MS);
-        }
+        } while (System.nanoTime() < deadline && !Thread.currentThread().isInterrupted());
 
         openQueueFiles.forEach(qf ->
                 Jvm.error().on(AppenderFileHandleLeakTest.class, "Found open queue file: " + qf));
