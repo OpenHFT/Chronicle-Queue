@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -249,6 +250,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                 assertEquals(expected, tailer.readText());
             }
         } finally {
+            BackgroundResourceReleaser.releasePendingResources();
             IOTools.deleteDirWithFiles(tmpDir);
         }
     }

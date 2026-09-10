@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -26,6 +27,7 @@ import org.junit.runner.Description;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -36,6 +38,7 @@ import static net.openhft.chronicle.core.onoes.LogLevel.PERF;
 import static org.junit.Assert.fail;
 
 public class QueueTestCommon {
+    private static final long DIRECTORY_DELETE_TIMEOUT_MS = 1_000;
     private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
     private final List<File> tmpDirs = new ArrayList<>();
@@ -214,6 +217,8 @@ public class QueueTestCommon {
                     .map(File::getName)
                     .collect(Collectors.toSet());
 
+            BackgroundResourceReleaser.releasePendingResources();
+
             currentFilesInTarget.stream()
                     .filter(fileName -> !targetAllowList.contains(fileName))
                     .forEach(fileName -> {
@@ -247,7 +252,30 @@ public class QueueTestCommon {
     protected void preAfter() {
     }
 
+    /**
+     * Delete a test directory after its owners have been closed. Drain pending releases and
+     * retry transient deletion failures, retaining the existing maximum depth of two.
+     */
+    protected static void deleteDirAfterCleanup(File dir) {
+        final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(DIRECTORY_DELETE_TIMEOUT_MS);
+        do {
+            BackgroundResourceReleaser.releasePendingResources();
+            if (!dir.exists())
+                return;
+            IOTools.deleteDirWithFiles(dir, 2);
+            if (!dir.exists())
+                return;
+            Jvm.pause(10);
+        } while (System.nanoTime() < deadline && !Thread.currentThread().isInterrupted());
+
+        if (dir.exists())
+            fail("Could not delete test directory " + dir.getAbsolutePath()
+                    + " within " + DIRECTORY_DELETE_TIMEOUT_MS + " ms (maximum depth 2); remaining entries: "
+                    + Arrays.toString(dir.list()));
+    }
+
     protected void tearDown() {
+        BackgroundResourceReleaser.releasePendingResources();
         // should be able to remove tmp dirs
         tmpDirs.forEach(file -> {
             if (file.exists() && !IOTools.deleteDirWithFiles(file)) {

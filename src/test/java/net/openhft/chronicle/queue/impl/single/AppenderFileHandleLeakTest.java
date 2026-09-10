@@ -7,7 +7,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -37,17 +36,18 @@ import java.util.stream.IntStream;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
-import static net.openhft.chronicle.testframework.GcControls.requestGcCycle;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
+    private static final long FUTURE_TIMEOUT_SECONDS = 30L;
+    private static final int FILE_CLOSE_RETRY_COUNT = 10;
+    private static final long FILE_CLOSE_RETRY_PAUSE_MS = 10L;
     private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
-    private static final int TRIES = 10;
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
             new NamedThreadFactory("test"));
@@ -59,15 +59,27 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
                                     final boolean manuallyReleaseResources,
                                     final Consumer<ExcerptTailer> refHolder) {
         final Bytes<ByteBuffer> bytes = Bytes.elasticByteBuffer();
-        try (final ExcerptTailer tailer = queue.createTailer()) {
-            while (bytes.isEmpty()) {
-                tailer.toStart().readBytes(bytes);
+        try {
+            final StoreTailer storeTailer;
+            final Bytes<?> tailerBytes;
+            try (final ExcerptTailer tailer = queue.createTailer()) {
+                while (bytes.isEmpty()) {
+                    tailer.toStart().readBytes(bytes);
+                }
+                refHolder.accept(tailer);
+                assertTrue(Math.signum(bytes.readInt()) >= 0);
+                storeTailer = (StoreTailer) tailer;
+                tailerBytes = storeTailer.wire().bytes();
+                if (manuallyReleaseResources)
+                    assertTrue("Tailer should own bytes before close", tailerBytes.refCount() > 0);
             }
-            refHolder.accept(tailer);
-            assertTrue(Math.signum(bytes.readInt()) >= 0);
 
             if (manuallyReleaseResources) {
-                Closeable.closeQuietly(tailer);
+                BackgroundResourceReleaser.releasePendingResources();
+                // Keep both objects reachable while checking explicit release, before any GC request.
+                assertTrue("Tailer should be closed", storeTailer.isClosed());
+                assertNull("Closed tailer should release its store", storeTailer.store);
+                assertEquals("Closed tailer should release its bytes", 0, tailerBytes.refCount());
             }
         } finally {
             bytes.releaseLast();
@@ -90,13 +102,13 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
+    public void closedAppenderAndTailerMappingsShouldBeReclaimedAfterGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
 
             GcControls.requestGcCycle();
             Thread.sleep(100);
-            final List<ExcerptTailer> gcGuard = new LinkedList<>();
+            final List<ExcerptTailer> gcGuard = Collections.synchronizedList(new ArrayList<>());
 
             final List<Future<Boolean>> futures = new LinkedList<>();
 
@@ -114,13 +126,14 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             }
 
             for (Future<Boolean> future : futures) {
-                assertTrue(future.get(1, TimeUnit.MINUTES));
+                assertTrue(future.get(FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS));
             }
             assertFalse(gcGuard.isEmpty());
             gcGuard.clear();
 
         }
 
+        BackgroundResourceReleaser.releasePendingResources();
         Assert.assertTrue(queueFilesAreAllClosed());
         finishedNormally = true;
     }
@@ -131,11 +144,9 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     private void tailerResourcesCanBeReleasedManually0() throws InterruptedException, TimeoutException, ExecutionException {
-        requestGcCycle();
-        Thread.sleep(100);
+        final List<ExcerptTailer> gcGuard = Collections.synchronizedList(new ArrayList<>());
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
             final List<Future<Boolean>> futures = new LinkedList<>();
-            final List<ExcerptTailer> gcGuard = new LinkedList<>();
 
             for (int i = 0; i < THREAD_COUNT; i++) {
                 futures.add(threadPool.submit(() -> {
@@ -150,13 +161,17 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
             }
 
             for (Future<Boolean> future : futures) {
-                assertTrue(future.get(1, TimeUnit.MINUTES));
+                assertTrue(future.get(FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS));
             }
 
-            assertFalse(gcGuard.isEmpty());
+            assertEquals(THREAD_COUNT * MESSAGES_PER_THREAD, gcGuard.size());
         }
 
-        Assert.assertTrue(queueFilesAreAllClosed());
+        BackgroundResourceReleaser.releasePendingResources();
+        for (ExcerptTailer tailer : gcGuard) {
+            assertTrue("Retained tailer should be closed", tailer.isClosed());
+            assertNull("Retained tailer should no longer own a store", ((StoreTailer) tailer).store);
+        }
 
     }
 
@@ -176,35 +191,39 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
             // StoreFileListener#onAcquired() is called on the background resource releaser thread
             BackgroundResourceReleaser.releasePendingResources();
+
             int acquiredBefore = storeFileListener.acquiredCounts.size();
             storeFileListener.reset();
 
-            final ExcerptTailer tailer = queue.createTailer();
-            tailer.toStart();
-            int messageCount = 0;
-            int notFoundAttempts = 5;
-            while (true) {
-                try (final DocumentContext ctx = tailer.readingDocument()) {
-                    if (!ctx.isPresent()) {
-                        if (--notFoundAttempts > 0)
-                            continue;
-                        break;
+            try (final ExcerptTailer tailer = queue.createTailer()) {
+                tailer.toStart();
+                int messageCount = 0;
+                int notFoundAttempts = 5;
+                while (true) {
+                    try (final DocumentContext ctx = tailer.readingDocument()) {
+                        if (!ctx.isPresent()) {
+                            if (--notFoundAttempts > 0)
+                                continue;
+                            break;
+                        }
+
+                        messageCount++;
                     }
-
-                    messageCount++;
                 }
-            }
 
-            assertEquals(messagesPerThread, messageCount);
+                assertEquals(messagesPerThread, messageCount);
+            }
 
             // StoreFileListener#onAcquired() is called on the background resource releaser thread
             BackgroundResourceReleaser.releasePendingResources();
+
             Jvm.debug().on(getClass(), "storeFileListener " + storeFileListener);
 
             assertEquals(acquiredBefore, storeFileListener.acquiredCounts.size());
 
         }
 
+        BackgroundResourceReleaser.releasePendingResources();
         Assert.assertTrue(queueFilesAreAllClosed());
     }
 
@@ -267,18 +286,12 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     private void assertOnlyCurrentRollCycleIsOpen(long timestamp) {
-        BackgroundResourceReleaser.releasePendingResources();
-        /*
-         * "A mapped byte buffer and the file mapping that it represents remain valid until the buffer itself is garbage-collected."
-         *
-         * Given we can't guarantee a GC happens, I wonder if this test can ever not be flaky
-         *
-         * See https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/MappedByteBuffer.html
-         */
-        GcControls.waitForGcCycle();
         final String currentRollCycleName = ROLL_CYCLE_FORMATTER.format(Instant.ofEpochMilli(timestamp)) + ".cq4";
         final String absolutePathToCurrentRollCycle = queuePath.toPath().toAbsolutePath().resolve(currentRollCycleName).toString();
-        Waiters.builder(() -> onlyCurrentRollCycleIsOpen(absolutePathToCurrentRollCycle))
+        Waiters.builder(() -> {
+                    requestMappingCleanup();
+                    return onlyCurrentRollCycleIsOpen(absolutePathToCurrentRollCycle);
+                })
                 .message("Files that are not the table store or the current roll cycle (" + currentRollCycleName + ") remain open")
                 .maxTimeToWaitMs(5_500)
                 .checkIntervalMs(1_000)
@@ -299,26 +312,42 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Override
-    public void assertReferencesReleased() {
+    protected void preAfter() {
         threadPool.shutdownNow();
+        boolean interrupted = Thread.interrupted();
         try {
-            assertTrue(threadPool.awaitTermination(5L, SECONDS));
+            assertTrue("Appender test workers did not terminate within 5 seconds",
+                    threadPool.awaitTermination(5L, SECONDS));
         } catch (InterruptedException e) {
+            interrupted = true;
             throw new AssertionError(e);
+        } finally {
+            BackgroundResourceReleaser.releasePendingResources();
+            if (interrupted)
+                Thread.currentThread().interrupt();
         }
-        super.assertReferencesReleased();
+    }
+
+    private static void requestMappingCleanup() {
+        BackgroundResourceReleaser.releasePendingResources();
+        try {
+            // Mapping tests wait for the mappings themselves, without polling GC counters.
+            GcControls.requestGcCycle();
+        } finally {
+            BackgroundResourceReleaser.releasePendingResources();
+        }
     }
 
     private boolean queueFilesAreAllClosed() {
         List<String> openQueueFiles = null;
-        for (int i = 0; i < TRIES; i++) {
-            GcControls.waitForGcCycle();
+        for (int i = 0; i < FILE_CLOSE_RETRY_COUNT; i++) {
+            requestMappingCleanup();
             openQueueFiles = MappedFileUtil.getAllMappedFiles().stream()
                     .filter(str -> str.contains(queuePath.getAbsolutePath()))
                     .collect(Collectors.toList());
             if (openQueueFiles.isEmpty())
                 return true;
-            Jvm.pause(10);
+            Jvm.pause(FILE_CLOSE_RETRY_PAUSE_MS);
         }
 
         openQueueFiles.forEach(qf ->

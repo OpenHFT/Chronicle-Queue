@@ -8,6 +8,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Before;
@@ -28,6 +29,7 @@ public class ReadWriteTest extends QueueTestCommon {
 
     private static final String STR1 = "hello", STR2 = "hey";
     private File chroniclePath;
+    private boolean collectDiscardedMetadataBindings;
 
     @Before
     public void setup() {
@@ -45,12 +47,19 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     /**
-     * Some flakiness with this test in build server due to background resources not released, we will revisit shortly
-     * to deliver proper fix.
+     * Release explicit owners before reference checks. Only the metadata initialization race
+     * needs collection of discarded bindings, after the test method's stack has unwound.
      */
     @After
     public void forceCleanupToDeFlakeTests() {
         BackgroundResourceReleaser.releasePendingResources();
+        if (collectDiscardedMetadataBindings) {
+            try {
+                GcControls.requestGcCycle();
+            } finally {
+                BackgroundResourceReleaser.releasePendingResources();
+            }
+        }
     }
 
     @Override
@@ -136,6 +145,7 @@ public class ReadWriteTest extends QueueTestCommon {
         // the below can happen if the race mitigation code in TableDirectoryListingReadOnly.init is exercised
         // as a LongValue gets created before it can be assigned to a reference and be available to be closed
         ignoreException("Discarded without closing");
+        collectDiscardedMetadataBindings = true;
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()

@@ -3,8 +3,6 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.io.IOTools;
 import org.junit.Test;
 
 import java.io.File;
@@ -36,11 +34,7 @@ public class MarshallableTest extends QueueTestCommon {
                 assertEquals("" + i, sb.toString());
             }
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(dir, 2);
-            } catch (IORuntimeException e) {
-                // ignored
-            }
+            deleteDirAfterCleanup(dir);
         }
     }
 }

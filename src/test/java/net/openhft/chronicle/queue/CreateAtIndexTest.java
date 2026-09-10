@@ -5,8 +5,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.IllegalIndexException;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -92,10 +90,7 @@ public class CreateAtIndexTest extends QueueTestCommon {
             appender.writeBytes(0x421d00000003L, HELLO_WORLD);
         }
 
-        try {
-            IOTools.deleteDirWithFiles(tmp, 2);
-        } catch (IORuntimeException ignored) {
-        }
+        deleteDirAfterCleanup(tmp);
     }
 
     private static String cleanDump(String dump) {
