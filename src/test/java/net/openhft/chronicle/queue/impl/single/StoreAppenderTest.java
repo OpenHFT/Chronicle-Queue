@@ -178,6 +178,12 @@ public class StoreAppenderTest extends QueueTestCommon {
 
             assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
             final long stalledWritePositionBefore = ((StoreAppender) stalledWriter).store.writePosition();
+            final Bytes<?> stalledBytes = ((StoreAppender) stalledWriter).wire().bytes();
+            long end = stalledWritePositionBefore + 4 + Wires.lengthOf(stalledBytes.readInt(stalledWritePositionBefore));
+            final long stalledEnd = end + net.openhft.chronicle.bytes.BytesUtil.padOffset(end);
+            assertEquals(Wires.END_OF_DATA, stalledBytes.readInt(stalledEnd));
+            // Model an unsealed historical source so a duplicate seal is observable independently of writePosition.
+            stalledBytes.writeInt(stalledEnd, Wires.NOT_INITIALIZED);
 
             // When wall time equals neither a newer nor the published cycle, an ordinary append
             // must still open the published maximum as existing-only and fail if it disappeared.
@@ -188,6 +194,7 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertFalse("failed append must not recreate the removed generation", publishedFile.exists());
             assertEquals("failure must precede sealing the stalled roll",
                     stalledWritePositionBefore, ((StoreAppender) stalledWriter).store.writePosition());
+            assertEquals("failure must not seal an unsealed source", Wires.NOT_INITIALIZED, stalledBytes.readInt(stalledEnd));
         }
     }
 
