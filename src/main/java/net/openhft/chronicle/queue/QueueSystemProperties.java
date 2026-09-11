@@ -14,8 +14,6 @@ import net.openhft.chronicle.core.Jvm;
  */
 public final class QueueSystemProperties {
 
-    private static volatile boolean checkIndexEnabled = Jvm.getBoolean("queue.check.index");
-
     private QueueSystemProperties() {
     }
 
@@ -32,7 +30,7 @@ public final class QueueSystemProperties {
      * @see Jvm#getBoolean(String) for more details on how boolean properties are evaluated.
      */
     @Deprecated(/* to be removed in 2027 */)
-    public static final boolean CHECK_INDEX = checkIndex();
+    public static volatile boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     /**
      * The system property key used to specify the default roll cycle for a Chronicle Queue.
@@ -68,7 +66,7 @@ public final class QueueSystemProperties {
      * @return true if index checking is enabled, false otherwise
      */
     public static boolean checkIndex() {
-        return checkIndexEnabled;
+        return CHECK_INDEX;
     }
 
     /**
@@ -78,6 +76,6 @@ public final class QueueSystemProperties {
      */
     @Deprecated(/* to be removed in 2027, only used in tests */)
     public static void setCheckIndex(boolean enabled) {
-        checkIndexEnabled = enabled;
+        CHECK_INDEX = enabled;
     }
 }

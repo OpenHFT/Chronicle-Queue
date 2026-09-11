@@ -84,7 +84,7 @@ public enum BinarySearch {
         if (!iterator.hasNext())
             return -1;
         final RollCycle rollCycle = tailer.queue().rollCycle();
-        long prevIndex = iterator.next();
+        long prevIndex = -1;
 
         cycleLoop:
         while (iterator.hasNext()) {
@@ -93,14 +93,11 @@ public enum BinarySearch {
 
             final boolean b = tailer.moveToIndex(rollCycle.toIndex((int) (long) current, 0));
             if (!b)
-                return prevIndex;
+                continue;
 
             while (true) {
                 try (final DocumentContext dc = tailer.readingDocument()) {
-                    if (!dc.isPresent()) {
-                        return prevIndex;
-                    }
-                    if (rollCycle.toCycle(dc.index()) > current) {
+                    if (!dc.isPresent() || rollCycle.toCycle(dc.index()) > current) {
                         continue cycleLoop;
                     }
                     try {

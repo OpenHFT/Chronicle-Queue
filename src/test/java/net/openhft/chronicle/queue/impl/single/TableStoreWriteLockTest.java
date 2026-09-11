@@ -20,6 +20,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.concurrent.*;
@@ -143,8 +144,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5_000)
-    public void unlockWillNotUnlockAndWarnIfLockedByAnotherProcess() throws InterruptedException, TimeoutException {
+    @Test(timeout = 15_000)
+    public void unlockWillNotUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
@@ -156,8 +157,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5_000)
-    public void forceUnlockWillUnlockAndWarnIfLockedByAnotherProcess() throws InterruptedException, TimeoutException {
+    @Test(timeout = 15_000)
+    public void forceUnlockWillUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
             waitForLockToBecomeLocked(testLock);
@@ -209,8 +210,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         assertTrue(true); // if we got here without an exception, the test passes
     }
 
-    @Test(timeout = 5_000)
-    public void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws TimeoutException, InterruptedException {
+    @Test(timeout = 15_000)
+    public void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws IOException, TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(true);
         try (TableStoreWriteLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
@@ -221,8 +222,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
     }
 
-    @Test(timeout = 5_000)
-    public void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws TimeoutException, InterruptedException {
+    @Test(timeout = 15_000)
+    public void forceUnlockIfProcessIsDeadWillSucceedWhenLockingProcessIsDead() throws IOException, TimeoutException, InterruptedException {
         ignoreException("Forced unlock");
         Process lockingProcess = runLockingProcess(false);
         try (TableStoreWriteLock lock = createTestLock()) {

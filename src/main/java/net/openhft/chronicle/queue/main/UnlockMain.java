@@ -11,10 +11,6 @@ import net.openhft.chronicle.queue.internal.main.InternalUnlockMain;
  */
 public final class UnlockMain {
 
-    private UnlockMain() {
-        // utility holder
-    }
-
     /**
      * The main method that triggers the unlocking process.
      * Delegates execution to {@link InternalUnlockMain#main(String[])}.

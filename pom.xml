@@ -10,20 +10,20 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>2026.0-SNAPSHOT</version>
+        <version>2026.0</version>
         <relativePath />
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>2026.0-SNAPSHOT</version>
+    <version>2026.7-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
         <!-- Define the target coverage thresholds as properties -->
-        <jacoco.line.coverage>0.78</jacoco.line.coverage>
-        <jacoco.branch.coverage>0.69</jacoco.branch.coverage>
+        <jacoco.line.coverage>0.788</jacoco.line.coverage>
+        <jacoco.branch.coverage>0.713</jacoco.branch.coverage>
     </properties>
 
     <dependencyManagement>
@@ -113,13 +113,6 @@
         </dependency>
 
         <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-core</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
             <scope>test</scope>
@@ -158,6 +151,12 @@
         <dependency>
             <groupId>org.xerial.snappy</groupId>
             <artifactId>snappy-java</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hsqldb</groupId>
+            <artifactId>hsqldb</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -221,9 +220,9 @@
                             <goal>enforcer</goal>
                         </goals>
                         <configuration>
-                            <referenceVersion>5.27ea0</referenceVersion>
+                            <referenceVersion>2026.0</referenceVersion>
                             <artifactsURI>https://teamcity.chronicle.software/repository/download</artifactsURI>
-                            <binaryCompatibilityPercentageRequired>98</binaryCompatibilityPercentageRequired>
+                            <binaryCompatibilityPercentageRequired>100.0</binaryCompatibilityPercentageRequired>
                             <extraOptions>
                                 <!--This skips "internal" but checks "impl"-->
                                 <extraOption>
@@ -257,9 +256,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <forkCount>1</forkCount>
-                    <!--                    <reuseForks>false</reuseForks>-->
+                    <forkCount>4</forkCount>
+                    <reuseForks>true</reuseForks>
                     <runOrder>hourly</runOrder>
+                    <!-- propagate JPMS flags from parent into unit test JVMs -->
+                    <argLine>${argLine} ${jvm.requiredArgs}</argLine>
                 </configuration>
             </plugin>
 
@@ -616,4 +617,5 @@
         </developerConnection>
         <tag>develop</tag>
     </scm>
+
 </project>

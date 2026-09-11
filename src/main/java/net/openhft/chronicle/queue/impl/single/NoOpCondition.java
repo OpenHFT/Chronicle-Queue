@@ -62,7 +62,7 @@ public final class NoOpCondition implements Condition, IgnoresEverything {
      * @return Always returns {@code true}.
      */
     @Override
-    public boolean await(long l, TimeUnit timeUnit) {
+    public boolean await(long l, TimeUnit timeUnit) throws InterruptedException {
         return true;
     }
 

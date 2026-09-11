@@ -21,10 +21,6 @@ import org.jetbrains.annotations.NotNull;
 public final class PretouchUtil {
     private static final PretoucherFactory INSTANCE;
 
-    private PretouchUtil() {
-        // utility holder
-    }
-
     static {
         PretoucherFactory instance;
         try {

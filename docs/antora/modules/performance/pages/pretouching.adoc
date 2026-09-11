@@ -27,7 +27,7 @@ A single pre-touching operation can be performed by the appender by calling `pre
 
 [source,java]
 ----
-queue.acquireAppender().pretouch();
+queue.createAppender().pretouch();
 ----
 
 IMPORTANT: The pre-toucher must be invoked from the same thread that created the appender, as the call to `pretouch()` is not thread safe.
@@ -38,7 +38,7 @@ The below example spins up a thread that performs pre-touching every second.
 [source,java]
 ----
 newSingleThreadScheduledExecutor().scheduleAtFixedRate(
-    () -> queue.acquireAppender().pretouch(), #<1>
+    () -> queue.createAppender().pretouch(), #<1>
     0, #<2>
     1, #<3>
     TimeUnit.SECONDS #<4>

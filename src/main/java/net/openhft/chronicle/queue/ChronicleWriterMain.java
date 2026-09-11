@@ -11,10 +11,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ChronicleWriterMain {
 
-    private ChronicleWriterMain() {
-        // utility holder
-    }
-
     /**
      * Main method for executing the ChronicleWriterMain.
      * It delegates to the internal writer implementation to run the application with the given arguments.

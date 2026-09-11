@@ -247,11 +247,12 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
         doTestCycleAndResourceNames(BIG_NEGATIVE_RELATIVE_EPOCH, WeeklyRollCycle.INSTANCE, 354, "1976287");
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void parseIncorrectlyFormattedName() {
         final RollingResourcesCache cache =
                 new RollingResourcesCache(HOURLY, PM_EPOCH, File::new, File::getName);
-        cache.parseCount("foobar-qux");
+        assertThrows("Parsing a malformed roll filename must be rejected",
+                RuntimeException.class, () -> cache.parseCount("foobar-qux"));
     }
 
     @Test

@@ -73,9 +73,10 @@ public class QueueOffsetSpecTest {
         QueueOffsetSpec.parse("INVALID;foo");
     }
 
-    @Test(expected = java.time.DateTimeException.class)
+    @Test
     public void parseRollTimeWithInvalidZoneFailsValidation() {
         QueueOffsetSpec spec = QueueOffsetSpec.parse("ROLL_TIME;12:00;Invalid/Zone");
-        spec.validate();
+        assertThrows("An invalid roll-time zone must be rejected during validation",
+                java.time.DateTimeException.class, spec::validate);
     }
 }

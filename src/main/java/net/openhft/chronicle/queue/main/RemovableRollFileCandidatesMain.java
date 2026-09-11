@@ -11,10 +11,6 @@ import net.openhft.chronicle.queue.internal.main.InternalRemovableRollFileCandid
  */
 public final class RemovableRollFileCandidatesMain {
 
-    private RemovableRollFileCandidatesMain() {
-        // utility holder
-    }
-
     /**
      * The main method that generates and prints the list of removable roll file candidates.
      * Delegates execution to {@link InternalRemovableRollFileCandidatesMain#main(String[])}.

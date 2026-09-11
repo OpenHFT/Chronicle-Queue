@@ -24,7 +24,7 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
  */
 public class IndexingTestCommon extends QueueTestCommon {
 
-    SetTimeProvider timeProvider;
+    protected SetTimeProvider timeProvider;
     SingleChronicleQueue queue;
     StoreAppender appender;
     private List<Closeable> closeables;

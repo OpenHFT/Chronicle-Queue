@@ -18,10 +18,6 @@ import net.openhft.chronicle.queue.internal.main.InternalBenchmarkMain;
  */
 public final class BenchmarkMain {
 
-    private BenchmarkMain() {
-        // utility holder
-    }
-
     /**
      * The main method that triggers the benchmarking process.
      * Delegates the execution to {@link InternalBenchmarkMain#main(String[])}.
