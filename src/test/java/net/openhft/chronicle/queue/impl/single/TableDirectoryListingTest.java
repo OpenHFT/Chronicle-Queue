@@ -66,10 +66,11 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         Closeable.closeQuietly(listing, listingReadOnly, tablestore, tablestoreReadOnly);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void shouldBlowUpIfClosed() {
         listing.close();
-        listing.getMaxCreatedCycle();
+        assertThrows("Reading the maximum cycle must be rejected after the listing is closed",
+                IllegalStateException.class, listing::getMaxCreatedCycle);
     }
 
     @Test
@@ -332,12 +333,12 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     public void freshListingReportsUnsetCycle() {
         assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
         assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMinCreatedCycle());
-        assertEquals(MarshallableOut.UNSET_CONTEXT, persistedCycle("listing.highestCycle"));
+        assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
         assertEquals(Integer.MAX_VALUE, persistedCycle("listing.lowestCycle"));
 
         listing.refresh(true);
         assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
-        assertEquals(MarshallableOut.UNSET_CONTEXT, persistedCycle("listing.highestCycle"));
+        assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
     }
 
     @Test
