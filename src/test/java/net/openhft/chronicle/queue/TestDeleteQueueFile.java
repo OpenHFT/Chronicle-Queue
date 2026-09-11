@@ -18,15 +18,21 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,6 +40,7 @@ import java.util.stream.IntStream;
 
 import static java.lang.Long.toHexString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 
 @SuppressWarnings("this-escape")
@@ -215,22 +222,37 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void deletingOldFilesChaosTest() throws InterruptedException {
+    public void deletingOldFilesChaosTest() throws Exception {
+        // This exercises unlinking actively mapped historical files, which Windows does not support.
+        assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
         final int numberOfCycles = 300;
         final AtomicBoolean running = new AtomicBoolean(true);
+        ExecutorService workers = Executors.newFixedThreadPool(3);
         try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(numberOfCycles, null)) {
-            Thread backwardTailerThread = new Thread(() -> new QueueTailer(running, queueWithCycleDetails, TailerDirection.BACKWARD));
-            Thread forwardTailerThread = new Thread(() -> new QueueTailer(running, queueWithCycleDetails, TailerDirection.FORWARD));
-            Thread deleterThread = new Thread(() -> progressivelyTruncateOldRollCycles(queueWithCycleDetails));
-
-            backwardTailerThread.start();
-            forwardTailerThread.start();
-            deleterThread.start();
-            deleterThread.join();
+            QueueTailer backward = new QueueTailer(running, queueWithCycleDetails, TailerDirection.BACKWARD);
+            QueueTailer forward = new QueueTailer(running, queueWithCycleDetails, TailerDirection.FORWARD);
+            Future<?> backwardTask = workers.submit(backward);
+            Future<?> forwardTask = workers.submit(forward);
+            try {
+                assertTrue(backward.firstRead.await(5, TimeUnit.SECONDS));
+                assertTrue(forward.firstRead.await(5, TimeUnit.SECONDS));
+                workers.submit(() -> progressivelyTruncateOldRollCycles(queueWithCycleDetails)).get(30, TimeUnit.SECONDS);
+            } finally {
+                running.set(false);
+                // Wait for both workers before Queue teardown. A five-second per-Future wait could close their
+                // mappings while a legitimate backward scan was still finishing in a busy full-suite run.
+                workers.shutdown();
+                assertTrue("tailer workers must stop before closing their Queue", workers.awaitTermination(30, TimeUnit.SECONDS));
+                backwardTask.get();
+                forwardTask.get();
+            }
+            assertTrue(backward.documentsRead.get() > 0);
+            assertTrue(forward.documentsRead.get() > 0);
+        } finally {
             running.set(false);
-            forwardTailerThread.join();
-            backwardTailerThread.join();
+            workers.shutdownNow();
+            assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -350,11 +372,38 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void stoppedDeletionReaderDoesNotReportIncompletePass() {
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(2, null);
+             ExcerptTailer tailer = queueWithCycleDetails.queue.createTailer()) {
+            for (TailerDirection direction : new TailerDirection[]{TailerDirection.FORWARD, TailerDirection.BACKWARD}) {
+                QueueTailer worker = new QueueTailer(new AtomicBoolean(false), queueWithCycleDetails, direction);
+                worker.logIterationResult(direction, tailer, 0, -5);
+            }
+        }
+    }
+
+    @Test
+    public void deletionReaderCanLogAnUnresolvedStartingCycle() throws ReflectiveOperationException {
+        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(0, null);
+             ExcerptTailer tailer = queueWithCycleDetails.queue.createTailer()) {
+            // Model the unresolved cursor observed when deletion races the first store acquisition.
+            assertEquals(Integer.MIN_VALUE, tailer.cycle());
+            Field index = tailer.getClass().getDeclaredField("index");
+            index.setAccessible(true);
+            index.setLong(tailer, Long.MIN_VALUE);
+            QueueTailer worker = new QueueTailer(new AtomicBoolean(true), queueWithCycleDetails, TailerDirection.FORWARD);
+            worker.logIterationStart(tailer);
+        }
+    }
+
     private static class QueueTailer implements Runnable {
 
         private final AtomicBoolean running;
         private final QueueWithCycleDetails queueWithCycleDetails;
         private final TailerDirection direction;
+        private final CountDownLatch firstRead = new CountDownLatch(1);
+        private final AtomicLong documentsRead = new AtomicLong();
 
         QueueTailer(AtomicBoolean running, QueueWithCycleDetails queueWithCycleDetails, TailerDirection direction) {
             this.running = running;
@@ -372,7 +421,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                         } else {
                             tailer.toStart();
                         }
-                        Jvm.startup().on(TestDeleteQueueFile.class, direction + " Tailer starting at index=" + toHexString(tailer.index()) + ", cycle=" + queueWithCycleDetails.queue.rollCycle().toCycle(tailer.index()));
+                        logIterationStart(tailer);
                         int cyclesRead = 0;
                         long lastReadIndex = -5;
                         int currentCycle = -1;
@@ -383,9 +432,11 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                                     break;
                                 }
                                 lastReadIndex = documentContext.index();
+                                documentsRead.incrementAndGet();
+                                firstRead.countDown();
                                 final int cycle = queueWithCycleDetails.queue.rollCycle().toCycle(lastReadIndex);
                                 if (cycle != currentCycle) {
-                                    Jvm.startup().on(TestDeleteQueueFile.class, direction + " reading cycle " + cycle);
+                                    Jvm.debug().on(TestDeleteQueueFile.class, direction + " reading cycle " + cycle);
                                     currentCycle = cycle;
                                     cyclesRead++;
                                 }
@@ -395,11 +446,20 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                             }
                         }
                     }
+                    // Keep repeated reopen coverage without letting empty-boundary spins dominate the test machine.
+                    Jvm.pause(1);
                 }
             } catch (Exception e) {
                 Jvm.error().on(TestDeleteQueueFile.class, "Error occurred", e);
+                throw new AssertionError("Tailer worker failed", e);
             }
             Jvm.startup().on(TestDeleteQueueFile.class, "Tailer thread terminated: " + direction);
+        }
+
+        private void logIterationStart(ExcerptTailer tailer) {
+            // Deletion can leave the initial cursor unresolved; diagnostics must not decode its sentinel as a cycle.
+            Jvm.debug().on(TestDeleteQueueFile.class, direction + " Tailer starting at index=" + toHexString(tailer.index())
+                    + ", cycle=" + tailer.cycle());
         }
 
         private DocumentContext readingDocumentWithRetries(ExcerptTailer excerptTailer) {
@@ -439,6 +499,9 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
 
         private void logIterationResult(TailerDirection direction, ExcerptTailer tailer, int cyclesRead, long lastReadIndex) {
+            // Shutdown can stop the retry loop before a boundary; that is not a completed pass to validate.
+            if (!running.get())
+                return;
             final int remainingCycles = remainingCycles();
             // Check we read at least the number of cycles remaining now
             if (cyclesRead < remainingCycles) {
