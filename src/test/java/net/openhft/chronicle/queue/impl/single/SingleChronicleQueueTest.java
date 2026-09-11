@@ -1245,23 +1245,23 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testLastWrittenIndexPerAppenderNoData() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
-            appender.lastIndexAppended();
-            fail();
+            assertThrows("lastIndexAppended() must reject an appender with no written messages",
+                    IllegalStateException.class, appender::lastIndexAppended);
         }
     }
 
-    @Test(expected = IllegalStateException.class) //: no messages written
+    @Test //: no messages written
     public void testNoMessagesWritten() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
                 .build();
              final ExcerptAppender appender = chronicle.createAppender()) {
-
-            appender.lastIndexAppended();
+            assertThrows("A new appender must not report a last-written index",
+                    IllegalStateException.class, appender::lastIndexAppended);
         }
     }
 

@@ -66,10 +66,11 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         Closeable.closeQuietly(listing, listingReadOnly, tablestore, tablestoreReadOnly);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void shouldBlowUpIfClosed() {
         listing.close();
-        listing.getMaxCreatedCycle();
+        assertThrows("Reading the maximum cycle must be rejected after the listing is closed",
+                IllegalStateException.class, listing::getMaxCreatedCycle);
     }
 
     @Test
