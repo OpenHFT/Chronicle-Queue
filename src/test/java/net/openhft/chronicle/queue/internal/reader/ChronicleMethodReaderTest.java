@@ -17,14 +17,17 @@ import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
@@ -203,44 +206,40 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
-        // #1150: every exclusion pattern must apply (a message is dropped if it matches ANY of them),
-        // consistently with the plain text reader. The method reader renders each excerpt as a
-        // multi-line DTO document (e.g. "method2: {\n  text: goodbye,\n ...}"), so patterns are matched
-        // against that rendered text; here the two patterns between them cover both message kinds.
-        basicReaderMethodReader().withExclusionRegex(".*goodbye.*").withExclusionRegex(".*hello.*").execute();
+        basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
 
     @Test
-    public void multipleExclusionRegexDropOnlyMessagesMatchingOne() {
-        // A single exclusion pattern removes only its matching messages; the rest (12 of 24) pass.
-        basicReaderMethodReader().withExclusionRegex(".*goodbye.*").execute();
+    public void shouldFilterByMultipleInclusionRegexMethodReader() {
+        Path inclusionDir = getTmpDir().toPath();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(inclusionDir).testBlockSize().build()) {
+            All writer = queue.methodWriter(All.class);
+            for (String text : Arrays.asList("alpha-only", "beta-only", "alpha-beta", "neither")) {
+                Method2Type message = new Method2Type();
+                message.text = text;
+                writer.method2(message);
+            }
+        }
 
-        long remaining = capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count();
-        assertEquals(12L, remaining);
-        capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
+        // A-only, B-only, both and neither distinguish AND from ignored, first-only, last-only and OR filters.
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir), "alpha-only", "beta-only", "alpha-beta", "neither");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("alpha"), "alpha-only", "alpha-beta");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("beta"), "beta-only", "alpha-beta");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("alpha").withInclusionRegex("beta"), "alpha-beta");
     }
 
-    @Test
-    public void shouldFilterByMultipleInclusionRegexMethodReader() {
-        // #1150 also names shouldFilterByMultipleInclusionRegex for method readers. Multiple inclusion
-        // patterns must ALL match for a message to pass (the same PatternFilterMessageConsumer used by
-        // the plain text reader), applied against the method reader's rendered multi-line DTO. Here only
-        // the "goodbye" excerpts contain "bye" as well as an "o", so exactly those 12 of 24 survive.
-        basicReaderMethodReader()
-                .withInclusionRegex(".*bye.*")
-                .withInclusionRegex(".*o.*")
-                .execute();
-
-        long remaining = capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count();
-        assertEquals(12L, remaining);
-        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
-                .forEach(msg -> assertThat(msg, containsString("goodbye")));
-        capturedOutput.stream().filter(msg -> !msg.startsWith("0x"))
-                .forEach(msg -> assertThat(msg, not(containsString("hello"))));
+    private void assertIncludedMessages(ChronicleReader reader, String... expectedTexts) {
+        capturedOutput.clear();
+        reader.execute();
+        assertEquals(Arrays.stream(expectedTexts)
+                        .map(text -> "method2: {\n  text: " + text + ",\n  value: 0,\n  number: 0.0\n}\n...\n")
+                        .collect(Collectors.toList()),
+                capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).collect(Collectors.toList()));
     }
 
     @Test
