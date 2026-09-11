@@ -7,7 +7,6 @@ import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.util.NanoSampler;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
@@ -31,8 +30,6 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
     private ExcerptTailer tailer;
     private ExcerptAppender appender;
     private JLBH jlbh;
-    private NanoSampler appendLatency;
-    private NanoSampler tailerLatency;
     private BytesStore<?, ?> datumBytes;
     private Bytes<?> datumWrite;
 
@@ -73,32 +70,22 @@ public class QueueSingleThreadedJLBHBenchmark implements JLBHTask {
         tailer = sinkQueue.createTailer();
         tailer.singleThreadedCheckDisabled(true);
         this.jlbh = jlbh;
-        appendLatency = jlbh.addProbe("append");
-        tailerLatency = jlbh.addProbe("tailer");
     }
 
     @Override
     public void run(long startTimeNS) {
         datum.setValue10(startTimeNS);
 
-        long appendStart = System.nanoTime();
         try (DocumentContext dc = appender.writingDocument()) {
             dc.wire().bytes().write(datumBytes);
-            //datum.writeMarshallable(dc.wire().bytes());
         }
-        long appendTime = System.nanoTime() - appendStart;
-        appendLatency.sampleNanos(appendTime);
-
-        long tailerStart = System.nanoTime();
         try (DocumentContext dc = tailer.readingDocument()) {
             if (dc.wire() != null) {
                 datumWrite.writePosition(0);
                 dc.wire().readBytes(datumWrite);
-                //datum.readMarshallable(dc.wire().bytes());
                 jlbh.sample(System.nanoTime() - datum.getValue10());
             }
         }
-        tailerLatency.sampleNanos(System.nanoTime() - tailerStart);
     }
 
     @Override
