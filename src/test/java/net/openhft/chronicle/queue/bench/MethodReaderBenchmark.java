@@ -7,6 +7,7 @@ import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.NanoSampler;
@@ -263,6 +264,7 @@ public class MethodReaderBenchmark implements JLBHTask {
         }
     }
 
+    @UsedViaReflection
     static class OrderDTO extends SelfDescribingMarshallable {
         private char side;
         private char ordType;
@@ -283,6 +285,7 @@ public class MethodReaderBenchmark implements JLBHTask {
         }
     }
 
+    @UsedViaReflection
     static class ExecutionReportDTO extends SelfDescribingMarshallable {
         private String orderID;
         private Bytes<?> clOrdID;

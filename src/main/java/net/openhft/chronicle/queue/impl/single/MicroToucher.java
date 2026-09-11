@@ -55,6 +55,7 @@ public class MicroToucher {
                 if (bs.inside(nextPage, 8))
                     touchPage(nextPage, bs);
             } catch (Throwable ignored) {
+                // ignored - best effort touching
             }
             return true;
         }

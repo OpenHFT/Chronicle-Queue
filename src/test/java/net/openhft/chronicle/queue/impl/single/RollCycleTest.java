@@ -295,8 +295,8 @@ public class RollCycleTest extends QueueTestCommon {
     }
 
     static class ParallelQueueObserver implements Runnable, StoreFileListener {
-        ChronicleQueue queue;
-        CountDownLatch progressLatch;
+        final ChronicleQueue queue;
+        final CountDownLatch progressLatch;
         volatile int documentsRead;
 
         ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
@@ -341,13 +341,8 @@ public class RollCycleTest extends QueueTestCommon {
         }
 
         @Override
-        public void onAcquired(int cycle, File file) {
-            // System.out.println("Acquiring " + file);
-        }
-
-        @Override
         public void onReleased(int cycle, File file) {
-            // System.out.println("Releasing " + file);
+            // no-op
         }
     }
 }

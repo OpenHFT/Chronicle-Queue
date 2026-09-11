@@ -1,4 +1,6 @@
 = Timezone Queue Rollover
+:lang: en-GB
+:source-highlighter: rouge
 
 [NOTE]
 ====

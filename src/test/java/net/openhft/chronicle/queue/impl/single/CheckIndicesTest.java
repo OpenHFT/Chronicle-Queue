@@ -91,8 +91,7 @@ public class CheckIndicesTest extends QueueTestCommon {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(-1);
+            throw new AssertionError(e);
         }
     }
 }

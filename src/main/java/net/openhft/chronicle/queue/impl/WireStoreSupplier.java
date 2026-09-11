@@ -49,7 +49,6 @@ public interface WireStoreSupplier {
      * @param currentCycle the current cycle
      * @param direction    the direction (FORWARD or BACKWARD)
      * @return the next available cycle, or -1 if no next cycle exists
-     * @throws ParseException if parsing the cycle fails
      */
     int nextCycle(int currentCycle, TailerDirection direction) throws ParseException;
 
@@ -68,5 +67,6 @@ public interface WireStoreSupplier {
      * @param store the {@link SingleChronicleQueueStore} to check for reuse
      * @return {@code true} if the store can be reused, {@code false} otherwise
      */
+    @Deprecated(/* to be removed in 2027 */)
     boolean canBeReused(@NotNull SingleChronicleQueueStore store);
 }

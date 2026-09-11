@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -50,4 +49,3 @@ public class InternalDumpMainTest extends QueueTestCommon {
         assertNotEquals(0, captureFile.size());
     }
 }
-

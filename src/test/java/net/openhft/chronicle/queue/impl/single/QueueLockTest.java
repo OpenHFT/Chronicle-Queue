@@ -53,7 +53,7 @@ public class QueueLockTest extends QueueTestCommon {
             expectException("Forced unlock for the lock");
 
         try {
-            System.setProperty("queue.force.unlock.mode", shouldThrowException ? "NEVER" : "ALWAYS" );
+            System.setProperty("queue.force.unlock.mode", shouldThrowException ? "NEVER" : "ALWAYS");
 
             final long timeoutMs = 2_000;
             final File queueDir = DirectoryUtils.tempDir("check");

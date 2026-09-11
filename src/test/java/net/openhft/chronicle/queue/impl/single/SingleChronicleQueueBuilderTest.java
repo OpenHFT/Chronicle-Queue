@@ -32,6 +32,7 @@ import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     private static final String TEST_QUEUE_FILE = "src/test/resources/tr2/20170320.cq4";
     private static final String BASE_PATH = OS.getTarget() + "/singleChronicleQueueBuilderTest";
@@ -61,7 +62,7 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
                              .build();
              final ExcerptTailer tailer = queue.createTailer();
              final DocumentContext dc = tailer.readingDocument()) {
-//            System.out.println(queue.dump());
+            // System.out.println(queue.dump());
             assertFalse(dc.isPresent());
 
         } finally {

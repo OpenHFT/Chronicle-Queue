@@ -45,7 +45,7 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
     private final Path basePath;
     private final SingleChronicleQueue queue;
     private final ExcerptAppender appender;
-    private Bytes<ByteBuffer> outbound;
+    private final Bytes<ByteBuffer> outbound;
 
     @SuppressWarnings("this-escape")
     public MoveToWrongIndexThenToEndTest() {

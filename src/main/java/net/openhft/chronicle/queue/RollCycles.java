@@ -56,6 +56,9 @@ public enum RollCycles implements RollCycle {
      * 0xffffffff entries per week, indexing every 256th entry, leave as 4K and 256 for historical reasons. Cycle starts Sunday 00:00
      */
     WEEKLY(/*-----------*/"YYYY'W'ww", 7 * 24 * 60 * 60 * 1000, 4 << 10, 256, RollCycleArithmetic.SUNDAY_00_00);
+    /**
+     * Default roll cycle used when none is specified explicitly.
+     */
     public static final RollCycles DEFAULT = FAST_DAILY;
 
     // don't alter this or you will confuse yourself.
@@ -90,10 +93,16 @@ public enum RollCycles implements RollCycle {
         maxMessagesPerCycle = arithmetic.maxMessagesPerCycle();
     }
 
+    /**
+     * Returns all roll cycles, including legacy and sparse variants.
+     *
+     * @return iterable of all known roll cycles
+     */
     public static Iterable<RollCycle> all() {
         return VALUES;
     }
 
+    @Override
     public long maxMessagesPerCycle() {
         return maxMessagesPerCycle;
     }

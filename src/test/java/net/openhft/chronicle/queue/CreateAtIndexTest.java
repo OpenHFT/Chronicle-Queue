@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.IllegalIndexException;
 import net.openhft.chronicle.queue.impl.single.InternalAppender;
@@ -23,6 +24,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
+@SuppressWarnings({"deprecation", "removal"})
 public class CreateAtIndexTest extends QueueTestCommon {
 
     @Test
@@ -52,27 +54,6 @@ public class CreateAtIndexTest extends QueueTestCommon {
             assertEquals(cleanDump(before), cleanDump(after));
         }
 
-/*
-        TODO FIX
-        if (Jvm.isAssertEnabled()) {
-            try (ChronicleQueue queue = single(tmp)
-                    .testBlockSize()
-                    .build()) {
-                InternalAppender appender = (InternalAppender) queue.acquireAppender();
-
-                String before = queue.dump();
-                try {
-                    appender.writeBytes(0x421d00000000L, Bytes.from("hellooooo world"));
-                    fail();
-                } catch (IllegalStateException e) {
-                    // expected
-                }
-                String after = queue.dump();
-                assertEquals(before, after);
-            }
-        }
-        */
-
         // try too far
         try (ChronicleQueue queue = single(tmp)
                 .testBlockSize()
@@ -94,7 +75,8 @@ public class CreateAtIndexTest extends QueueTestCommon {
 
         try {
             IOTools.deleteDirWithFiles(tmp, 2);
-        } catch (IORuntimeException ignored) {
+        } catch (IORuntimeException e) {
+            Jvm.warn().on(CreateAtIndexTest.class, "Failed to delete " + tmp, e);
         }
     }
 

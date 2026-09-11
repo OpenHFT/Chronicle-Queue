@@ -171,6 +171,12 @@ public interface ChronicleQueue extends Closeable {
         throw new UnsupportedOperationException("not currently supported in this implementation.");
     }
 
+    /**
+     * Returns the index store linked to a named tailer.
+     *
+     * @param id identifier previously supplied to {@link #createTailer(String)}
+     * @return the value tracking the named tailer's position
+     */
     default LongValue indexForId(String id) {
         throw new UnsupportedOperationException("Not supported");
     }
@@ -229,6 +235,7 @@ public interface ChronicleQueue extends Closeable {
     /**
      * Removes all the excerpts in the current ChronicleQueue.
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     void clear();
 
     /**
@@ -281,6 +288,7 @@ public interface ChronicleQueue extends Closeable {
      * @param toIndex   last index  (inclusive)
      * @throws NullPointerException if the provided {@code writer} is {@code null}
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default void dump(@NotNull OutputStream stream, long fromIndex, long toIndex) {
         dump(new OutputStreamWriter(stream, StandardCharsets.UTF_8), fromIndex, toIndex);
     }
@@ -402,6 +410,7 @@ public interface ChronicleQueue extends Closeable {
      *
      * @return the last index that was msync-ed to disk
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default long lastIndexMSynced() {
         return -1;
     }
@@ -428,6 +437,7 @@ public interface ChronicleQueue extends Closeable {
      * @param lastIndexMSynced last msync-ed index
      * @see #lastIndexMSynced()
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     default void lastIndexMSynced(long lastIndexMSynced) {
         throw new UnsupportedOperationException();
     }
@@ -449,6 +459,7 @@ public interface ChronicleQueue extends Closeable {
      * @return a new String representation of this ChronicleQueue's last header in YAML-format
      */
     @NotNull
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     String dumpLastHeader();
 
     /**
@@ -461,6 +472,11 @@ public interface ChronicleQueue extends Closeable {
         return PretouchUtil.createPretoucher(this);
     }
 
+    /**
+     * Creates an {@link EventHandler} that drives pretouching for this queue.
+     *
+     * @return event handler that advances pretouching work
+     */
     default EventHandler createPretoucherEventHandler() {
         return PretouchUtil.createEventHandler(this);
     }

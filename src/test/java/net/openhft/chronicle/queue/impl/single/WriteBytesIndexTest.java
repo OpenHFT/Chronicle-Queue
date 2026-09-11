@@ -34,7 +34,7 @@ public class WriteBytesIndexTest extends QueueTestCommon {
             Bytes<?> bytes2 = Bytes.allocateElasticOnHeap();
             for (int cycle = 1; cycle < 10; cycle++) {
                 for (int seq = 0; seq < cycle; seq++) {
-                    bytes.clear().append("Msg ").append(String.valueOf(cycle)).append(" ").append(String.valueOf(seq));
+                    bytes.clear().append("Msg ").append(String.valueOf(cycle)).append(' ').append(String.valueOf(seq));
                     long index = q0.rollCycle().toIndex(cycle, seq);
 
                     if ((cycle + seq) % 5 < 2) {

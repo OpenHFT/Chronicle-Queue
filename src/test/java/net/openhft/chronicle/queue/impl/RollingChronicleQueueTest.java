@@ -19,6 +19,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST2_DAILY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class RollingChronicleQueueTest extends QueueTestCommon {
 
     @Test
@@ -37,7 +38,7 @@ public class RollingChronicleQueueTest extends QueueTestCommon {
             time.set(0);
 
             appender.writeText("1. some  text");
-            long start = appender.lastIndexAppended();
+            final long start = appender.lastIndexAppended();
             appender.writeText("2. some more text");
             appender.writeText("3. some more text");
             time.set(TimeUnit.DAYS.toMillis(1));

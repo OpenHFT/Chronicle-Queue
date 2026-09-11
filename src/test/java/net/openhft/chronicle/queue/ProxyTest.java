@@ -39,13 +39,7 @@ public class ProxyTest extends QueueTestCommon {
                 sb.setLength(length);
             }
 
-            MethodReader methodReader = queue.createTailer().methodReader(new TestMessageListener() {
-
-                @Override
-                public void onMessage(final Message message) {
-                    result.append(message);
-                }
-            });
+            MethodReader methodReader = queue.createTailer().methodReader((TestMessageListener) result::append);
 
             for (int i = 0; i < 10; i++) {
                 methodReader.readOne();

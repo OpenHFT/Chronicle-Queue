@@ -179,7 +179,7 @@ public class ContendedWriterTest extends QueueTestCommon {
     }
 
     private class StartAndMonitor {
-        Histogram histo = new Histogram();
+        final Histogram histo = new Histogram();
 
         StartAndMonitor(ChronicleQueue queue, String name, int writePauseMs, int sleepBetweenMillis) {
             final SlowToSerialiseAndDeserialise object = new SlowToSerialiseAndDeserialise(writePauseMs);

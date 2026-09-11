@@ -34,6 +34,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class SingleCQFormatTest extends QueueTestCommon {
     static {
         SingleChronicleQueueBuilder.addAliases();

@@ -18,7 +18,7 @@ import static org.junit.Assume.assumeTrue;
 public class HugetlbfsTest extends QueueTestCommon {
 
     @Rule
-    public TestName testName = new TestName();
+    public final TestName testName = new TestName();
 
     @Test
     public void queueHugetlbfsEndToEndSimpleAcceptanceTest() {

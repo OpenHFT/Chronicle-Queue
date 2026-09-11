@@ -20,6 +20,7 @@ import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class SingleTableStoreIntegrationTests extends QueueTestCommon {
 
     private TestContext context;
@@ -87,6 +88,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         assertEquals(1, context.newQueueInstance().tableStoreGet(key));
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     class TestContext implements Closeable {
 
         private final File queuePath = getTmpDir();
@@ -102,7 +104,7 @@ public class SingleTableStoreIntegrationTests extends QueueTestCommon {
         }
 
         @Override
-        public void close() throws IOException {
+        public void close() {
             queues.forEach(net.openhft.chronicle.core.io.Closeable::closeQuietly);
             IOTools.deleteDirWithFiles(queuePath);
         }

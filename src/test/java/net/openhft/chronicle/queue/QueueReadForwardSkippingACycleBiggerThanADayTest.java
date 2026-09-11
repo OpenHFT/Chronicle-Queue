@@ -19,7 +19,7 @@ import static junit.framework.TestCase.assertNull;
 
 public class QueueReadForwardSkippingACycleBiggerThanADayTest extends QueueTestCommon {
     @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     private File dataDir;
     private SetTimeProvider timeProvider;

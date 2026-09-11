@@ -35,6 +35,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         IOTools.deleteDirWithFiles(path);
     }
@@ -89,11 +90,6 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                     count2++;
                 } else if (index >= 0) {
                     if (TEST_SECONDLY.toCycle(lastIndex) != TEST_SECONDLY.toCycle(index)) {
-/*
-                       // System.out.println("Wrote: " + count
-                                + " read: " + count2
-                                + " index: " + Long.toHexString(index));
-*/
                         lastIndex = index;
                     }
                 }

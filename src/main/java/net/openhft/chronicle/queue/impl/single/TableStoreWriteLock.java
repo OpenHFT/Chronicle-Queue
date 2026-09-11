@@ -29,6 +29,7 @@ import static net.openhft.chronicle.core.Jvm.warn;
  * The write lock is used to protect write operations in Chronicle Queue, ensuring that only one thread or process
  * can write at a time.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLock, Closeable {
     private static final String STORE_LOCK_THREAD = "chronicle.store.lock.thread";
     private static final boolean storeLockThread = Jvm.getBoolean(STORE_LOCK_THREAD);
@@ -76,18 +77,31 @@ public class TableStoreWriteLock extends AbstractTSQueueLock implements WriteLoc
         assert checkNotAlreadyLocked();
 
         long currentLockValue = 0;
-        TimingPauser tlPauser = pauser.get();
         try {
             currentLockValue = lock.getVolatileValue();
 
-            while (!lock.compareAndSwapValue(UNLOCKED, PID)) {
-                currentLockValue = lockGetCurrentLockValue(tlPauser);
+            if (!lock.compareAndSwapValue(UNLOCKED, PID)) {
+                currentLockValue = retryLockAcquisition();
             }
             checkStoreLockThread();
 
             // success
         } catch (TimeoutException e) {
             handleTimeoutEx(currentLockValue);
+        }
+    }
+
+    /**
+     * Retries acquiring the write lock until success or timeout, returning the previous lock value.
+     */
+    private long retryLockAcquisition() throws TimeoutException {
+        TimingPauser tlPauser = pauser.get();
+        try {
+            long currentLockValue;
+            do {
+                currentLockValue = lockGetCurrentLockValue(tlPauser);
+            } while (!lock.compareAndSwapValue(UNLOCKED, PID));
+            return currentLockValue;
         } finally {
             tlPauser.reset();
         }

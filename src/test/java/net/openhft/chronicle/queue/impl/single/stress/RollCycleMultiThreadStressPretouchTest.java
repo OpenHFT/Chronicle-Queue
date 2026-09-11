@@ -16,6 +16,7 @@ public class RollCycleMultiThreadStressPretouchTest extends RollCycleMultiThread
     }
 
     @Test
+    @Override
     public void stress() throws Exception {
         Assume.assumeTrue(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
         super.stress();

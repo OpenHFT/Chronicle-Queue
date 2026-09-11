@@ -40,6 +40,7 @@ public enum PrecreatedFiles {
      * @param requiredStoreFile The file for which a pre-created store file is required.
      * @return The pre-created store file object.
      */
+    @Deprecated(/* to be removed in 2027 */)
     public static File preCreatedFileForStoreFile(final File requiredStoreFile) {
         return new File(requiredStoreFile.getParentFile(), requiredStoreFile.getName() +
                 PRE_CREATED_FILE_SUFFIX);

@@ -12,6 +12,7 @@ import net.openhft.chronicle.wire.Sequence;
  * This class encodes and manages the sequence in a Chronicle Queue based on roll cycles.
  * It is responsible for encoding the sequence and position, and handling sequence retrieval.
  */
+@SuppressWarnings({"deprecation", "removal"})
 class RollCycleEncodeSequence implements Sequence {
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
@@ -69,6 +70,7 @@ class RollCycleEncodeSequence implements Sequence {
      * @param forWritePosition The write position, expected to be the end of the queue.
      * @return The sequence number or {@link Sequence#NOT_FOUND_RETRY} if the sequence is not found.
      */
+    @Override
     public long getSequence(long forWritePosition) {
 
         if (writePositionAndSequence == null)
@@ -112,6 +114,7 @@ class RollCycleEncodeSequence implements Sequence {
      * @param index The encoded index.
      * @return The sequence number.
      */
+    @Override
     public long toSequenceNumber(long index) {
         return index & sequenceMask;
     }

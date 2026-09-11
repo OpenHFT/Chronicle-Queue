@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -21,6 +22,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.assertEquals;
 
 @RequiredForClient
+@SuppressWarnings({"deprecation", "removal"})
 public class CycleNotFoundTest extends QueueTestCommon {
 
     private static final int NUMBER_OF_TAILERS = 20;
@@ -75,7 +77,8 @@ public class CycleNotFoundTest extends QueueTestCommon {
                     Assert.assertFalse(dc.isPresent());
                 }
             } finally {
-                // System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
+                Jvm.debug().on(CycleNotFoundTest.class,
+                        "Tailer " + Thread.currentThread().getName() + " processed " + count + " messages");
             }
         };
 
@@ -98,7 +101,7 @@ public class CycleNotFoundTest extends QueueTestCommon {
                 long next = System.nanoTime() + INTERVAL_US * 1000;
                 for (int i = 0; i < NUMBER_OF_MSG; i++) {
                     while (System.nanoTime() < next)
-                        /* busy wait*/ ;
+                        Jvm.nanoPause();
                     try (DocumentContext dc = appender.writingDocument()) {
                         dc.wire().write().int64(i);
                     }

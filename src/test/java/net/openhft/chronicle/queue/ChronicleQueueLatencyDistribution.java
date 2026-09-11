@@ -115,11 +115,6 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
     }
 
     protected void runTest(@NotNull ChronicleQueue queue, int throughput) throws InterruptedException {
-/*
-        Jvm.setExceptionHandlers(PrintExceptionHandler.ERR,
-                PrintExceptionHandler.OUT,
-                PrintExceptionHandler.OUT);
-*/
 
         Histogram histogramCo = new Histogram();
         Histogram histogramIn = new Histogram();
@@ -149,9 +144,6 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                 int counter = 0;
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
-                        // if (SAMPLING)
-                        // sampler.thread(Thread.currentThread());
-                        // boolean found = tailer.readDocument(myReadMarshallable);
                         boolean found;
                         try (DocumentContext dc = tailer.readingDocument()) {
                             found = dc.isPresent();
@@ -168,24 +160,8 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                                 long now = System.nanoTime();
                                 histogramCo.sample(now - startCo);
                                 histogramIn.sample(now - startIn);
-                                // if (count % 1_000_000 == 0) System.out.println("read  " + count);
                             }
                         }
-/*
-                        if (SAMPLING) {
-                            StackTraceElement[] stack = sampler.getAndReset();
-                            if (stack != null) {
-                                if (!stack[0].getClassName().equals(name) &&
-                                        !stack[0].getClassName().equals("java.lang.Thread")) {
-                                    StringBuilder sb = new StringBuilder();
-                                    Jvm.trimStackTrace(sb, stack);
-                                   // System.out.println(sb);
-                                }
-                            } else if (!found) {
-                                Thread.yield();
-                            }
-                        }
-                        */
 
                     } catch (Exception e) {
                         break;
@@ -240,7 +216,6 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
                         }
                     }
                     next += interval;
-                    // if (i % 1_000_000 == 0) System.out.println("wrote " + i);
                 }
                 stackCount.entrySet().stream()
                         .filter(e -> e.getValue() > 1)
@@ -266,9 +241,5 @@ public class ChronicleQueueLatencyDistribution extends QueueTestCommon {
         Jvm.pause(500);
         tailerThread.interrupt();
         tailerThread.join();
-
-        // System.out.println("wr: " + histogramWr.toMicrosFormat());
-        // System.out.println("in: " + histogramIn.toMicrosFormat());
-        // System.out.println("co: " + histogramCo.toMicrosFormat());
     }
 }

@@ -35,7 +35,7 @@ public class BrokenChainTest extends QueueTestCommon {
              ExcerptAppender appender = ThreadLocalAppender.acquireThreadLocalAppender(queue);
              ExcerptTailer tailer = queue.createTailer()) {
 
-            First writer = appender.methodWriter(First.class);
+            final First writer = appender.methodWriter(First.class);
             assertTrue(appender.writingIsComplete());
 
             List<String> list = new ArrayList<>();

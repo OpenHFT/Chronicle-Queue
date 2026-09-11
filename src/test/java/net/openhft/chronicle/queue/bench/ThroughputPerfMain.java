@@ -50,14 +50,12 @@ public class ThroughputPerfMain {
     private static final String PATH = System.getProperty("path", OS.TMP);
     private static final long blockSizeMB = Long.getLong("blockSizeMB", OS.isSparseFileSupported() ? 512L << 10 : 256L);
 
-    private static BytesStore<?, ?> nbs;
-
     public static void main(String[] args) {
         String base = PATH + "/delete-" + Time.uniqueId() + ".me";
         long start = System.nanoTime();
         long count = 0;
-        nbs = BytesStore.nativeStoreWithFixedCapacity(SIZE);
-        AffinityLock lock = AffinityLock.acquireCore();
+        BytesStore<?, ?> nbs = BytesStore.nativeStoreWithFixedCapacity(SIZE);
+        final AffinityLock lock = AffinityLock.acquireCore();
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
                 .rollCycle(LARGE_HOURLY_XSPARSE)
                 .blockSize(blockSizeMB << 20)
@@ -74,7 +72,7 @@ public class ThroughputPerfMain {
 
         nbs.releaseLast();
         long mid = System.nanoTime();
-        long time1 = mid - start;
+        final long time1 = mid - start;
 
         Bytes<?> bytes = Bytes.allocateElasticDirect(SIZE);
         try (ChronicleQueue q = ChronicleQueue.singleBuilder(base)
@@ -91,7 +89,7 @@ public class ThroughputPerfMain {
         }
         bytes.releaseLast();
         long end = System.nanoTime();
-        long time2 = end - mid;
+        final long time2 = end - mid;
         lock.close();
 
         System.out.println("-Dtime=" + TIME +

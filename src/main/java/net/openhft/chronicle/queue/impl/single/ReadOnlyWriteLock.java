@@ -10,6 +10,7 @@ import java.util.function.LongConsumer;
  * This lock throws {@link IllegalStateException} when any write-related operation is attempted,
  * indicating that the queue is in a read-only state.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class ReadOnlyWriteLock implements WriteLock {
 
     /**

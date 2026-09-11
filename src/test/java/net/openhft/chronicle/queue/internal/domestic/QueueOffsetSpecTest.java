@@ -11,6 +11,7 @@ import java.time.ZoneId;
 
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class QueueOffsetSpecTest {
 
     @Test

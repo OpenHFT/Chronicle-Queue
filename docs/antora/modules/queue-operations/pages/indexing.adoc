@@ -20,8 +20,6 @@ Recalling from the chapter on xref:configuration:roll-cycle.adoc[Roll Cycles], a
 In turn, the sequence number simply refers to the n:th entry within that queue file (cycle).
 Both the cycle and sequence number are incremented by 1, and the count begins at 0.
 
-//image::../../../../images/queue-index.png[Queue Indexes]
-
 Different roll-cycles have a difference balance between how many bits are allocated to the message sequence number, and how many of the remaining bits are allocated to the cycle number.
 In other words, different roll-cycles allow us to trade off the maximum number of cycles, for the maximum number of messages within the cycle.
 Learn more about this in xref:configuration:roll-cycle.adoc[Roll Cycle]

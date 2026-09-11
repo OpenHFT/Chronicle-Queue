@@ -76,15 +76,17 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
 
     static class DtoBytesMarshallable extends BytesInBinaryMarshallable {
 
-        StringBuilder name = new StringBuilder();
+        final StringBuilder name = new StringBuilder();
         int age;
 
+        @Override
         public void readMarshallable(BytesIn<?> bytes) {
             age = bytes.readInt();
             name.setLength(0);
             bytes.readUtf8(name);
         }
 
+        @Override
         public void writeMarshallable(BytesOut<?> bytes) {
             bytes.writeInt(age);
             bytes.writeUtf8(name);
@@ -92,15 +94,17 @@ public class DtoBytesMarshallableTest extends QueueTestCommon {
     }
 
     static class DtoAbstractMarshallable extends SelfDescribingMarshallable {
-        StringBuilder name = new StringBuilder();
+        final StringBuilder name = new StringBuilder();
         int age;
 
+        @Override
         public void readMarshallable(BytesIn<?> bytes) {
             age = bytes.readInt();
             name.setLength(0);
             bytes.readUtf8(name);
         }
 
+        @Override
         public void writeMarshallable(BytesOut<?> bytes) {
             bytes.writeInt(age);
             bytes.writeUtf8(name);

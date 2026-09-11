@@ -40,6 +40,7 @@ import static net.openhft.chronicle.wire.Wires.*;
  * excerpts to the queue. It manages the cycle of the queue, lock handling, and the state
  * of the wire and store.
  */
+@SuppressWarnings({"deprecation", "removal"})
 class StoreAppender extends AbstractCloseable
         implements ExcerptAppender, ExcerptContext, InternalAppender, MicroTouched {
 
@@ -59,6 +60,7 @@ class StoreAppender extends AbstractCloseable
     private final StoreAppenderContext context;
     private final WireStorePool storePool;
     private final boolean checkInterrupts;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     @UsedViaReflection
     private final Finalizer finalizer;
     @Nullable
@@ -150,16 +152,17 @@ class StoreAppender extends AbstractCloseable
      * @return true if the cycle has an EOF marker, false otherwise
      */
     private boolean cycleHasEOF() {
-        if (wire != null) {
+        final Wire wireLocal = this.wire;
+        if (wireLocal != null) {
             assert this.queue.writeLock().locked();
             assert this.store != null;
 
-            if (wire.bytes().tryReserve(this)) {
+            if (wireLocal.bytes().tryReserve(this)) {
                 try {
                     return WireOut.EndOfWire.PRESENT ==
-                            wire.endOfWire(false, timeoutMS(), TimeUnit.MILLISECONDS, store.writePosition());
+                            wireLocal.endOfWire(false, timeoutMS(), TimeUnit.MILLISECONDS, store.writePosition());
                 } finally {
-                    wire.bytes().release(this);
+                    wireLocal.bytes().release(this);
                 }
             }
         }
@@ -361,6 +364,7 @@ class StoreAppender extends AbstractCloseable
      *
      * @param cycle The cycle to be set.
      */
+    @Deprecated(/* to be removed in 2027 */)
     void setCycle(int cycle) {
         if (cycle != this.cycle)
             setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
@@ -468,27 +472,29 @@ class StoreAppender extends AbstractCloseable
      * @throws UnrecoverableTimeoutException If a timeout occurs during the operation.
      */
     private boolean resetPosition() {
-        long originalHeaderNumber = wire.headerNumber();
-        long INVALID_HEADER_NUMBER = -1;
-
         try {
-            if (store == null || wire == null)
+            if (store == null || wire == null) {
                 return false;
+            }
+
+            final long originalHeaderNumber = wire.headerNumber();
+            final long invalidHeaderNumber = -1;
+
             long position = store.writePosition();
             position(position, position);
 
             Bytes<?> bytes = wire.bytes();
-            assert !QueueSystemProperties.CHECK_INDEX || checkPositionOfHeader(bytes);
+            assert !QueueSystemProperties.checkIndex() || checkPositionOfHeader(bytes);
 
             final long lastSequenceNumber = store.lastSequenceNumber(this);
             wire.headerNumber(queue.rollCycle().toIndex(cycle, lastSequenceNumber + 1) - 1);
 
-            assert !QueueSystemProperties.CHECK_INDEX || wire.headerNumber() != INVALID_HEADER_NUMBER ||
+            assert !QueueSystemProperties.checkIndex() || wire.headerNumber() != invalidHeaderNumber ||
                     checkIndex(wire.headerNumber(), positionOfHeader);
 
             bytes.writeLimit(bytes.capacity());
 
-            assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+            assert !QueueSystemProperties.checkIndex() || checkWritePositionHeaderNumber();
             return originalHeaderNumber != wire.headerNumber();
 
         } catch (@NotNull BufferOverflowException | StreamCorruptedException e) {
@@ -572,7 +578,7 @@ class StoreAppender extends AbstractCloseable
 
                 long safeLength = queue.overlapSize();
                 resetPosition();
-                assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
+                assert !QueueSystemProperties.checkIndex() || checkWritePositionHeaderNumber();
 
                 // sets the writeLimit based on the safeLength
                 openContext(metaData, safeLength);
@@ -624,6 +630,7 @@ class StoreAppender extends AbstractCloseable
      * Ensures that EOF markers are properly added to all cycles, normalizing older cycles to ensure they are complete.
      * This method locks the writeLock and calls the internal {@link #normaliseEOFs0(int)} method for each cycle.
      */
+    @Override
     public void normaliseEOFs() {
         long start = System.nanoTime();
         final WriteLock writeLock = queue.writeLock();
@@ -813,7 +820,7 @@ class StoreAppender extends AbstractCloseable
      * @return true if inside a valid header, false otherwise
      */
     private boolean isInsideHeader(Wire wire) {
-        return (wire instanceof AbstractWire) ? ((AbstractWire) wire).isInsideHeader() : true;
+        return !(wire instanceof AbstractWire) || ((AbstractWire) wire).isInsideHeader();
     }
 
     /**
@@ -967,7 +974,7 @@ class StoreAppender extends AbstractCloseable
     /*
      * overridden in delta wire
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "EmptyMethod"})
     void beforeAppend(final Wire wire, final long index) {
     }
 
@@ -1176,6 +1183,7 @@ class StoreAppender extends AbstractCloseable
          *
          * @return true if the context is empty, false otherwise
          */
+        @Override
         public boolean isEmpty() {
             Bytes<?> bytes = wire().bytes();
             return bytes.readRemaining() == 0;

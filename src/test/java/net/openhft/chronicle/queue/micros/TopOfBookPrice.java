@@ -54,6 +54,8 @@ class TopOfBookPrice extends SelfDescribingMarshallable {
                     sellQuantity = price.quantity;
                 }
                 break;
+            default:
+                return false;
         }
         return changed;
     }

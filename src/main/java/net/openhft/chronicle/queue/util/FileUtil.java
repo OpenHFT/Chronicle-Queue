@@ -83,6 +83,7 @@ public final class FileUtil {
      * @return if the provided {@code file} has the ChronicleQueue file
      * suffix
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public static boolean hasQueueSuffix(@NotNull File file) {
         return InternalFileUtil.hasQueueSuffix(file);
     }
@@ -99,6 +100,7 @@ public final class FileUtil {
      * @throws UnsupportedOperationException if this operation is not
      *                                       supported for the current platform (e.g. Windows).
      */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
     public static FileState state(@NotNull File file) {
         return InternalFileUtil.state(file);
     }

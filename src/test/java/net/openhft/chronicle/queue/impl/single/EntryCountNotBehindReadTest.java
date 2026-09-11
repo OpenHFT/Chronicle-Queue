@@ -24,6 +24,7 @@ import java.util.function.LongConsumer;
 
 import static org.junit.Assert.assertFalse;
 
+@SuppressWarnings({"deprecation", "removal"})
 public final class EntryCountNotBehindReadTest extends QueueTestCommon {
     private static final int TOTAL_EVENTS = 100_000;
 
@@ -42,8 +43,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();
-            final Thread reader = new Thread
-                    (() -> runReader(queue, startBarrier, lastIndex::set));
+            final Thread reader = new Thread(() -> runReader(queue, startBarrier, lastIndex::set));
 
             startWriter(queue, startBarrier);
             reader.start();
@@ -68,8 +68,7 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();
-            final Thread reader = new Thread
-                    (() -> runReader(queue, startBarrier, lastIndex::set));
+            final Thread reader = new Thread(() -> runReader(queue, startBarrier, lastIndex::set));
 
             startWriter(queue, startBarrier);
             reader.start();

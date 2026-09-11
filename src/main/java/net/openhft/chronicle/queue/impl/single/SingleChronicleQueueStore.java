@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
  * the file to memory using {@link MappedBytes}. It handles reading and writing data in
  * a queue and supports efficient roll cycles and indexing.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public class SingleChronicleQueueStore extends AbstractCloseable implements WireStore {
 
     static {
@@ -129,6 +130,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @return the dumped contents as a string
      */
     @NotNull
+    @Deprecated(/* to be removed in 2027 */)
     public static String dump(@NotNull String directoryFilePath) {
         return ChronicleQueue.singleBuilder(directoryFilePath).build().dump();
     }

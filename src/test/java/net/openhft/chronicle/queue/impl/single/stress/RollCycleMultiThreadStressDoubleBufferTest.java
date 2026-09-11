@@ -11,12 +11,12 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Ignore("double buffering is turned off currently")
+@SuppressWarnings({"deprecation", "removal", "PMD.TestClassWithoutTestCases"})
 public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiThreadStressTest {
 
     private AtomicBoolean queueDumped = new AtomicBoolean(false);
@@ -62,7 +62,7 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
         @Override
         public void checkDocument(DocumentContext dc, ExcerptTailer tailer, RollingChronicleQueue queue,
                                   int lastTailerCycle, int lastQueueCycle, int expected, ValueIn valueIn) {
-            for (int i = 0; i < NUMBER_OF_INTS; i++) {
+            for (int i = 0; i < numberOfInts; i++) {
                 int v = valueIn.int32();
                 if (i == 0 && v != expected) {
                     if (!unexpectedValues.remove(expected)) {
@@ -79,9 +79,9 @@ public class RollCycleMultiThreadStressDoubleBufferTest extends RollCycleMultiTh
         @Override
         public void postReadCheck(RollingChronicleQueue queue) {
             Jvm.debug().on(getClass(), "Out-of-order count: " + outOfOrderCount);
-            if (skippedValue.size() > 0 || unexpectedValues.size() > 0) {
+            if (!skippedValue.isEmpty() || !unexpectedValues.isEmpty()) {
                 Jvm.error().on(getClass(), "Skipped " + skippedValue + ", Unexpected " + unexpectedValues);
-                if (DUMP_QUEUE && !queueDumped.getAndSet(true)) {
+                if (dumpQueue && !queueDumped.getAndSet(true)) {
                     InternalDumpMain.dump(queue.file(), System.out, Long.MAX_VALUE);
                 }
             }

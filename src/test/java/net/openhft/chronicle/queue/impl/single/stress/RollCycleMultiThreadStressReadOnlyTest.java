@@ -16,6 +16,7 @@ public class RollCycleMultiThreadStressReadOnlyTest extends RollCycleMultiThread
     }
 
     @Test
+    @Override
     public void stress() throws Exception {
         Assume.assumeFalse("Windows does not support read only", OS.isWindows());
         super.stress();

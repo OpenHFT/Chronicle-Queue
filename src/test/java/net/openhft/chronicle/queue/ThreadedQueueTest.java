@@ -38,7 +38,7 @@ public class ThreadedQueueTest extends QueueTestCommon {
 
         ExecutorService tailerES = Executors.newSingleThreadExecutor(
                 new NamedThreadFactory("tailer"));
-        Future<?> tf = tailerES.submit(() -> {
+        final Future<?> tf = tailerES.submit(() -> {
             try (final ChronicleQueue rqueue = ChronicleQueue.singleBuilder(path)
                     .testBlockSize()
                     .build()) {

@@ -38,36 +38,20 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     public void canWriteAtEndOfLastExistingRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
-        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         RollCycle rollCycle = RollCycles.DEFAULT;
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .timeProvider(() -> 0)
-                .rollCycle(rollCycle)
-                .build();
-             ExcerptAppender appender = q.createAppender();
-             ExcerptTailer tailer = q.createTailer()) {
-
-            // write at cycle 0, sequence 0
-            appender.writeBytes(test);
-            // append at cycle 0, sequence 1
-            ((InternalAppender) appender).writeBytes(rollCycle.toIndex(0, 1), test2);
-
-            tailer.readBytes(result);
-            assertEquals(test, result);
-            result.clear();
-
-            tailer.readBytes(result);
-            assertEquals(test2, result);
-            result.clear();
-        }
+        assertWriteAtIndex(test, test2, rollCycle, rollCycle.toIndex(0, 1));
     }
 
     @Test
     public void canWriteAtBeginningOfNextRollCycle() {
         @NotNull Bytes<byte[]> test = Bytes.from("hello world");
         @NotNull Bytes<byte[]> test2 = Bytes.from("hello world again");
-        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         RollCycle rollCycle = RollCycles.DEFAULT;
+        assertWriteAtIndex(test, test2, rollCycle, rollCycle.toIndex(1, 0));
+    }
+
+    private void assertWriteAtIndex(@NotNull Bytes<byte[]> test, @NotNull Bytes<byte[]> test2, RollCycle rollCycle, long index) {
+        Bytes<?> result = Bytes.elasticHeapByteBuffer();
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .timeProvider(() -> 0)
                 .rollCycle(rollCycle)
@@ -77,8 +61,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
             // write at cycle 0, sequence 0
             appender.writeBytes(test);
-            // append at cycle 1, sequence 0
-            ((InternalAppender) appender).writeBytes(rollCycle.toIndex(1, 0), test2);
+            ((InternalAppender) appender).writeBytes(index, test2);
 
             tailer.readBytes(result);
             assertEquals(test, result);

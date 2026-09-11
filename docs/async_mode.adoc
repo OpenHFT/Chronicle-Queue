@@ -1,4 +1,6 @@
 = Chronicle Async Mode
+:lang: en-GB
+:source-highlighter: rouge
 
 [NOTE]
 ====

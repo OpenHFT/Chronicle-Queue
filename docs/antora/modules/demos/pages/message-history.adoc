@@ -49,6 +49,7 @@ Or you can dump with the chronicle queue tool `net.openhft.chronicle.queue.Chron
 mvn exec:java@CHRM
 
 which will output like the below
+
 ----
 Timings below in MICROSECONDS
 sourceId                   1     startTo1
@@ -59,6 +60,7 @@ count:                100001       100001
 99.9:                     62           80
 99.99:                   108          120
 ----
+
 `1` is time taken to cross the bridge microservice and `startTo1` the time taken to get from publisher to bridge microservice.
 
 === Common Errors
@@ -70,11 +72,20 @@ WARNING: An illegal reflective access operation has occurred
 WARNING: Illegal reflective access by net.openhft.compiler.MyJavaFileManager (file:/C:/Users/peter/.m2/repository/net/openhft/compiler/2.3.4/compiler-2.3.4.jar) to method com.sun.tools.javac.file.JavacFileManager.listLocationsForModules(javax.tools.JavaFileManager$Location)
 ----
 
+=== Debugging method-writer fallback warnings
+
+If you see `Failed to compile generated method writer - falling back to proxy method writer` during tests:
+
+* Chronicle Queue’s tests will log extra context (test name, `java.version`, `wire.generator.v2`, `disableProxyCodegen`) when this occurs.
+* Reproduce on Java 8 with `mvn -Dtest=MessageHistoryTest test -DfailIfNoTests=false` and keep the log.
+* You can force the newer code generator with `-Dwire.generator.v2=true`, and optionally disable proxy fallback with `-DdisableProxyCodegen=true` (may fail fast if codegen is still broken).
+* See the FAQ entry “Debugging method writer codegen fallbacks” for more guidance.
+
 == Expected Output
 
 The microsecond timestamps are based on wall clock, however the nanosecond time stamps are based on the uptime of the machine.
 
-To decode this, you need to take the first nano-second time stamp and adjust further timestamps as deltas on the micro-second timestamp.
+To decode this, you need to take the first nanosecond time stamp and adjust further timestamps as deltas on the µs timestamp.
 
 The `DumpOutMain` writes the decoded messages as well as the bytes representing the first message.
 

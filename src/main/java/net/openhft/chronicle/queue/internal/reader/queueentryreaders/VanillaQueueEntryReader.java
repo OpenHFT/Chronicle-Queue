@@ -19,6 +19,7 @@ import java.util.function.Function;
  * It converts the read entries using a provided {@link QueueEntryHandler} and forwards the converted
  * message to a {@link MessageConsumer}.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public final class VanillaQueueEntryReader implements QueueEntryReader {
 
     private final ExcerptTailer tailer;

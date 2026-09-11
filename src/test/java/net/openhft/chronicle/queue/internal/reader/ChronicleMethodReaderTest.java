@@ -90,6 +90,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         return basicReader(path).asMethodReader(All.class.getName());
     }
 
+    // CPD-OFF - ChronicleReaderTest exercises the same behaviours
     @Test
     public void shouldNotFailWhenNoMetadata() throws IOException {
         if (!OS.isWindows())
@@ -198,7 +199,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-//                        .peek(System.out::println)
+                        // .peek(System.out::println)
                         .count();
         assertEquals(12, msgCount);
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
@@ -211,6 +212,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }
+    // CPD-ON
 
     @Test
     public void shouldReturnNoMoreThanTheSpecifiedNumberOfMaxRecords() {

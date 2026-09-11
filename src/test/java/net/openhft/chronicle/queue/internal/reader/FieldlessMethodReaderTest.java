@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.internal.reader;
 
 import net.openhft.chronicle.bytes.MethodReader;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -35,7 +36,7 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
     }
 
     @Test
-    public void test() throws InterruptedException {
+    public void test() {
         File path = new File(getTmpDir(), "enum_test_" + enumType);
 
         try (SingleChronicleQueue chronicle = SingleChronicleQueueBuilder.builder().path(path)
@@ -46,8 +47,8 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
             CustomEntity entity = new CustomEntity();
             IntStream.range(0, 2).forEach(i -> writer.onMessage(entity.enumType(enumType)));
 
-            //noinspection StatementWithEmptyBody
             while (methodReader.readOne()) {
+                Jvm.nanoPause();
             }
             Assert.assertEquals(2, msgCounter.get());
         } finally {
@@ -72,10 +73,8 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
     }
 
     static class CustomEntity extends SelfDescribingMarshallable {
-        private CustomEnumType enumType;
 
         CustomEntity enumType(CustomEnumType enumType) {
-            this.enumType = enumType;
             return this;
         }
     }

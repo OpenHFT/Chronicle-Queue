@@ -19,11 +19,6 @@ import java.io.InputStreamReader;
 import static org.junit.Assert.fail;
 
 public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
-    static {
-        // load the lass
-        HalfWriteAMessage.class.getName();
-    }
-
     public static class HalfWriteAMessage {
 
         // writes three messages the third messas is half written
@@ -78,27 +73,7 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
 
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                Assert.assertTrue(dc.isPresent());
-                Assert.assertEquals("hello world 1", dc.wire().read("key1").text());
-                Assert.assertEquals("hello world 2", dc.wire().read("key2").text());
-            }
-
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                Assert.assertTrue(dc.isPresent());
-                Assert.assertEquals("hello world 3", dc.wire().read("key1").text());
-                Assert.assertEquals("hello world 4", dc.wire().read("key2").text());
-            }
-
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                final boolean present = dc.isPresent();
-                if (present) {
-                    System.out.println(dc.wire().bytes().toHexString());
-                    String key = dc.wire().readEvent(String.class);
-                    String value = dc.wire().getValueIn().text();
-                    fail("key: " + key + ", value: " + value);
-                }
-            }
+            assertHalfWrittenReads(tailer);
         }
     }
 
@@ -116,27 +91,29 @@ public class CheckHalfWrittenMsgNotSeenByTailerTest extends QueueTestCommon {
         try (final ChronicleQueue single = ChronicleQueue.single(queueDirectory.getPath());
              final ExcerptTailer tailer = single.createTailer()) {
 
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                Assert.assertTrue(dc.isPresent());
-                Assert.assertEquals("hello world 1", dc.wire().read("key1").text());
-                Assert.assertEquals("hello world 2", dc.wire().read("key2").text());
-            }
+            assertHalfWrittenReads(tailer);
+        }
+    }
 
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                Assert.assertTrue(dc.isPresent());
-                Assert.assertEquals("hello world 3", dc.wire().read("key1").text());
-                Assert.assertEquals("hello world 4", dc.wire().read("key2").text());
-            }
+    private void assertHalfWrittenReads(ExcerptTailer tailer) {
+        try (final DocumentContext dc = tailer.readingDocument()) {
+            Assert.assertTrue(dc.isPresent());
+            Assert.assertEquals("hello world 1", dc.wire().read("key1").text());
+            Assert.assertEquals("hello world 2", dc.wire().read("key2").text());
+        }
 
-            try (final DocumentContext dc = tailer.readingDocument()) {
-                final boolean present = dc.isPresent();
-                if (present) {
-                    Jvm.error().on(getClass(), "Found an excerpt " + dc.wire().bytes().toHexString());
+        try (final DocumentContext dc = tailer.readingDocument()) {
+            Assert.assertTrue(dc.isPresent());
+            Assert.assertEquals("hello world 3", dc.wire().read("key1").text());
+            Assert.assertEquals("hello world 4", dc.wire().read("key2").text());
+        }
 
-                    String key = dc.wire().readEvent(String.class);
-                    String value = dc.wire().getValueIn().text();
-                    fail("key: " + key + ", value: " + value);
-                }
+        try (final DocumentContext dc = tailer.readingDocument()) {
+            final boolean present = dc.isPresent();
+            if (present) {
+                String key = dc.wire().readEvent(String.class);
+                String value = dc.wire().getValueIn().text();
+                fail("key: " + key + ", value: " + value);
             }
         }
     }

@@ -8,7 +8,9 @@ import net.openhft.chronicle.wire.MessageHistory;
 import org.apache.commons.cli.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +26,12 @@ import java.util.concurrent.TimeUnit;
  * to the console.
  */
 public class ChronicleHistoryReaderMain {
+
+    /**
+     * Creates a new instance for running via {@link #main(String[])}.
+     */
+    public ChronicleHistoryReaderMain() {
+    }
 
     /**
      * Entry point of the application.
@@ -91,6 +99,7 @@ public class ChronicleHistoryReaderMain {
      * @param options Available command-line options
      * @return Parsed {@link CommandLine} object
      */
+    // CPD-OFF - shared parsing logic with ChronicleReaderMain
     protected CommandLine parseCommandLine(@NotNull final String[] args, final Options options) {
         final CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
@@ -126,8 +135,9 @@ public class ChronicleHistoryReaderMain {
      * @param status  Exit status
      * @param message Optional message to print before help
      */
+    @SuppressWarnings("deprecation")
     protected void printHelpAndExit(final Options options, int status, String message) {
-        final PrintWriter writer = new PrintWriter(System.out);
+        final PrintWriter writer = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
         new HelpFormatter().printHelp(
                 writer,
                 180,
@@ -157,6 +167,7 @@ public class ChronicleHistoryReaderMain {
     protected void exit(int status) {
         System.exit(status);
     }
+    // CPD-ON
 
     /**
      * Configures command-line options for the ChronicleHistoryReaderMain.

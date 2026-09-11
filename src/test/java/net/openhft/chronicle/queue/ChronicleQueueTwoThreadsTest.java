@@ -103,7 +103,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                 long next = System.nanoTime() + INTERVAL_US * 1000;
                 for (int i = 0; i < runs; i++) {
                     while (System.nanoTime() < next)
-                        /* busy wait*/ ;
+                        Jvm.nanoPause();
                     long start = next;
                     bytes.readPositionRemaining(0, BYTES_LENGTH);
                     bytes.writeLong(0L, start);

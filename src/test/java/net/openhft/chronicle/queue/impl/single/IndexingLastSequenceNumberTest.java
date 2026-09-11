@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Tests focussed on {@link Indexing#lastSequenceNumber(ExcerptContext)}.
  */
+@SuppressWarnings({"deprecation", "removal"})
 class IndexingLastSequenceNumberTest extends IndexingTestCommon {
 
     @Test

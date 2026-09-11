@@ -34,6 +34,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDL
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class FileUtilTest extends QueueTestCommon {
 
     @Test(timeout = 30_000)
@@ -73,14 +74,15 @@ public class FileUtilTest extends QueueTestCommon {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class, timeout = 30_000)
+    @Test
     public void stateWindows() {
         assumeTrue(OS.isWindows());
 
         expectException("closable tracing disabled");
         AbstractCloseable.disableCloseableTracing();
 
-        FileUtil.state(new File("foo"));
+        FileState foo = FileUtil.state(new File("foo"));
+        assertEquals(FileState.NON_EXISTENT, foo);
     }
 
     @Test(timeout = 30_000)
@@ -191,6 +193,6 @@ public class FileUtilTest extends QueueTestCommon {
         out.close();
 
         filesWithPid = FileUtil.getAllOpenFiles();
-        assertFalse(filesWithPid.keySet().contains(temporaryFile.getAbsolutePath()));
+        assertFalse(filesWithPid.containsKey(temporaryFile.getAbsolutePath()));
     }
 }

@@ -18,6 +18,7 @@ import java.util.function.Function;
  * entry reading to the custom plugin. This is useful when custom behavior is needed
  * for processing each entry in the queue.
  */
+@SuppressWarnings({"deprecation", "removal"})
 public final class CustomPluginQueueEntryReader extends AbstractTailerPollingQueueEntryReader {
 
     private final ChronicleReaderPlugin plugin;

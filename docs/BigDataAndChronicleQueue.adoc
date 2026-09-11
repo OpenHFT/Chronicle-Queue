@@ -1,5 +1,8 @@
 = Big Data and Chronicle Queue
 Peter Lawrey
+:toc:
+:lang: en-GB
+:source-highlighter: rouge
 
 == The Big Question
 
@@ -12,9 +15,6 @@ Every reader sees every message, and a reader can join at any time and still see
 We assume that you can read/scan through messages fast enough that, even if you are not interested in most messages, it will still be fast enough.
 These are not consumers as such, and messages do not disappear after reading them.
 
-//removed the link as the web page is not available
-//image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[align=center]
-
 Retaining every message has a number of advantages:
 
 * a message can be replayed as many times as is needed.
@@ -22,8 +22,8 @@ Retaining every message has a number of advantages:
 * reduces the requirement for logging almost entirely, speeding up your application.
 * greater transparency leads to optimisations that you might have missed without a detailed record of every event that you process.
 
-One of our clients, first implemented their trading system without Chronicle Queue and achieved an average latency of 35 micro-seconds tick to trade.
-However, after switching to Chronicle Queue, the latency was reduced to 23 micro-seconds.
+One of our clients first implemented their trading system without Chronicle Queue and achieved an average latency of 35 µs tick to trade.
+However, after switching to Chronicle Queue, the latency was reduced to 23 µs.
 
 === What makes Chronicle Queue different from similar solutions
 
@@ -76,33 +76,36 @@ This means the only real performance test is a complete system test.
 * You can test a micro-service, replaying from the same input file repeatedly, without the producer or down stream consumers running.
 
 * You can restart and upgrade a service, by replaying its *outputs* to ensure it is committed to the decisions/outcomes it has produced in the past.
-This allows you to change your service and know that, even those your new version might have made different decision, it can honour those already made.
+This allows you to change your service and know that, even though your new version might have made different decisions, it can honour those already made.
 
-* Flow control is designed to smooth out burst and jitter in the system; but it can also hide such jitter as result.
+* Flow control is designed to smooth out bursts and jitter in the system; but it can also hide such jitter as a result.
 
 The main disadvantage is that this assumes disk space is cheap.
 If you look at retail prices for enterprise grade disks, you can get TBs of disk for a few hundred dollars.
 Many investment banks do not take this approach, and internal charge rates for managed storage can be orders of magnitude higher.
 I have worked on systems that have more free memory than free disk space.
 
-== What technology does Chronicle Queue using?
+== What technology does Chronicle Queue use?
 
 What might be surprising is that Chronicle Queue is written entirely in pure `Java`.
 It can outperform many data storage solutions written in `C`.
 You might be wondering, how is this possible given that well written `C` is usually faster than Java.
 
 You need a degree of protection between your application and your data storage to minimise the risk of corruption.
-As `Java` uses a `JVM`, it already has an abstraction layer, and a degree of protection.If an application throws an exception, this does not mean the data structure is corrupted.
+As `Java` uses a `JVM`, it already has an abstraction layer, and a degree of protection.
+If an application throws an exception, this does not mean the data structure is corrupted.
 To get a degree of isolation in `C`, many data storage solutions use `TCP`.
 The overhead of using `TCP`, even over loopback, can exceed the benefit of using `C`, and the throughput/latencies of Chronicle Queue can be `10x` greater by being able to use the data in-process.
 Chronicle Queue supports sharing of the data structure in memory for multiple JVMs, avoiding the need to use TCP to share data.
 
 === What does the data structure look like?
 
-One of our key objectives is transparency.We have worked hard to make sure you can see exactly what has been written to this data structure.
+One of our key objectives is transparency.
+We have worked hard to make sure you can see exactly what has been written to this data structure.
 
 We use `YAML` as this is a format which is designed to be readable.
-`JSON` and `XML`, we see, as a subset of `Javascript` and `SGML`, and not as readable.We support `JSON` for messaging with browsers.
+`JSON` and `XML`, we see, as a subset of `Javascript` and `SGML`, and not as readable.
+We support `JSON` for messaging with browsers.
 For performance reasons we use a binary form of `YAML`, which can be automatically translated to `YAML` for viewing.
 
 .Order class extends SelfDescribingMarshallable for helper methods

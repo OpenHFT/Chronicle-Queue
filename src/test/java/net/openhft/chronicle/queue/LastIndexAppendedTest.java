@@ -50,7 +50,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
     @Test
     public void testTwoAppenders() {
         File path = getTmpDir();
-        long a_index;
+        long appendedIndex;
 
         try (
                 ChronicleQueue appender_queue = single(path)
@@ -62,7 +62,7 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
                         m.write("msg").text("hello world ")));
             }
-            a_index = appender.lastIndexAppended();
+            appendedIndex = appender.lastIndexAppended();
         }
         try (ChronicleQueue tailer_queue = single(path)
                 .testBlockSize()
@@ -70,9 +70,9 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                 .build()) {
             ExcerptTailer tailer = tailer_queue.createTailer();
             tailer = tailer.toStart();
-            long t_index;
-            t_index = doRead(tailer, 5);
-            assertEquals(a_index, t_index);
+            long tailIndex;
+            tailIndex = doRead(tailer, 5);
+            assertEquals(appendedIndex, tailIndex);
             // System.out.println("Continue appending");
             try (ChronicleQueue appender_queue = single(path)
                     .testBlockSize()
@@ -84,19 +84,19 @@ public class LastIndexAppendedTest extends QueueTestCommon {
                     appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
                             m.write("msg").text("hello world2 ")));
                 }
-                a_index = appender.lastIndexAppended();
-                assertTrue(a_index > t_index);
+                appendedIndex = appender.lastIndexAppended();
+                assertTrue(appendedIndex > tailIndex);
             }
             // if the tailer continues as well it should see the 5 new messages
             // System.out.println("Reading messages added");
-            t_index = doRead(tailer, 5);
-            assertEquals(a_index, t_index);
+            tailIndex = doRead(tailer, 5);
+            assertEquals(appendedIndex, tailIndex);
 
             // if the tailer is expecting to read all the message again
             // System.out.println("Reading all the messages again");
             tailer.toStart();
-            t_index = doRead(tailer, 10);
-            assertEquals(a_index, t_index);
+            tailIndex = doRead(tailer, 10);
+            assertEquals(appendedIndex, tailIndex);
         } finally {
             IOTools.deleteDirWithFiles(path, 2);
         }
@@ -104,12 +104,12 @@ public class LastIndexAppendedTest extends QueueTestCommon {
 
     private long doRead(@NotNull ExcerptTailer tailer, int expected) {
         int[] i = {0};
-        long t_index = 0;
+        long tailIndex = 0;
         while (true) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (!dc.isPresent())
                     break;
-                t_index = tailer.index();
+                tailIndex = tailer.index();
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
                     assertNotNull(msg);
@@ -119,6 +119,6 @@ public class LastIndexAppendedTest extends QueueTestCommon {
             }
         }
         assertEquals(expected, i[0]);
-        return t_index;
+        return tailIndex;
     }
 }

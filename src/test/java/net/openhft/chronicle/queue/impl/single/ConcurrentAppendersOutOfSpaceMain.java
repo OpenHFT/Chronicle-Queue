@@ -117,9 +117,7 @@ public class ConcurrentAppendersOutOfSpaceMain extends QueueTestCommon {
                             boolean written = true;
 
                             try (final DocumentContext dc = appender.writingDocument()) {
-                                dc.wire().writeBytes(bytes -> {
-                                    bytes.write(sample, 0, r.nextInt(8, MSG_SIZE));
-                                });
+                                dc.wire().writeBytes(bytes -> bytes.write(sample, 0, r.nextInt(8, MSG_SIZE)));
                             } catch (Exception e) {
                                 System.out.println("Writer " + threadNo + ": failed to write message, sleeping for 1 sec");
                                 e.printStackTrace();

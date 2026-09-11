@@ -23,7 +23,7 @@ public class CycleOverflowTest extends QueueTestCommon {
         RollCycle rollCycle = TestRollCycles.TEST_DAILY;
         SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.set(System.currentTimeMillis());
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().timeProvider(timeProvider).rollCycle(rollCycle).path(path).build(); ExcerptAppender appender = queue.createAppender();) {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().timeProvider(timeProvider).rollCycle(rollCycle).path(path).build(); ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < rollCycle.maxMessagesPerCycle(); i++) {
                 appender.writeText(Integer.toString(i));
             }

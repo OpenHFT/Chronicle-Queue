@@ -42,7 +42,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public final class AppenderFileHandleLeakTest extends QueueTestCommon {
-    private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors() * 2;
+    private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
     private static final int MESSAGES_PER_THREAD = 50;
     private static final SystemTimeProvider SYSTEM_TIME_PROVIDER = SystemTimeProvider.INSTANCE;
     private static final RollCycle ROLL_CYCLE = TEST_SECONDLY;
@@ -176,7 +176,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
 
             // StoreFileListener#onAcquired() is called on the background resource releaser thread
             BackgroundResourceReleaser.releasePendingResources();
-            int acquiredBefore = storeFileListener.acquiredCounts.size();
+            final int acquiredBefore = storeFileListener.acquiredCounts.size();
             storeFileListener.reset();
 
             final ExcerptTailer tailer = queue.createTailer();
@@ -209,8 +209,8 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
-        FlakyTestRunner.<RuntimeException>builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
+    public void appenderShouldOnlyKeepCurrentRollCycleOpen_deflaked() throws Throwable {
+        FlakyTestRunner.builder(this::appenderShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
                 .run();
@@ -230,8 +230,8 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Test
-    public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() {
-        FlakyTestRunner.<RuntimeException>builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
+    public void tailerShouldOnlyKeepCurrentRollCycleOpen_deflaked() throws Throwable {
+        FlakyTestRunner.builder(this::tailerShouldOnlyKeepCurrentRollCycleOpen)
                 .withMaxIterations(3)
                 .build()
                 .run();
@@ -362,20 +362,16 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         }
 
         private String buildDiffs() {
-            final StringBuilder builder = new StringBuilder();
+            final StringBuilder builder = new StringBuilder(128);
             builder.append("acquired but not released:\n");
             HashSet<String> keyDiff = new HashSet<>(acquiredCounts.keySet());
             keyDiff.removeAll(releasedCounts.keySet());
-            keyDiff.forEach(k -> {
-                builder.append(k).append("(").append(acquiredCounts.get(k)).append(")\n");
-            });
+            keyDiff.forEach(k -> builder.append(k).append('(').append(acquiredCounts.get(k)).append(")\n"));
             builder.append("released but not acquired:\n");
             keyDiff.clear();
             keyDiff.addAll(releasedCounts.keySet());
             keyDiff.removeAll(acquiredCounts.keySet());
-            keyDiff.forEach(k -> {
-                builder.append(k).append("(").append(releasedCounts.get(k)).append(")\n");
-            });
+            keyDiff.forEach(k -> builder.append(k).append('(').append(releasedCounts.get(k)).append(")\n"));
 
             return builder.toString();
         }

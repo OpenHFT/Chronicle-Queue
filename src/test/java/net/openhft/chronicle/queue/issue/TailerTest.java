@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class TailerTest extends QueueTestCommon {
 
     private static final Path QUEUE_PATH = Paths.get(OS.getTarget() + "/host-1/queue/broker_out");

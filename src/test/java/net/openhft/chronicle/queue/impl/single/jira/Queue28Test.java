@@ -40,7 +40,6 @@ public class Queue28Test extends QueueTestCommon {
      *
      * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-28
      */
-
     @Test
     public void test() {
         File dir = getTmpDir();

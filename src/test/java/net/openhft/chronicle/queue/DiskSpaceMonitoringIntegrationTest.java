@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.nio.file.FileStore;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -81,7 +82,8 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
                  ExcerptAppender appender = queue.createAppender()) {
-                // Intentional no-op
+                assertNotNull(queue);
+                assertNotNull(appender);
             }
 
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -95,7 +97,8 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
             File tmpDir = getTmpDir();
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
                  ExcerptAppender appender = queue.createAppender()) {
-                // Intentional no-op
+                assertNotNull(queue);
+                assertNotNull(appender);
             }
 
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(tmpDir).build();
@@ -107,7 +110,7 @@ class DiskSpaceMonitoringIntegrationTest extends QueueTestCommon {
     }
 
     private void assertMapped(File queuePath) {
-        String path = queuePath.getAbsolutePath().toString();
+        String path = queuePath.getAbsolutePath();
         assertTrue(monitoredPaths.containsKey(path), () -> "Expected that the following queue path should be monitored by the disk space monitor, but it was not. Path: " + path);
     }
 }

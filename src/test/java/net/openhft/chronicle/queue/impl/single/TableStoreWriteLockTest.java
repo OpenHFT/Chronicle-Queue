@@ -31,6 +31,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class TableStoreWriteLockTest extends QueueTestCommon {
 
     private static final String TEST_LOCK_NAME = "testLock";
@@ -53,6 +54,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         Closeable.closeQuietly(tableStore);
         IOTools.deleteDirWithFiles(tempDir.toFile());

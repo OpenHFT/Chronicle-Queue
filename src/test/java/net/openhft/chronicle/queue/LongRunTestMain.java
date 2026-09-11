@@ -118,7 +118,7 @@ public class LongRunTestMain {
             final int messageSize = Math.min(this.logEntry.getMessage().length(), this.maxMessageSize);
 
             // Write message length
-            bytes.writeStopBit((long) messageSize);
+            bytes.writeStopBit(messageSize);
 
             // Write message bytes.
             bytes.write(this.logEntry.getMessage(), 0, messageSize);

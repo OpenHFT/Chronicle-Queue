@@ -38,7 +38,7 @@ public class ReadOneBackwardsTest extends QueueTestCommon {
         try (ChronicleQueue q = SingleChronicleQueueBuilder.single(getTmpDir()).sourceId(1).build()) {
 
             MyDtoListener myOut = q.methodWriter(MyDtoListener.class);
-            SnapshotListener snapshotOut = q.methodWriter(SnapshotListener.class);
+            final SnapshotListener snapshotOut = q.methodWriter(SnapshotListener.class);
 
             generateHistory(1);
             myOut.myDto(new MyDto());
@@ -98,7 +98,7 @@ public class ReadOneBackwardsTest extends QueueTestCommon {
     }
 
     static class SnapshotDTO extends SelfDescribingMarshallable {
-        String data;
+        final String data;
 
         SnapshotDTO(String data) {
             this.data = data;

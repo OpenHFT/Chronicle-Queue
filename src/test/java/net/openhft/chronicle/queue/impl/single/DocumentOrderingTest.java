@@ -95,7 +95,7 @@ public final class DocumentOrderingTest extends QueueTestCommon {
                      builder(dir, 5_000L).build();
              final ChronicleQueue queue4 =
                      builder(dir, 5_000L).build();
-             final ExcerptAppender excerptAppender = queue.createAppender();
+             final ExcerptAppender excerptAppender = queue.createAppender()
         ) {
 
             final Future<RecordInfo> firstWriter;

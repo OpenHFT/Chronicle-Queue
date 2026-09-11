@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.queue.internal.util.InternalFileUtil;
 import net.openhft.chronicle.queue.util.FileUtil;
 import org.junit.jupiter.api.Test;
 
@@ -70,7 +71,7 @@ class AppenderReleasesParkedStoreTest extends IndexingTestCommon {
 
     // All roll-cycle files, earliest first.
     private List<File> cycleFiles() {
-        final File[] files = queue.file().listFiles(FileUtil::hasQueueSuffix);
+        final File[] files = queue.file().listFiles(InternalFileUtil::hasQueueSuffix);
         assertNotNull(files, "no queue files found in " + queue.file());
         return Stream.of(files).sorted(EARLIEST_FIRST).collect(toList());
     }

@@ -22,7 +22,8 @@ NOTE: This feature is only relevant to daily rollovers where `RollCycle` is one 
     public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime, @NotNull final ZoneId zoneId);
 ----
 
-NOTE: `rollTime()` allows the rollover time of the cycle file to be controlled in both Chronicle Queue open-source and Chronicle QueueEnterprise Edition. +
+NOTE: `rollTime()` allows the rollover time of the cycle file to be controlled in both Chronicle Queue open-source and Chronicle QueueEnterprise Edition.
++
 If this is used with in the open-source version, any `zoneId` other than `UTC` will be converted to `UTC`, and a warning message logged.
 
 == Examples

@@ -14,7 +14,7 @@ import net.openhft.chronicle.bytes.SyncMode;
  * This example writes and reads messages using a Chronicle Queue with specified
  * file and message sizes. Performance metrics for both operations are logged.
  * <p>
- * Usage: java -Dfile.size=<size_in_gb> -Dmsg.size=<message_size_in_bytes> RunLargeQueueMain [queue_path]
+ * Usage: {@code java -Dfile.size=<size_in_gb> -Dmsg.size=<message_size_in_bytes> RunLargeQueueMain [queue_path]}
  */
 public enum RunLargeQueueMain {
     ; // no instances allowed
@@ -48,7 +48,7 @@ public enum RunLargeQueueMain {
 
             // Main write-read performance loop
             for (int t = 1; t <= FILE_SIZE; t++) {
-                long writeStart = System.currentTimeMillis();
+                final long writeStart = System.currentTimeMillis();
 
                 // Write 1 GB of data in chunks
                 for (int i = 0; i < 1_000_000_000; i += MSG_SIZE) {

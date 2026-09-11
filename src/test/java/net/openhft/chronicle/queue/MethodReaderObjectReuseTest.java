@@ -17,6 +17,7 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
@@ -52,6 +53,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                             (Pinger) pingDTO -> sb.append("ping ").append(pingDTO));
             while (reader.readOne()) {
                 // exhaust reader
+                continue;
             }
             // moved this assert below the readOne as object may be constructed lazily
             assertEquals(PingDTO.constructionExpected, PingDTO.constructionCounter);

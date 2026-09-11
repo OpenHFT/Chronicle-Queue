@@ -1,12 +1,10 @@
 = Chronicle Queue Utilities
 Neil Clifford
-:toc: macro
+:toc:
 :toclevels: 3
 :css-signature: demo
-:toc-placement: macro
-:icons: font
-
-toc::[]
+:lang: en-GB
+:source-highlighter: rouge
 
 This document describes Chronicle Queue utility programs that have been created to help in the maintenance of your Chronicle Queue environment.
 

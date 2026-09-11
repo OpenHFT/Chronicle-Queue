@@ -1,0 +1,308 @@
+= Chronicle Queue Architecture Overview
+:toc:
+:sectnums:
+:lang: en-GB
+:toclevels: 3
+:doctype: book
+:source-highlighter: rouge
+
+This document positions Chronicle Queue within the wider Chronicle stack, describes its core abstractions and data model, and explains how its file format, roll-cycle model, indexing, and concurrency patterns work together to deliver ultra-low-latency, durable messaging.
+It is intended for developers and architects building systems on top of Chronicle Queue or integrating it into larger platforms.
+
+== Context and Role in the Chronicle Stack
+
+Chronicle Queue is the *log-structured messaging and journalling layer* in the Chronicle ecosystem.
+It provides a broker-less, append-only, persisted queue that applications use to exchange messages between threads, processes and (with Chronicle-Queue-Enterprise) machines.
+
+At a high level:
+
+* *Chronicle-Core* supplies platform utilities, lifecycle helpers and the `Closeable`/`ReferenceCounted` contracts.
+* *Chronicle-Bytes* provides the off-heap and memory-mapped storage primitives used for queue data and indices.
+* *Chronicle-Wire* provides flexible serialisation formats layered on top of `Bytes` (binary, text, YAML, JSON).
+* *Chronicle-Threads* supplies event-loop and pauser utilities used by the pretoucher and other background services.
+* *Chronicle-Queue-Enterprise* builds on this module to add clustering, replication and advanced operational features.
+
+Chronicle Queue focuses on:
+
+* Persisted, append-only logs of messages or events.
+* Tight control over latency and allocation behaviour.
+* Simple concurrency rules (single-writer style appenders; independent tailers).
+* A storage model that scales from in-process IPC to multi-terabyte archives of historical data.
+
+== Core Concepts and Abstractions
+
+=== Append-Only Queue Files
+
+Chronicle Queue stores data in a directory of append-only files (roll files) with a `.cq4` suffix.
+Each roll file belongs to a *roll cycle* (for example daily or hourly) and contains:
+
+* A sequence of message payloads, encoded via Chronicle-Wire on top of Chronicle-Bytes.
+* Embedded index metadata to support fast random access and scanning.
+
+Files are never modified in place apart from appending new data and metadata.
+This append-only model simplifies crash recovery and makes it safe to tail queues while producers continue writing.
+
+The on-disk format and roll-cycle policy are described in more depth in:
+
+* link:decision-log.adoc#CQ-FN-101[CQ-FN-101 - Queue File Format and Roll-Cycle Model]
+* link:../../docs/How_it_works.adoc[How Chronicle Works]
+* link:../../docs/managing_roll_files_directly.adoc[Managing roll files directly]
+
+=== Appenders and Tailers
+
+Two primary runtime abstractions sit on top of the file format:
+
+* `ExcerptAppender` - a writer-side view used to append messages sequentially to the end of the queue.
+* `ExcerptTailer` - a reader-side view used to read messages from the queue in order, advancing its own cursor independently of other tailers.
+
+Typical usage:
+
+* A service creates a `ChronicleQueue` (often via `ChronicleQueue.single(path)` or a `SingleChronicleQueueBuilder`).
+* Each writer thread acquires its own `ExcerptAppender` and uses it to write text, binary messages or marshalled objects.
+* Each consumer thread acquires its own `ExcerptTailer` and iterates forward, optionally starting from the beginning, end or a stored index.
+
+Internally, both appenders and tailers are flyweight views backed by Chronicle-Bytes structures over the underlying roll files.
+
+=== Roll Cycles and Directory Layout
+
+Queues are organised by *roll cycle*, which controls how often Chronicle Queue starts a new file.
+A roll cycle:
+
+* Defines the mapping between logical time and roll file name (for example daily, hourly).
+* Influences file size, index density and operational handling (archival, backup, retention).
+* Is configured via the `SingleChronicleQueueBuilder` (`rollCycle(RollCycle.DAILY)` and similar).
+
+The roll-cycle design and trade-offs are documented in:
+
+* link:decision-log.adoc#CQ-FN-101[CQ-FN-101 - Queue File Format and Roll-Cycle Model]
+
+At the file-system level, a queue directory typically contains:
+
+* Roll files (for example `20241117.cq4`, `20241118.cq4`).
+* Metadata files used to track index and configuration information.
+
+=== Tiered Indexing
+
+Chronicle Queue uses a *tiered multi-level index* to provide efficient random access into large queues.
+Index structures are stored alongside data inside roll files.
+
+A conceptual view is provided in link:../../docs/How_it_works.adoc[How it works] and further illustrated in the *Tiered Indexing* section of that document.
+
+At a high level:
+
+* A top-level `index2index` structure maps logical ranges of message indices to lower-level index blocks.
+* Lower-level `index` blocks map directly to positions within the roll file.
+* When a tailer seeks to a specific index, Chronicle Queue walks this structure to find the corresponding file position.
+
+This scheme scales to very large queues while keeping the cost of point lookups and scans bounded.
+
+== Data Flow and Usage Patterns
+
+=== Single JVM Producer-Consumer
+
+The simplest deployment is within a single JVM, where producers and consumers share a queue directory on local disk:
+
+....
++---------------------------+
+| Application JVM           |
+|                           |
+|  +---------------------+  |
+|  | ChronicleQueue      |  |
+|  |   (SingleChronicle) |  |
+|  +---------------------+  |
+|    ^              ^       |
+|    |              |       |
+| ExcerptAppender  ExcerptTailer
+|  (producer)       (consumer)
++---------------------------+
+....
+
+Flow:
+
+. The producer writes messages through an `ExcerptAppender`.
+. Messages are appended to the current roll file; metadata is updated.
+. The consumer reads messages via an `ExcerptTailer`, advancing its own cursor.
+
+Both sides can run at high rates because:
+
+* Data is written and read sequentially.
+* Most I/O is served from the OS page cache.
+* Off-heap `Bytes` structures avoid GC pressure on the hot path.
+
+=== Multi-Process and Cross-Machine
+
+Chronicle Queue is often used to communicate:
+
+* Between processes on the same host, sharing a queue directory on local storage.
+* Across hosts when combined with Chronicle-Queue-Enterprise replication features.
+
+In the latter case, this module remains responsible for the local file format, roll-cycle behaviour and indexing.
+Queue-Enterprise components handle network replication, acknowledgements and recovery semantics.
+
+== Concurrency and Threading Model
+
+Chronicle Queue follows a *single-writer style* for appenders and a simple, explicit model for tailers:
+
+* Each `ExcerptAppender` is intended to be used by a single writer thread.
+** Sharing an appender between threads requires external synchronisation and is discouraged in latency-sensitive code.
+* Each `ExcerptTailer` is not thread-safe and should be owned by at most one reader thread at a time.
+* Multiple tailers can read from the same queue concurrently without interfering with each other; each maintains its own position.
+
+These rules are captured and justified in:
+
+* link:decision-log.adoc#CQ-FN-102[CQ-FN-102 - Appender and Tailer Concurrency Model]
+
+Chronicle Queue also integrates with Chronicle-Threads to support background activities such as pretouching:
+
+* The *pretoucher* runs in a separate thread or event loop, faulting in pages ahead of time to reduce page-fault latency when appenders write.
+* Event-loop abstractions from Chronicle-Threads can be used to integrate queue processing into larger event-driven systems.
+
+== Persistence, Durability and Recovery
+
+Chronicle Queue balances durability guarantees against latency and throughput goals:
+
+* Writes are appended to memory-mapped regions and eventually flushed to disk by the operating system.
+* The library can be configured to enforce stronger durability (for example explicit fsync behaviour) at the cost of higher latency.
+* On restart, queues can be replayed from roll files; the append-only format and embedded indices simplify recovery.
+
+The durability and recovery expectations, and the flush policy trade-offs, are discussed in:
+
+* link:decision-log.adoc#CQ-NF-P-201[CQ-NF-P-201 - Durability, Flush Policy and Recovery]
+
+== Configuration Surface
+
+=== SingleChronicleQueueBuilder
+
+`SingleChronicleQueueBuilder` is the primary configuration surface for creating queues.
+Key options include:
+
+* *Path and file layout*
+** `path(File)` / `path(Path)` - queue directory.
+** Handling of specific `.cq4` files vs directories.
+* *Wire format*
+** `wireType(WireType)` - choice of binary or text wire formats for messages.
+* *Roll cycle and indexing*
+** `rollCycle(RollCycle)` - time-based roll policy.
+** `indexCount` and `indexSpacing` - index density and layout.
+* *Buffering and block sizes*
+** `blockSize(long)` - block size used for mapped regions.
+** `writeBufferMode` / `readBufferMode` - buffer strategies for appender and tailer.
+* *Time and epoch*
+** `timeProvider(TimeProvider)` - pluggable time source.
+** `epoch(long)` - custom epoch for roll-cycle calculations.
+* *Operational hooks*
+** `storeFileListener(StoreFileListener)` - observe roll-file lifecycle events.
+** `appenderListener(AppenderListener)` - observe appender creation.
+** `queueOffsetSpec(QueueOffsetSpec)` - fine-grained control over initial tail positions.
+
+Consult the builder Javadoc and implementation for the full set of configuration points.
+
+=== System Properties
+
+Chronicle Queue exposes several *system properties* that alter runtime behaviour without code changes.
+These are catalogued in:
+
+* link:../../docs/system-properties.adoc[Chronicle Queue System Properties]
+
+Examples include:
+
+* `chronicle.queue.checkrollcycle` - emit warnings when new roll files are created.
+* `chronicle.queue.checkInterrupts` - enforce tailer interrupt checking semantics.
+* `chronicle.queue.report.linear.scan.latency` - log when index scans exceed a threshold.
+* `chronicle.queue.rollingResourceCache.size` - tune the in-memory cache of roll-file metadata.
+
+These properties are especially relevant when tuning performance and operability in production.
+
+== Integration with Other Chronicle Modules
+
+Chronicle Queue is not a standalone island; it is designed to interoperate closely with other Chronicle modules:
+
+* *Chronicle-Bytes*
+** Provides the underlying `Bytes` and `BytesStore` implementations used for queue data and indices.
+** Supplies off-heap and memory-mapped storage, reference counting and bounds-checked access.
+* *Chronicle-Wire*
+** Provides the message serialisation layer used by queue producers and consumers.
+** Enables flexible wire formats and schema evolution without changing the underlying queue format.
+* *Chronicle-Threads*
+** Supplies event loops and pauser strategies used by background components such as the pretoucher.
+** Provides patterns for integrating queue processing into low-latency, event-driven applications.
+* *Chronicle-Queue-Enterprise*
+** Adds replication, clustering and advanced operational features on top of the core queue.
+** Treats the file format and roll-cycle behaviour defined here as the canonical storage layer.
+
+== Security and Compliance Considerations
+
+Chronicle Queue is primarily a storage and messaging primitive.
+Security responsibilities are deliberately split between this module and surrounding infrastructure:
+
+* *Data at rest*
+** By default, queue files are stored in plain form on disk.
+* link:decision-log.adoc#CQ-NF-S-301[CQ-NF-S-301 - Encryption Responsibility and Boundary] records the decision that encryption is not enforced in this module by default; users can:
+*** Encrypt at the filesystem or volume level, or
+*** Marshal application-level payloads through Chronicle-Wire with custom encryption.
+* *Data in transit*
+** When queues are exposed over the network (for example via replication or gateways), Chronicle-Network and service-layer modules are responsible for TLS, authentication and authorisation.
+* *Off-heap safety*
+** Memory safety and bounds checking are provided by Chronicle-Bytes primitives.
+** Queue code assumes callers respect `Closeable` and `ReferenceCounted` contracts when interacting with off-heap resources.
+
+When documenting module-level compliance against ISO 27001 or SOC 2, this division of responsibility should be called out explicitly.
+
+== Operational Considerations
+
+=== Retention and Roll-File Management
+
+Roll files accumulate over time and must be managed carefully to avoid exhausting storage or violating retention policies.
+Chronicle Queue itself does not automatically delete data; instead:
+
+* It exposes predictable roll-file naming and directory structures.
+* It documents retention and cleanup as operational concerns.
+
+This is captured in:
+
+* link:decision-log.adoc#CQ-NF-O-401[CQ-NF-O-401 - Retention and Roll File Cleanup]
+
+Typical retention strategies include:
+
+* Time-based purge scripts that delete or archive roll files older than a configured window.
+* Tiered storage, where recent data stays on fast disks and older files are moved to cheaper storage.
+
+Operational runbooks should clearly document:
+
+* The retention policy.
+* The tooling used to enforce it.
+* Monitoring and alerting for disk utilisation.
+
+=== Monitoring and Diagnostics
+
+Chronicle Queue uses a combination of logging, metrics and system properties to support observability:
+
+* Slow appender warnings (for example `chronicle.queue.warnSlowAppenderMs`).
+* Linear scan latency reporting via `chronicle.queue.report.linear.scan.latency`.
+* Optional consistency checks for indexing (`queue.check.index`) at the cost of extra overhead.
+
+Operators should:
+
+* Configure logging to capture these diagnostics.
+* Integrate JVM- or process-level metrics with their monitoring stack (for example, queue directory size, roll-file counts).
+* Validate configuration in non-production environments before rolling out to latency-sensitive systems.
+
+== Evolution and Extension Points
+
+Chronicle Queue is designed to evolve while preserving on-disk compatibility and the core concurrency contracts.
+Key extension points include:
+
+Wire formats ::
+adding new Chronicle-Wire formats or evolving schemas without changing the queue file format.
+Builder hooks ::
+pluggable listeners (`StoreFileListener`, `AppenderListener`) for instrumentation and custom monitoring.
+Offset and indexing strategies ::
+configuration for index density and starting offsets via `QueueOffsetSpec`.
+Enterprise features ::
+queue replication and clustering in Chronicle-Queue-Enterprise that reuse the same core storage primitives.
+
+Any change that affects file format, roll-cycle semantics, durability guarantees or concurrency contracts should be recorded in:
+
+* link:decision-log.adoc[Chronicle Queue - Decision Log]
+
+so that downstream modules and operational runbooks can be updated consistently.

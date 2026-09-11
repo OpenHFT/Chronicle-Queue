@@ -64,6 +64,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
         }
     }
 
+    @SuppressWarnings("PMD.TestClassWithoutTestCases")
     private static final class TestChronicleHistoryReaderMain extends ChronicleHistoryReaderMain {
         final RecordingChronicleHistoryReader reader = new RecordingChronicleHistoryReader();
         final StringBuilder helpOutput = new StringBuilder();
@@ -73,6 +74,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
             return reader;
         }
 
+        @SuppressWarnings("deprecation")
         @Override
         protected void printHelpAndExit(Options options, int status, String message) {
             final StringWriter sw = new StringWriter();

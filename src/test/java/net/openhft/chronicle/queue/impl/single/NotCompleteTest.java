@@ -53,11 +53,10 @@ public class NotCompleteTest extends QueueTestCommon {
             final Person thrower = new Person(80, Person.THROW);
             final Person person2 = new Person(90, "Bert");
 
-            try (final ChronicleQueue queueReader = createQueue(tmpDir);
-                 final ChronicleQueue queueWriter = createQueue(tmpDir)) {
+                try (final ChronicleQueue queueReader = createQueue(tmpDir);
+                     final ChronicleQueue queueWriter = createQueue(tmpDir)) {
 
-                ExcerptTailer tailer = queueReader.createTailer();
-                MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
+                final ExcerptTailer tailer = queueReader.createTailer();
 
                 final StringBuilder queueDumpBeforeInterruptedWrite = new StringBuilder();
                 // set up
@@ -86,6 +85,7 @@ public class NotCompleteTest extends QueueTestCommon {
                 }
 
                 // check only 1 written
+                MethodReader reader = tailer.methodReader((PersonListener) person -> names.add(person.name));
                 assertTrue(reader.readOne());
                 assertEquals(1, names.size());
                 assertEquals(person1.name, names.get(0));
@@ -103,7 +103,7 @@ public class NotCompleteTest extends QueueTestCommon {
                 try (final ChronicleQueue queue = createQueue(tmpDir)) {
                     String dump = cleanQueueDump(queue.dump());
                     assertEquals("queue should be unchanged by the failed (exception) write", cleanedQueueDump, dump);
-//                    System.err.println(queue.dump());
+                    // System.err.println(queue.dump());
                 }
 
                 // check nothing else written
@@ -133,9 +133,8 @@ public class NotCompleteTest extends QueueTestCommon {
             try {
                 IOTools.deleteDirWithFiles(tmpDir, 2);
             } catch (Exception e) {
-                if (e instanceof AccessDeniedException && OS.isWindows())
-                    return;
-                throw e;
+                if (!(e instanceof AccessDeniedException) || !OS.isWindows())
+                    throw e;
             }
         }
     }

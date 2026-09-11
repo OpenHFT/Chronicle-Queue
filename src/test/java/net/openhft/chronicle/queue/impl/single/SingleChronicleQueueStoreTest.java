@@ -19,6 +19,7 @@ import java.util.function.Function;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final int INDEX_SPACING = 4;
     private static final int RECORD_COUNT = INDEX_SPACING * 10;
@@ -26,7 +27,7 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
     private static final ReferenceOwner test = ReferenceOwner.temporary("test");
     private final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
     @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
+    public final TemporaryFolder tmpDir = new TemporaryFolder();
 
     private static void assertExcerptsAreIndexed(final RollingChronicleQueue queue, final long[] indices,
                                                  final Function<Integer, Boolean> shouldBeIndexed, final ScanResult expectedScanResult) {

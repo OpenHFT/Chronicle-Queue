@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -14,7 +13,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -28,11 +26,11 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECOND
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class ToEndTest extends QueueTestCommon {
     private static final long FIVE_SECONDS = SECONDS.toMicros(5);
     private static final String ZERO_AS_HEX_STRING = Long.toHexString(0);
     private static final String LONG_MIN_VALUE_AS_HEX_STRING = Long.toHexString(Long.MIN_VALUE);
-    private long lastCycle;
 
     @Test
     public void missingCyclesToEndTest() {
@@ -89,7 +87,7 @@ public class ToEndTest extends QueueTestCommon {
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     if (dc.isPresent()) {
-                        fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read("msg").int32()));
+                        fail("Should be at the end of the queue but dc.isPresent and we read: " + dc.wire().read("msg").int32());
                     }
                 }
 
@@ -97,7 +95,7 @@ public class ToEndTest extends QueueTestCommon {
                 appender.writeDocument(wire -> wire.write("msg").int32(5));
 
                 // roll 5 cycles
-                timeProvider.currentTimeMillis(now += timeIncMs * 5);
+                timeProvider.currentTimeMillis(now + timeIncMs * 5);
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     assertTrue(dc.isPresent());
@@ -213,17 +211,17 @@ public class ToEndTest extends QueueTestCommon {
 
                     checkOneFile(baseDir);
 
-                    ExcerptTailer tailer = queue.createTailer();
-                    checkOneFile(baseDir);
+                        ExcerptTailer tailer = queue.createTailer();
+                        checkOneFile(baseDir);
 
-                    ExcerptTailer tailer2 = queue.createTailer();
-                    checkOneFile(baseDir);
+                        final ExcerptTailer tailer2 = queue.createTailer();
+                        checkOneFile(baseDir);
 
-                    tailer.toEnd();
-                    checkOneFile(baseDir);
+                        tailer.toEnd();
+                        checkOneFile(baseDir);
 
-                    tailer2.toEnd();
-                    checkOneFile(baseDir);
+                        tailer2.toEnd();
+                        checkOneFile(baseDir);
                 }
             }
             System.gc();
@@ -248,6 +246,7 @@ public class ToEndTest extends QueueTestCommon {
                 .build();
              ExcerptAppender appender = wqueue.createAppender()) {
 
+            long lastCycle = 0;
             for (int i = 0; i < 10; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().getValueOut().text("hi-" + i);
@@ -256,6 +255,7 @@ public class ToEndTest extends QueueTestCommon {
 
                 stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
             }
+            assert lastCycle > 0;
         }
 
         try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
@@ -268,8 +268,8 @@ public class ToEndTest extends QueueTestCommon {
             ExcerptTailer tailer = rqueue.createTailer();
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
-            //noinspection StatementWithEmptyBody
-            while (tailer.readText() != null) ;
+            while (tailer.readText() != null)
+                Jvm.nanoPause();
 
             assertNull(tailer.readText());
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
@@ -379,7 +379,7 @@ public class ToEndTest extends QueueTestCommon {
         try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
             writeExcerptToQueue(queue);
             String lastWriteIndexBefore = lastWriteIndex(queue);
-            String tailerToEndIndexBefore = tailerToEndIndex(queue);
+            final String tailerToEndIndexBefore = tailerToEndIndex(queue);
 
             timeProvider.advanceMicros(FIVE_SECONDS);
             writeMetadataToQueue(queue);

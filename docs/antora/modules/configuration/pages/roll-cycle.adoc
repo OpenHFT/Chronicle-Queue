@@ -186,7 +186,8 @@ SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
 == Archiving Old Queue Files ★
 
 Over time, it may become necessary to automatically delete or archive old queue files.
-An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete. facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the xref:command-line:command_line_tools.adoc#_archiverollfiles[ArchiveRollFiles utility].
+An automated process needs to ensure that there are no active file-handles open on a queue file before attempting to delete.
+facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the xref:command-line:command_line_tools.adoc#_archiverollfiles[ArchiveRollFiles utility].
 
 == General Advice on Rolling
 

@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings({"deprecation", "removal"})
 public class DumpQueueMainTest extends QueueTestCommon {
 
     @Test
@@ -60,7 +61,7 @@ public class DumpQueueMainTest extends QueueTestCommon {
             final ByteArrayOutputStream capture = new ByteArrayOutputStream();
             DumpMain.dump(dataDir, new PrintStream(capture), Long.MAX_VALUE);
 
-            final String capturedOutput = new String(capture.toByteArray());
+            final String capturedOutput = capture.toString();
 
             assertTrue(capturedOutput.contains("listing.highestCycle"));
             assertTrue(capturedOutput.contains("listing.lowestCycle"));
@@ -72,7 +73,7 @@ public class DumpQueueMainTest extends QueueTestCommon {
         private long bytes;
 
         @Override
-        public void write(final int b) throws IOException {
+        public void write(final int b) {
             bytes++;
         }
     }

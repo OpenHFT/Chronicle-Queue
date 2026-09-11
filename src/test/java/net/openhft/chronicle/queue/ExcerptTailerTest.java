@@ -25,6 +25,7 @@ public class ExcerptTailerTest extends QueueTestCommon {
     }
 
     @After
+    @Override
     public void tearDown() {
         excerptTailer.close();
         queue.close();

@@ -18,7 +18,7 @@ import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 
 class BackwardsTailerJmhState {
 
-    private static final Logger log = LoggerFactory.getLogger(BackwardsTailerToEndPerfAcceptanceTest.class);
+    private static final Logger log = LoggerFactory.getLogger(BackwardsTailerJmhState.class);
 
     private ExcerptTailer tailer;
     private File queuePath;

@@ -50,14 +50,14 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     .build();
                  ExcerptAppender appender = queue.createAppender()) {
 
-                Assert.assertEquals(-2, (int) scheduledExecutorService.submit(observer::call).get());
+                Assert.assertEquals(-2, (int) scheduledExecutorService.submit(observer).get());
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
 
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("say").text("Day 3 data");
                 }
-                Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer::call).get());
+                Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer).get());
                 assertEquals(1, observer.documentsRead);
 
             }

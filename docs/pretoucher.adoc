@@ -1,4 +1,6 @@
 = Chronicle Queue Pre-toucher
+:lang: en-GB
+:source-highlighter: rouge
 
 [NOTE]
 ====

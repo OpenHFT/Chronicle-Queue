@@ -29,7 +29,8 @@ public final class QueueSystemProperties {
      *
      * @see Jvm#getBoolean(String) for more details on how boolean properties are evaluated.
      */
-    public static boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
+    @Deprecated(/* to be removed in 2027 */)
+    public static volatile boolean CHECK_INDEX = Jvm.getBoolean("queue.check.index");
 
     /**
      * The system property key used to specify the default roll cycle for a Chronicle Queue.
@@ -59,4 +60,22 @@ public final class QueueSystemProperties {
 
     // The name space of the system properties should be managed. Eg. map.x.y, queue.a.b
 
+    /**
+     * Indicates whether index checking is enabled.
+     *
+     * @return true if index checking is enabled, false otherwise
+     */
+    public static boolean checkIndex() {
+        return CHECK_INDEX;
+    }
+
+    /**
+     * Allows tests and internal tools to override the index checking behaviour.
+     *
+     * @param enabled whether index checking should be enabled
+     */
+    @Deprecated(/* to be removed in 2027, only used in tests */)
+    public static void setCheckIndex(boolean enabled) {
+        CHECK_INDEX = enabled;
+    }
 }

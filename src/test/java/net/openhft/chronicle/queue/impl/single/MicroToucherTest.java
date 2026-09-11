@@ -47,6 +47,7 @@ public class MicroToucherTest extends QueueTestCommon {
                         Jvm.pause(25);
                     }
                 } catch (ClosedIllegalStateException expected) {
+                    Jvm.debug().on(MicroToucherTest.class, "MicroTouch loop closed", expected);
                 }
             });
             msync.setDaemon(true);
@@ -67,7 +68,7 @@ public class MicroToucherTest extends QueueTestCommon {
             }
         } finally {
             System.out.println("pages = " + pages);
-//        assertEquals(pagesExpected, pages);
+            // assertEquals(pagesExpected, pages);
             System.out.println("Time = " + (System.nanoTime() - start) / 1000000 / 1e3);
             IOTools.deleteDirWithFiles(path);
         }
