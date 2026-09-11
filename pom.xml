@@ -68,9 +68,6 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
-            <!-- //! Context-listener compilation requires Wire's new lifecycle API; remove this
-                 //! direct pin once the BOM includes the coordinated QUEUE-144 Wire artifact. -->
-            <version>2026.10-SNAPSHOT</version>
         </dependency>
 
         <dependency>
