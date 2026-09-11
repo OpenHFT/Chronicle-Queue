@@ -118,14 +118,13 @@ public class RollingResourcesCache {
         if (!parse.isSupported(weekFields.weekBasedYear()) || !parse.isSupported(weekFields.weekOfWeekBasedYear()))
             throw new UnsupportedOperationException("Unable to parse " + name + " using format " + format);
 
-        //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle,
-        //! #namedWeeklyFormatRoundTripsLocaleYearBoundaries,
-        //! #nonCanonicalNamedWeeksAreRejected and
-        //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer fail when a week-formatted filename is reconstructed
-        //! through the current date, calendar year, or week-of-year, or when cycle-tree ordering reads EPOCH_DAY
-        //! directly. Resolve the parsed week-based fields once for both parseCount() and toLong(), on the roll epoch's
-        //! weekday, then reject a week/year pair which formats to another canonical roll name. Without that check an
-        //! alias such as 2021W53 can collide with 2022W01 during physical roll enumeration.
+        //! RollingResourcesCacheTest#namedWeeklyFormatRoundTripsCycle and #namedWeeklyFormatRoundTripsLocaleYearBoundaries
+        //! detect reconstruction through the current date, calendar year, or week-of-year. Resolve the parsed week-based
+        //! fields once for both parseCount() and toLong(), on the roll epoch's weekday, and apply the common epoch geometry.
+        //! #nonCanonicalNamedWeeksAreRejected requires rejecting a week/year pair which formats to another canonical name:
+        //! an alias such as 2021W53 must not collide with 2022W01 during physical roll enumeration.
+        //! ChangeRollCycleTest#changeRollCycleWithReadOnlyTailer is retained integration evidence; its date-dependent fixture
+        //! does not discriminate every week-year reconstruction mistake.
         final int year = Math.toIntExact(parse.getLong(weekFields.weekBasedYear()));
         final int week = Math.toIntExact(parse.getLong(weekFields.weekOfWeekBasedYear()));
         final int rollDayOfWeek = LocalDate.ofEpochDay(epoch / ONE_DAY_IN_MILLIS)

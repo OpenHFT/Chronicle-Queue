@@ -161,10 +161,11 @@ public class StoreTailerTest extends QueueTestCommon {
                     Jvm.pause(1);
                 }
                 assertEquals("other-three", firstRead);
+                // The first visible record does not imply that the producer has published the next cycle.
+                submit.get();
                 assertEquals("other-four", tailer.readText());
                 assertEquals("five", tailer.readText());
                 assertEquals("six", tailer.readText());
-                submit.get();
             } finally {
                 ExecutorServiceUtil.shutdownAndWaitForTermination(ex);
             }
