@@ -12,7 +12,7 @@ An appender is acquired from the queue instance as follows:
 [source,java]
 ----
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder("trades").build()) { 
-   final ExcerptAppender appender = queue.acquireAppender(); 
+   final ExcerptAppender appender = queue.createAppender(); 
 }
 ----
 
@@ -113,7 +113,7 @@ An instance of `Person` can be then be written with `appender.writeDocument()` a
 ----
 SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(Files
     .createTempDirectory("queue").toFile()).build();
-ExcerptAppender appender = queue.acquireAppender();
+ExcerptAppender appender = queue.createAppender();
 
 Person person = new Person();
 person.name = "Rob";

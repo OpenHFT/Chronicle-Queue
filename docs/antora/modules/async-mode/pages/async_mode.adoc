@@ -97,7 +97,7 @@ NOTE: if you want multiple buffered queues to share the same drainer thread you 
             .bufferCapacity(1 << 20)
             .writeBufferMode(BufferMode.Asynchronous)
             .build()) {
-        ExcerptAppender appender = queue.acquireAppender();
+        ExcerptAppender appender = queue.createAppender();
         ...
         ExcerptTailer tailer = queue.createTailer();
         ...
@@ -133,7 +133,7 @@ NOTE: This example won't work on Windows as it uses /dev/shm.
             .writeBufferMode(BufferMode.Asynchronous)
             .asyncBufferCreator(AsyncBufferCreators.MappedFileDevShm) // share a memory-mapped ring in /dev/shm
             .build()) {
-        ExcerptAppender appender = queue.acquireAppender();
+        ExcerptAppender appender = queue.createAppender();
         ...
     }
 

@@ -44,7 +44,7 @@ long index = appender.lastIndexAppended();
 ----
 
 It should again be noted that Chronicle Queue appenders are thread-local, meaning only one appender can exist per thread.
-The first call to `acquireAppender()` creates the appender, and subsequent calls by the same thread reuses and returns the same instance.
+The first call to `createAppender()` creates the appender, and subsequent calls by the same thread reuses and returns the same instance.
 However, in a multi-threaded environment there may be more than one appender.
 In such case `lastIndexAppended()` returns the last index written by the specific appender; not the last index written by _any_ appender.
 If you wish to find the index of the last record written to the queue, simply call:
@@ -79,7 +79,7 @@ Learn more about how the index is composed in the section xref:#_index[The 8 Byt
 ----
 try (final ChronicleQueue queue = singleBuilder("queue").build()) {
 
-    final ExcerptAppender appender = queue.acquireAppender();
+    final ExcerptAppender appender = queue.createAppender();
 
     for (int i = 0; i < 10; i++) {
         appender.writeText("message " + i); 
