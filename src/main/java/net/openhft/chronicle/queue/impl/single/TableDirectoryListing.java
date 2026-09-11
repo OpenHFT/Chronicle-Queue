@@ -32,8 +32,6 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private static final String MOD_COUNT = "listing.modCount";
     private static final int LEGACY_UNSET_MAX_CYCLE = Integer.MIN_VALUE;
     static final int INITIAL_MIN_CYCLE = Integer.MAX_VALUE;
-    static final String INITIAL_MIN_FILENAME = Character.toString(Character.MAX_VALUE);
-    static final String INITIAL_MAX_FILENAME = Character.toString(Character.MIN_VALUE);
     private final TableStore<?> tableStore;
     private final Path queuePath;
     private final ToIntFunction<String> fileNameToCycleFunction;
@@ -84,10 +82,11 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
 
         tableStore.doWithExclusiveLock(ts -> {
             initLongValues();
-            //! freshListingReportsUnsetCycle requires a newly allocated Long.MIN_VALUE to be replaced before another
-            //! process can narrow it to cycle zero. New writers persist the domain's UNSET_CONTEXT value; the decoder
-            //! separately accepts the Integer.MIN_VALUE representation written by develop's empty refresh.
-            maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, UNSET_CONTEXT);
+            //! freshListingReportsUnsetCycle checks both the semantic -1 and the legacy persisted empty value.
+            //! Old readers narrow this field and recognise only Integer.MIN_VALUE as empty; storing domain -1 would
+            //! send their toEnd() down the non-empty path. Use the legacy encoding here and on empty refresh, while
+            //! decoding Long.MIN_VALUE before narrowing remains necessary for readers racing this initialisation.
+            maxCycleValue.compareAndSwapValue(Long.MIN_VALUE, LEGACY_UNSET_MAX_CYCLE);
             minCycleValue.compareAndSwapValue(Long.MIN_VALUE, INITIAL_MIN_CYCLE);
             if (modCount.getVolatileValue() == Long.MIN_VALUE) {
                 modCount.compareAndSwapValue(Long.MIN_VALUE, 0);
@@ -100,9 +99,24 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Acquires the necessary LongValues (maxCycle, minCycle, modCount) from the table store.
      */
     protected void initLongValues() {
-        maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
-        minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
-        modCount = tableStore.acquireValueFor(MOD_COUNT);
+        //! DirectoryPublicationBoundaryTest#readOnlyRetryClosesEveryReturnedBinding fails if a retry overwrites a
+        //! binding returned before a later acquisition failed. Acquire transactionally; callers cannot release a
+        //! partially assigned field after it has been lost. Allocation failures before return belong to ValueIn.
+        LongValue maximum = null;
+        LongValue minimum = null;
+        LongValue modifications = null;
+        try {
+            maximum = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
+            minimum = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
+            modifications = tableStore.acquireValueFor(MOD_COUNT);
+        } catch (RuntimeException | Error failure) {
+            Closeable.closeQuietly(maximum, minimum, modifications);
+            throw failure;
+        }
+        Closeable.closeQuietly(maxCycleValue, minCycleValue, modCount);
+        maxCycleValue = maximum;
+        minCycleValue = minimum;
+        modCount = modifications;
     }
 
     /**
@@ -121,9 +135,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             throwExceptionIfClosed();
             tableStore.throwExceptionIfClosed();
             Jvm.safepoint();
-            //! refreshRetriesWhenLegacyMinimumIsPublishedAfterMaximumCas requires observing min, max and modCount
-            //! around the scan and CAS-publishing both bounds. Older writers publish min, max, then modCount without
-            //! participating in a new lock protocol, so a partial legacy publication must force another scan.
+            //! refreshRetriesWhenLegacyMinimumIsPublishedAfterMaximumCas preserves a late legacy publication;
+            //! it is not an independent discriminator for every observation around the scan. Both bounds still need
+            //! CAS publication because older writers publish min, max, then modCount without taking a new lock.
             // Writers from before QUEUE-146 do not take a table lock. Observe both legacy publication
             // fields around the filesystem scan and retry if such a writer moves either one while the
             // scan is in progress.
@@ -143,25 +157,19 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             if (fileNamesList == null)
                 return;
 
-            String minFilename = INITIAL_MIN_FILENAME;
-            String maxFilename = INITIAL_MAX_FILENAME;
+            //! CycleOverflowTest#extendedYearFilesRetainLogicalBoundsAfterRefreshAndReopen requires numeric bounds:
+            //! a built-in daily/hourly filename for a large valid cycle starts with '+', which sorts before 1970.
+            //! Parse and validate every candidate before publishing either bound; lexical extrema can falsely report
+            //! the present maximum as deleted. Malformed interior names now also fail this explicit refresh.
+            int min = INITIAL_MIN_CYCLE;
+            int max = UNSET_CONTEXT;
             for (String fileName : fileNamesList) {
                 if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
-                    if (minFilename.compareTo(fileName) > 0)
-                        minFilename = fileName;
-
-                    if (maxFilename.compareTo(fileName) < 0)
-                        maxFilename = fileName;
+                    int cycle = requireCycle(fileNameToCycleFunction.applyAsInt(fileName), "physical cycle");
+                    min = Math.min(min, cycle);
+                    max = Math.max(max, cycle);
                 }
             }
-
-            int min = INITIAL_MIN_CYCLE;
-            if (!INITIAL_MIN_FILENAME.equals(minFilename))
-                min = fileNameToCycleFunction.applyAsInt(minFilename);
-
-            int max = UNSET_CONTEXT;
-            if (!INITIAL_MAX_FILENAME.equals(maxFilename))
-                max = fileNameToCycleFunction.applyAsInt(maxFilename);
 
             if (observedModCount != modCount.getVolatileValue()
                     || observedStoredMin != minCycleValue.getVolatileValue()
@@ -175,24 +183,26 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             //! refreshRejectsMissingPublishedMaximum, refreshRejectsMissingLegacyPublication and
             //! publishedCycleZeroMissingItsFileFailsClosed fail if a scan may lower the mapped maximum while
             //! metadata survives. The explicit UNSET_CONTEXT comparison keeps published cycle zero in this check.
+            //! TestDeleteQueueFile#deletingOldFilesChaosTest is retention integration evidence, now with live
+            //! forward/backward workers and checked progress, not a discriminator for this guard. The old tests
+            //! permitting live highest-roll deletion are deliberately replaced: SingleChronicleQueueTest's
+            //! testToEndAfterOfflineQueueDeletion retains whole-Queue deletion only after all handles close.
             if (observedMax != UNSET_CONTEXT && max < observedMax)
                 throw new IllegalStateException("Highest/current roll " + observedMax
                         + " disappeared while Queue metadata remains");
 
-            // The CAS closes the remaining check/publication window for a legacy writer. A
-            // failed CAS means its publication won and the directory must be scanned again.
-            //! freshListingReportsUnsetCycle also requires an empty refresh to retain the domain sentinel rather than
-            //! reintroduce develop's Integer.MIN_VALUE representation.
-            if (!maxCycleValue.compareAndSwapValue(observedStoredMax, max)) {
+            //! DirectoryPublicationBoundaryTest#readOnlyTailerSeesMinimumBeforeRefreshedMaximum pauses after the
+            //! maximum CAS. Minimum must already be visible: publishing maximum first exposes MAX_VALUE/7 to a
+            //! read-only tailer and strands it at a fictitious first cycle. Maximum commits the non-empty state,
+            //! matching onRoll and legacy writers; each failed CAS still retries against fresh physical bounds.
+            if (!minCycleValue.compareAndSwapValue(observedStoredMin, min)) {
                 Jvm.nanoPause();
                 continue;
             }
-
-            // A legacy writer publishes minimum before maximum. It can therefore race after
-            // the maximum CAS above without changing maximum yet. Publish both physical bounds
-            // symmetrically; if either observed value moved, rescan rather than overwriting the
-            // legacy writer's lower bound with a stale (possibly empty-directory) result.
-            if (!minCycleValue.compareAndSwapValue(observedStoredMin, min)) {
+            //! freshListingReportsUnsetCycle also checks empty refresh's old-reader storage encoding. The semantic
+            //! UNSET_CONTEXT comparison above remains independent of that persisted representation.
+            final long storedMax = max == UNSET_CONTEXT ? LEGACY_UNSET_MAX_CYCLE : max;
+            if (!maxCycleValue.compareAndSwapValue(observedStoredMax, storedMax)) {
                 Jvm.nanoPause();
                 continue;
             }
@@ -311,6 +321,9 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private int getMinCycleValue() {
         //! maximumCycleRoundTripsAsAValidMinimum requires the decoded maximum to carry empty/non-empty state:
         //! Integer.MAX_VALUE remains both the legacy stored minimum sentinel and a valid UInt31 cycle.
+        //! readOnlyListingHidesPartiallyPublishedCycleZero covers empty-to-non-empty visibility, not every volatile
+        //! read interleaving here. Recheck maximum so a concurrently committed non-empty state cannot be paired with
+        //! the minimum sampled for an earlier empty state; no current test independently discriminates this retry.
         while (true) {
             final long storedMax = maxCycleValue.getVolatileValue();
             final int maximum = decodeMaxCycle(storedMax);

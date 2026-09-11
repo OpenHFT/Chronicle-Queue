@@ -103,8 +103,10 @@ class StoreAppender extends AbstractCloseable
 
         try {
             int lastExistingCycle = queue.lastCycle();
-            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty reopens an appender at Integer.MAX_VALUE;
-            //! only the semantic first-cycle value distinguishes that valid roll from an empty Queue here.
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty supplies maximum-cycle integration evidence;
+            //! it does not discriminate this constructor's scan alone, since a sole maximum roll has no older roll
+            //! to seal. Retain semantic emptiness here so that valid roll still receives the constructor's normal
+            //! store inspection/reset lifecycle rather than silently bypassing it as an empty Queue.
             int firstCycle = queue.firstPublishedCycle();
             long start = System.nanoTime();
             int scannedCycle = Integer.MIN_VALUE;
@@ -583,7 +585,10 @@ class StoreAppender extends AbstractCloseable
         count++;
         try {
             return prepareAndReturnWriteContext(metaData);
-        } catch (RuntimeException e) {
+        //! DocumentAcquisitionFailureTest#acquisitionErrorReleasesLockAndRestoresCount injects before Wire header
+        //! entry without a listener. Error must restore nesting just like RuntimeException or later writes reuse
+        //! a context that never opened; the test does not simulate arbitrary partial Wire mutation.
+        } catch (RuntimeException | Error e) {
             count--;
             throw e;
         }
@@ -627,7 +632,9 @@ class StoreAppender extends AbstractCloseable
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
-            } catch (RuntimeException e) {
+            //! DocumentAcquisitionFailureTest#acquisitionErrorReleasesLockAndRestoresCount also requires the shared
+            //! write lock to be released on Error. Counting cleanup alone leaves every subsequent appender blocked.
+            } catch (RuntimeException | Error e) {
                 writeLock.unlock();
                 throw e;
             }
@@ -957,10 +964,17 @@ class StoreAppender extends AbstractCloseable
         //! stalledAppenderReinitialisesIncompletePublishedCycle mutation-fails if that probe merely reads the
         //! published generation: an interrupted first header is recoverable, while REINITIALIZE_EXISTING still
         //! returns null instead of creating a genuinely absent pathname.
-        try (SingleChronicleQueueStore ignored = queue.pool.acquire(
-                publishedCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING, null)) {
+        final SingleChronicleQueueStore ignored = queue.pool.acquire(
+                publishedCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING, null);
+        try {
             if (ignored == null)
                 throw missingPublishedCycle(publishedCycle);
+        } finally {
+            //! AppenderInspectionLifecycleTest#publishedCycleProbePairsStoreFileEvents counts a real stalled-writer
+            //! transition. Direct close releases the mapping but omits the pool's matching onReleased event, so
+            //! retention listeners would permanently count this temporary inspection as an acquired store.
+            if (ignored != null)
+                queue.pool.closeStore(ignored);
         }
     }
 
@@ -1565,7 +1579,6 @@ class StoreAppender extends AbstractCloseable
         final Bytes<?> existingBytes = comparisonWire.bytes();
         final long savedReadPosition = existingBytes.readPosition();
         final long savedReadLimit = existingBytes.readLimit();
-        final long savedWritePosition = existingBytes.writePosition();
         try {
             final ExcerptContext comparisonContext = new WireExcerptContext(comparisonWire, timeoutMS());
             final ScanResult scanResult = target.moveToIndexForRead(comparisonContext, sequenceNumber);
@@ -1576,9 +1589,12 @@ class StoreAppender extends AbstractCloseable
             compareExistingEntry(cycle, sequenceNumber, existingBytes, suppliedBytes, "published");
 
         } finally {
-            existingBytes.readPosition(savedReadPosition);
+            //! publishedDuplicateAfterTwoRecordsDoesNotMapLogicalCapacity reproduces a duplicate on a fresh read view
+            //! whose logical limit is 128 TiB. readLimit restores the shared read-limit/write-position cursor without
+            //! acquiring a mapping; writePosition would try to extend the file to that logical capacity. Restore the
+            //! limit before the position so a narrowed comparison window cannot reject the original position.
             existingBytes.readLimit(savedReadLimit);
-            existingBytes.writePosition(savedWritePosition);
+            existingBytes.readPosition(savedReadPosition);
         }
     }
 
@@ -2141,6 +2157,10 @@ class StoreAppender extends AbstractCloseable
         public void close(boolean unlock) {
             if (!closePreconditionsAreSatisfied()) return;
 
+            //! BufferedDocumentOwnershipTest#bufferedRollbackDoesNotUnlockAnotherAppender fails if private-buffer
+            //! rollback releases the PID-owned lock held by another appender. A buffered context owns no mapped
+            //! write lock; its eventual writeBytes call acquires/releases its own lock, including on failure.
+            unlock &= !buffered;
             try {
                 handleInterrupts();
                 if (handleRollbackOnClose()) return;
@@ -2150,8 +2170,6 @@ class StoreAppender extends AbstractCloseable
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
-                        unlock = false;
-                        wire.clear();
                     } else {
                         writeBytesInternal(wire.bytes(), metaData);
                         wire = StoreAppender.this.wire;
@@ -2163,7 +2181,15 @@ class StoreAppender extends AbstractCloseable
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
-                closeCleanup(unlock);
+                //! BufferedDocumentOwnershipTest#failedBufferedFlushDoesNotLeakPayloadIntoNextDocument rejects a
+                //! flush before copying, then reuses the buffer. Clear even on failure: success-only clearing makes
+                //! the next document publish payload from the rejected operation. Cleanup still runs if clear fails.
+                try {
+                    if (buffered && wire != null)
+                        wire.clear();
+                } finally {
+                    closeCleanup(unlock);
+                }
             }
         }
 
