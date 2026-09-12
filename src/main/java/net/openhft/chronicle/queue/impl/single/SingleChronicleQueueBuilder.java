@@ -1264,13 +1264,11 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     }
 
     /**
-     * Returns the {@link TimeProvider} for the queue. If not explicitly set, it defaults to the
-     * {@link SystemTimeProvider#INSTANCE}.
-     *
-     * @return the time provider used by the queue
+     * Returns the explicit time provider, or the current {@link SystemTimeProvider#CLOCK}.
+     * A queue captures this value when it is built.
      */
     public TimeProvider timeProvider() {
-        return timeProvider == null ? SystemTimeProvider.INSTANCE : timeProvider;
+        return timeProvider == null ? SystemTimeProvider.CLOCK : timeProvider;
     }
 
     /**
