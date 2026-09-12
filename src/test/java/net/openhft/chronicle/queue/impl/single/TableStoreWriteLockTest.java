@@ -264,20 +264,38 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    private static void stopProcess(Process process) throws InterruptedException {
+    static void stopProcess(Process process) {
+        stopProcess(process, PROCESS_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    }
+
+    static void stopProcess(Process process, long timeout, TimeUnit unit) {
+        final long deadline = System.nanoTime() + unit.toNanos(timeout);
         boolean interrupted = Thread.interrupted();
         try {
             process.destroy();
-            if (!process.waitFor(PROCESS_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            boolean forced = interrupted;
+            if (forced)
                 process.destroyForcibly();
-                assertTrue("Locking subprocess did not exit after forced termination",
-                        process.waitFor(PROCESS_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            while (process.isAlive()) {
+                final long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) {
+                    if (!forced)
+                        process.destroyForcibly();
+                    fail("Locking subprocess remains alive after termination deadline ("
+                            + unit.toMillis(timeout) + " ms)");
+                }
+                try {
+                    // Reserve half the initial budget for confirming forced termination.
+                    if (process.waitFor(forced ? remaining : remaining / 2, TimeUnit.NANOSECONDS))
+                        return;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+                if (!forced) {
+                    process.destroyForcibly();
+                    forced = true;
+                }
             }
-        } catch (InterruptedException e) {
-            interrupted = true;
-            process.destroyForcibly();
-            assertTrue("Interrupted cleanup did not terminate the locking subprocess",
-                    process.waitFor(PROCESS_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS));
         } finally {
             if (interrupted)
                 Thread.currentThread().interrupt();
