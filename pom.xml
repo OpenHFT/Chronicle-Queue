@@ -22,6 +22,7 @@
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
         <surefire.forkCount>4</surefire.forkCount>
+        <surefire.reuseForks>true</surefire.reuseForks>
         <!-- Define the target coverage thresholds as properties -->
         <jacoco.line.coverage>0.788</jacoco.line.coverage>
         <jacoco.branch.coverage>0.713</jacoco.branch.coverage>
@@ -258,7 +259,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <forkCount>${surefire.forkCount}</forkCount>
-                    <reuseForks>true</reuseForks>
+                    <reuseForks>${surefire.reuseForks}</reuseForks>
                     <runOrder>hourly</runOrder>
                     <!-- propagate JPMS flags from parent into unit test JVMs -->
                     <argLine>${argLine} ${jvm.requiredArgs}</argLine>
@@ -423,6 +424,8 @@
             <properties>
                 <!-- Reduce competing mapped-file workloads on macOS. -->
                 <surefire.forkCount>1</surefire.forkCount>
+                <!-- Isolate JVM state between test classes while diagnosing Mac failures. -->
+                <surefire.reuseForks>false</surefire.reuseForks>
             </properties>
         </profile>
         <profile>
