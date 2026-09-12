@@ -95,21 +95,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      *  + 125 {@link Thread#yield()} invocations per test run. */
     static int SEQUENCE_TRACKER_RETRY_BUDGET = 128;
     /** Spin this many iterations before {@link Thread#yield()}-ing in the retry loop; the
-     *  writer race window is sub-microsecond so the first few retries should not yield. */
+     *  first retries stay on the current thread before yielding to the writer. */
     private static final int SEQUENCE_TRACKER_RETRY_YIELD_AFTER = 2;
-    // Public log markers emitted on the lastIndex() fast path. Tests / observers attach a perf
-    // exception handler (see Jvm.setPerfExceptionHandler) and count these messages to assert
-    // that retries are rare under contention and that the path never falls through to the
-    // brute-force indexed-anchor scan during a healthy run -- avoiding any per-instance counter
-    // fields whose only purpose is observability.
+    // Sampled operator diagnostics; the opt-in fixed-size counters measure scan branches.
     static final String LOG_TRACKER_RETRY_PREFIX =
             "sequenceForPosition(MAX_VALUE) tracker-read retried";
     static final String LOG_TRACKER_BRUTE_FORCE_FALLTHROUGH =
             "sequenceForPosition(MAX_VALUE) tracker-read retry loop exhausted";
-    // Description tags passed to printLinearScanTime so each call site is distinguishable in
-    // perf logs (and so tests can match on a single source of truth rather than copying the
-    // string). The whole point of the fast path is to take SCAN_LABEL_FAST_PATH (or
-    // SCAN_LABEL_TAIL_CHECK), not SCAN_LABEL_FALL_THROUGH.
+    // Stable categories shared by timing diagnostics and the optional scan counters.
     static final String SCAN_LABEL_FAST_PATH =
             "linearScan from writePosition (sequenceForPosition fast path)";
     static final String SCAN_LABEL_FALL_THROUGH =
@@ -614,13 +607,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         return linearScanByPosition(wire, toPosition, indexOfNext, startAddress, inclusive, "linearScan by position");
     }
 
-    /**
-     * Variant that lets the caller supply a description for the perf log so different scan
-     * origins (fast path from {@code writePosition}, fall-through from indexed anchor, etc.)
-     * are distinguishable in logs -- important because the whole point of the
-     * {@code MAX_VALUE} fast path is to <em>avoid</em> the brute-force fall-through scan, and
-     * we want to be able to verify that from log output rather than guess.
-     */
+    /** Classifies the scan independently of sampled latency logging. */
     long linearScanByPosition(@NotNull final Wire wire,
                               final long toPosition,
                               final long indexOfNext,
@@ -817,9 +804,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 if (latestSeq == Sequence.NOT_FOUND)
                     break;
 
-                // NOT_FOUND_RETRY: writer raced. Spin-retry for the first couple of iterations
-                // (the race window is sub-microsecond); after that yield to let the writer make
-                // progress instead of starving them with our volatile reads.
+                // Yield after the first retries so a concurrent publisher can make progress.
                 if (retry > SEQUENCE_TRACKER_RETRY_YIELD_AFTER)
                     Thread.yield();
             }
@@ -1098,7 +1083,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     break;
                 try {
                     Wire wireForIndex = ec.wireForIndex();
-                    if (wireForIndex != null && !indexedSequenceMatchesPosition(wireForIndex, sequence, address))
+                    // Below the position-encoding wrap, monotonic write positions cannot alias.
+                    // Retain the normal tail check there: repeatedly mapping old index chunks while
+                    // appending would add mappings (ChunkCountTest). Wrapped positions need proof.
+                    long positionEncodingLimit = 1L << (64 - Math.max(32, 2 * indexCountBits + indexSpacingBits));
+                    if (wireForIndex != null && address >= positionEncodingLimit &&
+                            !indexedSequenceMatchesPosition(wireForIndex, sequence, address))
                         break;
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true,
                             SCAN_LABEL_TAIL_CHECK);

@@ -140,6 +140,21 @@ public class ChronicleHistoryReaderMain {
                 true
         );
         writer.flush();
+        exit(status);
+    }
+
+    /**
+     * Terminates the JVM with the given status.
+     * <p>
+     * Exposed as an overridable seam so that tests can verify exit behaviour without
+     * terminating the test runner. This replaces the previous SecurityManager-based
+     * interception, which is deprecated for removal since JDK 17 (JEP 411), and
+     * {@code System.setSecurityManager} throws {@code UnsupportedOperationException}
+     * from JDK 24 (JEP 486).
+     *
+     * @param status Exit status
+     */
+    protected void exit(int status) {
         System.exit(status);
     }
 

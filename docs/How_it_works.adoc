@@ -93,7 +93,7 @@ Create appender and reader:
 
 [source,java]
 ----
-ExcerptAppender appender = queue.acquireAppender();
+ExcerptAppender appender = queue.createAppender();
 ExcerptTailer tailer = queue.createTailer();
 ----
 
@@ -292,7 +292,7 @@ This check is enforced by `SingleChronicleQueueBuilder`, so the following code c
 final Path queueDir = Paths.get("/data/queue/my-queue");
 try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).rollCycle(SECONDLY).build()) {
     // this append call will 'lock' the queue to use the SECONDLY roll-cycle
-    try (DocumentContext documentContext = queue.acquireAppender().writingDocument()) {
+    try (DocumentContext documentContext = queue.createAppender().writingDocument()) {
         documentContext.wire().write("somekey").text("somevalue");
     }
 }
@@ -314,12 +314,12 @@ try (ChronicleQueue minuteRollCycleQueue = ChronicleQueue.singleBuilder(queueDir
     // creates a queue with roll-cycle HOURLY - valid since no appends have yet been made
     try (ChronicleQueue hourlyRollCycleQueue = ChronicleQueue.singleBuilder(queueDir).rollCycle(HOURLY).build()) {
         // append using the HOURLY roll-cycle
-        try (DocumentContext documentContext = hourlyRollCycleQueue.acquireAppender().writingDocument()) {
+        try (DocumentContext documentContext = hourlyRollCycleQueue.createAppender().writingDocument()) {
             documentContext.wire().write("somekey").text("somevalue");
         }
     }
     // now try to append using the queue configured with roll-cycle MINUTELY
-    try (DocumentContext documentContext2 = minuteRollCycleQueue.acquireAppender().writingDocument()) {
+    try (DocumentContext documentContext2 = minuteRollCycleQueue.createAppender().writingDocument()) {
         documentContext2.wire().write("otherkey").text("othervalue");
     }
 }

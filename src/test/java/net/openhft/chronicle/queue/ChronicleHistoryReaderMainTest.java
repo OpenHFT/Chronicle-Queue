@@ -3,47 +3,45 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.file.Path;
-import java.security.Permission;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
-@SuppressWarnings({"deprecation", "removal"})
 public class ChronicleHistoryReaderMainTest {
 
-    private static class NoExitSecurityManager extends SecurityManager {
-        @Override
-        public void checkPermission(Permission perm) {
-            // allow anything
-        }
+    /**
+     * Thrown by an overridden {@link ChronicleHistoryReaderMain#exit(int)} so that tests can
+     * observe an attempted JVM exit (and the status it was called with) without terminating the
+     * test runner. This replaces the old SecurityManager-based interception, which is deprecated
+     * for removal since JDK 17 (JEP 411) and unavailable from JDK 24 (JEP 486).
+     */
+    private static final class ExitInvoked extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+        final int status;
 
-        @Override
-        public void checkExit(int status) {
-            throw new SecurityException("System exit attempted with status: " + status);
+        ExitInvoked(int status) {
+            this.status = status;
         }
     }
 
-    @Before
-    public void setUp() {
-        // SecurityManager is effectively disabled from JDK 17 onwards
-        assumeTrue(Jvm.majorVersion() < 17);
-        System.setSecurityManager(new NoExitSecurityManager());
-    }
-
-    @After
-    public void tearDown() {
-        System.setSecurityManager(null);
+    /**
+     * A named subclass whose {@link #exit(int)} records the requested status rather than
+     * terminating the JVM. Deliberately a named (non-anonymous) class so that
+     * {@code getClass().getSimpleName()} is non-empty: {@code printHelpAndExit} passes it to
+     * commons-cli as the command-line syntax, which rejects an empty value.
+     */
+    private static final class ExitCapturingMain extends ChronicleHistoryReaderMain {
+        @Override
+        protected void exit(int status) {
+            throw new ExitInvoked(status);
+        }
     }
 
     @Test
@@ -131,25 +129,14 @@ public class ChronicleHistoryReaderMainTest {
 
     @Test
     public void testParseCommandLineHelpOption() {
-        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain() {
-            @Override
-            protected void printHelpAndExit(Options options, int status, String message) {
-                assertEquals(0, status);  // Ensure help is printed with status 0 (success)
-                throw new ThreadDeath();  // Exit without calling System.exit()
-            }
-        };
+        ChronicleHistoryReaderMain main = new ExitCapturingMain();
         String[] args = {"-h"};
 
-        // Manually setting the security manager to catch System.exit() if needed
         try {
-            main.run(args);  // Should trigger the help message and exit with 0
-            fail("Expected ThreadDeath to be thrown");
-
-        } catch (ThreadDeath e) {
-            // Expected exception
-
-        } catch (SecurityException e) {
-            fail("System.exit was called unexpectedly.");
+            main.run(args);  // Should print help and request exit with status 0
+            fail("Expected exit to be invoked");
+        } catch (ExitInvoked e) {
+            assertEquals(0, e.status);  // Help is requested explicitly, so a clean exit
         }
     }
 
@@ -171,13 +158,13 @@ public class ChronicleHistoryReaderMainTest {
 
     @Test
     public void testPrintHelpAndExit() {
-        ChronicleHistoryReaderMain main = new ChronicleHistoryReaderMain();
+        ChronicleHistoryReaderMain main = new ExitCapturingMain();
         Options options = main.options();
         try {
             main.printHelpAndExit(options, 0, "Optional message");
-            fail("Expected SecurityException due to System.exit(0)");
-        } catch (SecurityException e) {
-            assertTrue(e.getMessage().contains("System exit attempted with status: 0"));
+            fail("Expected exit to be invoked with status 0");
+        } catch (ExitInvoked e) {
+            assertEquals(0, e.status);
         }
     }
 }

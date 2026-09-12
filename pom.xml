@@ -15,7 +15,7 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>2026.3-SNAPSHOT</version>
+    <version>2026.7-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle Queue</name>
     <description>Java library for persisted low latency messaging (Java 8+)</description>
@@ -110,13 +110,6 @@
                     <artifactId>tools</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-core</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -263,8 +256,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <forkCount>1</forkCount>
-                    <!--                    <reuseForks>false</reuseForks>-->
+                    <forkCount>4</forkCount>
+                    <reuseForks>true</reuseForks>
                     <runOrder>hourly</runOrder>
                     <!-- propagate JPMS flags from parent into unit test JVMs -->
                     <argLine>${argLine} ${jvm.requiredArgs}</argLine>

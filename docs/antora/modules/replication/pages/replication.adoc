@@ -117,7 +117,7 @@ public void shouldReplicate() throws Exception {
 
     assertNull(poll(tailer, 200L));
 
-    ExcerptAppender appender = source.acquireAppender();
+    ExcerptAppender appender = source.createAppender();
 
     try (DocumentContext dc = appender.writingDocument()) {
         dc.wire().write("test").text("Hello replica");
