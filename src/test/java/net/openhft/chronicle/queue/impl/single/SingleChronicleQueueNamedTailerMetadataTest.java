@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -91,6 +92,22 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     }
 
     @Test
+    public void namedTailerIndexesKeepCaseVariantIdsSeparate() {
+        NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        metadataIndexes.put("Gateway", 1L);
+        metadataIndexes.put("gateway", 2L);
+        metadataIndexes.put("gateway.lock", 3L);
+
+        expectException("Named tailer id 'gateway.lock'");
+        NavigableMap<String, Long> indexes = SingleChronicleQueue.selectNamedTailerIndexes(metadataIndexes);
+
+        assertEquals(3, indexes.size());
+        assertEquals(Long.valueOf(1L), indexes.get("Gateway"));
+        assertEquals(Long.valueOf(2L), indexes.get("gateway"));
+        assertEquals(Long.valueOf(3L), indexes.get("gateway.lock"));
+    }
+
+    @Test
     public void namedTailerIndexesRetainsDistinguishableLegacyReservedIds() {
         File dir = getTmpDir();
         timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(12_000));
@@ -112,13 +129,13 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             q.tableStorePut("index." + replicated + ".Version.version", 1);
 
             expectException("Named tailer id 'gateway.LOCK'");
-            expectException("Named tailer id '" + replicated + ".LOCK'");
-            expectException("Named tailer id '" + replicated + ".Version'");
+            expectException("Named tailer id '" + replicated + ".lock'");
+            expectException("Named tailer id '" + replicated + ".version'");
             NavigableMap<String, Long> indexes = q.namedTailerIndexes();
 
             assertEquals(Long.valueOf(index), indexes.get("gateway.LOCK"));
-            assertEquals(Long.valueOf(index), indexes.get(replicated + ".LOCK"));
-            assertEquals(Long.valueOf(index), indexes.get(replicated + ".Version"));
+            assertEquals(Long.valueOf(index), indexes.get(replicated + ".lock"));
+            assertEquals(Long.valueOf(index), indexes.get(replicated + ".version"));
             assertFalse(indexes.containsKey(replicated + ".LOCK.lock"));
             assertFalse(indexes.containsKey(replicated + ".LOCK.version"));
             assertFalse(indexes.containsKey(replicated + ".Version.lock"));
@@ -179,7 +196,7 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
 
         try (SingleChronicleQueue q = builder(dir).build()) {
             assertEquals(NamedTailerParkResult.NOT_FOUND, q.parkNamedTailer("missing"));
-            assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer(null));
+            assertThrows(NullPointerException.class, () -> q.parkNamedTailer(null));
             assertFalse(q.namedTailerIndexes().containsKey("missing"));
         }
     }
@@ -198,10 +215,14 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             try {
                 long lockBefore = q.tableStoreGet("index.gateway.lock");
 
-                assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer("gateway.version"));
+                IllegalArgumentException versionException = assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.version"));
+                assertTrue(versionException.getMessage().contains("would collide with the metadata"));
                 assertEquals(42L, version.getValue());
 
-                assertEquals(NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer("gateway.lock"));
+                IllegalArgumentException lockException = assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.lock"));
+                assertTrue(lockException.getMessage().contains("would collide with the metadata"));
                 assertEquals(lockBefore, q.tableStoreGet("index.gateway.lock"));
             } finally {
                 lock.unlock();
@@ -223,45 +244,74 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
             }
             try (LongValue version = q.indexVersionForId(name)) {
                 long versionBefore = version.getValue();
+                long lockBefore = q.tableStoreGet("index." + name + ".lock");
+                NavigableMap<String, Long> indexesBefore = q.namedTailerIndexes();
 
                 assertEquals(NamedTailerParkResult.REFUSED_REPLICATED, q.parkNamedTailer(name));
+                assertEquals(NamedTailerParkResult.REFUSED_REPLICATED,
+                        q.parkNamedTailer("Replicated:sink"));
                 assertEquals(Long.valueOf(pinned), q.namedTailerIndexes().get(name));
                 assertEquals(versionBefore, version.getValue());
+                assertEquals(lockBefore, q.tableStoreGet("index." + name + ".lock"));
+                assertEquals(indexesBefore, q.namedTailerIndexes());
             }
         }
     }
 
     @Test
-    public void createTailerRejectsExactLowercaseReservedSuffixesOnly() {
+    public void createTailerRejectsReservedSuffixesCaseInsensitively() {
         File dir = getTmpDir();
         timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(60_000));
         writeDailyExcerpts(dir, 1);
 
         try (SingleChronicleQueue q = builder(dir).build()) {
-            for (String name : new String[]{"gateway.lock", "gateway.version"})
+            for (String name : new String[]{"gateway.lock", "gateway.LOCK",
+                    "gateway.version", "gateway.Version"})
                 assertThrows(IllegalArgumentException.class, () -> q.createTailer(name));
-            try (ExcerptTailer lock = q.createTailer("gateway.LOCK");
-                 ExcerptTailer version = q.createTailer("gateway.Version")) {
-                assertEquals(0, lock.index());
-                assertEquals(0, version.index());
+        }
+    }
+
+    @Test
+    public void mixedCaseReservedSuffixCannotBindReplicatedLockMetadata() {
+        File dir = getTmpDir();
+        timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(60_500));
+        writeDailyExcerpts(dir, 1);
+
+        try (SingleChronicleQueue q = builder(dir).build()) {
+            String replicated = SingleChronicleQueue.REPLICATED_NAMED_TAILER_PREFIX + "sink";
+            try (ExcerptTailer tailer = q.createTailer(replicated)) {
+                assertEquals(0, tailer.index());
+            }
+            try (LongValue version = q.indexVersionForId(replicated)) {
+                long lockBefore = q.tableStoreGet("index." + replicated + ".lock");
+                long versionBefore = version.getValue();
+                NavigableMap<String, Long> indexesBefore = q.namedTailerIndexes();
+
+                assertThrows(IllegalArgumentException.class,
+                        () -> q.createTailer(replicated + ".LOCK"));
+
+                assertEquals(lockBefore, q.tableStoreGet("index." + replicated + ".lock"));
+                assertEquals(versionBefore, version.getValue());
+                assertEquals(indexesBefore, q.namedTailerIndexes());
             }
         }
     }
 
     @Test
-    public void parkNamedTailerAcceptsExistingMixedCaseSuffix() {
+    public void parkNamedTailerRejectsExistingMixedCaseSuffixWithoutMutation() {
         File dir = getTmpDir();
         timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(61_000));
         writeDailyExcerpts(dir, 1);
 
         try (SingleChronicleQueue q = builder(dir).build()) {
             final long index = q.rollCycle().toIndex(q.firstCycle(), 0);
-            try (ExcerptTailer tailer = q.createTailer("gateway.LOCK")) {
-                assertTrue(tailer.moveToIndex(index));
-            }
-            assertEquals(NamedTailerParkResult.PARKED, q.parkNamedTailer("gateway.LOCK"));
+            q.tableStorePut("index.gateway.LOCK", index);
+
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                    () -> q.parkNamedTailer("gateway.LOCK"));
+            assertTrue(exception.getMessage().contains("would collide with the metadata"));
             expectException("Named tailer id 'gateway.LOCK'");
-            assertEquals(Long.valueOf(0), q.namedTailerIndexes().get("gateway.LOCK"));
+            assertEquals(Long.valueOf(index), q.namedTailerIndexes().get("gateway.LOCK"));
         }
     }
 
@@ -280,20 +330,17 @@ public class SingleChronicleQueueNamedTailerMetadataTest extends QueueTestCommon
     }
 
     @Test
-    public void namedTailerMetadataApisRejectExactLowercaseReservedSuffixesOnly() {
+    public void namedTailerMetadataApisRejectReservedSuffixesCaseInsensitively() {
         File dir = getTmpDir();
         timeProvider.currentTimeNanos(TimeUnit.DAYS.toNanos(62_000));
         writeDailyExcerpts(dir, 1);
 
         try (SingleChronicleQueue q = builder(dir).build()) {
-            assertThrows(IllegalArgumentException.class, () -> q.indexForId("gateway.lock"));
-            assertThrows(IllegalArgumentException.class, () -> q.indexVersionForId("gateway.version"));
-            try (LongValue index = q.indexForId("gateway.LOCK");
-                 LongValue version = q.indexVersionForId("gateway.Version");
-                 TableStoreWriteLock lock = q.versionIndexLockForId("gateway.Version")) {
-                assertNotNull(index);
-                assertNotNull(version);
-                assertNotNull(lock);
+            for (String name : new String[]{"gateway.lock", "gateway.LOCK",
+                    "gateway.version", "gateway.Version"}) {
+                assertThrows(IllegalArgumentException.class, () -> q.indexForId(name));
+                assertThrows(IllegalArgumentException.class, () -> q.indexVersionForId(name));
+                assertThrows(IllegalArgumentException.class, () -> q.versionIndexLockForId(name));
             }
         }
     }
