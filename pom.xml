@@ -260,6 +260,8 @@
                 <configuration>
                     <forkCount>${surefire.forkCount}</forkCount>
                     <reuseForks>${surefire.reuseForks}</reuseForks>
+                    <!-- Keep the first failure visible, including when CI requests retries. -->
+                    <rerunFailingTestsCount>0</rerunFailingTestsCount>
                     <runOrder>hourly</runOrder>
                     <!-- propagate JPMS flags from parent into unit test JVMs -->
                     <argLine>${argLine} ${jvm.requiredArgs}</argLine>
