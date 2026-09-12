@@ -422,7 +422,7 @@
             </activation>
             <properties>
                 <!-- Reduce competing mapped-file workloads on macOS. -->
-                <surefire.forkCount>2</surefire.forkCount>
+                <surefire.forkCount>1</surefire.forkCount>
             </properties>
         </profile>
         <profile>
