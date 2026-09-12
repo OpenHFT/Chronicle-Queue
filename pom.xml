@@ -21,8 +21,6 @@
     <description>Java library for persisted low latency messaging (Java 8+)</description>
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
-        <surefire.forkCount>4</surefire.forkCount>
-        <surefire.reuseForks>true</surefire.reuseForks>
         <!-- Define the target coverage thresholds as properties -->
         <jacoco.line.coverage>0.788</jacoco.line.coverage>
         <jacoco.branch.coverage>0.713</jacoco.branch.coverage>
@@ -258,8 +256,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <forkCount>${surefire.forkCount}</forkCount>
-                    <reuseForks>${surefire.reuseForks}</reuseForks>
+                    <forkCount>4</forkCount>
+                    <reuseForks>true</reuseForks>
                     <!-- Keep the first failure visible, including when CI requests retries. -->
                     <rerunFailingTestsCount>0</rerunFailingTestsCount>
                     <runOrder>hourly</runOrder>
@@ -416,18 +414,6 @@
     </build>
 
     <profiles>
-        <profile>
-            <id>macos-tests</id>
-            <activation>
-                <os>
-                    <family>mac</family>
-                </os>
-            </activation>
-            <properties>
-                <!-- Isolate JVM state between test classes while diagnosing Mac failures. -->
-                <surefire.reuseForks>false</surefire.reuseForks>
-            </properties>
-        </profile>
         <profile>
             <id>assertions</id>
             <properties>
