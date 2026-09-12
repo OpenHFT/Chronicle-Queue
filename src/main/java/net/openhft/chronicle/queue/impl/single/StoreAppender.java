@@ -33,6 +33,7 @@ import java.nio.BufferOverflowException;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
+import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
 import static net.openhft.chronicle.wire.Wires.*;
 
 /**
@@ -98,14 +99,18 @@ class StoreAppender extends AbstractCloseable
 
         try {
             int lastExistingCycle = queue.lastCycle();
-            int firstCycle = queue.firstCycle();
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty supplies maximum-cycle integration evidence;
+            //! it does not discriminate this constructor's scan alone, since a sole maximum roll has no older roll
+            //! to seal. Retain semantic emptiness here so that valid roll still receives the constructor's normal
+            //! store inspection/reset lifecycle rather than silently bypassing it as an empty Queue.
+            int firstCycle = queue.firstPublishedCycle();
             long start = System.nanoTime();
             int scannedCycle = Integer.MIN_VALUE;
             final WriteLock writeLock = this.queue.writeLock();
             writeLock.lock();
             try {
                 // Process cycles and handle EOF markers
-                if (firstCycle != Integer.MAX_VALUE) {
+                if (firstCycle != UNSET_CONTEXT) {
                     // Backing down until EOF-ed cycle is encountered
                     for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
@@ -535,7 +540,10 @@ class StoreAppender extends AbstractCloseable
         count++;
         try {
             return prepareAndReturnWriteContext(metaData);
-        } catch (RuntimeException e) {
+        //! DocumentAcquisitionFailureTest#acquisitionErrorReleasesLockAndRestoresCount injects before Wire header
+        //! entry without a listener. Error must restore nesting just like RuntimeException or later writes reuse
+        //! a context that never opened; the test does not simulate arbitrary partial Wire mutation.
+        } catch (RuntimeException | Error e) {
             count--;
             throw e;
         }
@@ -563,12 +571,10 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                int cycle = queue.cycle();
-                if (wire == null)
-                    setWireIfNull(cycle);
-
-                if (this.cycle != cycle)
-                    rollCycleTo(cycle);
+                //! writingDocumentIgnoresClockRollback and stalledWriterFollowsAnotherWriterToLaterCycle require
+                //! documents to use the same no-backward destination selector as sequential byte writes; retaining
+                //! the former local-clock selection lets the two public append paths choose different generations.
+                moveToCycleForAppend();
 
                 long safeLength = queue.overlapSize();
                 resetPosition();
@@ -579,7 +585,9 @@ class StoreAppender extends AbstractCloseable
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
-            } catch (RuntimeException e) {
+            //! DocumentAcquisitionFailureTest#acquisitionErrorReleasesLockAndRestoresCount also requires the shared
+            //! write lock to be released on Error. Counting cleanup alone leaves every subsequent appender blocked.
+            } catch (RuntimeException | Error e) {
                 writeLock.unlock();
                 throw e;
             }
@@ -675,9 +683,79 @@ class StoreAppender extends AbstractCloseable
      * @param cycle the cycle for which the wire should be set
      */
     private void setWireIfNull(final int cycle) {
+        setWireIfNull(cycle, WireStoreSupplier.CreateStrategy.CREATE);
+    }
+
+    private void setWireIfNull(final int cycle, WireStoreSupplier.CreateStrategy createStrategy) {
+        //! unusedAppenderDoesNotCreateDeletedPublishedMaximum requires a caller-selected acquisition strategy: the
+        //! unconditional CREATE here would recreate an absent generation already published in Queue metadata.
         normaliseEOFs0(cycle);
 
-        setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
+        setCycle2(cycle, createStrategy);
+        if (store == null)
+            throw missingPublishedCycle(cycle);
+    }
+
+    /**
+     * Moves an ordinary append to the latest cycle known by either time, this appender, or another
+     * writer. Time-provider rollback must not move an appender back into a historical roll.
+     */
+    private void moveToCycleForAppend() {
+        //! deletingOldestHistoricalRollPreservesPublishedMaximum and
+        //! deletingWholeQueueOfflineAllowsClockSelectedInitialCycle distinguish a retained Queue with a published
+        //! high-water mark from a genuinely new Queue. The shared maximum therefore remains the ordinary-write floor
+        //! while metadata exists; only a newer target may be created.
+        final int publishedCycle = queue.lastPublishedCycle();
+        final boolean hasPublishedCycle = publishedCycle != UNSET_CONTEXT;
+        // Supported retention keeps the published maximum; taking it with time prevents clock
+        // rollback while still allowing a writer to advance normally.
+        final int targetCycle = hasPublishedCycle ? Math.max(queue.cycle(), publishedCycle) : queue.cycle();
+        final boolean publishedCycleMustExist = hasPublishedCycle && targetCycle == publishedCycle;
+        if (wire == null) {
+            //! incompletePublishedCycleIsReinitialised, stalledAppenderReinitialisesIncompletePublishedCycle and StoreTailerTest's
+            //! shouldHaltAtPartiallyInitialisedRollCycle require REINITIALIZE_EXISTING rather than READ_ONLY:
+            //! it still refuses an absent pathname, but preserves Queue's established recovery of an existing
+            //! generation whose first header never completed.
+            setWireIfNull(targetCycle, publishedCycleMustExist
+                    ? WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING
+                    : WireStoreSupplier.CreateStrategy.CREATE);
+            return;
+        }
+
+        //! steadyStateAppenderAndTailerReusePublishedCycleStore requires the strict-forward guard: same-cycle writes
+        //! must reuse the acquired store rather than repeat store-pool and filesystem work for every document. A
+        //! missing published destination is therefore checked when an appender opens or transitions, not by adding
+        //! a pathname check to each append on an already-current mapped store.
+        if (cycle < targetCycle) {
+            if (publishedCycleMustExist)
+                requirePublishedCycle(publishedCycle);
+            rollCycleTo(targetCycle, false, publishedCycleMustExist);
+        }
+    }
+
+    private void requirePublishedCycle(int publishedCycle) {
+        //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum requires a known-missing destination to fail before
+        //! rollCycleTo seals the appender's current store, so the transition needs this separate preflight.
+        //! stalledAppenderReinitialisesIncompletePublishedCycle mutation-fails if that probe merely reads the
+        //! published generation: an interrupted first header is recoverable, while REINITIALIZE_EXISTING still
+        //! returns null instead of creating a genuinely absent pathname.
+        final SingleChronicleQueueStore ignored = queue.pool.acquire(
+                publishedCycle, WireStoreSupplier.CreateStrategy.REINITIALIZE_EXISTING, null);
+        try {
+            if (ignored == null)
+                throw missingPublishedCycle(publishedCycle);
+        } finally {
+            //! AppenderInspectionLifecycleTest#publishedCycleProbePairsStoreFileEvents counts a real stalled-writer
+            //! transition. Direct close releases the mapping but omits the pool's matching onReleased event, so
+            //! retention listeners would permanently count this temporary inspection as an acquired store.
+            if (ignored != null)
+                queue.pool.closeStore(ignored);
+        }
+    }
+
+    private IllegalStateException missingPublishedCycle(int publishedCycle) {
+        return new IllegalStateException("Highest/current roll " + publishedCycle
+                + " disappeared while Queue metadata remains");
     }
 
     /**
@@ -780,12 +858,9 @@ class StoreAppender extends AbstractCloseable
         checkAppendLock();
         writeLock.lock();
         try {
-            int cycle = queue.cycle();
-            if (wire == null)
-                setWireIfNull(cycle);
-
-            if (this.cycle != cycle)
-                rollCycleTo(cycle);
+            //! sequentialWriteBytesIgnoresClockRollback fails if this entry point retains the former clock-only
+            //! selection: bytes would move backwards while writingDocument() follows the shared published maximum.
+            moveToCycleForAppend();
 
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
@@ -851,7 +926,7 @@ class StoreAppender extends AbstractCloseable
         if (wire == null)
             setWireIfNull(cycle);
 
-        /// if the header number has changed then we will have roll
+        // If the header number has changed, the appender has rolled.
         if (this.cycle != cycle)
             rollCycleTo(cycle, this.cycle > cycle);
 
@@ -989,6 +1064,10 @@ class StoreAppender extends AbstractCloseable
      * @param suppressEOF flag to suppress writing EOF markers
      */
     private void rollCycleTo(final int cycle, boolean suppressEOF) {
+        rollCycleTo(cycle, suppressEOF, false);
+    }
+
+    private void rollCycleTo(final int cycle, boolean suppressEOF, boolean existingOnly) {
 
         // only a valid check if the wire was set.
         if (this.cycle == cycle)
@@ -999,14 +1078,30 @@ class StoreAppender extends AbstractCloseable
             store.writeEOF(wire, timeoutMS());
         }
 
-        int lastExistingCycle = queue.lastCycle();
+        //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fails if rollover calls
+        //! lastCycle(): a directory refresh can replace the cooperating writer's destination with an unrelated
+        //! unreported filename and adds filesystem I/O to the append path. testCountExcerptsWhenTheCycleIsRolled,
+        //! testRollCycle and testRead2 pin the corresponding publication and modification-count effects of using the
+        //! mapped maximum here.
+        int lastPublishedCycle = queue.lastPublishedCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
-        if (lastExistingCycle < cycle && lastExistingCycle != this.cycle && lastExistingCycle >= 0) {
-            setCycle2(lastExistingCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
+        if (lastPublishedCycle != UNSET_CONTEXT
+                && lastPublishedCycle < cycle
+                && lastPublishedCycle != this.cycle) {
+            setCycle2(lastPublishedCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
+            if (store == null)
+                throw missingPublishedCycle(lastPublishedCycle);
             rollCycleTo(cycle);
         } else {
-            setCycle2(cycle, WireStoreSupplier.CreateStrategy.CREATE);
+            //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum requires an equality transition to open the
+            //! published target without CREATE; otherwise a removed generation is silently replaced after the
+            //! source store has been sealed.
+            setCycle2(cycle, existingOnly
+                    ? WireStoreSupplier.CreateStrategy.READ_ONLY
+                    : WireStoreSupplier.CreateStrategy.CREATE);
+            if (existingOnly && store == null)
+                throw missingPublishedCycle(cycle);
         }
     }
 
@@ -1261,6 +1356,10 @@ class StoreAppender extends AbstractCloseable
         public void close(boolean unlock) {
             if (!closePreconditionsAreSatisfied()) return;
 
+            //! BufferedDocumentOwnershipTest#bufferedRollbackDoesNotUnlockAnotherAppender fails if private-buffer
+            //! rollback releases the PID-owned lock held by another appender. A buffered context owns no mapped
+            //! write lock; its eventual writeBytes call acquires/releases its own lock, including on failure.
+            unlock &= !buffered;
             try {
                 handleInterrupts();
                 if (handleRollbackOnClose()) return;
@@ -1270,8 +1369,6 @@ class StoreAppender extends AbstractCloseable
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
-                        unlock = false;
-                        wire.clear();
                     } else {
                         writeBytesInternal(wire.bytes(), metaData);
                         wire = StoreAppender.this.wire;
@@ -1283,7 +1380,15 @@ class StoreAppender extends AbstractCloseable
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
-                closeCleanup(unlock);
+                //! BufferedDocumentOwnershipTest#failedBufferedFlushDoesNotLeakPayloadIntoNextDocument rejects a
+                //! flush before copying, then reuses the buffer. Clear even on failure: success-only clearing makes
+                //! the next document publish payload from the rejected operation. Cleanup still runs if clear fails.
+                try {
+                    if (buffered && wire != null)
+                        wire.clear();
+                } finally {
+                    closeCleanup(unlock);
+                }
             }
         }
 

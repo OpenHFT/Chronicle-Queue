@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.harness.WeeklyRollCycle;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.Test;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -144,6 +146,43 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
             String name = weeklyCache.resourceFor(cycle).text;
             int parsed = weeklyCache.parseCount(name);
             assertEquals(cycle, parsed);
+        }
+    }
+
+    @Test
+    public void namedWeeklyFormatRoundTripsCycle() {
+        final RollingResourcesCache weeklyCache = new RollingResourcesCache(
+                RollCycles.WEEKLY, RollCycles.WEEKLY.defaultEpoch(), File::new, File::getName);
+        final int current = RollCycles.WEEKLY.current(System::currentTimeMillis,
+                RollCycles.WEEKLY.defaultEpoch());
+
+        for (int cycle = current - 10; cycle <= current + 10; cycle++) {
+            final String name = weeklyCache.resourceFor(cycle).text;
+            assertEquals("weekly filename " + name, cycle, weeklyCache.parseCount(name));
+        }
+    }
+
+    @Test
+    public void namedWeeklyFormatRoundTripsLocaleYearBoundaries() {
+        final Locale originalFormatLocale = Locale.getDefault(Locale.Category.FORMAT);
+        try {
+            for (Locale locale : new Locale[]{Locale.US, Locale.UK, Locale.FRANCE}) {
+                Locale.setDefault(Locale.Category.FORMAT, locale);
+                final RollingResourcesCache weeklyCache = new RollingResourcesCache(
+                        RollCycles.WEEKLY, RollCycles.WEEKLY.defaultEpoch(), File::new, File::getName);
+                final long firstMillis = Instant.parse("2018-12-16T00:00:00Z").toEpochMilli();
+                final int firstCycle = Math.toIntExact(Math.floorDiv(
+                        firstMillis - RollCycles.WEEKLY.defaultEpoch(),
+                        RollCycles.WEEKLY.lengthInMillis()));
+
+                for (int cycle = firstCycle; cycle < firstCycle + 170; cycle++) {
+                    final String name = weeklyCache.resourceFor(cycle).text;
+                    assertEquals(locale + " weekly filename " + name,
+                            cycle, weeklyCache.parseCount(name));
+                }
+            }
+        } finally {
+            Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale);
         }
     }
 
