@@ -949,7 +949,7 @@ class StoreTailer extends AbstractCloseable
             final boolean found = cycle(firstCycle);
             if (found)
                 state = FOUND_IN_CYCLE;
-            else if (store != null)
+            else
                 throw new MissingStoreFileException("Missing first store file cycle=" + firstCycle);
         } else if (store != null && !store.file().exists()) {
             // The tailer is already positioned on this cycle, so the block above short-circuits,
@@ -1589,7 +1589,8 @@ class StoreTailer extends AbstractCloseable
         wireForIndex = null;
         releaseStore();
         setCycle(Integer.MIN_VALUE);
-        index0(Long.MIN_VALUE);
+        // Match the public empty-queue index; Long.MIN_VALUE is an internal lookup sentinel.
+        index0(0);
         lastReadIndex = 0;
         indexAtCreation = Long.MIN_VALUE;
         readingDocumentFound = false;

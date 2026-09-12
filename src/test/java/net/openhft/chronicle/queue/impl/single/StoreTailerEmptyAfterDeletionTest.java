@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -23,6 +24,7 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 
 public class StoreTailerEmptyAfterDeletionTest extends QueueTestCommon {
@@ -58,10 +60,9 @@ public class StoreTailerEmptyAfterDeletionTest extends QueueTestCommon {
 
     private void verifyEmptyRecovery(Position initialPosition, Position operation,
                                      boolean readOnly) throws IOException {
-        final TailerPosition emptyPosition = freshEmptyPosition(
-                temporaryFolder.newFolder(readOnly ? "empty-read-only-baseline" : "empty-writable-baseline"));
+        final SetTimeProvider time = new SetTimeProvider(System.currentTimeMillis());
         final File directory = temporaryFolder.newFolder(readOnly ? "read-only" : "writable");
-        try (SingleChronicleQueue writerQueue = newQueue(directory, false);
+        try (SingleChronicleQueue writerQueue = newQueue(directory, false, time);
              ExcerptAppender appender = writerQueue.createAppender()) {
             appender.writeText("only-entry");
         }
@@ -73,33 +74,52 @@ public class StoreTailerEmptyAfterDeletionTest extends QueueTestCommon {
                     .orElseThrow(() -> new AssertionError("queue roll file not found"));
         }
 
-        try (SingleChronicleQueue queue = newQueue(directory, readOnly);
+        try (SingleChronicleQueue queue = newQueue(directory, readOnly, time);
              ExcerptTailer tailer = queue.createTailer()) {
             initialPosition.move(tailer);
             Files.delete(rollFile);
 
-            operation.move(tailer);
+            for (int attempt = 0; attempt < 3; attempt++) {
+                operation.move(tailer);
+                assertEquals("public empty-queue index", 0, tailer.index());
+                assertEquals("cycle", Integer.MIN_VALUE, tailer.cycle());
+                assertEquals("state", TailerState.UNINITIALISED, tailer.state());
+                assertNull("deleted store must be released", tailer.currentFile());
+                try (DocumentContext document = tailer.readingDocument()) {
+                    assertFalse("empty tailer must not expose a document", document.isPresent());
+                }
+                assertFalse("a missing position must remain unavailable", tailer.moveToIndex(0));
+            }
 
-            assertEquals("index", emptyPosition.index, tailer.index());
-            assertEquals("cycle", emptyPosition.cycle, tailer.cycle());
-            assertEquals("state", emptyPosition.state, tailer.state());
-            assertNull("deleted store must be released", tailer.currentFile());
+            time.advanceMillis(RollCycles.FAST_DAILY.lengthInMillis());
+            final long nextIndex;
+            try (SingleChronicleQueue writerQueue = newQueue(directory, false, time);
+                 ExcerptAppender appender = writerQueue.createAppender()) {
+                appender.writeText("next-entry");
+                nextIndex = appender.lastIndexAppended();
+            }
+            queue.refreshDirectoryListing();
+            operation.move(tailer);
+            assertEquals("position in the surviving later cycle",
+                    operation == Position.START ? nextIndex : nextIndex + 1, tailer.index());
+            if (operation == Position.END) {
+                try (DocumentContext document = tailer.readingDocument()) {
+                    assertFalse("toEnd must remain after the later message", document.isPresent());
+                }
+                tailer.toStart();
+            }
             try (DocumentContext document = tailer.readingDocument()) {
-                assertFalse("empty tailer must not expose a document", document.isPresent());
+                assertTrue("the surviving later message must be readable", document.isPresent());
+                assertEquals(nextIndex, document.index());
+                assertEquals("next-entry", document.wire().getValueIn().text());
             }
         }
     }
 
-    private static TailerPosition freshEmptyPosition(File directory) {
-        try (SingleChronicleQueue queue = newQueue(directory, false);
-             ExcerptTailer tailer = queue.createTailer()) {
-            return new TailerPosition(tailer.index(), tailer.cycle(), tailer.state());
-        }
-    }
-
-    private static SingleChronicleQueue newQueue(File directory, boolean readOnly) {
+    private static SingleChronicleQueue newQueue(File directory, boolean readOnly, SetTimeProvider time) {
         return SingleChronicleQueueBuilder.binary(directory)
                 .rollCycle(RollCycles.FAST_DAILY)
+                .timeProvider(time)
                 .testBlockSize()
                 .readOnly(readOnly)
                 .build();
@@ -122,15 +142,4 @@ public class StoreTailerEmptyAfterDeletionTest extends QueueTestCommon {
         abstract void move(ExcerptTailer tailer);
     }
 
-    private static final class TailerPosition {
-        final long index;
-        final int cycle;
-        final TailerState state;
-
-        TailerPosition(long index, int cycle, TailerState state) {
-            this.index = index;
-            this.cycle = cycle;
-            this.state = state;
-        }
-    }
 }
