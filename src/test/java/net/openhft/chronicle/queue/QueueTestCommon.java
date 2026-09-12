@@ -233,20 +233,36 @@ public class QueueTestCommon {
 
     @After
     public void afterChecks() {
-        preAfter();
+        Throwable failure = runAfterCheck(null, this::preAfter);
         SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
-        CleaningThread.performCleanup(Thread.currentThread());
+        failure = runAfterCheck(failure, () -> CleaningThread.performCleanup(Thread.currentThread()));
 
         // find any discarded resources.
-        AbstractCloseable.waitForCloseablesToClose(100);
+        failure = runAfterCheck(failure, () -> AbstractCloseable.waitForCloseablesToClose(100));
 
         if (finishedNormally) {
-            assertReferencesReleased();
-            checkThreadDump();
-            checkExceptions();
+            failure = runAfterCheck(failure, this::assertReferencesReleased);
+            failure = runAfterCheck(failure, this::checkThreadDump);
         }
 
-        tearDown();
+        failure = runAfterCheck(failure, this::tearDown);
+        if (finishedNormally)
+            failure = runAfterCheck(failure, this::checkExceptions);
+        Jvm.resetExceptionHandlers();
+        if (failure != null)
+            throw Jvm.rethrow(failure);
+    }
+
+    private static Throwable runAfterCheck(Throwable failure, Runnable check) {
+        try {
+            check.run();
+        } catch (Throwable next) {
+            if (failure == null)
+                return next;
+            if (failure != next)
+                failure.addSuppressed(next);
+        }
+        return failure;
     }
 
     protected void preAfter() {
@@ -257,12 +273,16 @@ public class QueueTestCommon {
      * retry transient deletion failures, retaining the existing maximum depth of two.
      */
     protected static void deleteDirAfterCleanup(File dir) {
+        deleteDirAfterCleanup(dir, 2);
+    }
+
+    private static void deleteDirAfterCleanup(File dir, int maxDepth) {
         final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(DIRECTORY_DELETE_TIMEOUT_MS);
         do {
             BackgroundResourceReleaser.releasePendingResources();
             if (!dir.exists())
                 return;
-            IOTools.deleteDirWithFiles(dir, 2);
+            IOTools.deleteDirWithFiles(dir, maxDepth);
             if (!dir.exists())
                 return;
             Jvm.pause(10);
@@ -270,17 +290,16 @@ public class QueueTestCommon {
 
         if (dir.exists())
             fail("Could not delete test directory " + dir.getAbsolutePath()
-                    + " within " + DIRECTORY_DELETE_TIMEOUT_MS + " ms (maximum depth 2); remaining entries: "
+                    + " within " + DIRECTORY_DELETE_TIMEOUT_MS + " ms (maximum depth " + maxDepth + "); remaining entries: "
                     + Arrays.toString(dir.list()));
     }
 
     protected void tearDown() {
-        BackgroundResourceReleaser.releasePendingResources();
-        // should be able to remove tmp dirs
-        tmpDirs.forEach(file -> {
-            if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
-                Jvm.error().on(getClass(), "Could not delete tmp dir " + file);
-            }
-        });
+        Throwable failure = runAfterCheck(null, BackgroundResourceReleaser::releasePendingResources);
+        // Preserve the fallback's depth limit while making every owned directory strict.
+        for (File file : tmpDirs)
+            failure = runAfterCheck(failure, () -> deleteDirAfterCleanup(file, 20));
+        if (failure != null)
+            throw Jvm.rethrow(failure);
     }
 }
