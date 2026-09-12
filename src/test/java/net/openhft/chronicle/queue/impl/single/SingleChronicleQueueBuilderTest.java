@@ -73,12 +73,12 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         assertTrue(new File(TEST_QUEUE_FILE).length() < (1 << 20));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws IOException {
         final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
         tempFile.deleteOnExit();
-        SingleChronicleQueueBuilder.
-                binary(tempFile);
+        assertThrows("A queue path naming a file with a non-queue extension must be rejected",
+                IllegalArgumentException.class, () -> SingleChronicleQueueBuilder.binary(tempFile));
     }
 
     @Test
@@ -92,13 +92,14 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
         assertEquals(98765, b2.bufferCapacity());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void setAllNullFieldsShouldFailWithDifferentHierarchy() {
         OneExtendedBuilder b1 = new OneExtendedBuilder();
         OtherExtendedBuilder b2 = new OtherExtendedBuilder();
         b2.bufferCapacity(98765);
         b1.blockSize(1234567);
-        b2.setAllNullFields(b1);
+        assertThrows("Copying builder fields between different subclass hierarchies must be rejected",
+                IllegalArgumentException.class, () -> b2.setAllNullFields(b1));
     }
 
     static class OneExtendedBuilder extends SingleChronicleQueueBuilder {
