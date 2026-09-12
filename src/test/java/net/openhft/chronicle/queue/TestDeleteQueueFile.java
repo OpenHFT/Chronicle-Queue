@@ -92,7 +92,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
     public void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
