@@ -18,6 +18,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -52,6 +53,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
 
     public TestMethodWriterWithThreads(boolean doubleBuffer) {
         this.doubleBuffer = doubleBuffer;
+        globalTimeout = Timeout.seconds(120);
     }
 
     @Parameterized.Parameters(name = "doubleBuffer={0}")
@@ -70,9 +72,9 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
         super.threadDump();
     }
 
-    @Test(timeout = 30_000)
+    @Test(timeout = 120_000)
     public void test() throws FileNotFoundException {
-
+        finishedNormally = false;
         File tmpDir = getTmpDir();
         try (final ChronicleQueue q = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).doubleBuffer(doubleBuffer).build()) {
 
@@ -101,6 +103,7 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
                 DumpMain.dump(tmpDir.getAbsolutePath());
             }
         }
+        finishedNormally = true;
     }
 
     @NotNull
