@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -187,6 +188,7 @@ public class WriteReadTextTest extends QueueTestCommon {
                 }
             }
         }
+        BackgroundResourceReleaser.releasePendingResources();
         IOTools.deleteDirWithFiles(myPath);
     }
 }

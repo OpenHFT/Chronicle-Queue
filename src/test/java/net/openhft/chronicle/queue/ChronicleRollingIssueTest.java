@@ -6,7 +6,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
@@ -14,6 +13,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -108,11 +108,7 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                 thread.interrupt();
                 thread.join(1000);
             }
-            try {
-                IOTools.deleteDirWithFiles(path, 2);
-            } catch (IORuntimeException e) {
-                Jvm.debug().on(ChronicleRollingIssueTest.class, "Failed to clean up test directory", e);
-            }
+            deleteDirAfterCleanup(new File(path));
         }
     }
 }

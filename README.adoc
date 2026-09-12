@@ -692,7 +692,7 @@ We refer to this 4-byte header, along with your excerpt, as a document.
 Strictly speaking Chronicle Queue can be used to read and write documents.
 
 NOTE:  Within this 4-byte header we also reserve a few bits for a number of internal operations, such as locking, to make Chronicle Queue thread-safe across both processors and threads.
-The important thing to note is that because of this, you can’t strictly convert the 4 bytes to an integer to find the length of your data blob.
+The important thing to note is that because of this, you can't strictly convert the 4 bytes to an integer to find the length of your data blob.
 
 As stated before, Chronicle Queue uses an _appender_ to write to the queue and a _tailer_ to read from the queue.
 Unlike other java queuing solutions, messages are not lost when they are read with a tailer.
@@ -711,7 +711,7 @@ Chronicle Queue uses the following low-level interface to write the data:
 [source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
-      dc.wire().write().text(“your text data“);
+      dc.wire().write().text("your text data");
 }
 ----
 
@@ -723,7 +723,7 @@ Each Chronicle Queue excerpt has a unique index.
 [source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
-    dc.wire().write().text(“your text data“);
+    dc.wire().write().text("your text data");
     System.out.println("your data was store to index="+ dc.index());
 }
 ----
@@ -1570,15 +1570,15 @@ The default value is 0.
 '''
 ==== File handles and flushing data to the disk
 
-As mentioned previously Chronicle Queue stores its data off-heap in a ‘.cq4’ file.
+As mentioned previously Chronicle Queue stores its data off-heap in a '.cq4' file.
 So whenever you wish to append data to this file or read data into this file, chronicle queue will create a file handle.
-Typically, Chronicle Queue will create a new ‘.cq4’ file every day.
+Typically, Chronicle Queue will create a new '.cq4' file every day.
 However, this could be changed so that you can create a new file every hour, every minute or even every second.
 
 If we create a queue file every second, we would refer to this as SECONDLY rolling.
 Of course, creating a new file every second is a little extreme, but it's a good way to illustrate the following point.
 When using secondly rolling, If you had written 10 seconds worth of data and then you wish to read this data, chronicle would have to scan across 10 files.
-To reduce the creation of the file handles, chronicle queue cashes them lazily and when it comes to writing data to the queue files, care-full consideration must be taken when closing the files, because on most OS’s a close of the file, will force any data that has been appended to the file, to be flushed to disk, and if we are not careful this could stall your application.
+To reduce the creation of the file handles, chronicle queue cashes them lazily and when it comes to writing data to the queue files, care-full consideration must be taken when closing the files, because on most OS's a close of the file, will force any data that has been appended to the file, to be flushed to disk, and if we are not careful this could stall your application.
 
 '''
 ==== Pretoucher and its configuration

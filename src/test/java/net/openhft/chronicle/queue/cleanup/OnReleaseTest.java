@@ -63,11 +63,13 @@ public class OnReleaseTest extends QueueTestCommon {
                 appender.writeText("hello-" + i);
                 assertNotNull(tailer.readText());
                 BackgroundResourceReleaser.releasePendingResources();
+
                 assertEquals(i, writeRoll.get());
                 assertEquals(i, readRoll.get());
                 stp.advanceMillis(66_000);
             }
         } finally {
+            BackgroundResourceReleaser.releasePendingResources();
             IOTools.deleteDirWithFiles(path);
         }
     }

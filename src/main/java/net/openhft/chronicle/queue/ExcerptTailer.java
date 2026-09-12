@@ -122,7 +122,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * queue.lastCycle() is cached, as finding the last cycle is expensive, it requires asking the
      * directory for the Files.list() so, this cache is only refreshed if the call toEnd() is in a
      * new millisecond. Hence, a whole milliseconds with of data could be added to the
-     * chronicle-queue that toEnd() won’t see. For appenders that are using the same queue
+     * chronicle-queue that toEnd() won't see. For appenders that are using the same queue
      * instance ( and with then same JVM ), they can be informed that the last cycle has
      * changed, this will yield better results, but atomicity can still not be guaranteed.
      *
