@@ -17,6 +17,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
@@ -92,6 +93,25 @@ public class InternalRollFileCleanupMainTest extends QueueTestCommon {
         assertEquals("park removes no roll files", 5, rollFiles(dir));
         try (SingleChronicleQueue reopened = builder(dir, time).build()) {
             assertEquals("--park must reset the committed tailer index to 0",
+                    0L, reopened.namedTailerIndexes().get("dead").longValue());
+        }
+    }
+
+    @Test
+    public void reservedParkNamesWarnWithoutSkippingLaterValidNames() throws Exception {
+        File dir = Files.createTempDirectory("main-park-reserved").toFile();
+        SetTimeProvider time = new SetTimeProvider(TimeUnit.DAYS.toNanos(74_000));
+        writeDaily(dir, time, 5);
+        createLaggingTailer(dir, time, "dead");
+
+        expectException("refusing to park invalid named tailer");
+        boolean warned = InternalRollFileCleanupMain.sweep(
+                dir, 2, 0, false, Arrays.asList("dead.LoCk", "dead.VeRsIoN", "dead"), false);
+
+        assertTrue("reserved names must be reported as warnings", warned);
+        assertEquals("parking must not delete roll files", 5, rollFiles(dir));
+        try (SingleChronicleQueue reopened = builder(dir, time).build()) {
+            assertEquals("the valid name after the rejected names must still be parked",
                     0L, reopened.namedTailerIndexes().get("dead").longValue());
         }
     }

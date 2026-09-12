@@ -305,7 +305,18 @@ public final class InternalRollFileCleanupMain {
                                        Set<String> handledParkNames) {
         boolean warned = false;
         for (String name : park) {
-            final NamedTailerParkResult result = q.parkNamedTailer(name);
+            final NamedTailerParkResult result;
+            try {
+                result = q.parkNamedTailer(name);
+            } catch (IllegalArgumentException e) {
+                // Queue reports reserved names as caller errors; keep the per-name warning and
+                // continue parking valid names in the same sweep.
+                handledParkNames.add(name);
+                warned = true;
+                Jvm.warn().on(InternalRollFileCleanupMain.class,
+                        "refusing to park invalid named tailer " + name + " in " + queueDir.getName());
+                continue;
+            }
             switch (result) {
                 case PARKED:
                     handledParkNames.add(name);
@@ -316,12 +327,6 @@ public final class InternalRollFileCleanupMain {
                     handledParkNames.add(name);
                     warned = true;
                     warnRefusedPark(queueDir, name);
-                    break;
-                case INVALID_NAME:
-                    handledParkNames.add(name);
-                    warned = true;
-                    Jvm.warn().on(InternalRollFileCleanupMain.class,
-                            "refusing to park invalid named tailer " + name + " in " + queueDir.getName());
                     break;
                 case NOT_FOUND:
                     break;

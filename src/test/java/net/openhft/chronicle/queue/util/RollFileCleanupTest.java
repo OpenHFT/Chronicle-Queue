@@ -140,8 +140,8 @@ public class RollFileCleanupTest extends QueueTestCommon {
                 assertTrue(tailer.moveToIndex(pinned));
             }
 
-            assertEquals("null is not a named tailer id to park",
-                    NamedTailerParkResult.INVALID_NAME, q.parkNamedTailer(null));
+            assertThrows("null is not a named tailer id to park",
+                    NullPointerException.class, () -> q.parkNamedTailer(null));
             assertEquals("parking null must not mutate the tailer literally named \"null\"",
                     Long.valueOf(pinned), q.namedTailerIndexes().get("null"));
         }
@@ -162,13 +162,13 @@ public class RollFileCleanupTest extends QueueTestCommon {
             try {
                 final long lockBefore = q.tableStoreGet("index.gateway.lock");
 
-                assertEquals(NamedTailerParkResult.INVALID_NAME,
-                        q.parkNamedTailer("gateway.version"));
+                assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.version"));
                 assertEquals("reserved .version park must not reset version metadata",
                         versionBefore, version.getValue());
 
-                assertEquals(NamedTailerParkResult.INVALID_NAME,
-                        q.parkNamedTailer("gateway.lock"));
+                assertThrows(IllegalArgumentException.class,
+                        () -> q.parkNamedTailer("gateway.lock"));
                 assertEquals("reserved .lock park must not reset lock metadata",
                         lockBefore, q.tableStoreGet("index.gateway.lock"));
             } finally {
