@@ -52,6 +52,19 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
     LongValue acquireValueFor(CharSequence key, long defaultValue);
 
     /**
+     * Looks up an existing {@link LongValue} without creating a missing key.
+     *
+     * @param key the key to look up
+     * @return the existing value, or {@code null} if the key is missing
+     * @throws UnsupportedOperationException if this implementation does not support non-mutating lookup
+     */
+    default LongValue getValueFor(CharSequence key) {
+        //! A default preserves source compatibility for specialised TableStore implementations;
+        //! maintenance callers fail explicitly rather than silently creating a missing key.
+        throw new UnsupportedOperationException("Non-mutating lookup is not supported");
+    }
+
+    /**
      * Iterates over each key in the table store and applies the given {@link TableStoreIterator} on it.
      *
      * @param <A>          the type of the accumulator

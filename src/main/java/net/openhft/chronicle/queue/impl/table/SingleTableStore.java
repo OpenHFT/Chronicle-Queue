@@ -267,16 +267,31 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
+        return acquireOrGetValueFor(key, defaultValue, true);
+    }
+
+    @Override
+    public synchronized LongValue getValueFor(CharSequence key) {
+        //! TableStoreTest#getValueForDoesNotCreateMissingKey distinguishes lookup from acquire;
+        //! destructive planning must not mutate metadata while checking optional state.
+        return acquireOrGetValueFor(key, 0, false);
+    }
+
+    private LongValue acquireOrGetValueFor(CharSequence key, final long defaultValue, boolean createIfAbsent) {
 
         if (mappedBytes.isClosed())
             throw new ClosedIllegalStateException("Closed");
 
         mappedBytes.reserve(this);
+        //! SingleTableStoreForEachKeyGuardTest#laterScanSeesEntriesAppendedByAnotherStore requires
+        //! lookup to restore all four caller-visible cursors and limits after observing growth.
+        final long previousReadPosition = mappedBytes.readPosition();
+        final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWritePosition = mappedBytes.writePosition();
+        final long previousWriteLimit = mappedBytes.writeLimit();
+        boolean restoreScanState = true;
         try {
-            mappedBytes.readPosition(0);
-            // if we set readLimit to realCapacity then we can run into DecoratedBufferUnderflowException: readLimit failed. Limit: xx > writeLimit: yy
-            // while reading from a TableStore which is being written to
-            mappedBytes.readLimit(Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity()));
+            prepareForTableScan();
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
@@ -288,6 +303,11 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     return valueIn.int64ForBinding(null);
                 }
                 mappedBytes.readPosition(readPosition + length);
+            }
+            if (!createIfAbsent) {
+                //! TableStoreTest#getValueForDoesNotCreateMissingKey demonstrates that lookup must
+                //! return before the legacy acquire path appends a persistent metadata entry.
+                return null;
             }
             if (mappedBytes.isBackingFileReadOnly())
                 throw new IllegalStateException("key " + key + " does not exist in readOnly TableStore and cannot be created");
@@ -305,12 +325,18 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
             if (end >= endOfChunk + overlapSize)
                 throw new IllegalStateException("Misaligned write");
+            //! laterScanSeesEntriesAppendedByAnotherStore requires lookup paths to restore the
+            //! caller's limits; a completed creation deliberately keeps acquire's write position.
+            restoreScanState = false;
             return longValue;
 
         } catch (StreamCorruptedException | EOFException e) {
             throw new IORuntimeException(e);
 
         } finally {
+            if (restoreScanState)
+                restoreAfterTableScan(previousReadPosition, previousReadLimit,
+                        previousWritePosition, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -330,10 +356,16 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
         mappedBytes.reserve(this);
+        //! SingleTableStoreForEachKeyGuardTest#laterScanSeesEntriesAppendedByAnotherStore requires a
+        //! structural scan to restore read/write positions and limits while a previously bound value
+        //! remains usable. #scansWhileAnotherStoreAppendsKeys supplies concurrent stress coverage.
+        final long previousReadPosition = mappedBytes.readPosition();
+        final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWritePosition = mappedBytes.writePosition();
+        final long previousWriteLimit = mappedBytes.writeLimit();
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
-            mappedBytes.readPosition(0);
-            mappedBytes.readLimit(mappedBytes.realCapacity());
+            prepareForTableScan();
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
@@ -349,6 +381,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             throw new IORuntimeException(e);
 
         } finally {
+            //! laterScanSeesEntriesAppendedByAnotherStore fails if this scan leaks any cursor or
+            //! limit into later binding operations; the concurrent test supplies stress coverage.
+            restoreAfterTableScan(previousReadPosition, previousReadLimit,
+                    previousWritePosition, previousWriteLimit);
             mappedBytes.release(this);
         }
     }
@@ -361,5 +397,30 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public T metadata() {
         return metadata;
+    }
+
+    @Override
+    public boolean readOnly() {
+        //! ReadonlyNamedTailerIndexesTest#readsNamedTailersWithoutWriteAccessOrMetadataMutation
+        //! requires shared-lock lookup rather than an exclusive, potentially writing path.
+        return mappedBytes.isBackingFileReadOnly();
+    }
+
+    private void prepareForTableScan() {
+        mappedBytes.readPosition(0);
+        final long scanLimit = mappedBytes.realCapacity();
+        //! laterScanSeesEntriesAppendedByAnotherStore fails if this instance's stale local
+        //! writeLimit truncates a subsequent scan after another process grows the table.
+        mappedBytes.writeLimit(mappedBytes.capacity());
+        mappedBytes.readLimit(scanLimit);
+    }
+
+    private void restoreAfterTableScan(long readPosition, long readLimit,
+                                       long writePosition, long writeLimit) {
+        mappedBytes.readPosition(0);
+        mappedBytes.readLimit(readLimit);
+        mappedBytes.writePosition(writePosition);
+        mappedBytes.writeLimit(writeLimit);
+        mappedBytes.readPosition(readPosition);
     }
 }

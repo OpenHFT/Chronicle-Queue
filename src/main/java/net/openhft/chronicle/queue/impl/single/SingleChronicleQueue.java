@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
@@ -188,7 +189,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
 
-            if (metaStore.readOnly()) {
+            //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithMetadataUsesPersistedDirectoryListing
+            //! distinguishes a missing metadata table from a read-only mapped table; only the former
+            //! needs filesystem discovery, avoiding a directory scan on every read-only tail poll.
+            if (metaStore instanceof ReadonlyTableStore) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
             } else {
                 this.directoryListing = readOnly
@@ -1306,6 +1310,24 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Parses the numeric cycle represented by a roll filename using this Queue's persisted roll
+     * geometry. Callers must not infer cycle order from lexical filename order.
+     *
+     * @param file a {@code .cq4} roll file
+     * @return the numeric cycle encoded by the filename
+     */
+    public int cycleForFile(@NotNull File file) {
+        //! SCQMetaRollMetadataTest#cycleForFileUsesTheQueueRollGeometry checks the configured filename format, while
+        //! #cycleForFileUsesPersistedNonZeroEpochAfterRestart requires the persisted epoch and period after reopening.
+        //! Reconstructing a default-epoch parser would give maintenance the wrong numeric deletion boundary even if
+        //! it recognises the filename; lexical ordering is not a substitute for the Queue's stored geometry.
+        final String name = file.getName();
+        if (!name.endsWith(SUFFIX))
+            throw new IllegalArgumentException("Not a Queue roll file: " + file);
+        return fileNameToCycleFunction().applyAsInt(name);
+    }
+
+    /**
      * Removes the specified {@link StoreTailer} from the close listeners.
      *
      * @param storeTailer the StoreTailer to remove
@@ -1323,6 +1345,210 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     public TableStore<SCQMeta> metaStore() {
         return metaStore;
+    }
+
+    /**
+     * Returns a detached snapshot of committed named-tailer indexes collected by a single metadata
+     * scan. The result is not live: subsequent registrations and index changes are not reflected.
+     * This method allocates and locks the metadata file for one scan: writable stores take an
+     * exclusive lock and read-only stores take a shared lock. It is intended for periodic,
+     * off-critical-path maintenance or diagnostics rather than application polling. A read-only
+     * queue with no metadata file has no persisted named tailers and returns an empty snapshot.
+     * <p>
+     * For retention, the cycle a tailer is indexed to is {@code rollCycle().toCycle(index)}. Internal
+     * lock and version metadata entries are excluded; replicated named tailers are returned under
+     * their exact raw persisted ids. This differs from public named-tailer lookup, whose historical
+     * table-store key comparison is case-insensitive. Case-variant raw keys are reported separately
+     * so retention considers every persisted position. An index of {@code 0} means the tailer has
+     * never read, or has been parked, and should not be interpreted as a real roll-cycle position.
+     * Tailer ids ending in a metadata-shaped variant of {@code .lock} or {@code .version} are
+     * retained in the result when they can be distinguished from internal metadata, and a warning
+     * identifies each id that should be considered for migration. This is deliberately conservative
+     * for retention.
+     *
+     * @return a name-ordered snapshot of named-tailer id to committed index (empty if none)
+     * @throws UnsupportedOperationException if the metadata store does not support locked key scans
+     */
+    public NavigableMap<String, Long> namedTailerIndexes() {
+        //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesSupportsConcurrentRegistration,
+        //! #namedTailerRegistrationWaitsForExclusiveMetadataLock and
+        //! #namedTailerRegistrationWaitsForSharedMetadataLock require traversal to hold the same
+        //! structural lock as registration. The concurrent test establishes eventual visibility;
+        //! it does not claim independently observable atomicity between metadata keys.
+        if (!metaStore.readOnly())
+            return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
+        //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithoutMetadataHasNoNamedTailers demonstrates
+        //! that a read-only Queue lacking a mapped metadata table reports an empty snapshot without
+        //! creating metadata merely to inspect it.
+        if (!(metaStore instanceof SingleTableStore))
+            return new TreeMap<>();
+        File metadataFile = new File(path, QUEUE_METADATA_FILE);
+        return SingleTableStore.doWithSharedLock(metadataFile,
+                SingleChronicleQueue::scanNamedTailerIndexes, () -> metaStore);
+    }
+
+    private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
+        //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesReturnsDetachedSnapshot
+        //! requires newly allocated point-in-time state rather than a view backed by mapped values.
+        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
+            final String k = key.toString();
+            //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesReturnsCommittedTailerPositionsOnly
+            //! rejects Queue locks and replication bookkeeping from the retention-floor snapshot.
+            if (k.startsWith("index."))
+                acc.put(k.substring("index.".length()), value.int64());
+        });
+
+        return selectNamedTailerIndexes(metadataIndexes);
+    }
+
+    static NavigableMap<String, Long> selectNamedTailerIndexes(Map<String, Long> metadataIndexes) {
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        metadataIndexes.forEach((namedTailer, index) -> {
+            //! namedTailerIndexesReturnsCommittedTailerPositionsOnly fails if replicated lock/version
+            //! records are exposed as independent consumers and pin unrelated roll files.
+            if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
+                return;
+            //! SingleChronicleQueueNamedTailerMetadataTest#namedTailerIndexesKeepCaseVariantIdsSeparate
+            //! requires exact raw ids in the result because case-distinct persisted positions may
+            //! independently pin different rolls even though public lookup is case-insensitive.
+            result.put(namedTailer, index);
+            if (hasMetadataShapedSuffix(namedTailer))
+                Jvm.warn().on(SingleChronicleQueue.class,
+                        "Named tailer id '" + namedTailer + "' uses a metadata-shaped suffix "
+                                + "'.lock' or '.version'. It remains in this snapshot for safe retention; "
+                                + "consider migrating its committed position to an unambiguous id.");
+        });
+        return result;
+    }
+
+    private static boolean isInternalNamedTailerMetadata(Map<String, Long> metadataIndexes,
+                                                          String candidate) {
+        final String suffix;
+        if (candidate.endsWith(".lock"))
+            suffix = ".lock";
+        else if (candidate.endsWith(".version"))
+            suffix = ".version";
+        else
+            return false;
+
+        final String owner = candidate.substring(0, candidate.length() - suffix.length());
+        if (!owner.startsWith(REPLICATED_NAMED_TAILER_PREFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, owner))
+            return false;
+
+        // Older releases allowed a replicated tailer whose primary id collided with this record.
+        // Its own lock and version records make that legacy registration distinguishable.
+        return !containsKeyIgnoreCase(metadataIndexes, candidate + ".lock")
+                || !containsKeyIgnoreCase(metadataIndexes, candidate + ".version");
+    }
+
+    private static boolean containsKeyIgnoreCase(Map<String, Long> metadataIndexes, String candidate) {
+        //! namedTailerIndexesRetainsDistinguishableLegacyReservedIds covers metadata written by
+        //! releases whose case-insensitive lookup allowed differently-cased persisted keys.
+        for (String persistedKey : metadataIndexes.keySet()) {
+            if (persistedKey.equalsIgnoreCase(candidate))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
+     * same value a freshly created, never-read tailer has - so retention by named-tailer position
+     * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free
+     * disk matters more than its unread backlog: the registration remains (there is no clean way to
+     * delete a table-store entry), but it stops blocking removal. On restart the persisted index
+     * remains {@code 0}; a tailer whose stored index is {@code 0} resumes from {@code firstIndex()}
+     * at its next read - the oldest roll still present - exactly as a freshly created, never-read
+     * tailer does. Consequently rolls deleted below that surviving floor are never replayed to the
+     * parked consumer: parking declares its unread backlog, up to the oldest surviving roll at next
+     * read, discardable. The owning consumer must be stopped and its tailer closed before parking;
+     * an active owner can publish a later position and undo the maintenance decision.
+     * <p>
+     * Replicated named tailers (those whose id starts with the canonical lowercase
+     * {@link #REPLICATED_NAMED_TAILER_PREFIX}) are refused without change: their position is
+     * coordinated with sinks through version metadata, and a backward reset here would not bump
+     * that version, so parking one could desynchronise replication. A case variant of the prefix is
+     * invalid because table-store lookup is case-insensitive and could otherwise alias the
+     * canonical replicated tailer while bypassing its version lock. The result distinguishes the
+     * canonical safety refusal
+     * from an unknown name so operators can diagnose the outcome without duplicating Queue's
+     * metadata rules. Refusal is evaluated before metadata existence, so an unregistered id with a
+     * replicated-looking prefix also returns {@link NamedTailerParkResult#REFUSED_REPLICATED}. A
+     * {@code null} name or a reserved metadata suffix is a caller error rather than an operational
+     * outcome.
+     *
+     * @param name the named-tailer id to park
+     * @return the outcome of the parking attempt
+     * @throws NullPointerException     if {@code name} is {@code null}
+     * @throws IllegalArgumentException if {@code name} has a reserved metadata suffix or a
+     *                                  non-canonical case variant of the replicated prefix
+     */
+    public NamedTailerParkResult parkNamedTailer(String name) {
+        Objects.requireNonNull(name, "name");
+        //! parkNamedTailerRejectsReservedSuffixesWithoutMutatingMetadata,
+        //! #parkNamedTailerRejectsExistingMixedCaseSuffixWithoutMutation and
+        //! #maintenanceParkingRejectsMixedCaseReplicatedPrefix prevent case-insensitive aliases
+        //! from mutating Queue-owned lock, version, or replicated-tailer keys.
+        validateParkableNamedTailerId(name);
+        //! replicatedNamedTailersCannotBeParked keeps version-coordinated sink state unchanged;
+        //! resetting only its index would desynchronise replication.
+        if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+            return NamedTailerParkResult.REFUSED_REPLICATED;
+        try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
+            Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
+            //! parkNamedTailerDoesNotCreateMissingTailer requires lookup-only semantics: parking
+            //! an unknown consumer must not create a persisted retention record.
+            LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
+            if (longValue == null)
+                return NamedTailerParkResult.NOT_FOUND;
+            //! SingleChronicleQueueNamedTailerMetadataTest#parkNamedTailerResetsExistingNonReplicatedTailer,
+            //! #parkedNamedTailerRemainsParkedAfterQueueRestart,
+            //! ParkNamedTailerResumeBehaviourTest#parkedTailerResumesFromOldestSurvivingRollAfterRestart
+            //! and #parkedTailerReadsSameFirstEntryAsNeverReadTailer demonstrate why parking writes
+            //! the persisted never-read sentinel: it is visible after a clean restart and resumes
+            //! from the oldest roll that still exists, discarding older backlog.
+            longValue.setOrderedValue(0);
+            return NamedTailerParkResult.PARKED;
+        }
+    }
+
+    private static boolean isReservedNamedTailerId(String id) {
+        return hasMetadataShapedSuffix(id);
+    }
+
+    private static boolean hasMetadataShapedSuffix(String value) {
+        return endsWithIgnoreCase(value, ".lock") || endsWithIgnoreCase(value, ".version");
+    }
+
+    private static boolean endsWithIgnoreCase(String value, String suffix) {
+        return value != null
+                && value.length() >= suffix.length()
+                && value.regionMatches(true, value.length() - suffix.length(), suffix, 0, suffix.length());
+    }
+
+    private static boolean startsWithIgnoreCase(String value, String prefix) {
+        return value != null
+                && value.length() >= prefix.length()
+                && value.regionMatches(true, 0, prefix, 0, prefix.length());
+    }
+
+    private static void validateParkableNamedTailerId(String id) {
+        if (isReservedNamedTailerId(id))
+            throw reservedNamedTailerIdException(id);
+        if (startsWithIgnoreCase(id, REPLICATED_NAMED_TAILER_PREFIX)
+                && !id.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+            throw new IllegalArgumentException("Invalid named tailer id '" + id + "': replicated tailer ids "
+                    + "must use the canonical lowercase prefix '" + REPLICATED_NAMED_TAILER_PREFIX + "'");
+    }
+
+    private static IllegalArgumentException reservedNamedTailerIdException(String id) {
+        return new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
+                + "'.lock' and '.version' are reserved in any letter case. Tailer state is kept under the metadata "
+                + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
+                + "would collide with the metadata of the tailer named '"
+                + id.substring(0, id.lastIndexOf('.')) + "'");
     }
 
     /**
@@ -1351,14 +1577,38 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
+        return tableStoreAcquireOrGet(key, defaultValue, true);
+    }
+
+    /**
+     * Acquires or reads a {@link LongValue} from the queue metadata table.
+     *
+     * @param key            the table-store key
+     * @param defaultValue   the default value to use when creating a missing key
+     * @param createIfAbsent whether a missing key should be created
+     * @return the existing or newly-created {@link LongValue}, or {@code null} when the key is missing
+     * and {@code createIfAbsent} is {@code false}
+     */
+    protected LongValue tableStoreAcquireOrGet(CharSequence key, long defaultValue, boolean createIfAbsent) {
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null) {
+            if (longValue == null || longValue.isClosed()) {
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null) {
-                        longValue = metaStore.acquireValueFor(key, defaultValue);
+                    //! SingleChronicleQueueNamedTailerMetadataTest#closedCachedMetadataValueIsReacquired
+                    //! demonstrates that protected callers may close an acquired metadata handle;
+                    //! reacquire it under the cache lock so later users never inherit that reference.
+                    if (longValue == null || longValue.isClosed()) {
+                        //! SingleChronicleQueueNamedTailerMetadataTest#parkNamedTailerDoesNotCreateMissingTailer
+                        //! distinguishes the lookup-only branch from historical acquisition: an
+                        //! absent consumer must return NOT_FOUND without adding metadata.
+                        longValue = createIfAbsent
+                                ? metaStore.acquireValueFor(key, defaultValue)
+                                : metaStore.getValueFor(key);
+                        if (longValue == null) {
+                            return null;
+                        }
                         int length = key.length();
                         HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
                         key2.write(0, keyBytes, 0, length);
@@ -1372,13 +1622,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Gets the value for the given key from the table store. If the key does not exist,
-     * returns Long.MIN_VALUE.
+     * Gets the value for the given key from the table store, creating the key with
+     * {@link Long#MIN_VALUE} when it is absent. This preserves the historical get-or-create
+     * behaviour used by external callers.
      *
      * @param key the key for the entry in the table store
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
     public long tableStoreGet(CharSequence key) {
+        //! SingleTableStoreIntegrationTests#getMissingKeyWithoutDefault demonstrates that this
+        //! historical public getter remains get-or-create even though maintenance now has a
+        //! separate lookup-only path.
         LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
         if (longValue == null) return Long.MIN_VALUE;
         return longValue.getVolatileValue();
