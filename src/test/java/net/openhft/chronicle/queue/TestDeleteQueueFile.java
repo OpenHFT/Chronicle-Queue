@@ -36,6 +36,7 @@ import java.util.stream.IntStream;
 
 import static java.lang.Long.toHexString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 
@@ -538,11 +539,11 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 Files.delete(Paths.get(firstCycle.filename));
                 Files.delete(Paths.get(secondCycle.filename));
 
-                String text;
-                while ((text = tailer.readText()) != null) {
-                    observedText.add(text);
+                for (int i = 1; i < NUM_REPEATS * 2; i++) {
+                    observedText.add(tailer.readText());
                     observedIndexes.add(tailer.lastReadIndex());
                 }
+                assertNull("recovery must end after the surviving messages", tailer.readText());
 
                 assertEquals(thirdCycle.lastIndex, tailer.lastReadIndex());
             }
@@ -551,14 +552,12 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             expectedText.addAll(Collections.nCopies(NUM_REPEATS, "test1"));
             expectedText.addAll(Collections.nCopies(NUM_REPEATS, "test3"));
             assertEquals(expectedText, observedText);
-            assertEquals(NUM_REPEATS * 2, observedIndexes.size());
-            assertTrue(observedIndexes.stream()
-                    .noneMatch(index -> queue.rollCycle().toCycle(index) == secondCycle.rollCycle));
-            for (int i = 1; i < observedIndexes.size(); i++)
-                assertTrue("indexes must increase: " + observedIndexes,
-                        observedIndexes.get(i) > observedIndexes.get(i - 1));
-            assertEquals(thirdCycle.lastIndex,
-                    observedIndexes.get(observedIndexes.size() - 1).longValue());
+            List<Long> expectedIndexes = new ArrayList<>();
+            for (RollCycleDetails cycle : new RollCycleDetails[]{firstCycle, thirdCycle}) {
+                for (long index = cycle.firstIndex; index <= cycle.lastIndex; index++)
+                    expectedIndexes.add(index);
+            }
+            assertEquals(expectedIndexes, observedIndexes);
         }
     }
 
