@@ -111,7 +111,9 @@ public class QueueTestCommon {
     public void checkSpaceUsed() {
         long spaceLeft = new File(OS.getTarget()).getFreeSpace();
         if (freeSpace - spaceLeft > 2L << 30) {
-            fail("Used more than 1 GB of disk space in " + OS.getTarget() + " during the test, was " + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB");
+            fail("Filesystem free space decreased by more than 2 GiB during the test: "
+                    + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB on the filesystem containing "
+                    + OS.getTarget() + ". This measurement includes activity outside the test directory.");
         }
     }
 
@@ -228,20 +230,37 @@ public class QueueTestCommon {
 
     @After
     public void afterChecks() {
-        preAfter();
-        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
-        CleaningThread.performCleanup(Thread.currentThread());
+        Throwable failure = null;
+        try {
+            preAfter();
+            SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+            CleaningThread.performCleanup(Thread.currentThread());
 
-        // find any discarded resources.
-        AbstractCloseable.waitForCloseablesToClose(100);
+            // find any discarded resources.
+            AbstractCloseable.waitForCloseablesToClose(100);
 
-        if (finishedNormally) {
-            assertReferencesReleased();
-            checkThreadDump();
-            checkExceptions();
+            if (finishedNormally) {
+                assertReferencesReleased();
+                checkThreadDump();
+                checkExceptions();
+            }
+        } catch (RuntimeException | Error e) {
+            failure = e;
+            throw e;
+        } finally {
+            // A failed leak/thread check must not bypass fixture cleanup or leave recording handlers installed.
+            try {
+                tearDown();
+            } catch (RuntimeException | Error cleanupFailure) {
+                if (failure == null)
+                    throw cleanupFailure;
+                if (failure != cleanupFailure)
+                    failure.addSuppressed(cleanupFailure);
+            } finally {
+                SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+                Jvm.resetExceptionHandlers();
+            }
         }
-
-        tearDown();
     }
 
     protected void preAfter() {

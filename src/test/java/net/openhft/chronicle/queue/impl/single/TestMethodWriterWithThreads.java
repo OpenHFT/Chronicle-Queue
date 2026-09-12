@@ -5,15 +5,16 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.main.DumpMain;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,13 +26,20 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.function.IntConsumer;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.IntStream;
 
 import static junit.framework.TestCase.fail;
 import static net.openhft.chronicle.queue.impl.single.ThreadLocalAppender.acquireThreadLocalAppender;
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -49,6 +57,10 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
     private I methodWriter;
     private AtomicBoolean fail = new AtomicBoolean();
     private boolean doubleBuffer;
+    private volatile ExecutorService workers;
+    private volatile ChronicleQueue queue;
+    private File tmpDir;
+    private final CountDownLatch bodyFinished = new CountDownLatch(1);
 
     public TestMethodWriterWithThreads(boolean doubleBuffer) {
         this.doubleBuffer = doubleBuffer;
@@ -71,36 +83,115 @@ public class TestMethodWriterWithThreads extends QueueTestCommon {
     }
 
     @Test(timeout = 30_000)
-    public void test() throws FileNotFoundException {
+    public void test() throws Exception {
+        tmpDir = getTmpDir();
+        queue = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).doubleBuffer(doubleBuffer).build();
+        methodWriter = queue.methodWriter(I.class);
+        runTasks(1000, i -> writeAndRead());
+    }
 
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue q = builder(tmpDir, WireType.BINARY).rollCycle(HOURLY).doubleBuffer(doubleBuffer).build()) {
-
-            methodWriter = q.methodWriter(I.class);
-
-            IntStream.range(0, 1000)
-                    .parallel()
-                    .forEach(i -> {
-                        try (final ExcerptTailer tailer = q.createTailer()) {
-                            creates();
-                            amends();
-                            final MethodReader methodReader = tailer.methodReader(newReader());
-                            for (int j = 0; j < 2 && !fail.get(); )
-                                if (methodReader.readOne())
-                                    j++;
-                        } finally {
-                            // close appender acquired by creates above
-                            Closeable.closeQuietly(acquireThreadLocalAppender(q));
-                        }
-                        if (fail.get())
-                            fail();
-                    });
-
+    void runTasks(int count, IntConsumer task) throws Exception {
+        workers = Executors.newFixedThreadPool(8, new NamedThreadFactory("method-writer"));
+        CompletionService<Void> completed = new ExecutorCompletionService<>(workers);
+        Throwable failure = null;
+        try {
+            for (int i = 0; i < count; i++) {
+                final int index = i;
+                completed.submit(() -> task.accept(index), null);
+            }
+            workers.shutdown();
+            // A blocked earlier worker must not hide an already completed failure.
+            for (int i = 0; i < count; i++)
+                completed.take().get();
+        } catch (Exception | Error e) {
+            failure = e;
+            if (e instanceof InterruptedException)
+                Thread.currentThread().interrupt();
+            throw e;
         } finally {
-            if (fail.get()) {
-                DumpMain.dump(tmpDir.getAbsolutePath());
+            try {
+                stopWorkers();
+            } catch (Exception | Error cleanupFailure) {
+                if (failure == null)
+                    throw cleanupFailure;
+                failure.addSuppressed(cleanupFailure);
+            } finally {
+                bodyFinished.countDown();
             }
         }
+    }
+
+    @SuppressWarnings("try") // The shared method writer obtains this same appender through its thread-local supplier.
+    private void writeAndRead() {
+        // Retain the actual appender; cleanup must not acquire a replacement after a failure.
+        try (final ExcerptAppender appender = acquireThreadLocalAppender(queue);
+             final ExcerptTailer tailer = queue.createTailer();
+             final MethodReader methodReader = tailer.methodReader(newReader())) {
+            creates();
+            amends();
+            for (int j = 0; j < 2 && !fail.get(); ) {
+                if (Thread.currentThread().isInterrupted())
+                    throw new AssertionError("Method-reader worker interrupted");
+                if (methodReader.readOne())
+                    j++;
+            }
+        }
+        if (fail.get())
+            fail();
+    }
+
+    @Override
+    protected void preAfter() {
+        // JUnit timeouts can start teardown while the test body is still unwinding.
+        // Stop owned workers before closing their Queue or checking global references.
+        stopWorkers();
+        try {
+            if (workers != null)
+                assertTrue("Method-writer test body did not stop", bodyFinished.await(5, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while stopping method-writer workers", e);
+        }
+        if (queue != null)
+            queue.close();
+        if (fail.get()) {
+            try {
+                DumpMain.dump(tmpDir.getAbsolutePath());
+            } catch (FileNotFoundException e) {
+                throw new AssertionError("Unable to dump failed method-writer queue", e);
+            }
+        }
+    }
+
+    private void stopWorkers() {
+        if (workers == null)
+            return;
+        boolean interrupted = Thread.interrupted();
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        try {
+            workers.shutdownNow();
+            while (!workers.isTerminated()) {
+                try {
+                    long remaining = deadline - System.nanoTime();
+                    assertTrue("Method-writer workers did not stop", remaining > 0);
+                    assertTrue("Method-writer workers did not stop",
+                            workers.awaitTermination(remaining, TimeUnit.NANOSECONDS));
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
+    }
+
+    @Override
+    @After
+    public void deleteTargetDirTestArtifacts() {
+        // The hugetlbfs cleanup is a separate inherited @After callback.
+        preAfter();
+        super.deleteTargetDirTestArtifacts();
     }
 
     @NotNull
