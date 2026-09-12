@@ -949,7 +949,7 @@ class StoreTailer extends AbstractCloseable
             final boolean found = cycle(firstCycle);
             if (found)
                 state = FOUND_IN_CYCLE;
-            else
+            else if (store != null || !queueHasRollFiles())
                 throw new MissingStoreFileException("Missing first store file cycle=" + firstCycle);
         } else if (store != null && !store.file().exists()) {
             // The tailer is already positioned on this cycle, so the block above short-circuits,
