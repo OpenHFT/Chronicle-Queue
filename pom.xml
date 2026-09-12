@@ -424,8 +424,6 @@
                 </os>
             </activation>
             <properties>
-                <!-- Reduce competing mapped-file workloads on macOS. -->
-                <surefire.forkCount>1</surefire.forkCount>
                 <!-- Isolate JVM state between test classes while diagnosing Mac failures. -->
                 <surefire.reuseForks>false</surefire.reuseForks>
             </properties>
