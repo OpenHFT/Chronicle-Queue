@@ -153,21 +153,24 @@ public class ReadWriteTest extends QueueTestCommon {
     }
 
     // Can't append to a read-only chronicle
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testWriteToReadOnlyChronicle() {
-        if (OS.isWindows()) {
-            System.err.println("#460 Cannot test read only mode on windows");
-            throw new IllegalStateException("not run");
-        }
+        assumeFalse("#460 Cannot test read only mode on Windows", OS.isWindows());
 
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()
                 .readOnly(true)
-                .build();
-             final ExcerptAppender appender = out.createAppender()) {
-            assumeNotNull(appender);
-            // Do nothing
+                .build()) {
+            ExcerptAppender unexpectedAppender;
+            try {
+                unexpectedAppender = out.createAppender();
+            } catch (IllegalStateException expected) {
+                return;
+            }
+            try (ExcerptAppender appender = unexpectedAppender) {
+                fail("Read-only queue unexpectedly created an appender: " + appender);
+            }
         }
     }
 

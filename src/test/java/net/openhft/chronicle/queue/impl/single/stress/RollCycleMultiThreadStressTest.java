@@ -111,7 +111,7 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             es.shutdownNow();
 
         for (ExecutorService es : ess) {
-            if (!es.awaitTermination(waitSecs, TimeUnit.MILLISECONDS))
+            if (!es.awaitTermination(waitSecs, TimeUnit.SECONDS))
                 System.err.println(es + ": still running");
         }
     }
@@ -193,59 +193,59 @@ public class RollCycleMultiThreadStressTest extends QueueTestCommon {
             results.add(executorServiceWrite.submit(writer));
         }
 
-        final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + (Jvm.isArm() ? 20 : 5)) + queueBuilder(file).timeoutMS();
-        long startTime = System.currentTimeMillis();
-        final long giveUpWritingAt = startTime + maxWritingTime;
-        long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
-        long now;
-        while ((now = System.currentTimeMillis()) < giveUpWritingAt) {
-            if (wrote.get() >= expectedNumberOfMessages)
-                break;
-            if (now > nextRollTime) {
-                timeProvider.advanceMillis(1000);
-                nextRollTime += ROLL_EVERY_MS;
-            }
-            if (now > nextCheckTime) {
-                String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
-                final int w = wrote.get();
-                Jvm.perf().on(getClass(), String.format("Writers have written %d of %d messages (%d%%) after %dms (%d%%) . Readers at %s. Waiting...",
-                        w + 1, expectedNumberOfMessages, (int) (100d * (w + 1) / expectedNumberOfMessages),
-                        now - startTime, (int) (100d * (now - startTime) / maxWritingTime), readersLastRead));
-                readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
-                    if (reader.exception != null) {
-                        throw new AssertionError("Reader encountered exception, so stopped reading messages",
-                                reader.exception);
-                    }
-                    throw new AssertionError("Reader is stuck");
-                });
-                if (pretoucherThread != null && pretoucherThread.exception != null)
-                    throw new AssertionError("Preloader encountered exception", pretoucherThread.exception);
-                nextCheckTime = System.currentTimeMillis() + 5_000L;
-            }
-            Jvm.pause(5);
-        }
-        long timeToWriteMillis = System.currentTimeMillis() - startTime;
-
-        final StringBuilder writerExceptions = new StringBuilder();
-        writers.stream().filter(w -> w.exception != null).forEach(w -> {
-            writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n");
-        });
-
-        assertTrue("Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
-                wrote.get() >= expectedNumberOfMessages);
-
-        readers.stream().filter(r -> r.exception != null).findAny().ifPresent(reader -> {
-            throw new AssertionError("Reader encountered exception, so stopped reading messages",
-                    reader.exception);
-        });
-
-        Jvm.perf().on(getClass(), String.format("Took %dms to write %d messages (max time allowed %dms)",
-                timeToWriteMillis, expectedNumberOfMessages, maxWritingTime));
-
-        final long giveUpReadingAt = System.currentTimeMillis() + 20_000L;
-        final long dumpThreadsAt = giveUpReadingAt - 5_000L;
-
         try {
+            final long maxWritingTime = TimeUnit.SECONDS.toMillis(TEST_TIME + (Jvm.isArm() ? 20 : 5)) + queueBuilder(file).timeoutMS();
+            long startTime = System.currentTimeMillis();
+            final long giveUpWritingAt = startTime + maxWritingTime;
+            long nextRollTime = System.currentTimeMillis() + ROLL_EVERY_MS, nextCheckTime = System.currentTimeMillis() + 5_000;
+            long now;
+            while ((now = System.currentTimeMillis()) < giveUpWritingAt) {
+                if (wrote.get() >= expectedNumberOfMessages)
+                    break;
+                if (now > nextRollTime) {
+                    timeProvider.advanceMillis(1000);
+                    nextRollTime += ROLL_EVERY_MS;
+                }
+                if (now > nextCheckTime) {
+                    String readersLastRead = readers.stream().map(reader -> Integer.toString(reader.lastRead)).collect(Collectors.joining(","));
+                    final int w = wrote.get();
+                    Jvm.perf().on(getClass(), String.format("Writers have written %d of %d messages (%d%%) after %dms (%d%%) . Readers at %s. Waiting...",
+                            w + 1, expectedNumberOfMessages, (int) (100d * (w + 1) / expectedNumberOfMessages),
+                            now - startTime, (int) (100d * (now - startTime) / maxWritingTime), readersLastRead));
+                    readers.stream().filter(r -> !r.isMakingProgress()).findAny().ifPresent(reader -> {
+                        if (reader.exception != null) {
+                            throw new AssertionError("Reader encountered exception, so stopped reading messages",
+                                    reader.exception);
+                        }
+                        throw new AssertionError("Reader is stuck");
+                    });
+                    if (pretoucherThread != null && pretoucherThread.exception != null)
+                        throw new AssertionError("Preloader encountered exception", pretoucherThread.exception);
+                    nextCheckTime = System.currentTimeMillis() + 5_000L;
+                }
+                Jvm.pause(5);
+            }
+            long timeToWriteMillis = System.currentTimeMillis() - startTime;
+
+            final StringBuilder writerExceptions = new StringBuilder();
+            writers.stream().filter(w -> w.exception != null).forEach(w -> {
+                writerExceptions.append("Writer failed due to: ").append(w.exception.getMessage()).append("\n");
+            });
+
+            assertTrue("Wrote " + wrote.get() + " which is less than " + expectedNumberOfMessages + " within timeout. " + writerExceptions,
+                    wrote.get() >= expectedNumberOfMessages);
+
+            readers.stream().filter(r -> r.exception != null).findAny().ifPresent(reader -> {
+                throw new AssertionError("Reader encountered exception, so stopped reading messages",
+                        reader.exception);
+            });
+
+            Jvm.perf().on(getClass(), String.format("Took %dms to write %d messages (max time allowed %dms)",
+                    timeToWriteMillis, expectedNumberOfMessages, maxWritingTime));
+
+            final long giveUpReadingAt = System.currentTimeMillis() + 20_000L;
+            final long dumpThreadsAt = giveUpReadingAt - 5_000L;
+
             while (System.currentTimeMillis() < giveUpReadingAt) {
                 results.forEach(f -> {
                     try {
