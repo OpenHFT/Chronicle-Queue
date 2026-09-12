@@ -60,6 +60,9 @@ cycle and will not reread context stored earlier in that cycle. A context listen
 the reader's in-memory state.
 
 Applications that require this state must either persist it separately or replay the current cycle
-up to the named tailer's saved index with a temporary unnamed tailer. Replay handlers must rebuild
-context without business side effects, and the temporary tailer must not advance the named tailer.
+up to the named tailer's saved index with a temporary unnamed tailer. Replay handlers must collectively
+cover the method stream, rebuild context without business side effects, and leave the named tailer unchanged.
 If the required roll file has already been removed, recovery needs another durable source.
+
+See link:named-tailer-context-recovery.adoc[Named Tailer Context Recovery] for the public replay
+helper, its result statuses and the restart pattern.
