@@ -28,14 +28,17 @@ import static org.junit.Assume.assumeFalse;
  * <p>
  * The fix (in {@code AbstractWire.updateHeader}) explicitly zeroes the next bytes after padding when a
  * write is committed, so any junk left in the following slot is cleared. This test reproduces the
- * layout — planting junk in the slot that will follow a short message — writes the short message, and
+ * layout by planting junk in the slot that will follow a short message, writes the short message, and
  * asserts the tailer reads exactly the written messages and then sees end-of-queue rather than junk.
+ * This rollback and dirty-layout reproduction does not kill a process or test durability.
  */
 public class JunkAfterShorterWriteTest extends QueueTestCommon {
 
     @Test
     public void junkFollowingAShorterWriteIsNotReadAsAHeader() throws Exception {
-        assumeFalse(OS.isWindows());
+        // This is a qualification hold, not an established Windows runtime defect.
+        // Remove it only after the mapping inspection and cleanup execute on Windows.
+        assumeFalse("Windows mapping and cleanup qualification is pending in PR #1735", OS.isWindows());
 
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .rollCycle(RollCycles.FAST_DAILY)
