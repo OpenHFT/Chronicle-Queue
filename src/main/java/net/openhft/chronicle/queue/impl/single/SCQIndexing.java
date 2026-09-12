@@ -28,6 +28,7 @@ import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -46,6 +47,22 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
     private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
+    private static final AtomicLongArray SCAN_COUNTS = Jvm.getBoolean("chronicle.queue.track.scans")
+            ? new AtomicLongArray(5) : null;
+
+    private static void recordScan(int category) {
+        if (SCAN_COUNTS != null)
+            SCAN_COUNTS.updateAndGet(category, count -> count == Long.MAX_VALUE ? count : count + 1);
+    }
+
+    static long[] scanCounts() {
+        long[] counts = new long[5];
+        if (SCAN_COUNTS != null)
+            for (int i = 0; i < counts.length; i++)
+                counts[i] = SCAN_COUNTS.get(i);
+        return counts;
+    }
+
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
@@ -521,6 +538,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                    long fromKnownIndex,
                                    long knownAddress) {
         this.linearScanCount++;
+        recordScan(0);
         @NotNull final Bytes<?> bytes = wire.bytes();
 
         // optimized if the `toIndex` is the last sequence
@@ -610,6 +628,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                               boolean inclusive,
                               String desc) throws EOFException {
         long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
+        recordScan(SCAN_LABEL_FAST_PATH.equals(desc) ? 1 :
+                SCAN_LABEL_FALL_THROUGH.equals(desc) ? 2 : SCAN_LABEL_TAIL_CHECK.equals(desc) ? 3 : 4);
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
         if (REPORT_LINEAR_SCAN) {
             printLinearScanTime(index, startAddress, start, desc);
@@ -768,20 +788,21 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     long sequenceForPosition(@NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive) throws StreamCorruptedException {
-        // Fast path for lastIndex() -- historically the dominant slow caller. Writers commit
-        // (writePosition, sequence) atomically into a single TwoLongValue. When the two halves
-        // agree we have the sequence at writePosition directly, so we can skip the indexed
-        // lookup (which walks back to the latest-indexed-anchor -- up to indexSpacing entries
-        // before writePos). We still walk forward from writePosition to recover any
-        // partial-write orphans / in-progress writes, matching the semantics of the indexed
-        // path. Falls through on writer race (NOT_FOUND_RETRY) and on tracker-uninitialised
-        // (NOT_FOUND), preserving the original behaviour when the optimisation can't be satisfied.
-        if (position == Long.MAX_VALUE) {
+        return sequenceForPosition(ec, position, inclusive, true);
+    }
+
+    private long sequenceForPosition(@NotNull ExcerptContext ec, long position,
+                                     boolean inclusive, boolean acquireTracker) throws StreamCorruptedException {
+        // The full position and encoded sequence are separate publications. Encoded position
+        // bits can alias, so only an exact persisted index entry establishes this association.
+        if (acquireTracker && position == Long.MAX_VALUE) {
             int retry = 0;
             for (; retry < SEQUENCE_TRACKER_RETRY_BUDGET; retry++) {
                 long lastWritePos = writePosition.getVolatileValue();
                 long latestSeq = sequence.getSequence(lastWritePos);
                 if (latestSeq >= 0) {
+                    if (!indexedSequenceMatchesPosition(ec.wireForIndex(), latestSeq, lastWritePos))
+                        break;
                     if (retry > 0) {
                         Jvm.perf().on(getClass(),
                                 LOG_TRACKER_RETRY_PREFIX + " " + retry + " times");
@@ -864,6 +885,19 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive, SCAN_LABEL_FALL_THROUGH);
         } catch (EOFException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    private boolean indexedSequenceMatchesPosition(Wire wire, long sequenceNumber, long position) {
+        if (wire == null || position <= 0 || (sequenceNumber & (indexSpacing - 1L)) != 0)
+            return false;
+        try {
+            LongArrayValues primary = getIndex2index(wire);
+            long secondaryAddress = primary.getVolatileValueAt(toAddress0(sequenceNumber));
+            return secondaryAddress > 0 &&
+                    arrayForAddress(wire, secondaryAddress).getVolatileValueAt(toAddress1(sequenceNumber)) == position;
+        } catch (IllegalStateException unavailableIndex) {
+            return false;
         }
     }
 
@@ -1064,6 +1098,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     break;
                 try {
                     Wire wireForIndex = ec.wireForIndex();
+                    if (wireForIndex != null && !indexedSequenceMatchesPosition(wireForIndex, sequence, address))
+                        break;
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true,
                             SCAN_LABEL_TAIL_CHECK);
                 } catch (EOFException e) {
@@ -1072,7 +1108,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             }
         }
 
-        return sequenceForPosition(ec, Long.MAX_VALUE, false);
+        // Acquisition has already used its budget. Resume directly at indexed recovery.
+        return sequenceForPosition(ec, Long.MAX_VALUE, false, false);
     }
 
     /**

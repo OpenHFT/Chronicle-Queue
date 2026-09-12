@@ -8,7 +8,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.onoes.ExceptionHandler;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -26,8 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * On-demand stress harness for the {@code sequenceForPosition(MAX_VALUE)} fast path in
+ * On-demand stress harness for the complete {@code queue.lastIndex()} operation and scans in
  * {@link SCQIndexing}. <em>Not</em> a JUnit test -- run from the command line with
  *
  * <pre>{@code
@@ -58,7 +55,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>Runs for 120 seconds with one writer per ~4 cores and two readers per core. Prints a
  * one-line summary plus a per-phase max-latency breakdown, watchdog stuck-event totals,
- * GC summary, and slow-scan kind breakdown. Optional {@code -Dscq.fastpath.stress.delay.ns=N}
+ * GC summary, and opt-in fixed-size saturating scan counters. Optional {@code -Dscq.fastpath.stress.delay.ns=N}
  * inserts a symmetric busy-wait in both writer and reader loops to widen race windows.
  *
  * <p>When JFR is available, each run dumps an allocation profile to
@@ -68,7 +65,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class LastIndexFastPathStress {
 
-    private static final long DURATION_NANOS = TimeUnit.SECONDS.toNanos(120);
+    private static final long DURATION_NANOS = TimeUnit.SECONDS.toNanos(
+            Long.getLong("scq.fastpath.stress.seconds", 120L));
     private static final long WATCHDOG_THRESHOLD_MS = 25;
     private static final long WATCHDOG_POLL_MS = 5;
 
@@ -90,13 +88,14 @@ public final class LastIndexFastPathStress {
     }
 
     private static void run(Path tmpDir) throws Exception {
+        System.setProperty("chronicle.queue.track.scans", "true");
         // Scale by available CPU so contention behaviour is comparable across hosts: many more
         // readers than writers so some readers stall on each tick, amplifying the chance that
         // a reader observes a writer mid-update (writePosition published, sequence half not
         // yet stored), exercising the NOT_FOUND_RETRY path.
         final int cores = Runtime.getRuntime().availableProcessors();
-        final int writerCount = Math.min(4, (cores + 3) / 4);
-        final int readerCount = 2 * cores;
+        final int writerCount = Integer.getInteger("scq.fastpath.stress.writers", Math.min(4, (cores + 3) / 4));
+        final int readerCount = Integer.getInteger("scq.fastpath.stress.readers", 2 * cores);
         // Optional symmetric per-iteration delay (ns) for both writers and readers.
         final long writerDelayNs = Long.getLong("scq.fastpath.stress.delay.ns", 0L);
         final long readerDelayNs = writerDelayNs;
@@ -119,7 +118,7 @@ public final class LastIndexFastPathStress {
 
             for (int i = 0; i < 100; i++) {
                 try (DocumentContext dc = warm.writingDocument()) {
-                    dc.wire().bytes().writeInt(i);
+                    dc.wire().bytes().writeInt(-1).writeLong(i).writeLong(~(long) i);
                 }
             }
 
@@ -149,25 +148,7 @@ public final class LastIndexFastPathStress {
             // images omit it, so keep this diagnostic optional and avoid a compile-time link.
             final AllocationRecording allocRecording = startAllocationRecording();
 
-            // Recording perf handler: silently aggregate "Took X us to linearScan ..." lines and
-            // the fast-path retry/exhaustion log markers so the test reports retry counts and
-            // brute-force fall-through counts WITHOUT SCQIndexing carrying observability-only
-            // counter fields. Each retry log line carries the retry count -- parse and sum it
-            // so we get the same total via observation rather than instrumentation.
-            final ConcurrentMap<String, AtomicLong> perfCounts = new ConcurrentHashMap<>();
-            final AtomicLong retryAttemptsTotal = new AtomicLong();
-            final AtomicLong bruteForceFallThroughs = new AtomicLong();
-            final ExceptionHandler recorder = (logger, message, throwable) -> {
-                if (message == null)
-                    return;
-                perfCounts.computeIfAbsent(message, k -> new AtomicLong()).incrementAndGet();
-                if (message.startsWith(SCQIndexing.LOG_TRACKER_RETRY_PREFIX)) {
-                    retryAttemptsTotal.addAndGet(parseTrailingRetryCount(message));
-                } else if (message.startsWith(SCQIndexing.LOG_TRACKER_BRUTE_FORCE_FALLTHROUGH)) {
-                    bruteForceFallThroughs.incrementAndGet();
-                }
-            };
-            Jvm.setPerfExceptionHandler(recorder);
+            final long[] scansBefore = SCQIndexing.scanCounts();
 
             final AtomicBoolean stop = new AtomicBoolean(false);
             final AtomicLong totalWrites = new AtomicLong();
@@ -194,7 +175,8 @@ public final class LastIndexFastPathStress {
                             try (DocumentContext dc = ap.writingDocument()) {
                                 Bytes<?> bytes = dc.wire().bytes();
                                 bytes.writeInt(wid);
-                                bytes.writeLong(count++);
+                                bytes.writeLong(count).writeLong(~count);
+                                count++;
                             }
                             totalWrites.incrementAndGet();
                             if (writerDelayNs > 0)
@@ -217,16 +199,24 @@ public final class LastIndexFastPathStress {
                         while (!stop.get()) {
                             long t0 = System.nanoTime();
                             readerIterationStartNanos.lazySet(rid, t0);
-                            tailer.toEnd();
+                            long index = queue.lastIndex();
                             long t1 = System.nanoTime();
+                            if (index < 0 || !tailer.moveToIndex(index))
+                                throw new AssertionError("lastIndex must identify a retained record: " + index);
                             try (DocumentContext dc = tailer.readingDocument()) {
-                                if (dc.isPresent() && !dc.isMetaData())
-                                    dc.index();
+                                if (!dc.isPresent() || dc.isMetaData() || dc.index() != index)
+                                    throw new AssertionError("lastIndex must identify the returned data document");
+                                Bytes<?> payload = dc.wire().bytes();
+                                int writer = payload.readInt();
+                                long count = payload.readLong();
+                                if (writer < -1 || writer >= writerCount || count < 0 ||
+                                        payload.readLong() != ~count || payload.readRemaining() != 0)
+                                    throw new AssertionError("invalid payload at index " + index);
                             }
                             long t2 = System.nanoTime();
                             maxToEndNanos.accumulateAndGet(t1 - t0, Math::max);
                             maxReadNanos.accumulateAndGet(t2 - t1, Math::max);
-                            long elapsed = t2 - t0;
+                            long elapsed = t1 - t0;
                             totalLastIndexCalls.incrementAndGet();
                             sumLatencyNanos.addAndGet(elapsed);
                             maxLatencyNanos.accumulateAndGet(elapsed, Math::max);
@@ -301,27 +291,23 @@ public final class LastIndexFastPathStress {
             }
 
             long calls = totalLastIndexCalls.get();
-            long retries = retryAttemptsTotal.get();
-            long bruteForceFallThroughCount = bruteForceFallThroughs.get();
             long avgLatencyNs = calls == 0 ? 0 : sumLatencyNanos.get() / calls;
             long maxLatencyNs = maxLatencyNanos.get();
-            double retryPerCall = calls == 0 ? 0 : (double) retries / calls;
+            long[] scans = SCQIndexing.scanCounts();
+            for (int i = 0; i < scans.length; i++)
+                scans[i] -= scansBefore[i];
 
-            long efficientFastPathScans = countCapturedMessages(perfCounts, SCQIndexing.SCAN_LABEL_FAST_PATH);
-            long efficientTailChecks = countCapturedMessages(perfCounts, SCQIndexing.SCAN_LABEL_TAIL_CHECK);
-            long bruteForceScans = countCapturedMessages(perfCounts, SCQIndexing.SCAN_LABEL_FALL_THROUGH);
-
-            System.out.printf("LastIndexFastPathStress: cores=%d writers=%d readers=%d delayNs=%d writes=%d lastIndexCalls=%d retries=%d retries/call=%.6f avgLatency=%dns maxLatency=%.2fms%n",
+            System.out.printf("LastIndexFastPathStress: cores=%d writers=%d readers=%d delayNs=%d writes=%d lastIndexCalls=%d avgLatency=%dns maxLatency=%.2fms%n",
                     cores, writerCount, readerCount, writerDelayNs,
-                    totalWrites.get(), calls, retries, retryPerCall, avgLatencyNs, maxLatencyNs / 1e6);
-            System.out.printf("LastIndexFastPathStress per-phase max: toEnd=%.2fms read=%.2fms%n",
+                    totalWrites.get(), calls, avgLatencyNs, maxLatencyNs / 1e6);
+            System.out.printf("LastIndexFastPathStress per-phase max: lastIndex=%.2fms verification=%.2fms%n",
                     maxToEndNanos.get() / 1e6, maxReadNanos.get() / 1e6);
             System.out.printf("LastIndexFastPathStress watchdog: stuckEvents=%d maxStuckMs=%d (threshold=%dms, poll=%dms)%n",
                     stuckEventCount.get(), maxStuckMillis.get(), WATCHDOG_THRESHOLD_MS, WATCHDOG_POLL_MS);
             System.out.printf("LastIndexFastPathStress gc: events=%d totalMs=%d maxPauseMs=%d%n",
                     totalGcEvents.get(), totalGcMillis.get(), maxGcMillis.get());
-            System.out.printf("LastIndexFastPathStress slow-scan breakdown: bruteForceFallThroughs=%d efficientFastPath=%d efficientTailCheck=%d bruteForceScans=%d%n",
-                    bruteForceFallThroughCount, efficientFastPathScans, efficientTailChecks, bruteForceScans);
+            System.out.printf("LastIndexFastPathStress process scan counts (writers and readers): byIndex=%d verifiedTracker=%d indexedRecovery=%d tailCheck=%d otherPosition=%d%n",
+                    scans[0], scans[1], scans[2], scans[3], scans[4]);
             if (jfrPath != null)
                 System.out.println("LastIndexFastPathStress allocation profile: " + jfrPath +
                         "  (try: jfr print --events 'ObjectAllocation*' " + jfrPath + " | head -200)");
@@ -332,13 +318,6 @@ public final class LastIndexFastPathStress {
             exec.shutdownNow();
             exec.awaitTermination(5, TimeUnit.SECONDS);
         }
-    }
-
-    private static long countCapturedMessages(ConcurrentMap<String, AtomicLong> perfCounts, String fragment) {
-        return perfCounts.entrySet().stream()
-                .filter(e -> e.getKey().contains(fragment))
-                .mapToLong(e -> e.getValue().get())
-                .sum();
     }
 
     /** Extract the retry count from a "{prefix} N times" log line. The prefix is fixed

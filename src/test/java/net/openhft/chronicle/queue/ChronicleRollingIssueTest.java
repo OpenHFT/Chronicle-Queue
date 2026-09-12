@@ -55,8 +55,10 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                     .rollCycle(TEST_SECONDLY).build();
                  ExcerptAppender appender = writeQueue.createAppender()) {
                 for (int i = 0; i < messages; i++) {
-                    long millis = System.currentTimeMillis() & 63;
-                    Jvm.pause(millis);
+                    long millis = System.currentTimeMillis() % 100;
+                    if (millis > 1 && millis < 99) {
+                        Jvm.pause(99 - millis);
+                    }
                     Map<String, Object> map = new HashMap<>();
                     map.put("key", Thread.currentThread().getName() + " - " + i);
                     appender.writeMap(map);
