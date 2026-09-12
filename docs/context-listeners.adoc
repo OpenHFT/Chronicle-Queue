@@ -1,0 +1,69 @@
+= Queue Context Listeners
+
+//! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter establishes Queue's
+//! appender/roll mapping; Wire owns only the generic output-context lifecycle.
+A context listener writes ordinary method-writer records before an appender's first data document
+in each actual ordinary roll cycle. Queue adds destination, EOF and write-lock constraints to
+Wire's generic output-context lifecycle. This is useful for snapshots, definitions or checkpoints
+that readers need before processing that cycle's data.
+
+[source,java]
+----
+SingleChronicleQueue queue = builder.build();
+ExcerptAppender appender = queue.acquireAppender();
+appender.contextListener(Events.class, events -> events.context(contextSnapshot));
+Events events = appender.methodWriter(Events.class);
+----
+
+//! sealedHighestRollIsResolvedBeforeDocumentListener and secondEofLeavesListenerRegistrationOpen
+//! require ordinary destination and EOF preflight before callback state changes.
+The listener runs under the Queue write lock. Queue first applies its monotonic/high-water cycle
+selection and its single permitted advance past EOF, then invokes the listener for that actual
+writable cycle. The listener's records and the triggering document are therefore written to the
+same cycle. Metadata and exact-index recovery do not invoke the listener or consume its registration;
+exact recovery also does not change the appender's ordinary context count.
+
+//! listenerRemainsCallerOwned and writesContextBeforeDataAndAllowsRetainingWriter require caller
+//! ownership and retained-writer delegation after the callback succeeds.
+The listener must write through the supplied method writer and must be configured before the
+appender is first used for ordinary output. The writer may be retained for normal use. The listener
+is appender-local and remains owned by the caller.
+Use the thread-local appender returned by `acquireAppender()` when its method writer must share an
+appender-local listener. Alternatively, configure the default listener on the queue builder.
+
+//! listenerFailureAfterWritingContextIsNotRetriedInTheSameRoll pins per-appender failure state;
+//! same-path and symlink-alias tests pin only JVM-wide canonical-real-path callback ownership.
+Listener failure is fail-closed for that appender's current listener lifecycle. Queue does not retry
+a callback which may already have committed
+partial context. A thrown exception or a callback returning with an unclosed document poisons the
+current cycle for that appender: its later application writes fail until a later roll rearms the
+listener. During a callback, a JVM-wide guard keyed by the Queue directory's canonical real path
+rejects appender entry through another appender, Queue instance, thread or symlink alias. This guard
+prevents same-JVM re-entry; cross-process writers remain coordinated by the Queue write lock. A
+rejected append-lock preflight does not consume listener registration or state.
+
+A new appender has no record of context written by an earlier appender. It can therefore write the
+context again when it starts in an existing roll cycle. Context records should be complete and
+idempotent.
+
+//! rolledBackClockDoesNotRepeatAnOlderContext and exactHistoricalRecoveryDoesNotChangeOrdinaryContext
+//! pin ordinary-cycle identity; doubleBufferedAppenderAndDocumentContextCountsAreUnavailable pins
+//! the separate count-availability restriction at both public surfaces.
+For Queue, `ExcerptAppender.contextCount()` is `-1` before the first ordinary destination is
+selected and after close; otherwise it is the last actual ordinary destination cycle. It never
+moves backwards when an exact recovery temporarily positions the appender on a historical cycle.
+Context listener registration is unsupported with double buffering, asynchronous write buffers,
+encoding or encryption. Independently, `contextCount()` is unavailable with double buffering
+because the destination cycle is selected only when the buffer is flushed.
+
+== Named tailer restarts
+
+//! tailerDocumentsExposeTheirActualCycle establishes document identity but cannot reconstruct
+//! application state skipped when a named tailer resumes within an existing cycle.
+A named tailer persists its next read position. After a restart it may resume in the middle of a
+cycle and will not reread context stored earlier in that cycle. A context listener does not restore
+the reader's in-memory state.
+
+Applications that require this state must persist it separately or implement application-specific
+reconstruction. If the required roll file has already been removed, recovery needs another durable
+source.

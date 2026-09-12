@@ -139,6 +139,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
+    //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter and
+    //! #listenerRemainsCallerOwned require builder registration to retain the writer contract and
+    //! caller-owned callback until the Queue creates independent appender lifecycle state.
+    @Nullable
+    private Class<?> contextListenerWriterType;
+    @Nullable
+    private MarshallableOut.ContextListener<?> contextListener;
     private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
@@ -371,6 +378,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     @NotNull
     public SingleChronicleQueue build() {
         preBuild();
+        //! ContextListenerCoreTest#validatesModesLoadedDuringPreBuildAndClosesMetadata requires the
+        //! compatibility decision after persisted/enterprise configuration has been loaded but
+        //! before a Queue can expose an unsupported listener/output combination.
+        validateContextListenerCompatibility();
 
         SingleChronicleQueue chronicleQueue;
 
@@ -384,6 +395,22 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         postBuild(chronicleQueue);
 
         return chronicleQueue;
+    }
+
+    private void validateContextListenerCompatibility() {
+        if (contextListener == null)
+            return;
+        //! validatesModesLoadedDuringPreBuildAndClosesMetadata requires validation after preBuild
+        //! and requires the metadata mapping to close when persisted settings make the mode invalid.
+        try {
+            SingleChronicleQueue.validateContextListenerCompatibility(
+                    key != null || encodingSupplier != null,
+                    writeBufferMode() == BufferMode.Asynchronous,
+                    doubleBuffer());
+        } catch (RuntimeException incompatible) {
+            Closeable.closeQuietly(metaStore);
+            throw incompatible;
+        }
     }
 
     /**
@@ -1617,6 +1644,26 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public AppenderListener appenderListener() {
         return appenderListener;
+    }
+
+    /**
+     * Sets the default context listener for appenders created by this queue.
+     * The caller retains ownership of the listener.
+     *
+     * @see ExcerptAppender#contextListener(Class, MarshallableOut.ContextListener)
+     */
+    public <T> SingleChronicleQueueBuilder contextListener(@NotNull Class<T> writerType,
+                                                            @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        //! ContextListenerCoreTest#listenerRemainsCallerOwned requires configuration to retain but
+        //! never close the caller-owned listener.
+        contextListenerWriterType = requireNonNull(writerType, "writerType");
+        contextListener = requireNonNull(listener, "listener");
+        return this;
+    }
+
+    @NotNull
+    ContextListenerState contextListenerState() {
+        return new ContextListenerState(contextListenerWriterType, contextListener);
     }
 
     /**
