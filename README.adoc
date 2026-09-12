@@ -577,6 +577,7 @@ In Chronicle Queue, the rollover time is based on UTC. The Timezone Rollover Ent
 
 The Chronicle Queue `FileUtil` class provides useful methods for managing queue files.
 See link:docs/managing_roll_files_directly.adoc[Managing Roll Files Directly].
+For named-tailer-position-based operational clean-up, see link:docs/roll-file-cleanup.adoc[Roll File Cleanup].
 
 * _wireType_
 
@@ -1868,6 +1869,7 @@ For comparison see http://kafka.apache.org/documentation.html[Kafka Documentatio
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/FAQ.adoc[FAQ] - questions asked by customers
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/How_it_works.adoc[How it works] - more depth on how Chronicle Queue is implemented
 * https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/utilities.adoc[Utilities] - lists some useful utilities for working with queue files
+* https://github.com/OpenHFT/Chronicle-Queue/tree/develop/docs/roll-file-cleanup.adoc[Roll File Cleanup] - explains safe roll-file cleanup using named tailer positions
 
 ==== Online support
 

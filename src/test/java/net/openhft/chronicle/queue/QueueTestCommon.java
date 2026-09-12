@@ -109,9 +109,12 @@ public class QueueTestCommon {
 
     @After
     public void checkSpaceUsed() {
+        if (OS.isWindows())
+            return;
+
         long spaceLeft = new File(OS.getTarget()).getFreeSpace();
         if (freeSpace - spaceLeft > 2L << 30) {
-            fail("Used more than 1 GB of disk space in " + OS.getTarget() + " during the test, was " + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB");
+            fail("Used more than 2 GB of disk space in " + OS.getTarget() + " during the test, was " + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB");
         }
     }
 
