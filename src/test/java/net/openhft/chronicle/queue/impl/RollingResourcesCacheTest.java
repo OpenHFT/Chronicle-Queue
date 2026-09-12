@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.Test;
 
 import java.io.File;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -155,10 +156,16 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
                 RollCycles.WEEKLY, RollCycles.WEEKLY.defaultEpoch(), File::new, File::getName);
         final int current = RollCycles.WEEKLY.current(System::currentTimeMillis,
                 RollCycles.WEEKLY.defaultEpoch());
+        Long previousOrderingKey = null;
 
         for (int cycle = current - 10; cycle <= current + 10; cycle++) {
-            final String name = weeklyCache.resourceFor(cycle).text;
+            final RollingResourcesCache.Resource resource = weeklyCache.resourceFor(cycle);
+            final String name = resource.text;
             assertEquals("weekly filename " + name, cycle, weeklyCache.parseCount(name));
+            final Long orderingKey = weeklyCache.toLong(resource.path);
+            if (previousOrderingKey != null)
+                assertTrue("weekly ordering key " + name, orderingKey > previousOrderingKey);
+            previousOrderingKey = orderingKey;
         }
     }
 
@@ -174,12 +181,38 @@ public class RollingResourcesCacheTest extends QueueTestCommon {
                 final int firstCycle = Math.toIntExact(Math.floorDiv(
                         firstMillis - RollCycles.WEEKLY.defaultEpoch(),
                         RollCycles.WEEKLY.lengthInMillis()));
+                Long previousOrderingKey = null;
 
                 for (int cycle = firstCycle; cycle < firstCycle + 170; cycle++) {
-                    final String name = weeklyCache.resourceFor(cycle).text;
+                    final RollingResourcesCache.Resource resource = weeklyCache.resourceFor(cycle);
+                    final String name = resource.text;
                     assertEquals(locale + " weekly filename " + name,
                             cycle, weeklyCache.parseCount(name));
+                    final Long orderingKey = weeklyCache.toLong(resource.path);
+                    if (previousOrderingKey != null)
+                        assertTrue(locale + " weekly ordering key " + name,
+                                orderingKey > previousOrderingKey);
+                    previousOrderingKey = orderingKey;
                 }
+            }
+        } finally {
+            Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale);
+        }
+    }
+
+    @Test
+    public void nonCanonicalNamedWeeksAreRejected() {
+        final Locale originalFormatLocale = Locale.getDefault(Locale.Category.FORMAT);
+        try {
+            for (Locale locale : new Locale[]{Locale.US, Locale.UK}) {
+                Locale.setDefault(Locale.Category.FORMAT, locale);
+                final RollingResourcesCache weeklyCache = new RollingResourcesCache(
+                        RollCycles.WEEKLY, RollCycles.WEEKLY.defaultEpoch(), File::new, File::getName);
+
+                assertThrows(locale + " parseCount must reject a week alias",
+                        DateTimeException.class, () -> weeklyCache.parseCount("2021W53"));
+                assertThrows(locale + " ordering key must reject a week alias",
+                        DateTimeException.class, () -> weeklyCache.toLong(new File("2021W53")));
             }
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale);

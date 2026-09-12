@@ -73,6 +73,15 @@ This will provide a new List with all candidates in the provided `dir`.
 
 NOTE: It always the ultimate decision of the user code to actually decide if a candidate should be deleted or not.
 
+//! InternalAppenderWriteBytesTest#canBackfillPreviousCycleAfterEOF shows that EOF can be reopened;
+//! StoreAppenderTest#historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion shows when Queue reseals
+//! it. Neither test proves that Queue's candidate API supplies external online-maintenance exclusion.
+IMPORTANT: A removable candidate or EOF marker is not proof of permanent
+immutability when exact-index replication recovery is enabled. Coordinate the
+whole eligibility-check and archive/delete operation with recovery, and do not
+release that exclusion until failed recovery has been retried and EOF
+normalisation has completed.
+
 NOTE: The method above is only supported on Linux/BSD systems and not Windows.
 
 If the used code intends to remove all candidates unconditionally, the following snippet can be used:
