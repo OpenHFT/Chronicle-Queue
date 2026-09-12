@@ -99,7 +99,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
+    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151: toStart retains the deleted first roll's mapping")
     @Test
     public void tailerToStartFromStartWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());
@@ -150,7 +150,6 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1151")
     @Test
     public void tailerToEndFromEndWorksInFaceOfDeletedStoreFile() throws IOException {
         assumeFalse(OS.isWindows());

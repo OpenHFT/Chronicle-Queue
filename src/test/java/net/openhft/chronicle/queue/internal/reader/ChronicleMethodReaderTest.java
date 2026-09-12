@@ -17,15 +17,16 @@ import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
@@ -135,7 +136,6 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        //.peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
         // "hello"
@@ -149,7 +149,6 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-                        //.peek(System.out::println)
                         .count();
         assertEquals(24, msgCount);
         // "hello"
@@ -198,18 +197,57 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         long msgCount =
                 capturedOutput.stream()
                         .filter(msg -> !msg.startsWith("0x"))
-//                        .peek(System.out::println)
                         .count();
         assertEquals(12, msgCount);
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
-        basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
+        // The regex applies to the complete multiline DTO, not just its text field.
+        basicReaderMethodReader().withExclusionRegex("goodbye").execute();
+        assertEquals(12L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, containsString("hello")));
+        capturedOutput.clear();
+
+        basicReaderMethodReader().withExclusionRegex("hello").execute();
+        assertEquals(12L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, containsString("goodbye")));
+        capturedOutput.clear();
+
+        basicReaderMethodReader().withExclusionRegex("goodbye").withExclusionRegex("hello").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+    }
+
+    @Test
+    public void shouldFilterByMultipleInclusionRegexMethodReader() {
+        Path inclusionDir = getTmpDir().toPath();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(inclusionDir).testBlockSize().build()) {
+            All writer = queue.methodWriter(All.class);
+            for (String text : Arrays.asList("alpha-only", "beta-only", "alpha-beta", "neither")) {
+                Method2Type message = new Method2Type();
+                message.text = text;
+                writer.method2(message);
+            }
+        }
+
+        // A-only, B-only, both and neither distinguish AND from ignored, first-only, last-only and OR filters.
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir), "alpha-only", "beta-only", "alpha-beta", "neither");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("alpha"), "alpha-only", "alpha-beta");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("beta"), "beta-only", "alpha-beta");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("alpha").withInclusionRegex("beta"), "alpha-beta");
+    }
+
+    private void assertIncludedMessages(ChronicleReader reader, String... expectedTexts) {
+        capturedOutput.clear();
+        reader.execute();
+        assertEquals(Arrays.stream(expectedTexts)
+                        .map(text -> "method2: {\n  text: " + text + ",\n  value: 0,\n  number: 0.0\n}\n...\n")
+                        .collect(Collectors.toList()),
+                capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).collect(Collectors.toList()));
     }
 
     @Test

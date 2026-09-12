@@ -317,6 +317,7 @@ public class ChronicleReader implements Reader {
 
     /**
      * Adds an inclusion regex for filtering messages.
+     * Repeated inclusion regexes must all match for a message to be retained.
      *
      * @param regex The regex pattern for inclusion
      * @return The current instance of {@link ChronicleReader}
@@ -328,6 +329,7 @@ public class ChronicleReader implements Reader {
 
     /**
      * Adds an exclusion regex for filtering messages.
+     * A match against any repeated exclusion regex removes the message.
      *
      * @param regex The regex pattern for exclusion
      * @return The current instance of {@link ChronicleReader}
