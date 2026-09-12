@@ -18,6 +18,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -39,6 +40,7 @@ public class TestBinarySearch extends QueueTestCommon {
         this.numberOfMessagesToVerify = numberOfMessagesToVerify;
         this.retrievalStrategy = numberOfMessages == numberOfMessagesToVerify ? RetrievalStrategy.LINEAR : RetrievalStrategy.RANDOM;
         this.emptyCyclesStrategy = emptyCyclesStrategy;
+        globalTimeout = Timeout.seconds(180);
     }
 
     @Parameterized.Parameters(name = "items: {0} verify: {1} emptyCycles: {2}")
