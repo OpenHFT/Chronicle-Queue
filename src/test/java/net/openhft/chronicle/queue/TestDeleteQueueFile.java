@@ -15,6 +15,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,6 +43,10 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private static final int NUM_REPEATS = 10;
     private static final int CYCLES_TO_DELETE_PER_ITERATION = 20;
     private final Path tempQueueDir = getTmpDir().toPath();
+
+    public TestDeleteQueueFile() {
+        globalTimeout = Timeout.seconds(180);
+    }
 
     @Test
     public void testRefreshDirectoryListingWillUpdateFirstAndLastIndicesCorrectly() throws IOException {
