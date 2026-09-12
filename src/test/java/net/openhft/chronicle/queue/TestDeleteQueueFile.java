@@ -24,6 +24,10 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,6 +38,9 @@ import java.util.stream.IntStream;
 
 import static java.lang.Long.toHexString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
 @SuppressWarnings("this-escape")
@@ -215,22 +222,13 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void deletingOldFilesChaosTest() throws InterruptedException {
+    public void deletingOldFilesChaosTest() throws Exception {
+        // Like the other unlink-under-tailer cases, this requires deleting a mapped file.
+        assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
-        final int numberOfCycles = 300;
-        final AtomicBoolean running = new AtomicBoolean(true);
-        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(numberOfCycles, null)) {
-            Thread backwardTailerThread = new Thread(() -> new QueueTailer(running, queueWithCycleDetails, TailerDirection.BACKWARD));
-            Thread forwardTailerThread = new Thread(() -> new QueueTailer(running, queueWithCycleDetails, TailerDirection.FORWARD));
-            Thread deleterThread = new Thread(() -> progressivelyTruncateOldRollCycles(queueWithCycleDetails));
-
-            backwardTailerThread.start();
-            forwardTailerThread.start();
-            deleterThread.start();
-            deleterThread.join();
-            running.set(false);
-            forwardTailerThread.join();
-            backwardTailerThread.join();
+        try (QueueTailerRace race = new QueueTailerRace(createQueueWithNRollCycles(300, null))) {
+            race.awaitReaders();
+            progressivelyTruncateOldRollCycles(race.details);
         }
     }
 
@@ -327,25 +325,113 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     @Test
-    public void deletingRandomRollCyclesChaosTest() throws InterruptedException {
+    public void deletingRandomRollCyclesChaosTest() throws Exception {
         assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
-        final int numberOfCycles = 300;
-        final AtomicBoolean running = new AtomicBoolean(true);
-        try (QueueWithCycleDetails queueWithCycleDetails = createQueueWithNRollCycles(numberOfCycles, null)) {
+        try (QueueTailerRace race = new QueueTailerRace(createQueueWithNRollCycles(300, null))) {
+            race.awaitReaders();
+            deleteAllRollCyclesInRandomOrder(race.details);
+        }
+    }
 
-            Thread forwardTailerThread = new Thread(new QueueTailer(running, queueWithCycleDetails, TailerDirection.FORWARD));
-            Thread backwardTailerThread = new Thread(new QueueTailer(running, queueWithCycleDetails, TailerDirection.BACKWARD));
+    @Test
+    public void failedDeletionStopsReadersBeforeQueueClose() throws Exception {
+        final QueueWithCycleDetails details = createQueueWithNRollCycles(3, null);
+        final QueueTailerRace race = new QueueTailerRace(details);
+        final IllegalStateException original = new IllegalStateException("controlled deletion failure");
+        try (QueueTailerRace owned = race) {
+            owned.awaitReaders();
+            throw original;
+        } catch (IllegalStateException failure) {
+            assertSame(original, failure);
+        }
+        assertTrue("Both readers must stop before closing their queue", race.workers.isTerminated());
+        assertTrue("The readers' queue must close on failure", details.queue.isClosed());
+    }
 
-            Thread deleteRandomCyclesThread = new Thread(() -> deleteAllRollCyclesInRandomOrder(queueWithCycleDetails));
+    @Test
+    public void interruptedCleanupStopsReadersAndPreservesInterrupt() throws Exception {
+        final QueueWithCycleDetails details = createQueueWithNRollCycles(3, null);
+        final QueueTailerRace race = new QueueTailerRace(details);
+        try {
+            try (QueueTailerRace owned = race) {
+                owned.awaitReaders();
+                Thread.currentThread().interrupt();
+            }
+            assertTrue("Cleanup must restore the caller's interrupt", Thread.currentThread().isInterrupted());
+            assertTrue("Both readers must stop before closing their queue", race.workers.isTerminated());
+            assertTrue("The readers' queue must close on interruption", details.queue.isClosed());
+        } finally {
+            Thread.interrupted();
+        }
+    }
 
-            backwardTailerThread.start();
-            forwardTailerThread.start();
-            deleteRandomCyclesThread.start();
-            deleteRandomCyclesThread.join();
+    private static final class QueueTailerRace implements AutoCloseable {
+        private final QueueWithCycleDetails details;
+        private final AtomicBoolean running = new AtomicBoolean(true);
+        private final CountDownLatch readersStarted = new CountDownLatch(2);
+        private final ExecutorService workers = Executors.newFixedThreadPool(2);
+        private final Future<?> forward;
+        private final Future<?> backward;
+
+        QueueTailerRace(QueueWithCycleDetails details) {
+            this.details = details;
+            forward = workers.submit(new QueueTailer(running, details, TailerDirection.FORWARD, readersStarted));
+            backward = workers.submit(new QueueTailer(running, details, TailerDirection.BACKWARD, readersStarted));
+        }
+
+        void awaitReaders() throws Exception {
+            if (!readersStarted.await(5, TimeUnit.SECONDS)) {
+                // A failed reader should report its cause, not just a readiness timeout.
+                if (forward.isDone())
+                    forward.get();
+                if (backward.isDone())
+                    backward.get();
+                fail("Both deletion-race readers must read a document before deletion starts");
+            }
+        }
+
+        @Override
+        public void close() {
             running.set(false);
-            backwardTailerThread.join();
-            forwardTailerThread.join();
+            workers.shutdown();
+            boolean interrupted = Thread.interrupted();
+            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            try {
+                while (!workers.isTerminated()) {
+                    try {
+                        final long remaining = deadline - System.nanoTime();
+                        assertTrue("Deletion-race readers did not stop; their queue remains open", remaining > 0);
+                        assertTrue("Deletion-race readers did not stop; their queue remains open",
+                                workers.awaitTermination(remaining, TimeUnit.NANOSECONDS));
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+                Exception failure = null;
+                for (Future<?> reader : new Future<?>[]{forward, backward}) {
+                    try {
+                        reader.get();
+                    } catch (Exception e) {
+                        if (failure == null)
+                            failure = e;
+                        else
+                            failure.addSuppressed(e);
+                    }
+                }
+                try {
+                    details.close();
+                } catch (RuntimeException e) {
+                    if (failure == null)
+                        throw e;
+                    failure.addSuppressed(e);
+                }
+                if (failure != null)
+                    throw new AssertionError("Deletion-race reader failed", failure);
+            } finally {
+                if (interrupted)
+                    Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -354,15 +440,18 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         private final AtomicBoolean running;
         private final QueueWithCycleDetails queueWithCycleDetails;
         private final TailerDirection direction;
+        private final CountDownLatch readersStarted;
 
-        QueueTailer(AtomicBoolean running, QueueWithCycleDetails queueWithCycleDetails, TailerDirection direction) {
+        QueueTailer(AtomicBoolean running, QueueWithCycleDetails queueWithCycleDetails, TailerDirection direction, CountDownLatch readersStarted) {
             this.running = running;
             this.queueWithCycleDetails = queueWithCycleDetails;
             this.direction = direction;
+            this.readersStarted = readersStarted;
         }
 
         @Override
         public void run() {
+            boolean firstRead = true;
             try {
                 while (running.get()) {
                     try (final ExcerptTailer tailer = queueWithCycleDetails.queue.createTailer().direction(direction)) {
@@ -381,6 +470,10 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                                     logIterationResult(direction, tailer, cyclesRead, lastReadIndex);
                                     break;
                                 }
+                                if (firstRead) {
+                                    readersStarted.countDown();
+                                    firstRead = false;
+                                }
                                 lastReadIndex = documentContext.index();
                                 final int cycle = queueWithCycleDetails.queue.rollCycle().toCycle(lastReadIndex);
                                 if (cycle != currentCycle) {
@@ -396,7 +489,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                     }
                 }
             } catch (Exception e) {
-                Jvm.error().on(TestDeleteQueueFile.class, "Error occurred", e);
+                throw new AssertionError("Deletion-race reader failed: " + direction, e);
             }
             Jvm.startup().on(TestDeleteQueueFile.class, "Tailer thread terminated: " + direction);
         }
