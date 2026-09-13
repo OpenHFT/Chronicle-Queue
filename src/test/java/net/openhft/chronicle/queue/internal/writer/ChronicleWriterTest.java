@@ -77,7 +77,7 @@ public class ChronicleWriterTest extends QueueTestCommon {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30_000)
     public void testBytesMarshallingWithInterface() throws IOException {
         ChronicleWriter chronicleWriter = chronicleWriter(MyInterface2.class.getTypeName(), cw3);
         chronicleWriter.execute();

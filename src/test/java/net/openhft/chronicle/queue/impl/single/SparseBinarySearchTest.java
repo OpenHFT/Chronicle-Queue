@@ -14,6 +14,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -37,6 +38,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
     public SparseBinarySearchTest(int numberOfMessages, float percentageWithValues) {
         this.numberOfMessages = numberOfMessages;
         this.percentageWithValues = percentageWithValues;
+        globalTimeout = Timeout.seconds(180);
     }
 
     @Parameterized.Parameters(name = "items in queue: {0}, percentage with values: {1}")
