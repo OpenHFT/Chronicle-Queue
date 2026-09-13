@@ -7,6 +7,7 @@ import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.table.Metadata;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
 import net.openhft.chronicle.wire.WireType;
@@ -16,6 +17,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.queue.DirectoryUtils.tempDir;
 import static org.junit.Assert.*;
@@ -77,6 +79,28 @@ public class TableStoreTest extends QueueTestCommon {
     }
 
     @Test
+    public void defaultAcquireOrGetDelegatesToAcquireWhenCreating() {
+        AtomicInteger calls = new AtomicInteger();
+        TableStore<Metadata.NoMeta> table = new ReadonlyTableStore<Metadata.NoMeta>(Metadata.NoMeta.INSTANCE) {
+            @Override
+            public LongValue acquireValueFor(CharSequence key, long defaultValue) {
+                calls.incrementAndGet();
+                assertEquals(17L, defaultValue);
+                assertEquals("k", key.toString());
+                return null;
+            }
+        };
+        try {
+            assertNull(table.acquireOrGetValueFor("k", 17L, true));
+            assertEquals("the default must preserve acquire/create compatibility", 1, calls.get());
+            assertThrows(UnsupportedOperationException.class,
+                    () -> table.acquireOrGetValueFor("k", 17L, false));
+        } finally {
+            table.close();
+        }
+    }
+
+    @Test
     public void acquireValueForReadOnly() throws IOException {
 
         final File file = tempDir("table");
@@ -96,4 +120,5 @@ public class TableStoreTest extends QueueTestCommon {
             assertThrows(IllegalStateException.class, () -> table.acquireValueFor("d"));
         }
     }
+
 }
