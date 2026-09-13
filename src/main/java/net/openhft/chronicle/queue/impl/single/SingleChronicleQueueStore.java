@@ -518,6 +518,11 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         // If unable to reserve bytes, create a new instance of MappedBytes and try again
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
             Wire wire0 = WireType.valueOf(wire).apply(bytes);
+            // The fallback wire must use the same padding as the normal-path wire (see the appender and
+            // dump(), both of which set usePadding(dataVersion > 0)). Without this the EOF marker is
+            // written at an unpadded offset, diverging from the normal path depending purely on whether
+            // the byte reservation succeeded. See https://github.com/OpenHFT/Chronicle-Queue/issues/1096
+            wire0.usePadding(dataVersion > 0);
             return writeEOFAndShrink(wire0, timeoutMS);
 
         } catch (Exception e) {
