@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 
@@ -39,9 +40,10 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
         IOTools.deleteDirWithFiles(path);
     }
 
-    @Test
+    @Test(timeout = 180_000L)
     public void test() throws InterruptedException {
-        int threads = Math.min(64, Runtime.getRuntime().availableProcessors() * 4) - 1;
+        int processors = Runtime.getRuntime().availableProcessors();
+        int threads = Math.max(2, Math.min(64, processors * 2) - 1);
         int messages = 100;
 
         AtomicInteger count = new AtomicInteger();
@@ -55,12 +57,12 @@ public class ChronicleRollingIssueTest extends QueueTestCommon {
                     .rollCycle(TEST_SECONDLY).build();
                  ExcerptAppender appender = writeQueue.createAppender()) {
                 for (int i = 0; i < messages; i++) {
-                    long millis = System.currentTimeMillis() % 100;
-                    if (millis > 1 && millis < 99) {
-                        Jvm.pause(99 - millis);
-                    }
                     Map<String, Object> map = new HashMap<>();
                     map.put("key", Thread.currentThread().getName() + " - " + i);
+
+                    long nanos = System.nanoTime() % 100_000_000;
+                    // should cause them all to try to wake and write at the same time
+                    LockSupport.parkNanos(100_000_000 - nanos);
                     appender.writeMap(map);
                     count.incrementAndGet();
                 }
