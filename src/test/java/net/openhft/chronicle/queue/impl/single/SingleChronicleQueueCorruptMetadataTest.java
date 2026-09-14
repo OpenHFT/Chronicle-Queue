@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
@@ -14,8 +15,12 @@ import net.openhft.chronicle.queue.impl.table.CorruptTableStoreException;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.TableStoreUnavailableException;
+import net.openhft.chronicle.wire.BinaryWireCode;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assume;
 import org.junit.Test;
@@ -220,6 +225,28 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
                 thrown.getMessage().contains("does not hold a readable table store"));
     }
 
+    @Test
+    public void queueOwnedMetadataBodyDamageIsCorruption() {
+        final File queueDir = getTmpDir();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+            queue.createAppender().writeText("hello");
+        }
+        final File metadataFile = new File(queueDir, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        final long sourceIdCodeAt = sourceIdValueCodeAt(metadataFile);
+        try (RandomAccessFile raf = new RandomAccessFile(metadataFile, "rw")) {
+            raf.seek(sourceIdCodeAt);
+            raf.write(BinaryWireCode.TYPE_PREFIX);
+        } catch (IOException e) {
+            throw new AssertionError("could not damage SCQMeta", e);
+        }
+
+        final Throwable thrown = buildAndCaptureFailure(queueDir);
+
+        assertEquals("thrown was " + chainOf(thrown), CorruptTableStoreException.class, thrown.getClass());
+        assertTrue("message was " + thrown.getMessage(),
+                thrown.getMessage().contains("queue metadata body cannot be decoded"));
+    }
+
     /**
      * The check must not reject a healthy queue.
      */
@@ -288,6 +315,38 @@ public class SingleChronicleQueueCorruptMetadataTest extends QueueTestCommon {
         } catch (IOException e) {
             throw new AssertionError("could not corrupt " + metadataFile, e);
         }
+    }
+
+    private long sourceIdValueCodeAt(File metadataFile) {
+        final long[] result = {-1L};
+        try (MappedBytes bytes = MappedBytes.mappedBytes(
+                metadataFile, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, true)) {
+            bytes.singleThreadedCheckDisabled(true);
+            try {
+                final Wire wire = WireType.BINARY_LIGHT.apply(bytes);
+                wire.readFirstHeader();
+                final ValueIn storeValue = wire.read(MetaDataKeys.header);
+                storeValue.typePrefix(new StringBuilder(), StringBuilder::append);
+                storeValue.applyToMarshallable(storeWire -> {
+                    storeWire.read(MetaDataField.wireType).object(WireType.class);
+                    final ValueIn metadataValue = storeWire.read(MetaDataField.metadata);
+                    metadataValue.typePrefix(new StringBuilder(), StringBuilder::append);
+                    metadataValue.applyToMarshallable(metadataWire -> {
+                        metadataWire.read(MetaDataField.roll).skipValue();
+                        metadataWire.read(MetaDataField.sourceId);
+                        result[0] = metadataWire.bytes().readPosition();
+                        return null;
+                    });
+                    return null;
+                });
+            } finally {
+                bytes.singleThreadedCheckReset();
+            }
+        } catch (IOException e) {
+            throw new AssertionError("could not locate SCQMeta sourceId", e);
+        }
+        assertTrue("SCQMeta sourceId value was not located", result[0] >= 0L);
+        return result[0];
     }
 
     private String chainOf(Throwable thrown) {
