@@ -73,6 +73,9 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      * @param <R>  result type
      * @return result of code block execution
      */
+    //! SingleTableStoreLockTest#exclusiveBodyRunsOnceAndPreservesRuntimeExceptionAndErrorIdentity and
+    //! #sharedBodyRunsOnceAndPreservesRuntimeExceptionAndErrorIdentity prove that a protected body runs once and its
+    //! original failure escapes. Treating a body failure as lock contention can repeat mutations before timing out.
     <R> R doWithExclusiveLock(Function<TableStore<T>, ? extends R> code);
 
     /**
