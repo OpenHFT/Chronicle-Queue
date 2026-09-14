@@ -7,8 +7,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -57,11 +55,7 @@ public class WriteBytesTest extends QueueTestCommon {
             // System.out.println(new String(incomingMsgBytes));
 
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(dir, 2);
-            } catch (IORuntimeException e) {
-                // ignored
-            }
+            deleteDirAfterCleanup(dir);
         }
     }
 
@@ -1044,11 +1038,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     "# 126928 bytes remaining\n", queue.dump());
 
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(dir, 2);
-            } catch (IORuntimeException e) {
-                // ignored
-            }
+            deleteDirAfterCleanup(dir);
         }
     }
 
@@ -1079,11 +1069,7 @@ public class WriteBytesTest extends QueueTestCommon {
                 readBuffer.releaseLast();
             }
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(dir, 2);
-            } catch (IORuntimeException e) {
-                // ignored
-            }
+            deleteDirAfterCleanup(dir);
         }
     }
 
@@ -1118,11 +1104,7 @@ public class WriteBytesTest extends QueueTestCommon {
             assertEquals("Wire buffer capacity should remain stable across rolls", initialCapacity, postRollCapacity);
             assertNextUtf8(tailer, "cycle-2");
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(dir, 2);
-            } catch (IORuntimeException e) {
-                // ignored
-            }
+            deleteDirAfterCleanup(dir);
         }
     }
 
