@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -19,6 +20,8 @@ import org.junit.rules.Timeout;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.io.StreamCorruptedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -43,6 +47,7 @@ import static java.lang.Long.toHexString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
@@ -53,9 +58,25 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     private static final int NUM_REPEATS = 10;
     private static final int CYCLES_TO_DELETE_PER_ITERATION = 20;
     private final Path tempQueueDir = getTmpDir().toPath();
+    private QueueTailerRace activeRace;
 
     public TestDeleteQueueFile() {
         globalTimeout = Timeout.seconds(180);
+    }
+
+    @Override
+    protected void preAfter() {
+        //! cleanupBoundsIncompleteHeaderAcquisition: fixture cleanup must also stop a reader left by a failed test body.
+        if (activeRace != null)
+            activeRace.close();
+    }
+
+    @Override
+    protected void tearDown() {
+        //! teardownPreservesFilesWhileAReaderIsStillRunning: a failed shutdown must not unlink a live reader's files.
+        assertTrue("Deletion-race readers are still using their files",
+                activeRace == null || activeRace.workers.isTerminated());
+        super.tearDown();
     }
 
     @Test
@@ -247,7 +268,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         // Like the other unlink-under-tailer cases, this requires deleting a mapped file.
         assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
-        try (QueueTailerRace race = new QueueTailerRace(createQueueWithNRollCycles(300, null))) {
+        try (QueueTailerRace race = new QueueTailerRace(300)) {
             race.awaitReaders();
             progressivelyTruncateOldRollCycles(race.details);
         }
@@ -349,7 +370,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     public void deletingRandomRollCyclesChaosTest() throws Exception {
         assumeFalse(OS.isWindows());
         ignoreException("The current cycle seems to have been deleted from under the queue, scanning to find the next remaining cycle");
-        try (QueueTailerRace race = new QueueTailerRace(createQueueWithNRollCycles(300, null))) {
+        try (QueueTailerRace race = new QueueTailerRace(300)) {
             race.awaitReaders();
             deleteAllRollCyclesInRandomOrder(race.details);
         }
@@ -357,8 +378,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     @Test
     public void failedDeletionStopsReadersBeforeQueueClose() throws Exception {
-        final QueueWithCycleDetails details = createQueueWithNRollCycles(3, null);
-        final QueueTailerRace race = new QueueTailerRace(details);
+        final QueueTailerRace race = new QueueTailerRace(3);
+        final QueueWithCycleDetails details = race.details;
         final IllegalStateException original = new IllegalStateException("controlled deletion failure");
         try (QueueTailerRace owned = race) {
             owned.awaitReaders();
@@ -372,8 +393,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     @Test
     public void interruptedCleanupStopsReadersAndPreservesInterrupt() throws Exception {
-        final QueueWithCycleDetails details = createQueueWithNRollCycles(3, null);
-        final QueueTailerRace race = new QueueTailerRace(details);
+        final QueueTailerRace race = new QueueTailerRace(3);
+        final QueueWithCycleDetails details = race.details;
         try {
             try (QueueTailerRace owned = race) {
                 owned.awaitReaders();
@@ -387,33 +408,128 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         }
     }
 
-    private static final class QueueTailerRace implements AutoCloseable {
+    @Test
+    @SuppressWarnings("try") // Restore the header used to clean up the negative control.
+    public void cleanupBoundsIncompleteHeaderAcquisition() throws Exception {
+        try (QueueTailerRace race = new QueueTailerRace(3);
+             CycleHeaderOverride ignored = new CycleHeaderOverride(race.details.rollCycles.get(1), 0)) {
+            CountDownLatch acquiring = new CountDownLatch(1);
+            race.readers.add(race.workers.submit(() -> {
+                acquiring.countDown();
+                final SingleChronicleQueueStore store = race.details.queue.storeForCycle(
+                        race.details.rollCycles.get(1).rollCycle, 0, false, null);
+                try {
+                    assertNull("An incomplete header must not produce a store", store);
+                } finally {
+                    if (store != null)
+                        race.details.queue.closeStore(store);
+                }
+            }));
+            assertTrue("The acquisition task must start", acquiring.await(5, TimeUnit.SECONDS));
+
+            preAfter();
+
+            assertTrue("Header acquisition must stop before cleanup returns", race.workers.isTerminated());
+            assertTrue("The readers' queue must close", race.details.queue.isClosed());
+        }
+    }
+
+    @Test
+    @SuppressWarnings("try") // Restore the malformed header after the controlled worker failure.
+    public void readerFailureIsReportedOnceAndQueueIsClosed() throws Exception {
+        try (QueueTailerRace race = new QueueTailerRace(3);
+             CycleHeaderOverride ignored = new CycleHeaderOverride(race.details.rollCycles.get(1), 1)) {
+            Future<?> reader = race.workers.submit(() -> {
+                SingleChronicleQueueStore store = race.details.queue.storeForCycle(
+                        race.details.rollCycles.get(1).rollCycle, 0, false, null);
+                if (store != null)
+                    race.details.queue.closeStore(store);
+            });
+            race.readers.add(reader);
+            ExecutionException original = assertThrows(ExecutionException.class, () -> reader.get(5, TimeUnit.SECONDS));
+            assertTrue("The real malformed file must cause the failure", original.getCause() instanceof StreamCorruptedException);
+
+            AssertionError reported = assertThrows(AssertionError.class, race::close);
+            assertSame(original.getCause(), reported.getCause().getCause());
+            assertTrue("A failed reader must terminate before queue closure", race.workers.isTerminated());
+            assertTrue("A failed reader must not leak its queue", race.details.queue.isClosed());
+            preAfter();
+        }
+    }
+
+    @Test
+    public void teardownPreservesFilesWhileAReaderIsStillRunning() throws Exception {
+        try (QueueTailerRace race = new QueueTailerRace(3)) {
+            race.awaitReaders();
+            try {
+                assertThrows(AssertionError.class, this::tearDown);
+                assertTrue("A live reader's directory must remain intact", Files.isDirectory(tempQueueDir));
+                assertTrue("A live reader's file must remain intact",
+                        Files.exists(Paths.get(race.details.rollCycles.get(1).filename)));
+            } finally {
+                race.running.set(false);
+            }
+        }
+    }
+
+    private static final class CycleHeaderOverride implements AutoCloseable {
+        private final RandomAccessFile file;
+        private final int originalHeader;
+
+        CycleHeaderOverride(RollCycleDetails cycle, int replacementHeader) throws IOException {
+            file = new RandomAccessFile(cycle.filename, "rw");
+            originalHeader = file.readInt();
+            file.seek(0);
+            file.writeInt(Integer.reverseBytes(replacementHeader));
+        }
+
+        @Override
+        public void close() throws IOException {
+            // Also release the wait in the negative control before its second cleanup attempt.
+            try {
+                file.seek(0);
+                file.writeInt(originalHeader);
+            } finally {
+                file.close();
+            }
+        }
+    }
+
+    private final class QueueTailerRace implements AutoCloseable {
         private final QueueWithCycleDetails details;
         private final AtomicBoolean running = new AtomicBoolean(true);
         private final CountDownLatch readersStarted = new CountDownLatch(2);
         private final ExecutorService workers = Executors.newFixedThreadPool(2);
-        private final Future<?> forward;
-        private final Future<?> backward;
+        private final List<Future<?>> readers = new ArrayList<>();
+        private boolean started;
 
-        QueueTailerRace(QueueWithCycleDetails details) {
-            this.details = details;
-            forward = workers.submit(new QueueTailer(running, details, TailerDirection.FORWARD, readersStarted));
-            backward = workers.submit(new QueueTailer(running, details, TailerDirection.BACKWARD, readersStarted));
+        QueueTailerRace(int cycles) {
+            //! cleanupBoundsIncompleteHeaderAcquisition: all fixture records are committed before readers start.
+            //! An incomplete file left by deletion has no publisher to wait for; the default 10s wait exceeds shutdown's 5s.
+            details = createQueueWithNRollCycles(cycles, builder -> builder.timeoutMS(0));
+            activeRace = this;
         }
 
         void awaitReaders() throws Exception {
+            if (!started) {
+                started = true;
+                readers.add(workers.submit(new QueueTailer(running, details, TailerDirection.FORWARD, readersStarted)));
+                readers.add(workers.submit(new QueueTailer(running, details, TailerDirection.BACKWARD, readersStarted)));
+            }
             if (!readersStarted.await(5, TimeUnit.SECONDS)) {
                 // A failed reader should report its cause, not just a readiness timeout.
-                if (forward.isDone())
-                    forward.get();
-                if (backward.isDone())
-                    backward.get();
+                for (Future<?> reader : readers)
+                    if (reader.isDone())
+                        reader.get();
                 fail("Both deletion-race readers must read a document before deletion starts");
             }
         }
 
         @Override
         public void close() {
+            //! readerFailureIsReportedOnceAndQueueIsClosed: fixture cleanup must not rethrow an already-observed worker failure.
+            if (workers.isTerminated() && details.isClosed())
+                return;
             running.set(false);
             workers.shutdown();
             boolean interrupted = Thread.interrupted();
@@ -430,7 +546,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                     }
                 }
                 Exception failure = null;
-                for (Future<?> reader : new Future<?>[]{forward, backward}) {
+                for (Future<?> reader : readers) {
                     try {
                         reader.get();
                     } catch (Exception e) {
