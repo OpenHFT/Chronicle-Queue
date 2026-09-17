@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -21,8 +22,9 @@ import org.junit.rules.Timeout;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.io.StreamCorruptedException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -487,24 +489,22 @@ public class TestDeleteQueueFile extends QueueTestCommon {
     }
 
     private static final class CycleHeaderOverride implements AutoCloseable {
-        private final RandomAccessFile file;
+        private final MappedBytes bytes;
         private final int originalHeader;
 
         CycleHeaderOverride(RollCycleDetails cycle, int replacementHeader) throws IOException {
-            file = new RandomAccessFile(cycle.filename, "rw");
-            originalHeader = file.readInt();
-            file.seek(0);
-            file.writeInt(Integer.reverseBytes(replacementHeader));
+            bytes = MappedBytes.mappedBytes(new File(cycle.filename), OS.pageSize());
+            originalHeader = bytes.readVolatileInt(0);
+            bytes.writeVolatileInt(0, replacementHeader);
         }
 
         @Override
-        public void close() throws IOException {
-            // Also release the wait in the negative control before its second cleanup attempt.
+        public void close() {
+            // Publish all four bytes atomically: a reader must not see a partially restored header.
             try {
-                file.seek(0);
-                file.writeInt(originalHeader);
+                bytes.writeVolatileInt(0, originalHeader);
             } finally {
-                file.close();
+                bytes.close();
             }
         }
     }
@@ -513,7 +513,13 @@ public class TestDeleteQueueFile extends QueueTestCommon {
         private final QueueWithCycleDetails details;
         private final AtomicBoolean running = new AtomicBoolean(true);
         private final CountDownLatch readersStarted = new CountDownLatch(2);
-        private final ExecutorService workers = Executors.newFixedThreadPool(2);
+        private final List<Thread> readerThreads = new ArrayList<>();
+        private final ExecutorService workers = Executors.newFixedThreadPool(2, task -> {
+            Thread thread = Executors.defaultThreadFactory().newThread(task);
+            thread.setName("deletion-reader-" + readerThreads.size());
+            readerThreads.add(thread);
+            return thread;
+        });
         private final List<Future<?>> readers = new ArrayList<>();
         private boolean started;
 
@@ -552,9 +558,8 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                 while (!workers.isTerminated()) {
                     try {
                         final long remaining = deadline - System.nanoTime();
-                        assertTrue("Deletion-race readers did not stop; their queue remains open", remaining > 0);
-                        assertTrue("Deletion-race readers did not stop; their queue remains open",
-                                workers.awaitTermination(remaining, TimeUnit.NANOSECONDS));
+                        if (remaining <= 0 || !workers.awaitTermination(remaining, TimeUnit.NANOSECONDS))
+                            throw readersStillRunning();
                     } catch (InterruptedException e) {
                         interrupted = true;
                     }
@@ -584,6 +589,25 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                     Thread.currentThread().interrupt();
             }
         }
+
+        private AssertionError readersStillRunning() {
+            StringBuilder message = new StringBuilder("Deletion-race readers did not stop; their queue and files remain open");
+            for (Thread thread : readerThreads) {
+                @SuppressWarnings("deprecation") // Thread.threadId() is unavailable on Java 8.
+                long threadId = thread.getId();
+                ThreadInfo info = ManagementFactory.getThreadMXBean().getThreadInfo(threadId, Integer.MAX_VALUE);
+                message.append('\n').append(thread.getName()).append(": ");
+                if (info == null) {
+                    message.append("terminated");
+                    continue;
+                }
+                message.append(info.getThreadState()).append(", lock=").append(info.getLockInfo())
+                        .append(", owner=").append(info.getLockOwnerName()).append(" id=").append(info.getLockOwnerId());
+                for (StackTraceElement frame : info.getStackTrace())
+                    message.append("\n  at ").append(frame);
+            }
+            return new AssertionError(message.toString());
+        }
     }
 
     private static class QueueTailer implements Runnable {
@@ -611,7 +635,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
                         } else {
                             tailer.toStart();
                         }
-                        Jvm.startup().on(TestDeleteQueueFile.class, direction + " Tailer starting at index=" + toHexString(tailer.index()) + ", cycle=" + queueWithCycleDetails.queue.rollCycle().toCycle(tailer.index()));
+                        Jvm.startup().on(TestDeleteQueueFile.class, direction + " Tailer starting at index=" + toHexString(tailer.index()) + ", cycle=" + tailer.cycle());
                         int cyclesRead = 0;
                         long lastReadIndex = -5;
                         int currentCycle = -1;
