@@ -1105,7 +1105,9 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                             //! and lastSequenceNumberStaysOnTheTrackerForHugeDailyAboveSixteenMiB:
                             //! an exact pair from a prior commit/scan is safe even when the tracker wraps.
                             ScanAnchor anchor = scanAnchor.get();
-                            if (anchor.position > 0)
+                            //! SequenceLookupAuditTest.staleReaderAnchorMustNotPrecedeNewerSparseIndex:
+                            //! a writer burst may have persisted a newer starting point than this thread's pair.
+                            if (anchor.position > 0 && anchor.sequence >= nextEntryToBeIndexed() - indexSpacing)
                                 return linearScanByPosition(wireForIndex, Long.MAX_VALUE,
                                         anchor.sequence, anchor.position, true);
                             break;
@@ -1168,34 +1170,50 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     return -1;
 
                 //! SCQIndexingReviewEvidenceTest.forwardToEndWithStaleAliasedTrackerUsesThePhysicalTail:
-                //! return to the indexed public toEnd path when the pair is ambiguous.
-                if (endAddress >= positionAliasPeriod)
-                    return -1;
-                //! SequenceAliasGeometryTest.forwardToEndRejectsSubPeriodCaptureAfterWriterAdvances.
-                if (writePosition.getVolatileValue() != endAddress)
-                    continue;
+                //! a wrapped tracker must not supply the scan's starting pair.
+                if (endAddress >= positionAliasPeriod) {
+                    //! SequenceLookupAuditTest.forwardToEndHasBoundedWorkAfterCacheWarmup:
+                    //! an independently proved full pair avoids repeated indexed recovery.
+                    ScanAnchor anchor = scanAnchor.get();
+                    //! SequenceLookupAuditTest.forwardEndPrefersNewerIndexAfterWriterBurst:
+                    //! a cached pair must not hide a newer persisted starting point.
+                    if (anchor.position == 0 || anchor.sequence < nextEntryToBeIndexed() - indexSpacing)
+                        return -1;
+                    endAddress = anchor.position;
+                    sequence = anchor.sequence;
+                } else {
+                    //! SequenceAliasGeometryTest.forwardToEndRejectsSubPeriodCaptureAfterWriterAdvances.
+                    if (writePosition.getVolatileValue() != endAddress)
+                        continue;
+                }
 
                 Bytes<?> bytes = wire.bytes();
                 if (wire.usePadding())
                     endAddress += BytesUtil.padOffset(endAddress);
 
                 bytes.readPosition(endAddress);
+                long lastDataPosition = 0;
 
                 // Iterate through the wire to find the last complete entry.
                 for (; ; ) {
                     int header = bytes.readVolatileInt(endAddress);
-                    if (header == 0 || Wires.isNotComplete(header))
+                    if (header == 0 || Wires.isNotComplete(header)) {
+                        //! SequenceLookupAuditTest.forwardEndRetainsTheLastCommittedSuffixPosition:
+                        //! retain the last data pair so repeated toEnd calls do not rescan the suffix.
+                        finishSequenceScan(sequence - 1, lastDataPosition);
                         return sequence;
+                    }
+
+                    if (Wires.isData(header)) {
+                        lastDataPosition = endAddress;
+                        sequence += 1;
+                    }
 
                     int len = Wires.lengthOf(header) + 4;
                     len += (int) BytesUtil.padOffset(len);
 
                     bytes.readSkip(len);
                     endAddress += len;
-
-                    if (Wires.isData(header))
-                        sequence += 1;
-
                 }
             }
         }
