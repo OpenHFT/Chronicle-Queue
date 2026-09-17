@@ -505,8 +505,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             fromKnownIndex = lastIndex;
         }
 
-        bytes.readLimitToCapacity();
-        bytes.readPosition(knownAddress);
+        bytes.readPositionUnlimited(knownAddress);
 
         for (long i = fromKnownIndex; ; i++) {
             try {
@@ -566,26 +565,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
-        return linearScanByPosition(wire, toPosition, indexOfNext, startAddress, inclusive, "linearScan by position");
-    }
-
-    /**
-     * Variant that lets the caller supply a description for the perf log so different scan
-     * origins (fast path from {@code writePosition}, fall-through from indexed anchor, etc.)
-     * are distinguishable in logs -- important because the whole point of the
-     * {@code MAX_VALUE} fast path is to <em>avoid</em> the brute-force fall-through scan, and
-     * we want to be able to verify that from log output rather than guess.
-     */
-    long linearScanByPosition(@NotNull final Wire wire,
-                              final long toPosition,
-                              final long indexOfNext,
-                              final long startAddress,
-                              boolean inclusive,
-                              String desc) throws EOFException {
         long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
         long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
         if (REPORT_LINEAR_SCAN) {
-            printLinearScanTime(index, startAddress, start, desc);
+            printLinearScanTime(index, startAddress, start, "linearScan by position");
         }
         return index;
     }
@@ -681,13 +664,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @return The starting index for the scan.
      */
     private long calculateInitialValue(long toPosition, long indexOfNext, long startAddress, Bytes<?> bytes, long lastAddress, long lastIndex) {
-        bytes.readLimit(bytes.capacity());
+        //! ScanLimitRegressionTest.positionScanWorksWithRestrictedWriteLimit fails if the
+        //! mapped-bytes limit reset is replaced by readLimit(capacity), which checks writeLimit.
         if (lastAddress > 0 && toPosition == lastAddress
                 && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
-            bytes.readPosition(toPosition);
+            bytes.readPositionUnlimited(toPosition);
             return lastIndex - 1;
         } else {
-            bytes.readPosition(startAddress);
+            bytes.readPositionUnlimited(startAddress);
             return indexOfNext - 1;
         }
     }
@@ -729,39 +713,31 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
     long sequenceForMaxPosition(@NotNull ExcerptContext ec,
                                 boolean inclusive) throws StreamCorruptedException {
-        int retry = 0;
-        for (; retry < 128; retry++) {
+        //! MaxPositionMutationTest.maxPositionRetriesTransientTrackerRace fails if a transient
+        //! mismatch falls straight back to the sparse index instead of retrying the tracker.
+        for (int retry = 0; retry < 128; retry++) {
+            //! MaxPositionMutationTest.maxPositionRefreshesWritePositionAfterRace fails if retries
+            //! reuse a stale write position while the writer advances the published position.
             long lastWritePos = writePosition.getVolatileValue();
             long latestSeq = sequence.getSequence(lastWritePos);
+            //! MaxPositionMutationTest.maxPositionAcceptsSequenceZero fails if zero is rejected.
             if (latestSeq >= 0) {
-                if (retry > 0) {
-                    Jvm.perf().on(getClass(),
-                            "sequenceForPosition(MAX_VALUE) tracker-read retried" + " " + retry + " times");
-                }
                 try {
-                    return linearScanByPosition(ec.wireForIndex(), Long.MAX_VALUE, latestSeq, lastWritePos, inclusive,
-                            "linearScan from writePosition (sequenceForPosition fast path)");
+                    //! MaxPositionMutationTest.maxPositionScansCommittedSuffixAfterPublishedWritePosition
+                    //! fails if the tracker is returned before scanning subsequently committed records.
+                    return linearScanByPosition(ec.wireForIndex(), Long.MAX_VALUE,
+                            latestSeq, lastWritePos, inclusive);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);
                 }
             }
+            //! MaxPositionMutationTest.maxPositionFallsBackWithoutRetryWhenTrackerAbsent fails
+            //! if permanent tracker absence consumes the retry budget.
             if (latestSeq == Sequence.NOT_FOUND)
                 break;
-
-            // NOT_FOUND_RETRY: writer raced. Spin-retry for the first couple of iterations
-            // (the race window is sub-microsecond); after that yield to let the writer make
-            // progress instead of starving them with our volatile reads.
-            if (retry > 2)
-                Thread.yield();
         }
-        if (retry >= 128) {
-            // Retry budget exhausted in a row of NOT_FOUND_RETRY -- surface this clearly:
-            // it means we're about to do a brute-force indexed-anchor scan instead of the
-            // efficient writePos-anchored fast-path scan. The log makes a regression visible.
-            Jvm.perf().on(getClass(),
-                    "sequenceForPosition(MAX_VALUE) tracker-read retry loop exhausted" + " after " + retry +
-                            " attempts; falling through to indexed lookup");
-        }
+        //! MaxPositionMutationTest.maxPositionFallsBackWithinRetryBudget fails if retries are
+        //! unbounded or exhaustion stops returning the last committed sequence via indexed lookup.
         return sequenceForPosition(ec, Long.MAX_VALUE, inclusive);
     }
 
@@ -829,7 +805,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
         try {
             // Perform a linear scan if no exact match is found.
-            return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive, "linearScan from indexed anchor (sequenceForPosition fall-through)");
+            return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive);
         } catch (EOFException e) {
             throw new UncheckedIOException(e);
         }
@@ -1032,16 +1008,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     break;
                 try {
                     Wire wireForIndex = ec.wireForIndex();
-                    return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true,
-                            "linearScan from writePosition (lastSequenceNumber tail-check)");
+                    return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);
                 }
             }
         }
 
-        // The write-position retry budget has already been spent above. Fall through
-        // directly to the indexed lookup instead of restarting the MAX_VALUE fast path.
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
     }
 

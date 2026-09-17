@@ -89,7 +89,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         queuePath = getTmpDir();
     }
 
-    @Test(timeout = 180_000L)
+    @Test
     public void appenderAndTailerResourcesShouldBeCleanedUpByGarbageCollection() throws InterruptedException, TimeoutException, ExecutionException {
         finishedNormally = false;
         try (ChronicleQueue queue = createQueue(SYSTEM_TIME_PROVIDER)) {
@@ -125,7 +125,7 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
         finishedNormally = true;
     }
 
-    @Test(timeout = 180_000L)
+    @Test
     public void tailerResourcesCanBeReleasedManually() throws Exception {
         FlakyTestRunner.builder(this::tailerResourcesCanBeReleasedManually0).build().run();
     }

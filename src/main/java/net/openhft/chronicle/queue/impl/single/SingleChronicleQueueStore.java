@@ -377,6 +377,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws StreamCorruptedException {
         throwExceptionIfClosed();
 
+        //! MaxPositionMutationTest.maxPositionStartsAtPublishedWritePosition fails if MAX_VALUE
+        //! scans from the sparse index instead of the published write position.
+        //! MaxPositionMutationTest.finitePositionPreservesInclusiveAndExclusiveLookup fails if
+        //! finite positions are also routed through the MAX_VALUE lookup.
         return position == Long.MAX_VALUE
                 ? indexing.sequenceForMaxPosition(ec, inclusive)
                 : indexing.sequenceForPosition(ec, position, inclusive);
