@@ -517,8 +517,8 @@ public class ChronicleReaderTest extends QueueTestCommon {
     }
 
     @RequiredForClient
-    @Test(timeout = 20_000)
-    public void shouldPrintTimestampsToLocalTime() throws IOException {
+    @Test
+    public void shouldPrintTimestampsToLocalTime() throws IOException, InterruptedException {
         finishedNormally = false;
         final File queueDir = getTmpDir();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
@@ -534,11 +534,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
                 microTimestamp += 1000 * i;
             }
 
-            // UTC by default
             assertTimesAreInZone(queueDir, ZoneId.of("UTC"), timestamps);
 
-            // Local timezone
-            assertTimesAreInZone(queueDir, ZoneId.systemDefault(), timestamps);
+            // Exercise a different zone even when the build agent's default is UTC.
+            assertTimesAreInZone(queueDir, ZoneId.of("+02:00"), timestamps);
         }
         IOTools.deleteDirWithFiles(queueDir);
         finishedNormally = true;
@@ -609,20 +608,18 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertEquals(4, capturedOutput.stream().filter(msg -> msg.contains("hello")).count());
     }
 
-    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) throws IOException {
+    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) throws IOException, InterruptedException {
         final Process readerProcess = JavaProcessBuilder.create(ChronicleReaderRunner.class)
                 .withProgramArguments(queueDir.toString())
                 .withJvmArguments("-D" + AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY + "=" + zoneId.toString())
                 .start();
-        while (readerProcess.isAlive()) {
-            Jvm.pause(10);
-        }
-        String output = new String(IOTools.readAsBytes(readerProcess.getInputStream()));
+        // Two child JVMs share QueueTestCommon's 60-second limit, including cleanup.
+        String output = ReaderProcessOutput.read(readerProcess, "Reader zone=" + zoneId, 20, TimeUnit.SECONDS);
         MicroTimestampLongConverter mtlc = new MicroTimestampLongConverter(zoneId.toString());
         for (Long timestamp : timestamps) {
             final String expectedTimestamp = mtlc.asString(timestamp);
             int timestampIndex = output.indexOf(expectedTimestamp);
-            assertTrue(String.format("%s contains %s", output, expectedTimestamp), timestampIndex > 0);
+            assertTrue(String.format("Reader zone=%s: %s contains %s", zoneId, output, expectedTimestamp), timestampIndex > 0);
             output = output.substring(timestampIndex + expectedTimestamp.length());
         }
     }
