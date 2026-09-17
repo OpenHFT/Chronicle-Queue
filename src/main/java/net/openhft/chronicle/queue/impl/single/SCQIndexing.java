@@ -50,7 +50,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
     private final int indexCountBits;
-    private final long positionAliasPeriod;
+    private long positionAliasPeriod;
     private final int indexSpacing;
     private final int indexSpacingBits;
     private final LongValue index2Index;
@@ -119,9 +119,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.indexCountBits = Maths.intLog2(indexCount);
         this.indexSpacing = indexSpacing;
         this.indexSpacingBits = Maths.intLog2(indexSpacing);
-        // Same shift as RollCycleEncodeSequence: the tracker keeps only the position bits below
-        // this period, so positions this many bytes apart read back the same encoded fragment.
-        this.positionAliasPeriod = 1L << (64 - Math.max(32, 2 * indexCountBits + indexSpacingBits));
         this.index2Index = index2Index;
         this.nextEntryToBeIndexed = nextEntryToBeIndexed;
         this.longArraySupplier = longArraySupplier;
@@ -130,6 +127,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
         singleThreadedCheckDisabled(true);
+    }
+
+    void initSequence(RollCycleEncodeSequence sequence) {
+        this.sequence = sequence;
+        //! SequenceAliasGeometryTest.customIndexGeometryMustUseTheLiveCodecAliasPeriod fails
+        //! if the bound comes from index geometry: a new store's codec uses roll-cycle defaults.
+        this.positionAliasPeriod = sequence.positionAliasPeriod();
     }
 
     // Helper method to create a new LongArrayValuesHolder
@@ -733,16 +737,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 // At and above the period the bits can belong to another record: only indexed
                 // recovery is safe there.
                 //! SequenceForPositionSafetyTest.newerPositionStaleTrackerAliasRecoversFromTheIndex
-                //! and olderPositionNewerTrackerAliasRecoversFromTheIndex fail if an aliased pair
-                //! seeds the scan, and backwardTraversalAcrossRollBoundaryLandsOnTheTrueTail then
-                //! positions the backward reader on the wrong record of the previous cycle.
+                //! fails if a stable full position can accept an older, aliased tracker.
                 if (lastWritePos >= positionAliasPeriod)
                     break;
                 // Below the period the match is exact, provided the tracker belongs to this
                 // position: the tracker is published only after the write position covers its
                 // record, so a stable re-read pins the pair to exactly lastWritePos.
-                //! MaxPositionMutationTest.maxPositionRefreshesWritePositionAfterRace fails if a
-                //! pair whose write position moved between the two reads seeds the scan.
+                //! SequenceAliasGeometryTest.maxPositionRejectsSubPeriodCaptureAfterWriterAdvances
+                //! fails if a newer aliased tracker seeds a scan from the captured sub-period position.
                 if (writePosition.getVolatileValue() != lastWritePos)
                     continue;
                 try {
@@ -762,27 +764,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         //! MaxPositionMutationTest.maxPositionFallsBackWithinRetryBudget fails if retries are
         //! unbounded or exhaustion stops returning the last committed sequence via indexed lookup.
         return sequenceForPosition(ec, Long.MAX_VALUE, inclusive);
-    }
-
-    /**
-     * Establishes whether the persisted sparse index proves that {@code sequenceNumber} is the
-     * sequence of the record at exactly {@code position}. The encoded sequence tracker compares
-     * only the low bits of a position, so a matching tracker read alone cannot prove the pair;
-     * the index stores the full position, but only for sequences on an index-spacing boundary.
-     */
-    private boolean indexedSequenceMatchesPosition(Wire wire, long sequenceNumber, long position) {
-        if (wire == null || position <= 0 || (sequenceNumber & (indexSpacing - 1L)) != 0)
-            return false;
-        try {
-            LongArrayValues primary = getIndex2index(wire);
-            long secondaryAddress = primary.getVolatileValueAt(toAddress0(sequenceNumber));
-            //! SequenceForPositionSafetyTest.indexedTrackerWithMismatchedPersistedEntryRecoversFromTheIndex
-            //! fails if the persisted entry is not compared against the full position.
-            return secondaryAddress > 0 &&
-                    arrayForAddress(wire, secondaryAddress).getVolatileValueAt(toAddress1(sequenceNumber)) == position;
-        } catch (IllegalStateException unavailableIndex) {
-            return false;
-        }
     }
 
     /**
@@ -1052,17 +1033,17 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     break;
                 try {
                     Wire wireForIndex = ec.wireForIndex();
-                    // Below the position-encoding wrap, positions are too small to alias, so the
-                    // tail check keeps its existing behaviour there. At and above the wrap only an
-                    // exact persisted index entry proves the pair; anything unproven must use
-                    // indexed recovery. Without an index wire the raw tracker value remains the
-                    // only available answer, as before.
                     //! SequenceForPositionSafetyTest.lastIndexWithStaleTrackerAliasRecoversFromTheIndex
                     //! and backwardTraversalAcrossRollBoundaryLandsOnTheTrueTail fail if an aliased
                     //! pair seeds the tail check: the reader is positioned on the wrong record.
-                    if (wireForIndex != null && address >= positionAliasPeriod &&
-                            !indexedSequenceMatchesPosition(wireForIndex, sequence, address))
-                        break;
+                    if (wireForIndex != null) {
+                        if (address >= positionAliasPeriod)
+                            break;
+                        //! SequenceAliasGeometryTest.lastSequenceNumberRejectsSubPeriodCaptureAfterWriterAdvances
+                        //! fails if a newer aliased tracker can seed a scan from an older, sub-period position.
+                        if (writePosition.getVolatileValue() != address)
+                            continue;
+                    }
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);

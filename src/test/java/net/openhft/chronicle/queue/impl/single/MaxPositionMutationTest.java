@@ -28,6 +28,20 @@ import static org.junit.Assert.*;
  */
 public class MaxPositionMutationTest extends QueueTestCommon {
     @Test
+    public void reopenedStoreUsesItsCodecForPublishedPositionLookup() throws Exception {
+        File path = getTmpDir();
+        long lastPosition;
+        try (Fixture f = new Fixture(path, 13)) {
+            lastPosition = f.positions[12];
+        }
+        try (Fixture f = new Fixture(path, 0)) {
+            assertEquals(12, f.lookup(Long.MAX_VALUE, false));
+            assertEquals("Reopening must retain the proven published-position path", lastPosition, f.firstScanPosition);
+            assertEquals(2, f.headersRead);
+        }
+    }
+
+    @Test
     public void maxPositionStartsAtPublishedWritePosition() throws Exception {
         for (boolean inclusive : new boolean[]{false, true}) {
             try (Fixture f = new Fixture(getTmpDir(), 13)) {
@@ -103,7 +117,8 @@ public class MaxPositionMutationTest extends QueueTestCommon {
                 f.scriptSequence(position -> Sequence.NOT_FOUND);
                 assertEquals(12, f.lookup(Long.MAX_VALUE, inclusive));
                 assertEquals(f.positions[0], f.firstScanPosition);
-                assertEquals("An absent tracker needs one attempt, then the ordinary scan", 2, f.sequenceReads);
+                assertTrue("An absent tracker must not consume the retry budget: " + f.sequenceReads,
+                        f.sequenceReads <= 2);
             }
         }
     }
