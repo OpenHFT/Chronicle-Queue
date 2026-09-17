@@ -14,6 +14,8 @@ public class ScanLimitRegressionTest extends QueueTestCommon {
     public void positionScanWorksWithRestrictedWriteLimit() throws Exception {
         try (MaxPositionMutationTest.Fixture f = new MaxPositionMutationTest.Fixture(getTmpDir(), 13)) {
             Bytes<?> bytes = f.wireForIndex().bytes();
+            long readPosition = bytes.readPosition();
+            long readLimit = bytes.readLimit();
             long writeLimit = bytes.writeLimit();
             try {
                 bytes.readLimit(f.positions[12] + 64);
@@ -21,7 +23,12 @@ public class ScanLimitRegressionTest extends QueueTestCommon {
                 assertEquals(12, f.lookup(Long.MAX_VALUE, true));
             } finally {
                 bytes.writeLimit(writeLimit);
+                bytes.readLimit(readLimit);
+                bytes.readPosition(readPosition);
             }
+            assertEquals("the restricted write limit must be restored", writeLimit, bytes.writeLimit());
+            assertEquals("the restricted read limit must be restored", readLimit, bytes.readLimit());
+            assertEquals("the read position must be restored", readPosition, bytes.readPosition());
         }
     }
 }

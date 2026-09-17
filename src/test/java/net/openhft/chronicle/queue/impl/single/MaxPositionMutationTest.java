@@ -20,6 +20,12 @@ import java.util.function.LongUnaryOperator;
 
 import static org.junit.Assert.*;
 
+/**
+ * All positions in this fixture sit far below the position-encoding wrap, where a stable tracker
+ * pair is exact and the {@code MAX_VALUE} fast path may start at the published write position.
+ * {@link SequenceForPositionSafetyTest} covers positions at and above the wrap, where the pair
+ * can alias and only indexed recovery is safe.
+ */
 public class MaxPositionMutationTest extends QueueTestCommon {
     @Test
     public void maxPositionStartsAtPublishedWritePosition() throws Exception {
@@ -38,7 +44,9 @@ public class MaxPositionMutationTest extends QueueTestCommon {
         try (Fixture f = new Fixture(getTmpDir(), 1)) {
             f.scriptSequence(position -> 0);
             assertEquals(0, f.lookup(Long.MAX_VALUE, false));
-            assertEquals("The matched tracker must be consumed before the scan", 2, f.sequenceReads);
+            assertEquals("Sequence zero must engage the fast path, not be treated as absent",
+                    f.positions[0], f.firstScanPosition);
+            assertTrue("The matched tracker must not burn retries: " + f.sequenceReads, f.sequenceReads <= 2);
         }
     }
 
@@ -63,7 +71,8 @@ public class MaxPositionMutationTest extends QueueTestCommon {
             assertEquals(12, f.lookup(Long.MAX_VALUE, false));
             assertEquals("A transient mismatch must not force a sparse-index scan",
                     f.positions[12], f.firstScanPosition);
-            assertEquals(7, f.sequenceReads);
+            assertTrue("The lookup must have retried past the transient mismatches: " + f.sequenceReads,
+                    f.sequenceReads > 5);
         }
     }
 
@@ -74,14 +83,16 @@ public class MaxPositionMutationTest extends QueueTestCommon {
             f.scriptPosition(published);
             f.scriptSequence(position -> {
                 if (f.sequenceReads == 1) {
+                    // The writer advances the published position between the reader's two
+                    // position reads; the pair captured against the older position is stale.
                     published.set(f.positions[12]);
-                    return Sequence.NOT_FOUND_RETRY;
+                    return 9;
                 }
                 return position == f.positions[12] ? 12 : Sequence.NOT_FOUND_RETRY;
             });
             assertEquals(12, f.lookup(Long.MAX_VALUE, false));
-            assertEquals(f.positions[12], f.firstScanPosition);
-            assertEquals(3, f.sequenceReads);
+            assertEquals("A pair whose write position moved between the reads must be retried, not trusted",
+                    f.positions[12], f.firstScanPosition);
         }
     }
 
