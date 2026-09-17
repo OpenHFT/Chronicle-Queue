@@ -190,7 +190,6 @@ public class ChronicleReaderTest extends QueueTestCommon {
     @Test(timeout = 10_000L)
     public void shouldReadQueueWithNonDefaultRollCycle() {
         expectException("Overriding roll length from existing metadata");
-//        expectException("Overriding roll cycle from");
         Path path = getTmpDir().toPath();
         path.toFile().mkdirs();
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(MINUTELY).
@@ -283,13 +282,6 @@ public class ChronicleReaderTest extends QueueTestCommon {
             }
         }
     }
-
-//        basicReader()
-//                .asMethodReader(SayWhen.class.getName())
-//                .execute();
-//
-//        assertTrue(capturedOutput.isEmpty());
-//    }
 
     @Test
     public void canReadPastEmptyMessageInReverseOrder() {
