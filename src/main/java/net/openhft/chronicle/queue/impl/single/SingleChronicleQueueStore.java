@@ -73,7 +73,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             this.sequence = new RollCycleEncodeSequence(writePosition, indexing.indexCount(), indexing.indexSpacing());
             //! MaxPositionMutationTest.reopenedStoreUsesItsCodecForPublishedPositionLookup fails
             //! if reopening omits the codec's alias bound and unnecessarily falls back to the sparse index.
-            this.indexing.initSequence(sequence);
+            this.indexing.initSequence(sequence, mappedFile);
             final String fieldName = wire.readEvent(String.class);
             int version = 0;
 
@@ -119,7 +119,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         this.sequence = new RollCycleEncodeSequence(writePosition,
                 rollCycle.defaultIndexCount(),
                 rollCycle.defaultIndexSpacing());
-        this.indexing.initSequence(sequence);
+        this.indexing.initSequence(sequence, mappedFile);
         this.dataVersion = 1;
 
         singleThreadedCheckDisabled(true);
@@ -476,6 +476,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         throwExceptionIfClosedInSetter();
 
         sequence.setSequence(sequenceNumber, position);
+
+        //! SCQIndexingReviewEvidenceTest.tailLookupAfterDirectByteWritesUsesCommittedFullPosition:
+        //! retain the full pair supplied for this committed record, not a decoded position fragment.
+        indexing.rememberSequence(sequenceNumber, position);
 
         long nextSequence = indexing.nextEntryToBeIndexed();
         if (nextSequence > sequenceNumber)

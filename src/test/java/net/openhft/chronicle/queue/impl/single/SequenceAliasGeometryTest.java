@@ -38,23 +38,43 @@ class SequenceAliasGeometryTest extends QueueTestCommon {
 
     @Test
     void lastSequenceNumberRejectsSubPeriodCaptureAfterWriterAdvances() throws Exception {
-        assertSubPeriodCapture(true, false);
+        assertSubPeriodCapture(Lookup.LAST_SEQUENCE, false);
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void maxPositionRejectsSubPeriodCaptureAfterWriterAdvances(boolean inclusive) throws Exception {
-        assertSubPeriodCapture(false, inclusive);
+        assertSubPeriodCapture(Lookup.MAX_POSITION, inclusive);
     }
 
-    private void assertSubPeriodCapture(boolean lastSequenceLookup, boolean inclusive) throws Exception {
+    @Test
+    void moveToIndexRejectsSubPeriodCaptureAfterWriterAdvances() throws Exception {
+        assertSubPeriodCapture(Lookup.INDEX, false);
+    }
+
+    @Test
+    void finitePositionRejectsSubPeriodCaptureAfterWriterAdvances() throws Exception {
+        assertSubPeriodCapture(Lookup.FINITE_POSITION, true);
+    }
+
+    @Test
+    void forwardToEndRejectsSubPeriodCaptureAfterWriterAdvances() throws Exception {
+        assertSubPeriodCapture(Lookup.FORWARD_END, false);
+    }
+
+    private enum Lookup { LAST_SEQUENCE, MAX_POSITION, INDEX, FINITE_POSITION, FORWARD_END }
+
+    private void assertSubPeriodCapture(Lookup lookup, boolean inclusive) throws Exception {
         long aliasPeriod = 1L << 24;
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .blockSize(32 << 20).timeProvider(() -> 0L).rollCycle(LargeRollCycles.HUGE_DAILY).build();
-             StoreAppender appender = (StoreAppender) queue.createAppender()) {
+             StoreAppender appender = (StoreAppender) queue.createAppender();
+             StoreTailer tailer = (StoreTailer) queue.createTailer()) {
             appender.writeText("first");
             appender.writeBytes(bytes -> bytes.writeSkip(aliasPeriod - 4));
-            SCQIndexing indexing = appender.store.indexing;
+            tailer.toStart();
+            SCQIndexing indexing = lookup == Lookup.INDEX || lookup == Lookup.FORWARD_END
+                    ? tailer.store.indexing : appender.store.indexing;
             long capturedPosition = appender.store.writePosition();
             assertTrue(capturedPosition < aliasPeriod, "The captured position must precede the wrap");
             Sequence real = indexing.sequence;
@@ -83,13 +103,36 @@ class SequenceAliasGeometryTest extends QueueTestCommon {
                 }
             };
             try {
-                long result = lastSequenceLookup ? appender.store.lastSequenceNumber(appender)
-                        : appender.store.sequenceForPosition(appender, Long.MAX_VALUE, inclusive);
+                long result;
+                switch (lookup) {
+                    case LAST_SEQUENCE:
+                        result = appender.store.lastSequenceNumber(appender);
+                        break;
+                    case MAX_POSITION:
+                        result = appender.store.sequenceForPosition(appender, Long.MAX_VALUE, inclusive);
+                        break;
+                    case INDEX:
+                        assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(0, 2)));
+                        assertEquals("last", tailer.readText());
+                        result = queue.rollCycle().toSequenceNumber(tailer.lastReadIndex());
+                        break;
+                    case FINITE_POSITION:
+                        result = appender.store.sequenceForPosition(appender, capturedPosition, inclusive);
+                        break;
+                    case FORWARD_END:
+                        tailer.toEnd();
+                        result = queue.rollCycle().toSequenceNumber(tailer.index());
+                        assertNull(tailer.readText());
+                        break;
+                    default:
+                        throw new AssertionError(lookup);
+                }
                 assertTrue(published.get());
                 assertEquals(aliasPeriod, appender.store.writePosition() - capturedPosition);
                 assertEquals(2, real.getSequence(capturedPosition), "The older position must alias the new tracker");
                 assertThreeRecords(queue);
-                assertEquals(2, result, "The suffix must not be counted twice");
+                long expected = lookup == Lookup.FINITE_POSITION ? 1 : lookup == Lookup.FORWARD_END ? 3 : 2;
+                assertEquals(expected, result, "The sequence must belong to the physical record");
             } finally {
                 indexing.sequence = real;
             }

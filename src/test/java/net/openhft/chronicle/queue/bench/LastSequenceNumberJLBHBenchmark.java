@@ -1,10 +1,11 @@
 /*
- * Copyright 2026 chronicle.software; SPDX-License-Identifier: Apache-2.0
+ * Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
  */
 package net.openhft.chronicle.queue.bench;
 
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
@@ -20,26 +21,31 @@ import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
 import net.openhft.chronicle.queue.rollcycles.SparseRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.management.ManagementFactory;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
- * Measures the cost of the tail sequence lookup, SCQIndexing.lastSequenceNumber, through two
- * public paths that call it on every invocation.
+ * Measures document opening/writing and excerptsInCycle with one or two appenders.
+ * The ordinary writingDocument path calls resetPosition/lastSequenceNumber even
+ * with one appender; alternating appenders is a separate control, not a prerequisite.
+ * Samples are recorded after both independently timed regions.
  * <p>
- * The end-to-end sample is one write by an appender that finds the write position moved by the
- * other appender. StoreAppender.writeHeader then calls lastSequenceNumber to resync its header
- * number. Two appenders alternate, so every write pays the lookup. The probe "excerptsInCycle"
- * samples ExcerptTailer.excerptsInCycle, which calls lastSequenceNumber directly.
+ * The initial population is one optional alias-period filler plus "records" small records.
+ * Warmup and every measured invocation append another record. Population and distance
+ * from the last sparse-index anchor are printed at each run boundary.
  * <p>
- * The queue starts with one filler record that spans the alias period of the roll cycle,
- * 2^(64 - cycleShift) bytes, so that every later write position is above the period. Then it
- * holds "records" small records. Each iteration adds one record, so the number of records
- * since the last index entry grows during the run.
- * <p>
- * System properties: rollCycle (default HUGE_DAILY_XSPARSE), records (default 10000),
- * iterations (default 2000), throughput (default 200), runs (default 3), path.
+ * Properties: rollCycle (HUGE_DAILY_XSPARSE), records (10000), appenders (1 or 2,
+ * default 2), iterations (2000), throughput (200), runs (3), warmUp (500), revision,
+ * and path (an existing parent directory for a new benchmark-owned child).
  */
 public class LastSequenceNumberJLBHBenchmark implements JLBHTask {
-    private static final String PATH = System.getProperty("path", "last-sequence-number-bench");
+    private static final String PATH = System.getProperty("path");
     private static final String ROLL_CYCLE = System.getProperty("rollCycle", "HUGE_DAILY_XSPARSE");
+    private static final int APPENDERS = Integer.getInteger("appenders", 2);
     private static final int RECORDS = Integer.getInteger("records", 10_000);
     private static final int ITERATIONS = Integer.getInteger("iterations", 2_000);
     private static final int THROUGHPUT = Integer.getInteger("throughput", 200);
@@ -53,6 +59,9 @@ public class LastSequenceNumberJLBHBenchmark implements JLBHTask {
     private NanoSampler excerptsInCycleProbe;
     private JLBH jlbh;
     private long count;
+    private long fillerRecords;
+    private Path directory;
+    private int completedRuns;
 
     static {
         System.setProperty("disable.thread.safety", "true");
@@ -85,19 +94,35 @@ public class LastSequenceNumberJLBHBenchmark implements JLBHTask {
     @Override
     public void init(JLBH jlbh) {
         this.jlbh = jlbh;
-        System.out.println("-Dpath=" + PATH + " -DrollCycle=" + ROLL_CYCLE + " -Drecords=" + RECORDS);
-        IOTools.deleteDirWithFiles(PATH, 10);
+        if (APPENDERS != 1 && APPENDERS != 2)
+            throw new IllegalArgumentException("appenders must be 1 or 2");
+        try {
+            directory = PATH == null ? Files.createTempDirectory("last-sequence-number-") :
+                    Files.createTempDirectory(Paths.get(PATH), "last-sequence-number-");
+            System.out.println("revision=" + System.getProperty("revision", "unspecified")
+                    + " directory=" + directory + " filesystem=" + Files.getFileStore(directory).type());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        System.out.println("java=" + System.getProperty("java.runtime.version") + " vm="
+                + System.getProperty("java.vm.name") + " os=" + System.getProperty("os.name")
+                + " arch=" + System.getProperty("os.arch") + " processors=" + Runtime.getRuntime().availableProcessors());
+        System.out.println("jvmOptions=" + ManagementFactory.getRuntimeMXBean().getInputArguments());
+        System.out.println("rollCycle=" + ROLL_CYCLE + " initiallySmallRecords=" + RECORDS
+                + " appenders=" + APPENDERS + " iterations=" + ITERATIONS + " throughput=" + THROUGHPUT
+                + " runs=" + RUNS + " warmUp=" + WARM_UP);
 
         RollCycle rollCycle = rollCycle(ROLL_CYCLE);
-        queue = SingleChronicleQueueBuilder.binary(PATH).rollCycle(rollCycle).build();
+        queue = SingleChronicleQueueBuilder.binary(directory).rollCycle(rollCycle).timeProvider(() -> 0L).build();
         appenderA = queue.createAppender();
-        appenderB = queue.createAppender();
+        appenderB = APPENDERS == 2 ? queue.createAppender() : null;
         tailer = queue.createTailer();
 
         int cycleShift = Math.max(32, Maths.intLog2(queue.indexCount()) * 2 + Maths.intLog2(queue.indexSpacing()));
         long aliasPeriod = 1L << (64 - cycleShift);
         if (aliasPeriod <= (256L << 20)) {
             appenderA.writeBytes(bytes -> bytes.writeSkip(aliasPeriod));
+            fillerRecords = 1;
             System.out.println("filler of " + aliasPeriod + " bytes written, alias period " + aliasPeriod);
         } else {
             System.out.println("alias period " + aliasPeriod + " not filled, all positions stay below it");
@@ -106,6 +131,7 @@ public class LastSequenceNumberJLBHBenchmark implements JLBHTask {
             write(appenderA, i);
         count = RECORDS;
         excerptsInCycleProbe = jlbh.addProbe("excerptsInCycle");
+        printPopulation("before warmup");
     }
 
     private void write(ExcerptAppender appender, long value) {
@@ -116,23 +142,48 @@ public class LastSequenceNumberJLBHBenchmark implements JLBHTask {
 
     @Override
     public void run(long startTimeNS) {
-        // Alternate the appenders so that each write finds the position moved by the other.
-        ExcerptAppender appender = (count & 1) == 0 ? appenderA : appenderB;
+        ExcerptAppender appender = APPENDERS == 1 || (count & 1) == 0 ? appenderA : appenderB;
         long start = System.nanoTime();
         write(appender, count++);
         long afterWrite = System.nanoTime();
-        jlbh.sample(afterWrite - start);
+        long beforeCount = System.nanoTime();
+        long population = tailer.excerptsInCycle(queue.cycle());
+        long afterCount = System.nanoTime();
 
-        tailer.excerptsInCycle(queue.cycle());
-        excerptsInCycleProbe.sampleNanos(System.nanoTime() - afterWrite);
+        if (population != count + fillerRecords)
+            throw new AssertionError("Expected population " + (count + fillerRecords) + ", was " + population);
+        jlbh.sample(afterWrite - start);
+        excerptsInCycleProbe.sampleNanos(afterCount - beforeCount);
+    }
+
+    @Override
+    public void warmedUp() {
+        printPopulation("after warmup / before run 1");
+    }
+
+    @Override
+    public void runComplete() {
+        printPopulation("after run " + (++completedRuns));
+    }
+
+    private void printPopulation(String phase) {
+        long population = count + fillerRecords;
+        long lastSequence = population - 1;
+        long distance = lastSequence < 0 ? 0 : lastSequence % queue.indexSpacing();
+        System.out.println(phase + ": population=" + population + " lastSequence=" + lastSequence
+                + " indexSpacing=" + queue.indexSpacing() + " lastSparseAnchor=" + (lastSequence - distance)
+                + " recordsAfterAnchor=" + distance);
     }
 
     @Override
     public void complete() {
-        tailer.close();
-        appenderB.close();
-        appenderA.close();
-        queue.close();
-        TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
+        try {
+            TeamCityHelper.teamCityStatsLastRun(getClass().getSimpleName(), jlbh, ITERATIONS, System.out);
+        } finally {
+            Closeable.closeQuietly(tailer, appenderB, appenderA, queue);
+            // Only the child created by this benchmark is owned; never delete the supplied parent.
+            if (directory != null)
+                IOTools.deleteDirWithFiles(directory.toFile());
+        }
     }
 }

@@ -1,11 +1,16 @@
 /*
- * Copyright 2026 chronicle.software; SPDX-License-Identifier: Apache-2.0
+ * Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
+import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
@@ -14,22 +19,22 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.io.File;
+import java.nio.file.Files;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Review evidence for PR 1706, SCQIndexing.java lines 1036 to 1046.
- * The alias bound in lastSequenceNumber rejects the tracker for every position at or above
- * 2^(64 - cycleShift). For the large and sparse roll cycles the bound is 16 MiB or less, so the
- * tail lookup falls back to a linear scan from the last index entry. On the base commit the
- * tracker answers with two header reads. Each test counts the headers that the lookup reads.
- * <p>
- * The third test checks SCQIndexing.java lines 508 to 513, linearScan0, which the PR does not
- * change. It trusts the tracker pair with no alias bound, so a stale aliased tracker moves the
- * tailer to the wrong record.
+ * Deterministic review evidence: assert the physical sequence before bounding header work.
+ * Tail lookup and writingDocument performance regressions are distinguished from the
+ * pre-existing finite-position, moveToIndex and forward-toEnd alias defects.
  */
 public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
 
@@ -45,7 +50,20 @@ public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
         assertTrackerLookup(LargeRollCycles.HUGE_DAILY);
     }
 
+    @Test
+    public void tailLookupAfterDirectByteWritesUsesCommittedFullPosition() throws Exception {
+        assertTrackerLookup(SparseRollCycles.HUGE_DAILY_XSPARSE, true);
+    }
+
     private void assertTrackerLookup(RollCycle rollCycle) throws Exception {
+        assertTrackerLookup(rollCycle, false);
+    }
+
+    private void assertTrackerLookup(RollCycle rollCycle, boolean directBytes) throws Exception {
+        boolean checkIndex = QueueSystemProperties.CHECK_INDEX;
+        // Production writes must establish the pair without relying on optional assertion scans.
+        QueueSystemProperties.CHECK_INDEX = false;
+        Bytes<?> payload = Bytes.wrapForRead(new byte[8]);
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .rollCycle(rollCycle).blockSize(32 << 20).timeProvider(() -> 0L).build();
              ExcerptAppender appender = queue.createAppender();
@@ -55,8 +73,14 @@ public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
                 throw new AssertionError("this test needs a cycle with an alias period of at most 16 MiB");
             // Push the write position past the alias period with one large record, then add small ones.
             appender.writeBytes(bytes -> bytes.writeSkip(aliasPeriod));
-            for (int i = 1; i < RECORDS; i++)
-                appender.writeText("record-" + i);
+            for (int i = 1; i < RECORDS; i++) {
+                if (directBytes) {
+                    // The BytesStore overload bypasses writingDocument/resetPosition.
+                    appender.writeBytes(payload);
+                } else {
+                    appender.writeText("record-" + i);
+                }
+            }
             SingleChronicleQueueStore store = ((StoreAppender) appender).store;
             long writePosition = store.writePosition();
             assertTrue("write position " + writePosition + " must be at or above the alias period " + aliasPeriod,
@@ -74,6 +98,9 @@ public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
                     + " us at write position " + writePosition + " (alias period " + aliasPeriod + ")";
             System.out.println(message);
             assertTrue(message, ctx.headersRead <= 4);
+        } finally {
+            payload.releaseLast();
+            QueueSystemProperties.CHECK_INDEX = checkIndex;
         }
     }
 
@@ -118,6 +145,199 @@ public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void singleAppenderDocumentWriteHasBoundedHeaderWork() throws Exception {
+        assertDocumentWrites(1);
+    }
+
+    @Test
+    public void alternatingAppenderDocumentWritesHaveBoundedHeaderWork() throws Exception {
+        assertDocumentWrites(2);
+    }
+
+    @Test
+    public void repeatedTailLookupRetainsTheLatestProvedFullPosition() throws Exception {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreAppender appender = (StoreAppender) queue.createAppender();
+             SingleChronicleQueue reader = SingleChronicleQueueBuilder.binary(queue.file())
+                     .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreTailer tailer = (StoreTailer) reader.createTailer()) {
+            appender.writeText("first");
+            appender.writeText("second");
+            long secondPosition = appender.store.writePosition();
+            for (int i = 2; i < RECORDS; i++)
+                appender.writeText("record-" + i);
+            tailer.toStart();
+            CountingContext counter = new CountingContext(tailer);
+            assertEquals(RECORDS - 1, tailer.store.lastSequenceNumber(counter));
+            // A later finite lookup must not discard the newer, independently proved pair.
+            assertEquals(1, tailer.store.sequenceForPosition(counter, secondPosition, true));
+            appender.writeText("new-tail");
+            counter.headersRead = 0;
+            assertEquals(RECORDS, tailer.store.lastSequenceNumber(counter));
+            assertTrue("A warmed reader rescanned " + counter.headersRead + " headers", counter.headersRead <= 4);
+        }
+    }
+
+    @Test
+    public void indexedLookupReusesTheProvedFullPosition() throws Exception {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreAppender appender = (StoreAppender) queue.createAppender();
+             SingleChronicleQueue reader = SingleChronicleQueueBuilder.binary(queue.file())
+                     .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreTailer tailer = (StoreTailer) reader.createTailer()) {
+            appender.writeText("first");
+            long firstPosition = appender.store.writePosition();
+            for (int i = 1; i < RECORDS; i++)
+                appender.writeText("record-" + i);
+            long lastPosition = appender.store.writePosition();
+            tailer.toStart();
+            CountingContext counter = new CountingContext(tailer);
+            assertEquals(RECORDS - 1, tailer.store.lastSequenceNumber(counter));
+            counter.headersRead = 0;
+            assertEquals(ScanResult.FOUND,
+                    tailer.store.indexing.linearScanTo(RECORDS - 1, 0, counter, firstPosition));
+            assertEquals(lastPosition, tailer.wire().bytes().readPosition());
+            assertTrue("A warmed index lookup rescanned " + counter.headersRead + " headers", counter.headersRead <= 2);
+        }
+    }
+
+    @Test
+    public void repeatedPublicCountQueriesReuseTheMappedFileAnchor() throws Exception {
+        AtomicInteger headers = new AtomicInteger();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreAppender appender = (StoreAppender) queue.createAppender();
+             StoreTailer tailer = new StoreTailer(queue, queue.pool) {
+                 @Override
+                 public Wire wireForIndex() {
+                     return counted(super.wireForIndex(), headers::incrementAndGet);
+                 }
+             }) {
+            for (int i = 0; i < RECORDS; i++)
+                appender.writeText("record-" + i);
+            for (int i = 0; i < 3; i++) {
+                headers.set(0);
+                assertEquals(RECORDS + i, tailer.excerptsInCycle(0));
+                assertNull("the public query releases its store", tailer.store);
+                assertTrue("reacquired store read " + headers.get() + " headers", headers.get() <= 4);
+                appender.writeText("next-" + i);
+            }
+        }
+    }
+
+    @Test
+    public void scanAnchorsDoNotSurviveReplacementOfTheMappedFile() throws Exception {
+        File directory = getTmpDir();
+        MappedFile oldMapping;
+        File cycleFile;
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreAppender appender = (StoreAppender) queue.createAppender()) {
+            for (int i = 0; i < 1000; i++)
+                appender.writeText("old-" + i);
+            oldMapping = ((MappedBytes) appender.wire().bytes()).mappedFile();
+            cycleFile = appender.store.file();
+        }
+        BackgroundResourceReleaser.releasePendingResources();
+        Files.delete(cycleFile.toPath());
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory)
+                .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreAppender appender = (StoreAppender) queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            appender.writeText("replacement");
+            assertNotSame(oldMapping, ((MappedBytes) appender.wire().bytes()).mappedFile());
+            assertEquals(cycleFile, appender.store.file());
+            assertEquals(0, appender.store.lastSequenceNumber(appender));
+            assertEquals(1, tailer.excerptsInCycle(0));
+            assertEquals("replacement", tailer.toStart().readText());
+            assertNull(tailer.readText());
+        }
+    }
+
+    private void assertDocumentWrites(int writers) throws Exception {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreAppender first = (StoreAppender) queue.createAppender();
+             StoreAppender second = (StoreAppender) queue.createAppender()) {
+            for (int i = 0; i < RECORDS; i++)
+                first.writeText("record-" + i);
+            StoreAppender[] appenders = writers == 1 ? new StoreAppender[]{first} : new StoreAppender[]{first, second};
+            // Establish each writer's store before measuring steady-state document opening.
+            for (StoreAppender appender : appenders)
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write().text("warmup");
+                }
+            Field field = StoreAppender.class.getDeclaredField("wireForIndex");
+            field.setAccessible(true);
+            for (int i = 0; i < 6; i++) {
+                StoreAppender appender = appenders[i % writers];
+                Wire original = appender.wireForIndex();
+                CountingContext counter = new CountingContext(appender);
+                field.set(appender, counter.wireForIndex());
+                try {
+                    try (DocumentContext dc = appender.writingDocument()) {
+                        dc.wire().write().text("measured-" + i);
+                    }
+                    assertEquals(RECORDS + writers + i, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
+                    assertTrue(writers + " appender(s): document write read " + counter.headersRead + " headers",
+                            counter.headersRead <= 8);
+                } finally {
+                    field.set(appender, original);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void finitePositionWithStaleAliasedTrackerReturnsThePhysicalSequence() throws Exception {
+        assertAdditionalStaleTrackerPath(false);
+    }
+
+    @Test
+    public void forwardToEndWithStaleAliasedTrackerUsesThePhysicalTail() throws Exception {
+        assertAdditionalStaleTrackerPath(true);
+    }
+
+    private void assertAdditionalStaleTrackerPath(boolean forwardToEnd) throws Exception {
+        final long aliasPeriod = 65536;
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .rollCycle(SparseRollCycles.HUGE_DAILY_XSPARSE).blockSize(1 << 20).timeProvider(() -> 0L).build();
+             StoreAppender appender = (StoreAppender) queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            appender.writeText("first");
+            appender.writeBytes(bytes -> bytes.writeSkip(aliasPeriod - 4));
+            long previousPosition = appender.store.writePosition();
+            appender.writeText("last");
+            long lastPosition = appender.store.writePosition();
+            assertEquals(aliasPeriod, lastPosition - previousPosition);
+            // Independent physical-record oracle before installing real codec residue.
+            assertEquals("first", tailer.readText());
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
+                assertEquals(aliasPeriod - 4, dc.wire().bytes().readRemaining());
+            }
+            assertEquals("last", tailer.readText());
+            appender.store.indexing.sequence.setSequence(1, previousPosition);
+            try {
+                assertEquals(1, appender.store.indexing.sequence.getSequence(lastPosition));
+                if (forwardToEnd) {
+                    tailer.toEnd();
+                    assertEquals(queue.rollCycle().toIndex(0, 3), tailer.index());
+                    assertEquals(null, tailer.readText());
+                } else {
+                    for (boolean inclusive : new boolean[]{false, true})
+                        assertEquals(inclusive ? 2 : 1,
+                                appender.store.sequenceForPosition(appender, lastPosition, inclusive));
+                }
+            } finally {
+                appender.store.indexing.sequence.setSequence(2, lastPosition);
+            }
+        }
+    }
+
     private static int cycleShift(SingleChronicleQueue queue) {
         int indexCount = queue.indexCount();
         int indexSpacing = queue.indexSpacing();
@@ -126,27 +346,17 @@ public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
     }
 
     private static final class CountingContext implements ExcerptContext {
-        private final StoreTailer tailer;
         private final Wire indexWire;
+        private final Wire dataWire;
         int headersRead;
 
-        CountingContext(StoreTailer tailer) {
-            this.tailer = tailer;
-            Wire delegate = tailer.wireForIndex();
-            indexWire = (Wire) Proxy.newProxyInstance(Wire.class.getClassLoader(), new Class<?>[]{Wire.class},
-                    (proxy, method, args) -> {
-                        if (method.getName().equals("readDataHeader"))
-                            headersRead++;
-                        try {
-                            return method.invoke(delegate, args);
-                        } catch (InvocationTargetException e) {
-                            throw e.getCause();
-                        }
-                    });
+        CountingContext(ExcerptContext context) {
+            indexWire = counted(context.wireForIndex(), () -> headersRead++);
+            dataWire = counted(context.wire(), () -> headersRead++);
         }
 
         public Wire wire() {
-            return tailer.wire();
+            return dataWire;
         }
 
         public Wire wireForIndex() {
@@ -156,5 +366,20 @@ public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
         public long timeoutMS() {
             return 1000;
         }
+    }
+
+    private static Wire counted(Wire delegate, Runnable onHeader) {
+        if (delegate == null)
+            return null;
+        return (Wire) Proxy.newProxyInstance(Wire.class.getClassLoader(), new Class<?>[]{Wire.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("readDataHeader"))
+                        onHeader.run();
+                    try {
+                        return method.invoke(delegate, args);
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
     }
 }

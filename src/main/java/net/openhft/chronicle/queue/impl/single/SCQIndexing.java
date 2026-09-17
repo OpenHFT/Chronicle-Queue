@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.StackTrace;
@@ -28,6 +29,8 @@ import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -46,6 +49,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
     private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
+    private static final ThreadLocal<Map<MappedFile, ScanAnchor>> SCAN_ANCHORS =
+            ThreadLocal.withInitial(WeakHashMap::new);
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
@@ -75,6 +80,24 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     int linearScanByPositionCount;
     Collection<Closeable> closeables = new ArrayList<>();
     private long lastScannedIndex = -1;
+    // A scan anchor is an exact full-position pair, independent of the truncated tracker.
+    // Each thread owns its pair; no additional cross-process publication protocol is involved.
+    private ThreadLocal<ScanAnchor> scanAnchor;
+
+    void rememberSequence(long sequenceNumber, long position) {
+        ScanAnchor anchor = scanAnchor.get();
+        //! SCQIndexingReviewEvidenceTest.repeatedTailLookupRetainsTheLatestProvedFullPosition:
+        //! an earlier finite lookup must not discard a newer committed anchor.
+        if (position > anchor.position) {
+            anchor.position = position;
+            anchor.sequence = sequenceNumber;
+        }
+    }
+
+    private static final class ScanAnchor {
+        long position;
+        long sequence;
+    }
 
     /**
      * Constructor used for demarshalling via {@link Demarshallable}.
@@ -129,11 +152,17 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         singleThreadedCheckDisabled(true);
     }
 
-    void initSequence(RollCycleEncodeSequence sequence) {
+    void initSequence(RollCycleEncodeSequence sequence, MappedFile mappedFile) {
         this.sequence = sequence;
         //! SequenceAliasGeometryTest.customIndexGeometryMustUseTheLiveCodecAliasPeriod fails
         //! if the bound comes from index geometry: a new store's codec uses roll-cycle defaults.
         this.positionAliasPeriod = sequence.positionAliasPeriod();
+        //! SCQIndexingReviewEvidenceTest.repeatedPublicCountQueriesReuseTheMappedFileAnchor:
+        //! releasing a store must not lose the exact pair while the same mapping remains live.
+        //! SCQIndexingReviewEvidenceTest.scanAnchorsDoNotSurviveReplacementOfTheMappedFile:
+        //! use MappedFile identity, never a pathname/cycle; weak keys do not retain mappings.
+        this.scanAnchor = ThreadLocal.withInitial(() ->
+                SCAN_ANCHORS.get().computeIfAbsent(mappedFile, ignored -> new ScanAnchor()));
     }
 
     // Helper method to create a new LongArrayValuesHolder
@@ -504,10 +533,24 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.linearScanCount++;
         @NotNull final Bytes<?> bytes = wire.bytes();
 
+        //! SCQIndexingReviewEvidenceTest.indexedLookupReusesTheProvedFullPosition:
+        //! index checks may reuse an exact full-position anchor, including above the alias period.
+        ScanAnchor anchor = scanAnchor.get();
+        //! MoveToIndexTest.testRandomMove: nearby tailer scans can supply full queue indices;
+        //! do not replace their starting index with a smaller cycle-relative sequence.
+        if (anchor.position > knownAddress && anchor.sequence >= fromKnownIndex && anchor.sequence <= toIndex) {
+            knownAddress = anchor.position;
+            fromKnownIndex = anchor.sequence;
+        }
+
         // optimized if the `toIndex` is the last sequence
         long lastAddress = writePosition.getVolatileValue();
         long lastIndex = this.sequence.getSequence(lastAddress);
-        if (toIndex == lastIndex) {
+        //! SCQIndexingReviewEvidenceTest.moveToIndexWithStaleAliasedTrackerLandsOnTheCorrectRecord:
+        //! a matching fragment must not replace the independently indexed starting point.
+        //! SequenceAliasGeometryTest.moveToIndexRejectsSubPeriodCaptureAfterWriterAdvances covers the stable reread.
+        if (toIndex == lastIndex && lastAddress > 0 && lastAddress < positionAliasPeriod
+                && writePosition.getVolatileValue() == lastAddress) {
             assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
             knownAddress = lastAddress;
             fromKnownIndex = lastIndex;
@@ -603,6 +646,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
         long i;
+        long lastDataPosition = 0;
 
         // Optimized path if the `toPosition` is the last written position.
         long lastAddress = writePosition.getVolatileValue();
@@ -615,18 +659,18 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             WireIn.HeaderType headerType = wire.readDataHeader(true);
             if (headerType == WireIn.HeaderType.EOF) {
                 if (toPosition == Long.MAX_VALUE)
-                    return i;
+                    return finishSequenceScan(i, lastDataPosition);
                 throw new EOFException();
             }
 
             if (!inclusive && toPosition == bytes.readPosition())
-                return i;
+                return finishSequenceScan(i, lastDataPosition);
 
             switch (headerType) {
                 case NONE:
                     // Case where no data header is found
                     if (toPosition == Long.MAX_VALUE) {
-                        return i;
+                        return finishSequenceScan(i, lastDataPosition);
                     }
 
                     int header = bytes.readVolatileInt(bytes.readPosition());
@@ -638,6 +682,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 case DATA:
                     // Increment the index for each valid data entry
                     ++i;
+                    lastDataPosition = bytes.readPosition();
                     break;
                 case EOF:
                     throw new AssertionError("EOF should have been handled");
@@ -647,7 +692,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
             // If the current position matches the target, return the index
             if (bytes.readPosition() == toPosition)
-                return i;
+                return finishSequenceScan(i, lastDataPosition);
 
             // Skip over the current entry
             int header = bytes.readVolatileInt();
@@ -657,6 +702,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         return throwPositionNotAtStartOfMessage(toPosition, bytes);
+    }
+
+    private long finishSequenceScan(long sequenceNumber, long position) {
+        //! SCQIndexingReviewEvidenceTest.repeatedTailLookupRetainsTheLatestProvedFullPosition:
+        //! retain the final committed pair once per scan, without per-header thread-local lookups.
+        if (position > 0)
+            rememberSequence(sequenceNumber, position);
+        return sequenceNumber;
     }
 
     /**
@@ -675,10 +728,20 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         //! ScanLimitRegressionTest.positionScanWorksWithRestrictedWriteLimit fails if the
         //! mapped-bytes limit reset is replaced by readLimit(capacity), which checks writeLimit.
         if (lastAddress > 0 && toPosition == lastAddress
-                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
+                //! SCQIndexingReviewEvidenceTest.finitePositionWithStaleAliasedTrackerReturnsThePhysicalSequence.
+                && lastAddress < positionAliasPeriod && lastIndex >= 0
+                //! SequenceAliasGeometryTest.finitePositionRejectsSubPeriodCaptureAfterWriterAdvances.
+                && writePosition.getVolatileValue() == lastAddress) {
             bytes.readPositionUnlimited(toPosition);
             return lastIndex - 1;
         } else {
+            //! SCQIndexingReviewEvidenceTest.alternatingAppenderDocumentWritesHaveBoundedHeaderWork:
+            //! finite-position checks may scan forward from a previously established full pair.
+            ScanAnchor anchor = scanAnchor.get();
+            if (toPosition != Long.MAX_VALUE && anchor.position > startAddress && anchor.position <= toPosition) {
+                startAddress = anchor.position;
+                indexOfNext = anchor.sequence;
+            }
             bytes.readPositionUnlimited(startAddress);
             return indexOfNext - 1;
         }
@@ -1037,8 +1100,16 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     //! and backwardTraversalAcrossRollBoundaryLandsOnTheTrueTail fail if an aliased
                     //! pair seeds the tail check: the reader is positioned on the wrong record.
                     if (wireForIndex != null) {
-                        if (address >= positionAliasPeriod)
+                        if (address >= positionAliasPeriod) {
+                            //! SCQIndexingReviewEvidenceTest.lastSequenceNumberStaysOnTheTrackerForHugeDailyXSparse
+                            //! and lastSequenceNumberStaysOnTheTrackerForHugeDailyAboveSixteenMiB:
+                            //! an exact pair from a prior commit/scan is safe even when the tracker wraps.
+                            ScanAnchor anchor = scanAnchor.get();
+                            if (anchor.position > 0)
+                                return linearScanByPosition(wireForIndex, Long.MAX_VALUE,
+                                        anchor.sequence, anchor.position, true);
                             break;
+                        }
                         //! SequenceAliasGeometryTest.lastSequenceNumberRejectsSubPeriodCaptureAfterWriterAdvances
                         //! fails if a newer aliased tracker can seed a scan from an older, sub-period position.
                         if (writePosition.getVolatileValue() != address)
@@ -1095,6 +1166,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
                     return -1;
+
+                //! SCQIndexingReviewEvidenceTest.forwardToEndWithStaleAliasedTrackerUsesThePhysicalTail:
+                //! return to the indexed public toEnd path when the pair is ambiguous.
+                if (endAddress >= positionAliasPeriod)
+                    return -1;
+                //! SequenceAliasGeometryTest.forwardToEndRejectsSubPeriodCaptureAfterWriterAdvances.
+                if (writePosition.getVolatileValue() != endAddress)
+                    continue;
 
                 Bytes<?> bytes = wire.bytes();
                 if (wire.usePadding())
