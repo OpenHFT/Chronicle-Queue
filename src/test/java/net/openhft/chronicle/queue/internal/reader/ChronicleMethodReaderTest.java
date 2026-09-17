@@ -24,8 +24,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
@@ -210,6 +212,34 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+    }
+
+    @Test
+    public void shouldFilterByMultipleInclusionRegexMethodReader() {
+        Path inclusionDir = getTmpDir().toPath();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(inclusionDir).testBlockSize().build()) {
+            All writer = queue.methodWriter(All.class);
+            for (String text : Arrays.asList("alpha-only", "beta-only", "alpha-beta", "neither")) {
+                Method2Type message = new Method2Type();
+                message.text = text;
+                writer.method2(message);
+            }
+        }
+
+        // A-only, B-only, both and neither distinguish AND from ignored, first-only, last-only and OR filters.
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir), "alpha-only", "beta-only", "alpha-beta", "neither");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("alpha"), "alpha-only", "alpha-beta");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("beta"), "beta-only", "alpha-beta");
+        assertIncludedMessages(basicReaderMethodReader(inclusionDir).withInclusionRegex("alpha").withInclusionRegex("beta"), "alpha-beta");
+    }
+
+    private void assertIncludedMessages(ChronicleReader reader, String... expectedTexts) {
+        capturedOutput.clear();
+        reader.execute();
+        assertEquals(Arrays.stream(expectedTexts)
+                        .map(text -> "method2: {\n  text: " + text + ",\n  value: 0,\n  number: 0.0\n}\n...\n")
+                        .collect(Collectors.toList()),
+                capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).collect(Collectors.toList()));
     }
 
     @Test

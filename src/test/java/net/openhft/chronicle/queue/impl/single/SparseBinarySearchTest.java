@@ -14,6 +14,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -37,6 +38,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
     public SparseBinarySearchTest(int numberOfMessages, float percentageWithValues) {
         this.numberOfMessages = numberOfMessages;
         this.percentageWithValues = percentageWithValues;
+        globalTimeout = Timeout.seconds(180);
     }
 
     @Parameterized.Parameters(name = "items in queue: {0}, percentage with values: {1}")
@@ -67,8 +69,13 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
 
+        //! Sparse search needs the existing messages, gaps and roll boundaries,
+        //! but each roll contains only a few small records. Request small
+        //! mappings so Windows does not allocate a default 80 MiB roll file.
+        //! Retain the supplied secondly/daily cycle and its indexing semantics.
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(rollCycle)
+                .testBlockSize()
                 .timeProvider(stp)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
