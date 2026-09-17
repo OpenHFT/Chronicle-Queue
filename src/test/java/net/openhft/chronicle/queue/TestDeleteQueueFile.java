@@ -14,6 +14,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -73,10 +74,22 @@ public class TestDeleteQueueFile extends QueueTestCommon {
 
     @Override
     protected void tearDown() {
-        //! teardownPreservesFilesWhileAReaderIsStillRunning: a failed shutdown must not unlink a live reader's files.
+        assertReadersStopped();
+        super.tearDown();
+    }
+
+    @After
+    @Override
+    public void deleteTargetDirTestArtifacts() {
+        assertReadersStopped();
+        super.deleteTargetDirTestArtifacts();
+    }
+
+    private void assertReadersStopped() {
+        //! teardownPreservesFilesWhileAReaderIsStillRunning covers ordinary and hugetlbfs artifact cleanup.
+        //! Neither cleanup path may unlink a live reader's files after a failed shutdown.
         assertTrue("Deletion-race readers are still using their files",
                 activeRace == null || activeRace.workers.isTerminated());
-        super.tearDown();
     }
 
     @Test
@@ -463,6 +476,7 @@ public class TestDeleteQueueFile extends QueueTestCommon {
             race.awaitReaders();
             try {
                 assertThrows(AssertionError.class, this::tearDown);
+                assertThrows(AssertionError.class, this::deleteTargetDirTestArtifacts);
                 assertTrue("A live reader's directory must remain intact", Files.isDirectory(tempQueueDir));
                 assertTrue("A live reader's file must remain intact",
                         Files.exists(Paths.get(race.details.rollCycles.get(1).filename)));
