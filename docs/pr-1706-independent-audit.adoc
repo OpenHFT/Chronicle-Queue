@@ -1,0 +1,176 @@
+= PR #1706: independent regression audit
+:toc:
+
+Reviewed head: `f51ea463cef256f66118d48e119b0ce823acc99a`.
+Comparison base: `129e9ae5ea7e034c59e89dd0b81cdeaf115422fb`.
+Production fixes: `ff758d392b3b3fb0405ae69fa08e1388d7572597`.
+Date: 2026-09-17.
+
+== Two further performance regressions, reproduced and fixed
+
+The audit independently traced every consumer of the cached position/sequence
+pair, the persisted-index publication, forward-end dispatch, byte-header scans
+and mapping lifetime. It then exercised workloads outside the earlier alternating
+appender benchmark.
+
+=== A stale reader cache can hide newer sparse-index entries
+
+An independently mapped reader first observes sequence zero. Another queue
+instance appends 5,000 records in the same `HUGE_DAILY` cycle, after an initial
+record has taken the position beyond the 16 MiB alias period. The reader's cached
+pair remains valid, but several newer sparse-index entries now exist.
+
+The reviewed head always chooses that cached pair and reads 5,002 headers.
+The fix compares its sequence with the latest persisted index progress and
+uses indexed recovery when the latter is newer. The first lookup reads 906
+headers, within the 1,024-record index interval; the next lookup reads two.
+The public forward `toEnd()` path had the same stale-start problem: its
+instrumented header work was 5,006 operations on the reviewed head.
+
+This does not reproduce the unsafe base's two-read first lookup. That base
+trusts a truncated tracker above the alias boundary. Recovering from a newer
+persisted index is the supported safety/performance tradeoff when this thread
+does not have a sufficiently recent full pair.
+
+The bound concerns a completed writer burst and the index progress observed
+by the lookup. It is not a fixed latency bound against an arbitrarily advancing
+concurrent writer.
+
+=== Warm forward toEnd unnecessarily falls back
+
+The reviewed `moveToEnd()` rejects every position above the alias boundary,
+even when this thread has already proved an exact pair. Public `toEnd()` then
+performs indexed recovery and additional navigation. The new deterministic
+test observes six header operations instead of three.
+
+The fix uses the same independently proved full pair for the forward scan,
+provided a newer persisted index has not overtaken it. It retains the last
+committed data pair once the scan finishes. Metadata never advances the sequence
+or becomes the cached data position, including trailing metadata. Without a
+usable pair, indexed recovery remains the fallback. Wrapped tracker results
+still cannot seed the scan, and the below-period stability reread remains.
+
+=== Evidence and attribution
+
+The six cases in `SequenceLookupAuditTest` run unchanged against the base and
+reviewed head. All six pass on the base. Four fail on the reviewed head:
+
+* `staleReaderAnchorMustNotPrecedeNewerSparseIndex`
+* `forwardEndPrefersNewerIndexAfterWriterBurst`
+* `forwardToEndHasBoundedWorkAfterCacheWarmup`
+* `forwardEndRetainsTheLastCommittedSuffixPosition`
+
+All six pass with the fixes. The remaining controls check rollback/metadata
+handling and a concurrent writer with an independently mapped reader. The
+concurrent case verifies all 5,000 physical record values and indices, with
+metadata and rolled-back documents interleaved, while querying counts, forward
+end positions and finite positions. It is a correctness test, not a throughput
+benchmark or a substitute for issue #1704's requested scan-source counters.
+
+== Broader performance and allocation checks
+
+The diagnostic covers `writingDocument`, direct `writeBytes(BytesStore)`,
+forward `toEnd`, `lastIndex`, `excerptsInCycle`, and repeated near-tail seeks.
+Configurations are `FAST_DAILY`, `HUGE_DAILY` above 16 MiB and
+`HUGE_DAILY_XSPARSE` above 64 KiB. One benchmark class is used unchanged across
+the three production revisions. Each operation has 20,000 warmup calls; four
+batches follow. The summary uses the median of batch means from rounds 2-4,
+not per-operation latency percentiles. Source and raw argument vectors/output
+are in link:pr-1706-audit-evidence/README.adoc[the audit evidence directory].
+
+The JVM uses OpenJDK 21.0.12, `-Xbatch`, a 256 MiB heap and
+`-XX:ActiveProcessorCount=4`. Hardware is the same Ryzen 9 5950X Linux/ext4 host
+recorded with the earlier evidence. Heap allocation is measured on the calling
+thread with `ThreadMXBean`; it excludes other threads and native mappings.
+Each row records the actual population; writes grow the file during measurement.
+
+[cols="2,2,1,1,1",options="header"]
+|===
+| Cycle | Operation | Base ns/op | Reviewed ns/op | Fixed ns/op
+| FAST_DAILY | document | 855.22 | 849.18 | 853.71
+| FAST_DAILY | bytes | 60.13 | 65.70 | 62.82
+| FAST_DAILY | toEnd | 40.53 | 40.52 | 46.20
+| FAST_DAILY | lastIndex | 19,611.70 | 20,366.39 | 20,325.60
+| FAST_DAILY | count | 8,617.39 | 8,762.83 | 8,610.08
+| FAST_DAILY | moveNearTail | 234.61 | 242.63 | 243.43
+| HUGE_DAILY | document | 742.26 | 742.80 | 743.77
+| HUGE_DAILY | bytes | 83.26 | 82.63 | 80.58
+| HUGE_DAILY | toEnd | 40.60 | 126.59 | 45.96
+| HUGE_DAILY | lastIndex | 19,721.50 | 19,945.37 | 19,550.88
+| HUGE_DAILY | count | 8,365.99 | 8,857.66 | 8,656.07
+| HUGE_DAILY | moveNearTail | 237.94 | 251.35 | 242.88
+| HUGE_DAILY_XSPARSE | document | 721.55 | 729.94 | 737.40
+| HUGE_DAILY_XSPARSE | bytes | 58.97 | 61.69 | 61.98
+| HUGE_DAILY_XSPARSE | toEnd | 39.42 | 123.93 | 48.93
+| HUGE_DAILY_XSPARSE | lastIndex | 19,589.18 | 19,749.40 | 19,928.77
+| HUGE_DAILY_XSPARSE | count | 8,541.96 | 8,636.25 | 8,774.25
+| HUGE_DAILY_XSPARSE | moveNearTail | 703,936.49 | 712,401.71 | 718,048.26
+|===
+
+Document writes, direct byte writes, warmed forward end and near-tail seeks
+show zero steady-state calling-thread allocation. Reacquiring stores for counts
+and `lastIndex()` adds approximately 88 bytes per call, compared with base costs
+of approximately 3,160 and 4,096 bytes respectively. This is a remaining cost of
+the per-store thread-local cache access and is not presented as allocation-free.
+
+The fixed default-cycle forward-end cost is about 6 ns higher than the base
+in this run; other small timing differences should be interpreted with the
+single-machine measurement limit. Near-tail seeks on `HUGE_DAILY_XSPARSE`
+remain around 0.7 ms with a population of 210,001 records: the million-record
+index spacing makes backward movement from the tail expensive on all three
+revisions. This is an inherited configuration cost, not a newly introduced
+regression.
+
+An exploratory run with only 2,000 warmup calls suggested a default-cycle seek
+slowdown. Longer warmup and synchronous compilation removed that apparent
+regression. It is not counted as a confirmed defect. Timings are diagnostics
+from one development machine; deterministic work bounds enforce the fixes.
+
+== Correctness, lifetime and validation limits
+
+No additional correctness failure was exposed by the new rollback, metadata
+and concurrent physical-record controls. The existing real-codec tests still
+cover both alias directions, multi-period/metadata gaps, custom codec geometry,
+finite-position lookups and backward roll traversal.
+
+The cache was inspected against the
+https://docs.oracle.com/javase/8/docs/api/java/util/WeakHashMap.html[Java WeakHashMap contract]:
+its values contain only the two longs and do not refer back to mapping keys.
+The per-store thread-local value likewise contains no mapped-file reference.
+Existing mapped-memory unmapping and appender file-handle tests pass in the full
+suite. This does not claim a heap census across every collector or JVM vendor.
+
+Validation of the production fix:
+
+* Clean full Maven verification on Java 21: 1,197 reported tests, zero
+  failures/errors, 52 skips; licence and binary compatibility checks pass.
+* Clean focused verification on Java 8u502 and actual 32-bit Java 17.0.20:
+  83 passing tests on each, with no skips.
+* Nine targeted, compiled mutations are rejected by their selected tests,
+  including stale-index preference, forward fallback, cached sequence accuracy,
+  suffix retention, trailing metadata and the retained alias/stability guards.
+* A further clean focused verification after mutation restoration passes 83
+  tests. Surefire reruns are disabled throughout.
+* All 35 explicit production `//!` test-method references resolve. The new
+  production choices name their failing evidence tests.
+
+The earlier evidence directory preserves validation and 23 mutations for its
+exact earlier implementation. Those results are not relabelled as executions
+against this update. Fresh CI must independently validate the updated PR head.
+
+== Decision log and follow-up
+
+The cache's validity was insufficient as a performance argument: it also needs
+comparison with newer persisted progress. Conversely, rejecting all wrapped
+positions was unnecessary once the forward reader had a proved full pair.
+Both corrections preserve the alias guard and avoid a new publication protocol.
+
+The suffix work bound includes trailing metadata; lowering it to two reads
+would incorrectly require skipping a committed metadata header. All final
+mutation results use the corrected, positively verified three-header bound.
+
+Recommend extending `/prompts:TRACKER_PUBLICATION_REVIEW` and the corresponding
+AGENTS notes with stale-reader writer bursts, forward-end dispatch, allocation
+measurements, warmup controls and checks that cached positions never supersede
+newer persisted indices. Issue #1704 remains open for its separate concurrent
+performance/counter acceptance criteria and the cost of initially cold mappings.

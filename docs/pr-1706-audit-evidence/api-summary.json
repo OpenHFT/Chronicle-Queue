@@ -1,0 +1,290 @@
+[
+  {
+    "cycle": "FAST_DAILY",
+    "operation": "document",
+    "base": {
+      "ns": 855.22,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 849.18,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 853.71,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "FAST_DAILY",
+    "operation": "bytes",
+    "base": {
+      "ns": 60.13,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 65.7,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 62.82,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "FAST_DAILY",
+    "operation": "toEnd",
+    "base": {
+      "ns": 40.53,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 40.52,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 46.2,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "FAST_DAILY",
+    "operation": "lastIndex",
+    "base": {
+      "ns": 19611.7,
+      "bytes": 4096.0
+    },
+    "reviewed": {
+      "ns": 20366.39,
+      "bytes": 4184.39
+    },
+    "head": {
+      "ns": 20325.6,
+      "bytes": 4184.48
+    }
+  },
+  {
+    "cycle": "FAST_DAILY",
+    "operation": "count",
+    "base": {
+      "ns": 8617.39,
+      "bytes": 3160.0
+    },
+    "reviewed": {
+      "ns": 8762.83,
+      "bytes": 3248.0
+    },
+    "head": {
+      "ns": 8610.08,
+      "bytes": 3248.0
+    }
+  },
+  {
+    "cycle": "FAST_DAILY",
+    "operation": "moveNearTail",
+    "base": {
+      "ns": 234.61,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 242.63,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 243.43,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY",
+    "operation": "document",
+    "base": {
+      "ns": 742.26,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 742.8,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 743.77,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY",
+    "operation": "bytes",
+    "base": {
+      "ns": 83.26,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 82.63,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 80.58,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY",
+    "operation": "toEnd",
+    "base": {
+      "ns": 40.6,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 126.59,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 45.96,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY",
+    "operation": "lastIndex",
+    "base": {
+      "ns": 19721.5,
+      "bytes": 4096.0
+    },
+    "reviewed": {
+      "ns": 19945.37,
+      "bytes": 4184.4
+    },
+    "head": {
+      "ns": 19550.88,
+      "bytes": 4184.42
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY",
+    "operation": "count",
+    "base": {
+      "ns": 8365.99,
+      "bytes": 3178.64
+    },
+    "reviewed": {
+      "ns": 8857.66,
+      "bytes": 3248.0
+    },
+    "head": {
+      "ns": 8656.07,
+      "bytes": 3248.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY",
+    "operation": "moveNearTail",
+    "base": {
+      "ns": 237.94,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 251.35,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 242.88,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY_XSPARSE",
+    "operation": "document",
+    "base": {
+      "ns": 721.55,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 729.94,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 737.4,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY_XSPARSE",
+    "operation": "bytes",
+    "base": {
+      "ns": 58.97,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 61.69,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 61.98,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY_XSPARSE",
+    "operation": "toEnd",
+    "base": {
+      "ns": 39.42,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 123.93,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 48.93,
+      "bytes": 0.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY_XSPARSE",
+    "operation": "lastIndex",
+    "base": {
+      "ns": 19589.18,
+      "bytes": 4096.0
+    },
+    "reviewed": {
+      "ns": 19749.4,
+      "bytes": 4184.65
+    },
+    "head": {
+      "ns": 19928.77,
+      "bytes": 4184.35
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY_XSPARSE",
+    "operation": "count",
+    "base": {
+      "ns": 8541.96,
+      "bytes": 3160.0
+    },
+    "reviewed": {
+      "ns": 8636.25,
+      "bytes": 3248.0
+    },
+    "head": {
+      "ns": 8774.25,
+      "bytes": 3248.0
+    }
+  },
+  {
+    "cycle": "HUGE_DAILY_XSPARSE",
+    "operation": "moveNearTail",
+    "base": {
+      "ns": 703936.49,
+      "bytes": 0.0
+    },
+    "reviewed": {
+      "ns": 712401.71,
+      "bytes": 0.0
+    },
+    "head": {
+      "ns": 718048.26,
+      "bytes": 0.0
+    }
+  }
+]

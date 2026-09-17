@@ -1,0 +1,85 @@
+= Independent audit evidence
+
+Production revisions:
+
+* `base`: `129e9ae5ea7e034c59e89dd0b81cdeaf115422fb`
+* `reviewed`: `f51ea463cef256f66118d48e119b0ce823acc99a`
+* `head`: `ff758d392b3b3fb0405ae69fa08e1388d7572597`
+
+`validation.json` records the final Maven summaries, runtime architectures and
+source hashes. `mutation-definitions.json` and `mutation-results.json` contain
+the exact nine mutations and their executed test outcomes. They are additional
+targeted checks; they do not replace or relabel the earlier 23-mutation run.
+
+== Functional and work-count controls
+
+Use isolated worktrees at the revisions above. Copy only
+`SequenceLookupAuditTest.java` from the fixed revision into historical worktrees
+to run the same six cases against all three production versions:
+
+[source,shell]
+----
+mvn -B -ntp -nsu -DargLine=-XX:ActiveProcessorCount=4 \
+  -Dsurefire.rerunFailingTestsCount=0 -Dtest=SequenceLookupAuditTest test \
+  -l /tmp/queue-audit-tests.log
+----
+
+The base passes all six. The reviewed head fails the four cases identified in
+the report. The fixed head passes all six. For the broader focused verification,
+use this selector with `clean verify`:
+
+[source,text]
+----
+SequenceLookupAuditTest,SCQIndexingReviewEvidenceTest,SequenceAliasGapTest,SequenceAliasGeometryTest,SequenceForPositionSafetyTest,MaxPositionMutationTest,PartialUpdateTest,MoveToIndexTest,ScanLimitRegressionTest
+----
+
+The full check is `mvn verify` after `clean`, with Surefire reruns disabled and a
+log file. To reproduce a mutation, replace its unique `before` text with `after`
+in `SCQIndexing.java`, delete the old corresponding Surefire XML report, and run
+the entry's test selector. Require a compiled, executed test failure. Restore
+the source after each mutation; after all restorations run a clean focused
+verification to discard mutated classes. Use a separate worktree for this.
+
+== Timing and allocation diagnostic
+
+`QueueLookupAuditBenchmark.java` is a standalone diagnostic. It creates and
+removes only its own temporary queue directory. It does not accept an existing
+queue path. Use the same class bytecode for all three production revisions.
+
+In each production worktree, obtain the compiled classes and dependencies:
+
+[source,shell]
+----
+mvn -B -ntp -nsu -DskipTests test-compile dependency:build-classpath \
+  -DincludeScope=test -Dmdep.outputFile=target/audit-classpath.txt \
+  -l /tmp/queue-audit-compile.log
+----
+
+Compile the diagnostic with Java 21 and the project's test dependency classpath.
+Put the resulting diagnostic classes, the selected worktree's `target/classes`
+and those dependencies on the runtime classpath. The exact original argument
+vectors are recorded in `api-*.command.json`; substitute local classpath paths
+and use the same exports/opens and JVM options. For each revision, launch a
+separate JVM for each of:
+
+[source,text]
+----
+QueueLookupAuditBenchmark FAST_DAILY
+QueueLookupAuditBenchmark HUGE_DAILY
+QueueLookupAuditBenchmark HUGE_DAILY_XSPARSE
+----
+
+Pass the exact revision with `-Drevision=...`. The common options are `-Xbatch`,
+`-Xms256m`, `-Xmx256m` and `-XX:ActiveProcessorCount=4`. The output records
+runtime details, actual population and all four measured batches. Operation
+warmup is 20,000 calls. Summaries use the median of the batch means from rounds
+2-4; they are not latency percentiles. The allocation counter covers only the
+calling thread's Java heap allocations.
+
+The files are grown by document/direct-byte write operations before read-only
+operations are measured. Both population and sparse-index distance therefore
+matter when comparing rows. All revisions receive the same call counts and
+contents. Timing is supporting evidence from one development host; deterministic
+work bounds are the acceptance gate. The original host information remains in
+`../pr-1706-evidence/benchmark-host.txt`, and filesystem/JVM details are in the
+earlier raw output. This run also uses that Linux/ext4 host and Java 21.0.12.

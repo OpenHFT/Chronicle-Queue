@@ -1,0 +1,35 @@
+[main] INFO net.openhft.chronicle.core.Jvm - Chronicle core loaded from file:/home/peter/.m2/repository/net/openhft/chronicle-core/2026.7-SNAPSHOT/chronicle-core-2026.7-SNAPSHOT.jar
+java=21.0.12+8-1-24.04-Ubuntu os=amd64 options=[-Xbatch, -Xms256m, -Xmx256m, -XX:ActiveProcessorCount=4, --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED, --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED, --add-exports=java.base/jdk.internal.util=ALL-UNNAMED, --add-exports=java.base/sun.nio.ch=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED, --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED, --add-opens=java.base/java.io=ALL-UNNAMED, --add-opens=java.base/java.lang=ALL-UNNAMED, --add-opens=java.base/java.lang.reflect=ALL-UNNAMED, --add-opens=java.base/java.util=ALL-UNNAMED, --add-opens=jdk.compiler/com.sun.tools.javac=ALL-UNNAMED, -Drevision=ff758d392b3b3fb0405ae69fa08e1388d7572597]
+revision,cycle,operation,round,population,iterations,ns_per_op,bytes_per_op
+[main] INFO net.openhft.chronicle.bytes.PageUtil - Found pageSize=2,097,152 for mount point '/dev/hugepages'
+[main] INFO net.openhft.chronicle.bytes.internal.ChunkedMappedFile - Took 11 ms to add mapping for /tmp/queue-lookup-audit-14211330171940750530/metadata.cq4t
+[main] INFO net.openhft.chronicle.threads.DiskSpaceMonitor - Took 1.848 ms to pollDiskSpace for /tmp/queue-lookup-audit-14211330171940750530
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Running under OpenJDK Runtime Environment 21.0.12+8-1-24.04-Ubuntu with 4 processors reported.
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Leave your e-mail to get information about the latest releases and patches at https://chronicle.software/release-notes/
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Process id: 227 :: Chronicle Queue (unknown)
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Analytics: Chronicle Queue reports usage statistics. Learn more or turn off: https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,document,1,50001,20000,174.12,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,document,2,70001,20000,737.40,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,document,3,90001,20000,111.02,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,document,4,110001,20000,1740.28,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,bytes,1,150001,20000,69.30,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,bytes,2,170001,20000,2011.52,0.06
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,bytes,3,190001,20000,61.98,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,bytes,4,210001,20000,61.56,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,toEnd,1,210001,5000,47.82,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,toEnd,2,210001,5000,50.18,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,toEnd,3,210001,5000,47.81,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,toEnd,4,210001,5000,48.93,0.00
+[main] INFO net.openhft.chronicle.queue.impl.single.StoreTailer - Took 30 ms to performClose
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,lastIndex,1,210001,5000,17547.05,4184.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,lastIndex,2,210001,5000,18910.92,4288.86
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,lastIndex,3,210001,5000,19928.77,4184.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,lastIndex,4,210001,5000,19929.30,4184.35
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,count,1,210001,5000,8688.92,3248.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,count,2,210001,5000,8814.16,3248.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,count,3,210001,5000,8750.30,3248.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,count,4,210001,5000,8774.25,3248.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,moveNearTail,1,210001,5000,718105.01,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,moveNearTail,2,210001,5000,718048.26,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,moveNearTail,3,210001,5000,717759.23,0.00
+ff758d392b3b3fb0405ae69fa08e1388d7572597,HUGE_DAILY_XSPARSE,moveNearTail,4,210001,5000,718484.79,0.00

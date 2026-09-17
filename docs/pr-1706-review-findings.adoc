@@ -9,9 +9,17 @@
 | Production head originally reviewed | `b8665fc4b2982925d073b5fa018cb80876a67bdd`
 | Original comparison base | `fc96fac3b58803d12d5d982bd0e8a7a424965319`
 | Develop integrated for this update | `129e9ae5ea7e034c59e89dd0b81cdeaf115422fb`
-| Implemented and measured fix | `58e19d8c1af715a09da0a8efc6a13e611e40fed1`
+| First implemented and measured fix | `58e19d8c1af715a09da0a8efc6a13e611e40fed1`
+| Independent audit fixes | `ff758d392b3b3fb0405ae69fa08e1388d7572597`
 | Date | 2026-09-17
 |===
+
+The subsequent link:pr-1706-independent-audit.adoc[independent audit] found
+and fixed two more performance regressions in `f51ea463c`: stale cached positions
+could hide newer sparse-index entries, and warm forward `toEnd()` unnecessarily
+fell back. That report contains the latest 1,197-test verification, nine additional
+mutations, API/allocation comparisons and the remaining costs. The measurements
+and 23-mutation results below retain their original exact-revision attribution.
 
 == Findings and disposition
 
@@ -42,8 +50,8 @@ starting point of an ordinary `Long.MAX_VALUE` lookup.
 
 The live codec's alias-period bound and stable full-position rereads remain.
 The same checks now guard the previously unprotected index, finite-position
-and forward-end shortcuts. The public forward-end path falls back to indexed
-recovery when the tracker pair cannot be proved.
+and forward-end shortcuts. The public forward-end path may use an independently proved full pair; it
+falls back to indexed recovery when neither that pair nor the tracker is usable.
 
 Repeated lookups can instead use a full position/sequence pair established by
 a committed write or by a successful scan from an independently known starting
@@ -77,8 +85,9 @@ rescanning the entire sparse-index interval. Single-appender and alternating
 `writingDocument()` calls, direct byte writes followed by a tail lookup, and
 repeated reader/index lookups and public `excerptsInCycle()` queries have
 deterministic bounded-work regressions.
-Those bounds apply to the controlled workload; an arbitrarily large intervening
-write burst can still require scanning its newly committed records.
+After the independent audit, a newer persisted index takes precedence over an
+older cached pair. These work bounds apply to the observed index progress; they
+do not impose a fixed latency bound on an arbitrarily advancing writer.
 
 `excerptsInCycle()` releases its store in a `finally` block on every invocation.
 When the same mapping remains live, the replacement store now reuses the proved
@@ -185,7 +194,7 @@ to the corrected probe. The approximately 5 ms cost near a million-record
 sparse interval was an extrapolation, not a presented measurement; it is not
 an acceptance result.
 
-== Validation and workflow
+== Validation of the first cache implementation and workflow
 
 * Clean full `mvn verify` on OpenJDK 21.0.12: 1,191 reported tests, zero
   failures/errors, 52 skipped. Licence and binary compatibility checks pass.
