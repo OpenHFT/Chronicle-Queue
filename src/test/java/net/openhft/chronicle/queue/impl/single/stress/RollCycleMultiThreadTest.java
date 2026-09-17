@@ -13,6 +13,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -25,9 +26,14 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 
     private static final RollCycle ROLL_CYCLE = TEST_DAILY;
 
+    @Override
+    @Before
+    public void threadDump() {
+        super.threadDump();
+    }
+
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {
-        finishedNormally = false;
         File path = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -65,12 +71,10 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
             scheduledExecutorService.shutdown();
             scheduledExecutorService.awaitTermination(1, TimeUnit.SECONDS);
         }
-        finishedNormally = true;
     }
 
     @Test
     public void testRead2() throws ExecutionException, InterruptedException {
-        finishedNormally = false;
         File path = getTmpDir();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -290,7 +294,6 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
             es.shutdown();
             es.awaitTermination(1, TimeUnit.SECONDS);
         }
-        finishedNormally = true;
     }
 
     private static class ParallelQueueObserver implements Callable<Integer> {

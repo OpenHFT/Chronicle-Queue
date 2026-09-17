@@ -1,0 +1,180 @@
+= Chronicle-Queue Iteration 3 Context
+
+== Summary
+
+Iteration 3 should focus on cleanup determinism, resource-release hygiene, and test support consolidation.
+The strongest Chronicle Queue feedback themes were consistent across implementer and reviewer lanes:
+
+- shared cleanup support is missing and is being reimplemented locally;
+- deterministic closure is better than leak-check suppression;
+- cleanup-sensitive tests need one repeatable validation gate;
+- the cycle-roll reference-count issue should be investigated as a real defect, not normalised as noise.
+
+This context file records the full feedback corpus used to derive `ITERATION_3_PLAN.md`, explains what was promoted into the task list, and captures what was deliberately left as external or deferred work.
+
+== Feedback Corpus
+
+The following files were read from `~/ws/`:
+
+=== Current workspace feedback
+
+- `AIDEW_FEEDBACK.md`
+- `CQ_FEEDBACK.md`
+
+=== Archived feedback corpus (`archive/feedback/20260309T115700Z`)
+
+- `impl/claude1/AIDEW_FEEDBACK.md`
+- `impl/claude1/CQ_FEEDBACK.md`
+- `impl/codex1/AIDEW_FEEDBACK.md`
+- `impl/codex1/CQ_FEEDBACK.md`
+- `impl/gpt1/AIDEW_FEEDBACK.md`
+- `impl/gpt1/CQ_FEEDBACK.md`
+- `impl/sonnet1/AIDEW_FEEDBACK.md`
+- `impl/sonnet1/CQ_FEEDBACK.md`
+- `impl/spark1/AIDEW_FEEDBACK.md`
+- `impl/spark1/CQ_FEEDBACK.md`
+- `review/claude/AIDEW_FEEDBACK.md`
+- `review/claude/CQ_FEEDBACK.md`
+- `review/codex/AIDEW_FEEDBACK.md`
+- `review/codex/CQ_FEEDBACK.md`
+- `review/sonnet/AIDEW_FEEDBACK.md`
+- `review/sonnet/CQ_FEEDBACK.md`
+
+== Synthesis
+
+=== Chronicle Queue themes promoted into Iteration 3
+
+==== 1. Shared cleanup support is the clearest consensus item
+
+Nearly every Chronicle Queue feedback file converged on the same point: the background cleanup drain sequence is now part of the real test contract, but it still lives as duplicated local code.
+
+Recurring recommendations:
+
+- move `BackgroundResourceReleaser.releasePendingResources()`, `GcControls.requestGcCycle()`, `GcControls.waitForGcCycle()`, and final release draining into shared test support;
+- reuse that helper in `OnReleaseTest`, `AppenderFileHandleLeakTest`, and similar mapped-file assertions;
+- prefer one documented helper over a growing set of local variants.
+
+This is why Iteration 3 promotes helper extraction and migration as the first two tasks instead of treating the Iteration 2 local fixes as complete.
+
+==== 2. Deterministic closure beats blanket suppression
+
+The second major theme was that `finishedNormally = false` is too blunt. It disables several teardown checks at once and makes it harder to tell whether a failure is a real leak, a background releaser race, or a test bug.
+
+Strongly repeated signals:
+
+- close tailers and other queue resources explicitly with try-with-resources;
+- shut down thread pools before teardown checks run;
+- use `preAfter()` for cleanup-sensitive test classes;
+- only keep suppressions where the underlying issue is confirmed and documented.
+
+This directly drives the suppression-audit task in the Markdown plan.
+
+==== 3. The cleanup cluster needs one repeatable validation target
+
+Multiple feedback files recommended a small, repeatable validation command or CI target for the classes most likely to regress:
+
+- `OnReleaseTest`
+- `AppenderFileHandleLeakTest`
+- `RollingChronicleQueueTest`
+- rolling/resource-cache neighbours such as `RollingResourcesCacheTest`
+
+The plan therefore includes a dedicated validation task rather than relying only on the full `mvn verify` gate.
+
+==== 4. Preserve the real subprocess path and the merged SCQIndexing guards
+
+The feedback converged on keeping the real `JavaProcessBuilder` plus `TableStoreWriteLockTest.LockAndHoldUntilInterrupted` pattern for the subprocess smoke test. The weaker `java -version` proxy pattern was explicitly rejected by multiple reviewers because it does not exercise the real lock-acquisition path.
+
+Likewise, the merged SCQIndexing guards are now part of the baseline and should remain in place while the cleanup work proceeds.
+
+==== 5. Investigate the cycle-roll reference-count issue as a real bug
+
+Several reviewers and implementers pointed at a deeper issue around `ChunkedMappedFile` and `StoreAppender.rollCycleTo()` during cycle rolls. That problem was not cleanly fixed in Iteration 2 and should not be disguised as ordinary test flake.
+
+Iteration 3 keeps this as a discovery task because:
+
+- it touches production code rather than only test support;
+- the evidence is strong enough to justify investigation;
+- but the exact fix boundary still needs a tighter reproducer and risk check.
+
+=== Feedback accepted but already satisfied in the synced baseline
+
+Some feedback was valid but does not need to become a new Iteration 3 task because the current synced baseline already satisfies it or because the repo state says it is no longer the active gap.
+
+==== `hs_err_pid*` ignore rule
+
+Reviewer feedback asked for `hs_err_pid*.log` to be added to `.gitignore`. The current synced baseline already contains that pattern in `.gitignore`, so this is not promoted as an Iteration 3 task.
+
+==== Local cleanup hardening already merged
+
+The current synced baseline already carries local cleanup hardening in:
+
+- `OnReleaseTest`
+- `AppenderFileHandleLeakTest`
+
+That work reduced immediate failures, but it also created the duplication that Iteration 3 should now consolidate into common test support.
+
+==== Stronger concurrent tailer assertion already merged
+
+The current synced baseline already includes the stronger concurrent tailer coverage in `SCQIndexingTest`. The plan therefore treats that as preserved baseline behaviour, not a new deliverable.
+
+=== Feedback noted but not promoted as default Iteration 3 tasks
+
+==== Unconditional thread capping
+
+Some feedback proposed capping `AppenderFileHandleLeakTest` thread count aggressively; other feedback argued against weakening concurrency pressure unless repeated evidence shows it is necessary.
+
+Decision:
+
+- do not make thread capping the primary Iteration 3 fix;
+- first extract shared cleanup support and tighten deterministic closure;
+- only revisit thread caps if the repeated cleanup gate still shows environment-driven instability.
+
+==== `LongAdder` conversion for SCQIndexing diagnostics
+
+One implementer suggested `LongAdder` for the SCQIndexing diagnostic counters. That is a production-path performance follow-up, not a cleanup-hygiene task, and it lacks supporting evidence from this feedback corpus that it should outrank the cleanup work. It is therefore left out of the Iteration 3 task list.
+
+==== Broad test rewrites
+
+Some feedback suggested rewriting existing concurrency test shapes. The stronger recommendation, and the one reflected in the plan, is to keep scope narrow: fix cleanup support, keep the real subprocess path, and avoid broad churn unless the focused gate proves it is needed.
+
+=== External AIDEW coordination
+
+The user asked for all `*FEEDBACK.md` files to be considered, so the AIDEW feedback is captured here even though it is not a Chronicle Queue code task.
+
+The most actionable upstream AIDEW requests were:
+
+- add a terminal `COMPLETE` stage after verified `sync-origin`;
+- make sync status and evidence paths explicit in `next` output;
+- improve artifact validation/lint so agents can fix schema issues before advancing stages;
+- reduce review/worklist noise by filtering non-subjects and better handling missing candidates.
+
+The `COMPLETE` stage request is especially well grounded. The current runtime intentionally keeps returning `SYNC_TO_ORIGIN` after a successful sync, but operationally that stage name is doing double duty as both "needs sync" and "already synced". A terminal completion state would make the workflow easier to understand.
+
+These points are tracked in the Markdown plan as external coordination items only.
+
+== Why the Markdown Task List Looks the Way It Does
+
+The Markdown plan is intentionally short and list-shaped:
+
+- it keeps the actionable Chronicle Queue tasks visible;
+- it separates Chronicle Queue implementation work from AIDEW/tooling follow-up;
+- it leaves the detailed argumentation, source inventory, and deferral rationale here in AsciiDoc.
+
+The task ordering is deliberate:
+
+. Baseline the problem and current suppressions.
+. Extract shared cleanup support.
+. Migrate the current cleanup-sensitive tests to that shared support.
+. Add one repeatable validation target so the changes can be exercised repeatedly.
+. Audit the remaining suppressions with evidence instead of folklore.
+. Investigate the deeper cycle-roll bug once the local cleanup noise is reduced.
+
+== Acceptance Guidance
+
+Iteration 3 should be considered successful when:
+
+- cleanup-sensitive tests no longer carry duplicated local drain helpers;
+- the principal cleanup cluster has a documented repeated validation command;
+- the highest-value remaining `finishedNormally = false` sites are either removed or explicitly justified;
+- the cycle-roll reference-count issue is either fixed or narrowed to a concrete follow-up with a reproducible failure path;
+- the AIDEW completion-stage note is preserved as upstream coordination, including the recommendation that a terminal `COMPLETE` stage would be helpful.

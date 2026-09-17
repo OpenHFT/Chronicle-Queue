@@ -47,10 +47,11 @@ public class QueueLockTest extends QueueTestCommon {
     }
 
     private void check(boolean shouldThrowException) throws InterruptedException {
-        finishedNormally = false;
         ignoreException("Couldn't acquire write lock");
-        if (!shouldThrowException)
+        if (!shouldThrowException) {
             expectException("Forced unlock for the lock");
+            expectException("Write lock was already unlocked");
+        }
 
         try {
             System.setProperty("queue.force.unlock.mode", shouldThrowException ? "NEVER" : "ALWAYS" );
@@ -104,7 +105,6 @@ public class QueueLockTest extends QueueTestCommon {
                     assertTrue("timeout, time: " + time, time >= timeoutMs);
                 }
             }
-            finishedNormally = true;
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }

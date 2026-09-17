@@ -34,14 +34,14 @@ public class SingleChronicleQueueStoreTest extends QueueTestCommon {
              StoreTailer tailer = (StoreTailer) queue.createTailer()) {
             final SCQIndexing indexing = wireStore.indexing;
             for (int i = 0; i < RECORD_COUNT; i++) {
-                final int startLinearScanCount = indexing.linearScanCount;
+                final int startLinearScanCount = indexing.linearScanCount.get();
                 final ScanResult scanResult = indexing.moveToIndex(tailer, indices[i]);
                 assertEquals(expectedScanResult, scanResult);
 
                 if (shouldBeIndexed.apply(i)) {
-                    assertEquals(startLinearScanCount, indexing.linearScanCount);
+                    assertEquals(startLinearScanCount, indexing.linearScanCount.get());
                 } else {
-                    assertEquals(startLinearScanCount + 1, indexing.linearScanCount);
+                    assertEquals(startLinearScanCount + 1, indexing.linearScanCount.get());
                 }
             }
         }
