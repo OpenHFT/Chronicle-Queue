@@ -1,0 +1,148 @@
+= PR #1706 review findings: tail lookup alias bound
+:toc:
+:toclevels: 2
+
+[cols="1,3"]
+|===
+| Pull request | https://github.com/OpenHFT/Chronicle-Queue/pull/1706[#1706] Validate tracker pairs before queue tail lookup
+| Head reviewed | `b8665fc4b`
+| Base | `fc96fac3b` on `develop`
+| Date | 2026-09-17
+|===
+
+== Summary
+
+Do not merge the change in its current shape. The alias hazard that the PR
+describes is real and the proof below the alias period is sound. The cost of
+the fix is the problem. `SCQIndexing.lastSequenceNumber()` now rejects the
+sequence tracker for every write position at or above `2^(64 - cycleShift)`
+bytes, and falls back to a linear scan from the last index entry. On the sparse
+roll cycles that scan runs on every write that follows a write by another
+appender. Measured with JLBH on `HUGE_DAILY_XSPARSE`, a write costs 62 us at
+10,000 records and 484 us at 100,000 records, where the base costs under 1 us.
+
+== Findings
+
+=== Blockers
+
+. *No Jira key.* Neither the PR title nor any of the nine commits carries a
+  Jira key.
+. *AI attribution.* Commit `816009ccb` ends with a `Co-Authored-By: Claude`
+  trailer. The house style forbids it. Rewrite the commit before merge.
+. *Tail lookup regression above the alias period.*
+  `SCQIndexing.java:1040`, `if (address >= positionAliasPeriod) break;`.
+  The alias period per roll cycle:
++
+[cols="2,1,1,1"]
+|===
+| Roll cycle | cycleShift | Alias period | Records scanned per fallback (up to)
+
+| FAST_DAILY, FAST_HOURLY, WEEKLY, LARGE_HOURLY, SMALL_DAILY | 32 | 4 GiB | 256, 64 or 8
+| LARGE_HOURLY_SPARSE | 34 | 1 GiB | 1,024
+| LARGE_DAILY | 37 | 128 MiB | 128
+| XLARGE_DAILY | 38 | 64 MiB | 256
+| HUGE_DAILY | 40 | 16 MiB | 1,024
+| LARGE_HOURLY_XSPARSE | 42 | 4 MiB | 1,048,576
+| HUGE_DAILY_XSPARSE | 48 | 64 KiB | 1,048,576
+|===
++
+On `HUGE_DAILY_XSPARSE` the two index arrays alone place the first record
+above 64 KiB, so the tracker path never runs. The callers that pay are the
+appender header resync in `StoreAppender.writeHeader` (line 700) on every write
+after another appender's write, `resetPosition` (line 483), the context
+`index()` (line 1451), a backward `toEnd()` and `queue.lastIndex()`
+(`StoreTailer.java:1039`), `excerptsInCycle` (line 1607) and backward traversal
+(lines 631 and 750). A forward `toEnd()` uses `moveToEndForRead`, which the PR
+does not change.
+
+=== Major
+
+. *The fix closes two of five tracker reads.* `linearScan0`
+  (`SCQIndexing.java:508`), `linearScanByPosition0` (line 608) and `moveToEnd`
+  (line 1090) still trust the tracker with no alias bound and no re-read. The
+  test below shows `moveToIndex(1)` reading record 2 with a one-record-stale
+  tracker. The defect exists on the base too, so the PR does not introduce it,
+  but the queue is not alias-safe after the merge either.
+. *Production comments narrate the test suite.* Fourteen `//!` comment blocks
+  name sixteen test methods. No tool checks the names. Keep the two
+  explanations of the alias mechanism and move the test mapping into the test
+  javadoc.
+
+== Why the fix is safe below the period
+
+The appender publishes the write position (`StoreAppender.java:799` and
+`:1362`) before the tracker (`:800` and `:1364`), under the write lock that
+`closeCleanup` releases afterwards. The tracker is therefore at most one record
+stale. A stable re-read of the write position below the period pins the pair
+to that position exactly. Above the period the pair can only alias when the
+previous record is exactly `k * period` bytes long.
+
+== Proof
+
+=== Unit test
+
+`src/test/java/net/openhft/chronicle/queue/impl/single/SCQIndexingReviewEvidenceTest.java`
+
+----
+mvn test -Dtest=SCQIndexingReviewEvidenceTest -Dsurefire.rerunFailingTestsCount=0
+----
+
+Three methods. Each fails on the PR head.
+
+[cols="3,1,1,3"]
+|===
+| Method | Head | Base | What it shows
+
+| `lastSequenceNumberStaysOnTheTrackerForHugeDailyXSparse` | fails | passes | one `lastSequenceNumber()` call reads 20,001 headers on the head, 2 on the base
+| `lastSequenceNumberStaysOnTheTrackerForHugeDailyAboveSixteenMiB` | fails | passes | 545 headers on the head, 2 on the base
+| `moveToIndexWithStaleAliasedTrackerLandsOnTheCorrectRecord` | fails | fails | `moveToIndex(1)` reads the 5-byte last record, not the 65,532-byte filler
+|===
+
+=== JLBH benchmark
+
+`src/test/java/net/openhft/chronicle/queue/bench/LastSequenceNumberJLBHBenchmark.java`
+
+----
+mvn -q exec:java -Dexec.classpathScope=test \
+  -Dexec.mainClass=net.openhft.chronicle.queue.bench.LastSequenceNumberJLBHBenchmark \
+  -DrollCycle=HUGE_DAILY_XSPARSE -Drecords=100000
+----
+
+Two appenders alternate writes on the harness thread, so every write finds the
+position moved and `writeHeader` calls `lastSequenceNumber()`. The end-to-end
+sample is one write. The probe samples `excerptsInCycle`. The queue starts with
+a filler record that spans the alias period, then `records` small records.
+Coordinated omission is off, so the numbers are service times. Median of runs
+2 and 3, 2,000 iterations per run at 200/s, on one developer machine with the
+default JVM flags. Use the ratios, not the absolute values.
+
+[cols="2,1,1,1,1"]
+|===
+| Roll cycle, records | Write, base | Write, head | excerptsInCycle, base | excerptsInCycle, head
+
+| HUGE_DAILY_XSPARSE, 10,000 | 0.67 us | 62 to 70 us | 17 to 23 us | 86 to 93 us
+| HUGE_DAILY_XSPARSE, 100,000 | 0.7 to 1.5 us | 484 to 491 us | 22 to 26 us | 444 to 447 us
+| HUGE_DAILY, 10,000 | 0.79 us | 3.2 to 3.3 us | 17 to 23 us | 23 to 28 us
+|===
+
+The head cost grows about 5 ns per record since the last index entry, hot in
+cache. `HUGE_DAILY_XSPARSE` indexes every 1,048,576th record, so a write
+reaches about 5 ms before the next index entry.
+
+== Recommendation
+
+Keep the tracker above the period and prove the pair another way. Two options
+are exact and O(1), given that the tracker is at most one record stale:
+
+. Skip the bound when a single record cannot span the period. A record length
+  has at most 30 bits, so for `cycleShift <= 33` the alias cannot occur. This
+  restores the standard cycles, `LARGE_HOURLY` and `SMALL_DAILY`, but not the
+  large and sparse cycles.
+. Above the period, read the header at `lastWritePos - period`. If that offset
+  is below the first data position, or the record there does not end exactly
+  at `lastWritePos`, the tracker cannot be one record stale by one period. A
+  false "unproven" costs only the fallback, never a wrong answer.
+
+Apply the same proof to the three sites that the PR leaves unchanged, or state
+the scope in the PR body. Reconcile with PR #1705, which implements the same
+change and is still open.
