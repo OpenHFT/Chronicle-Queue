@@ -51,6 +51,11 @@ public class IndexingTestCommon extends QueueTestCommon {
 
     private SingleChronicleQueue createQueueInstance() {
         return SingleChronicleQueueBuilder.builder()
+                //! These fixtures test indexing across the existing cycles and messages,
+                //! not a 64 MiB initial mapping. Request small chunks to avoid eagerly
+                //! allocating default-sized roll files on Windows. The builder retains
+                //! the index-geometry minimum and grows as larger indexing cases need it.
+                .testBlockSize()
                 .path(queuePath)
                 .timeProvider(timeProvider)
                 .rollCycle(rollCycle())
