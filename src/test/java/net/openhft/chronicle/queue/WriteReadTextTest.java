@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -165,9 +166,8 @@ public class WriteReadTextTest extends QueueTestCommon {
                 .single(directory.path)
                 .blockSize(Maths.nextPower2(largestInput * 4, 256 << 10))
                 .build();
-             ExcerptAppender appender = theQueue.createAppender()) {
-
-            ExcerptTailer tailer = theQueue.createTailer();
+             ExcerptAppender appender = theQueue.createAppender();
+             ExcerptTailer tailer = theQueue.createTailer()) {
 
             StringBuilder tmpReadback = new StringBuilder();
 
@@ -210,6 +210,8 @@ public class WriteReadTextTest extends QueueTestCommon {
 
         @Override
         public void close() {
+            //! Queue close can enqueue unmapping; finish those releases before Windows deletion.
+            BackgroundResourceReleaser.releasePendingResources();
             //! A false deletion result is a cleanup failure too. Limit deletion to the
             //! unique path created by this invocation, leaving other tests' files alone.
             if (path.exists() && !IOTools.deleteDirWithFiles(path))
