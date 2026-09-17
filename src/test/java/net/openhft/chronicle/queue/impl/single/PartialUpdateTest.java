@@ -212,7 +212,8 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     private static void printLastWritePositionAndSequence(String description, StoreTailer context, SingleChronicleQueueStore store) {
         try {
-            context.toStart();
+            // The indexing context must map the store being inspected, not the queue's first cycle.
+            assertTrue(context.moveToIndex(RollCycles.FAST_HOURLY.toIndex(store.cycle(), 0)));
             long writePosition = store.writePosition();
             long lastSequenceNumber = store.lastSequenceNumber(context);
             Jvm.startup().on(PartialUpdateTest.class, format("Last wp/seq = %x/%d (%s)", writePosition, lastSequenceNumber, description));

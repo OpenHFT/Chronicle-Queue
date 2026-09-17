@@ -822,6 +822,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 oldStore);
     }
 
+    @Nullable
+    SingleChronicleQueueStore storeForCycleForTailer(int cycle, SingleChronicleQueueStore oldStore) {
+        //! StoreAcquisitionDeletionTest#readerDoesNotRecreateCycleDeletedDuringMapping: never recreate a deleted cycle file.
+        //! StoreTailerTest#shouldHaltAtPartiallyInitialisedRollCycle keeps the public writable-store path available.
+        return pool.acquire(cycle, WireStoreSupplier.CreateStrategy.READ_ONLY_MAPPING, oldStore);
+    }
+
     /**
      * Returns the next cycle in the specified direction.
      *
@@ -1196,8 +1203,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     @PackageLocal
     MappedFile mappedFile(File file) throws FileNotFoundException {
+        return mappedFile(file, readOnly);
+    }
+
+    @NotNull
+    @PackageLocal
+    MappedFile mappedFile(File file, boolean readOnlyMapping) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
-        final MappedFile mappedFile = MappedFile.of(file, chunkSize, overlapSize, readOnly);
+        final MappedFile mappedFile = MappedFile.of(file, chunkSize, overlapSize, readOnlyMapping);
         mappedFile.syncMode(syncMode);
         return mappedFile;
     }
@@ -1371,6 +1384,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         // A cache for managing MappedFile and MappedBytes, used to map files into memory.
         private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache;
+        private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> readOnlyMappedFileCache;
 
         // Indicates whether the queue path exists on disk.
         private boolean queuePathExists;
@@ -1383,6 +1397,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             mappedFileCache = new ReferenceCountedCache<>(
                     MappedBytes::mappedBytes,
                     SingleChronicleQueue.this::mappedFile);
+            //! StoreAcquisitionDeletionTest#readerDoesNotRecreateCycleDeletedDuringMapping:
+            //! opening a reader's file read-only cannot recreate it if deletion wins the existence-check race.
+            readOnlyMappedFileCache = new ReferenceCountedCache<>(
+                    MappedBytes::mappedBytes,
+                    file -> SingleChronicleQueue.this.mappedFile(file, true));
             singleThreadedCheckDisabled(true);
         }
 
@@ -1406,6 +1425,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             MappedBytes mappedBytes = null;
             SingleChronicleQueueStore wireStore = null;
             boolean acquired = false;
+            //! StoreAcquisitionDeletionTest#appenderCanWriteAfterTailerAcquiresCycle:
+            //! writers must retain a writable mapping even when readers acquired the cycle first.
+            final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> cache =
+                    createStrategy == CreateStrategy.READ_ONLY_MAPPING ? readOnlyMappedFileCache : mappedFileCache;
             try {
                 File path = dateValue.path;
 
@@ -1424,10 +1447,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 dateValue.pathExists = true;
 
                 try {
-                    mappedBytes = mappedFileCache.get(path);
+                    mappedBytes = cache.get(path);
                 } catch (FileNotFoundException e) {
+                    //! StoreAcquisitionDeletionTest#readerDoesNotRecreateCycleDeletedDuringMapping:
+                    //! do not turn the failed read-only open back into a file creation request.
+                    if (createStrategy == CreateStrategy.READ_ONLY_MAPPING) {
+                        if (!path.exists())
+                            return null;
+                        throw e;
+                    }
                     createFile(path);
-                    mappedBytes = mappedFileCache.get(path);
+                    mappedBytes = cache.get(path);
                 }
                 mappedBytes.singleThreadedCheckDisabled(true);
                 mappedBytes.chunkCount(chunkCount);
@@ -1455,9 +1485,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             File cycleFile = mappedBytes.mappedFile().file();
 
                             mappedBytes.close();
-                            mappedFileCache.remove(path);
+                            cache.remove(path);
 
-                            if (!readOnly && createStrategy != CreateStrategy.READ_ONLY && cycleFileRenamed != cycle) {
+                            //! StoreAcquisitionDeletionTest#readerWaitsForIncompleteHeaderPublication and
+                            //! #readerWaitsForZeroHeaderPublication: a tailer must not recover an in-flight writer's file.
+                            if (!readOnly && createStrategy != CreateStrategy.READ_ONLY &&
+                                    createStrategy != CreateStrategy.READ_ONLY_MAPPING && cycleFileRenamed != cycle) {
                                 SingleChronicleQueueStore recovered = acquire(cycle, backupCycleFile(cycle, cycleFile));
 
                                 if (recovered == null)
@@ -1575,7 +1608,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          */
         @Override
         protected void performClose() {
-            mappedFileCache.close();
+            try {
+                mappedFileCache.close();
+            } finally {
+                //! StoreAcquisitionDeletionTest#appenderCanWriteAfterTailerAcquiresCycle checks fixture resource cleanup.
+                readOnlyMappedFileCache.close();
+            }
         }
 
         /**
