@@ -1,0 +1,105 @@
+= Reproducing PR #1706 evidence
+
+Implementation: `58e19d8c1af715a09da0a8efc6a13e611e40fed1`.
+Original base: `fc96fac3b58803d12d5d982bd0e8a7a424965319`.
+Reviewed production: `b8665fc4b2982925d073b5fa018cb80876a67bdd`.
+The corrected benchmark bytecode is identical for all three measurements
+(hashes in `validation.json`; historical source copies differ only in the
+licence header).
+
+`validation.json` records the final Maven summaries, runtime architectures and
+source hashes. `mutation-definitions.json` contains the exact source replacements
+and test selectors; `mutation-results.json` records their executed outcomes.
+These are targeted mutations, not a claim of exhaustive mutation coverage.
+`benchmark-*.log` contains raw measurements, and `benchmark-*.command.json`
+contains the original argument vectors, including local dependency paths.
+`benchmark-host.txt` records the host CPU and filesystem information.
+
+== Build and test
+
+Use separate, newly created worktrees; no existing checkout needs to be reset.
+The production commit can be tested directly with:
+
+[source,shell]
+----
+mvn -B -ntp -nsu -DargLine=-XX:ActiveProcessorCount=4 \
+  -Dsurefire.rerunFailingTestsCount=0 clean verify -l /tmp/pr1706-verify.log
+----
+
+The focused selector used for Java 8 and 32-bit Java 17 is:
+
+[source,text]
+----
+MoveToIndexTest,SCQIndexingReviewEvidenceTest,SequenceAliasGeometryTest,SequenceAliasGapTest,SequenceForPositionSafetyTest,MaxPositionMutationTest,ScanLimitRegressionTest,PartialUpdateTest
+----
+
+Set `JAVA_HOME` and put its `bin` directory first in `PATH`, then add that selector
+with `-Dtest=...` to the verification command. The 32-bit run uses an actual
+`i386` JVM, not a mocked architecture property. Surefire reruns are disabled.
+
+== Compare benchmarks
+
+Create worktrees at the three revisions above. Copy only
+`src/test/java/net/openhft/chronicle/queue/bench/LastSequenceNumberJLBHBenchmark.java`
+from the implementation revision into each historical worktree. Leave historical
+production code unchanged. In each worktree, compile and obtain its test classpath:
+
+[source,shell]
+----
+mvn -B -ntp -nsu -DskipTests test-compile dependency:build-classpath \
+  -DincludeScope=test -Dmdep.outputFile=target/bench-classpath.txt \
+  -l /tmp/pr1706-benchmark-compile.log
+----
+
+Run the benchmark with Java 21, the exports/opens from the recorded command
+vectors, and this classpath:
+
+[source,text]
+----
+target/test-classes:target/classes:<contents of target/bench-classpath.txt>
+----
+
+Use the following properties for each revision, once with `appenders=1` and once
+with `appenders=2`:
+
+[source,text]
+----
+-XX:ActiveProcessorCount=4
+-Drevision=<exact production revision>
+-Dpath=<existing benchmark parent directory>
+-Dappenders=1
+-Drecords=10000
+-Diterations=500
+-Dthroughput=500
+-Druns=3
+-DwarmUp=100
+net.openhft.chronicle.queue.bench.LastSequenceNumberJLBHBenchmark
+----
+
+The benchmark creates and removes its own child directory. The supplied parent
+is never recursively deleted. The recorded validation also placed a sentinel
+queue file in that parent and checked its contents after each run. Run without
+other builds/benchmarks on the machine for a more controlled comparison.
+
+Each invocation writes another record. The raw output reports population and
+distance from the sparse index at each run boundary. Compare the same boundaries;
+do not describe these as fixed-size queues or infer a concurrent stress result.
+
+== Repeat targeted mutations
+
+In a separate worktree at the implementation revision, apply one entry from
+`mutation-definitions.json` at a time. Require exactly one occurrence of its
+`before` text, replace it with `after`, and run:
+
+[source,shell]
+----
+mvn -B -ntp -nsu -DargLine=-XX:ActiveProcessorCount=4 \
+  -Dsurefire.rerunFailingTestsCount=0 -Dtest=<entry.test> test \
+  -l /tmp/pr1706-mutation.log
+----
+
+Remove the corresponding old Surefire XML report before each execution. A killed
+mutation must compile, execute its selected test and produce a test failure;
+compile errors, missing reports and timeouts are invalid runs. Restore the exact
+source before proceeding to the next mutation. After the last restoration,
+run the clean focused verification above to discard mutated classes.

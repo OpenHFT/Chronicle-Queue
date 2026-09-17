@@ -1,0 +1,65 @@
+{
+  "implementation_revision": "58e19d8c1af715a09da0a8efc6a13e611e40fed1",
+  "checks": [
+    {
+      "label": "full-jdk21",
+      "tests": 1191,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 52,
+      "java_runtime": "21.0.12+8-1-24.04-Ubuntu",
+      "java_vm": "OpenJDK 64-Bit Server VM",
+      "os_arch": "amd64",
+      "maven_verify_success": true,
+      "surefire_reruns": 0,
+      "count_source": "Maven final summary"
+    },
+    {
+      "label": "focused-jdk8",
+      "tests": 77,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "java_runtime": "1.8.0_502-8u502-ga~us1-0ubuntu1~24.04-b07",
+      "java_vm": "OpenJDK 64-Bit Server VM",
+      "os_arch": "amd64",
+      "maven_verify_success": true,
+      "surefire_reruns": 0,
+      "count_source": "Maven final summary"
+    },
+    {
+      "label": "focused-jdk17-i386",
+      "tests": 77,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "java_runtime": "17.0.20+8-1-24.04-Ubuntu",
+      "java_vm": "OpenJDK Server VM",
+      "os_arch": "i386",
+      "maven_verify_success": true,
+      "surefire_reruns": 0,
+      "count_source": "Maven final summary"
+    }
+  ],
+  "source_sha256": {
+    "src/main/java/net/openhft/chronicle/queue/impl/single/RollCycleEncodeSequence.java": "9991016876452b481af330399414f7da48fd52c0d0aec7fcb40ec1f14ab61c14",
+    "src/main/java/net/openhft/chronicle/queue/impl/single/SCQIndexing.java": "d9f233e1c2a97f188096971b8373da9b7e80a4005057595f0147339a4e298793",
+    "src/main/java/net/openhft/chronicle/queue/impl/single/SingleChronicleQueueStore.java": "7b537899b5a12bc21b5c1e9c0b4478fee23d4b4d18290643c8154f575984f4c5",
+    "src/test/java/net/openhft/chronicle/queue/bench/LastSequenceNumberJLBHBenchmark.java": "bbbc624a3280442f4e58b045a397d6cc657be1f07d54cd2f9d08e5dfb0204229",
+    "src/test/java/net/openhft/chronicle/queue/impl/single/SCQIndexingReviewEvidenceTest.java": "894487fd450b3d3cee7f0097a12e3e97a6c6adde770e2206ee841476f779de4b",
+    "src/test/java/net/openhft/chronicle/queue/impl/single/SequenceAliasGeometryTest.java": "41596a268bae7ed04624f240375b0ff9efdc3372cbf6d421cdf7f81e12bfa49e",
+    "src/test/java/net/openhft/chronicle/queue/impl/single/SequenceAliasGapTest.java": "0c5b2ba4a0b04fcd294ba92f64554b13b6651f2b32a6019520d2f38f2c7b7cdd"
+  },
+  "mutation_restoration": {
+    "tests": 77,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "clean_verify_success": true
+  },
+  "benchmark_class_sha256": {
+    "base": "377a093d47c3fc48701f93d1aa329b08aae6c458895df4377c70f11587258ffa",
+    "reviewed": "377a093d47c3fc48701f93d1aa329b08aae6c458895df4377c70f11587258ffa",
+    "head": "377a093d47c3fc48701f93d1aa329b08aae6c458895df4377c70f11587258ffa"
+  }
+}

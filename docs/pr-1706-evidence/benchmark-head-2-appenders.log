@@ -1,0 +1,64 @@
+[main] INFO net.openhft.chronicle.core.Jvm - Chronicle core loaded from file:/home/peter/.m2/repository/net/openhft/chronicle-core/2026.7-SNAPSHOT/chronicle-core-2026.7-SNAPSHOT.jar
+revision=58e19d8c1af715a09da0a8efc6a13e611e40fed1 directory=/home/peter/Build-All/queue-1706-findings-update-2026-09-17/benchmark-parent/last-sequence-number-11542498422904652571 filesystem=ext4
+java=21.0.12+8-1-24.04-Ubuntu vm=OpenJDK 64-Bit Server VM os=Linux arch=amd64 processors=4
+jvmOptions=[-XX:ActiveProcessorCount=4, --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED, --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED, --add-exports=java.base/jdk.internal.util=ALL-UNNAMED, --add-exports=java.base/sun.nio.ch=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED, --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED, --add-opens=java.base/java.io=ALL-UNNAMED, --add-opens=java.base/java.lang=ALL-UNNAMED, --add-opens=java.base/java.lang.reflect=ALL-UNNAMED, --add-opens=java.base/java.util=ALL-UNNAMED, --add-opens=jdk.compiler/com.sun.tools.javac=ALL-UNNAMED, -Drevision=58e19d8c1af715a09da0a8efc6a13e611e40fed1, -Dpath=/home/peter/Build-All/queue-1706-findings-update-2026-09-17/benchmark-parent, -Dappenders=2, -Drecords=10000, -Diterations=500, -Dthroughput=500, -Druns=3, -DwarmUp=100]
+rollCycle=HUGE_DAILY_XSPARSE initiallySmallRecords=10000 appenders=2 iterations=500 throughput=500 runs=3 warmUp=100
+[main] INFO net.openhft.chronicle.bytes.PageUtil - Found pageSize=2,097,152 for mount point '/dev/hugepages'
+[main] INFO net.openhft.chronicle.bytes.internal.ChunkedMappedFile - Took 5 ms to add mapping for /home/peter/Build-All/queue-1706-findings-update-2026-09-17/benchmark-parent/last-sequence-number-11542498422904652571/metadata.cq4t
+[main] INFO net.openhft.chronicle.threads.DiskSpaceMonitor - Took 0.991 ms to pollDiskSpace for /home/peter/Build-All/queue-1706-findings-update-2026-09-17/benchmark-parent/last-sequence-number-11542498422904652571
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Running under OpenJDK Runtime Environment 21.0.12+8-1-24.04-Ubuntu with 4 processors reported.
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Leave your e-mail to get information about the latest releases and patches at https://chronicle.software/release-notes/
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Process id: 139 :: Chronicle Queue (unknown)
+[main] INFO net.openhft.chronicle.core.internal.announcer.InternalAnnouncer - Analytics: Chronicle Queue reports usage statistics. Learn more or turn off: https://github.com/OpenHFT/Chronicle-Queue/blob/ea/DISCLAIMER.adoc
+filler of 65536 bytes written, alias period 65536
+before warmup: population=10001 lastSequence=10000 indexSpacing=1048576 lastSparseAnchor=0 recordsAfterAnchor=10000
+[main] INFO net.openhft.affinity.AffinityLock - Assigning cpu 31 to Thread[#1,main,5,main] on thread id 140
+Warm up complete (100 iterations took 0.049 s)
+after warmup / before run 1: population=10101 lastSequence=10100 indexSpacing=1048576 lastSparseAnchor=0 recordsAfterAnchor=10100
+-------------------------------- BENCHMARK RESULTS (RUN 1) us --------------------------------------
+Run time: 0.998 s, distribution: NORMAL
+Correcting for co-ordinated:false
+Target throughput:500/s = 1 message every 2000us
+End to End: (500)                               50/90 99/99.9 99.99 - worst was 3.05 / 3.77  13.49 / 24.29  24.29 - 24.29
+excerptsInCycle (501)                           50/90 99/99.9 99.99 - worst was 64.1 / 125.6  234.8 / 522  522 - 522
+----------------------------------------------------------------------------------------------------
+after run 1: population=10601 lastSequence=10600 indexSpacing=1048576 lastSparseAnchor=0 recordsAfterAnchor=10600
+-------------------------------- BENCHMARK RESULTS (RUN 2) us --------------------------------------
+Run time: 1.0 s, distribution: NORMAL
+Correcting for co-ordinated:false
+Target throughput:500/s = 1 message every 2000us
+End to End: (500)                               50/90 99/99.9 99.99 - worst was 0.430 / 2.63  14.48 / 50.9  50.9 - 50.9
+excerptsInCycle (500)                           50/90 99/99.9 99.99 - worst was 31.3 / 43.7  78.0 / 138.0  138.0 - 138.0
+----------------------------------------------------------------------------------------------------
+after run 2: population=11101 lastSequence=11100 indexSpacing=1048576 lastSparseAnchor=0 recordsAfterAnchor=11100
+-------------------------------- BENCHMARK RESULTS (RUN 3) us --------------------------------------
+Run time: 1.0 s, distribution: NORMAL
+Correcting for co-ordinated:false
+Target throughput:500/s = 1 message every 2000us
+End to End: (500)                               50/90 99/99.9 99.99 - worst was 0.401 / 0.480  0.661 / 0.971  0.971 - 0.971
+excerptsInCycle (500)                           50/90 99/99.9 99.99 - worst was 28.9 / 33.7  48.7 / 265  265 - 265
+----------------------------------------------------------------------------------------------------
+after run 3: population=11601 lastSequence=11600 indexSpacing=1048576 lastSparseAnchor=0 recordsAfterAnchor=11600
+-------------------------------- SUMMARY (end to end) us -------------------------------------------
+Percentile   run1         run2         run3      % Variation
+50.0:            3.05         0.43         0.40         4.76
+90.0:            3.77         2.63         0.48        74.87
+99.0:           13.49        14.48         0.66        93.31
+worst:          24.29        50.88         0.97        97.16
+----------------------------------------------------------------------------------------------------
+-------------------------------- SUMMARY (excerptsInCycle) us --------------------------------------
+Percentile   run1         run2         run3      % Variation
+50.0:           64.06        31.26        28.90         5.18
+90.0:          125.57        43.71        33.73        16.48
+99.0:          234.75        77.95        48.70        28.59
+worst:         521.73       137.98       264.70        37.97
+----------------------------------------------------------------------------------------------------
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.end-to-end.0.5.java17' value='0.4005']
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.end-to-end.0.9.java17' value='0.4805']
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.end-to-end.0.99.java17' value='0.661']
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.end-to-end.1.0.java17' value='0.971']
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.excerptsInCycle.0.5.java17' value='28.896']
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.excerptsInCycle.0.9.java17' value='33.728']
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.excerptsInCycle.0.99.java17' value='48.704']
+##teamcity[buildStatisticValue key='LastSequenceNumberJLBHBenchmark.excerptsInCycle.1.0.java17' value='264.704']
+[main] INFO net.openhft.affinity.LockInventory - Releasing cpu 31 from Thread[#1,main,5,main]

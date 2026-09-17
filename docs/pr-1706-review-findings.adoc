@@ -1,148 +1,247 @@
-= PR #1706 review findings: tail lookup alias bound
+= PR #1706: review evidence and guarded scan reuse
 :toc:
 :toclevels: 2
 
 [cols="1,3"]
 |===
-| Pull request | https://github.com/OpenHFT/Chronicle-Queue/pull/1706[#1706] Validate tracker pairs before queue tail lookup
-| Head reviewed | `b8665fc4b`
-| Base | `fc96fac3b` on `develop`
+| Pull request | https://github.com/OpenHFT/Chronicle-Queue/pull/1706[#1706]
+| Findings commit integrated | `61b6db5c00e4c5e5db5ee99e86b2abe49dba706f`
+| Production head originally reviewed | `b8665fc4b2982925d073b5fa018cb80876a67bdd`
+| Original comparison base | `fc96fac3b58803d12d5d982bd0e8a7a424965319`
+| Develop integrated for this update | `129e9ae5ea7e034c59e89dd0b81cdeaf115422fb`
+| Implemented and measured fix | `58e19d8c1af715a09da0a8efc6a13e611e40fed1`
 | Date | 2026-09-17
 |===
 
-== Summary
+== Findings and disposition
 
-Do not merge the change in its current shape. The alias hazard that the PR
-describes is real and the proof below the alias period is sound. The cost of
-the fix is the problem. `SCQIndexing.lastSequenceNumber()` now rejects the
-sequence tracker for every write position at or above `2^(64 - cycleShift)`
-bytes, and falls back to a linear scan from the last index entry. On the sparse
-roll cycles that scan runs on every write that follows a write by another
-appender. Measured with JLBH on `HUGE_DAILY_XSPARSE`, a write costs 62 us at
-10,000 records and 484 us at 100,000 records, where the base costs under 1 us.
+The alias hazard and performance regression are both real. The original three
+evidence tests are retained. Executing them locally reproduces 20,001 header
+reads for a 20,000-record `HUGE_DAILY_XSPARSE` tail lookup, 545 reads for
+`HUGE_DAILY` above 16 MiB, and an incorrect physical record returned by
+`moveToIndex()` with a stale aliased tracker. The corresponding base reads
+2 headers for either tail lookup and has the same pre-existing `moveToIndex()`
+defect.
 
-== Findings
+The write regression is not limited to alternating appenders. The ordinary
+`writingDocument()` path calls `prepareAndReturnWriteContext()` ->
+`resetPosition()` -> `lastSequenceNumber()` before opening the document,
+including with one appender. Separate controls reproduce 20,004 header reads
+for a single-appender document write and 20,005 for an alternating-appender
+write on the reviewed head. Both controls pass their bounded-work assertions
+on the original base.
 
-=== Blockers
+Separate real-file regressions now reproduce the finite-position shortcut
+and forward `toEnd()` failures on both the reviewed head and original base.
+These are pre-existing defects, not regressions introduced by this PR.
+The `linearScanByPosition0()` tracker shortcut applies when a finite requested
+position equals the published address. It does not override the indexed
+starting point of an ordinary `Long.MAX_VALUE` lookup.
 
-. *No Jira key.* Neither the PR title nor any of the nine commits carries a
-  Jira key.
-. *AI attribution.* Commit `816009ccb` ends with a `Co-Authored-By: Claude`
-  trailer. The house style forbids it. Rewrite the commit before merge.
-. *Tail lookup regression above the alias period.*
-  `SCQIndexing.java:1040`, `if (address >= positionAliasPeriod) break;`.
-  The alias period per roll cycle:
-+
-[cols="2,1,1,1"]
-|===
-| Roll cycle | cycleShift | Alias period | Records scanned per fallback (up to)
+== Retained implementation
 
-| FAST_DAILY, FAST_HOURLY, WEEKLY, LARGE_HOURLY, SMALL_DAILY | 32 | 4 GiB | 256, 64 or 8
-| LARGE_HOURLY_SPARSE | 34 | 1 GiB | 1,024
-| LARGE_DAILY | 37 | 128 MiB | 128
-| XLARGE_DAILY | 38 | 64 MiB | 256
-| HUGE_DAILY | 40 | 16 MiB | 1,024
-| LARGE_HOURLY_XSPARSE | 42 | 4 MiB | 1,048,576
-| HUGE_DAILY_XSPARSE | 48 | 64 KiB | 1,048,576
-|===
-+
-On `HUGE_DAILY_XSPARSE` the two index arrays alone place the first record
-above 64 KiB, so the tracker path never runs. The callers that pay are the
-appender header resync in `StoreAppender.writeHeader` (line 700) on every write
-after another appender's write, `resetPosition` (line 483), the context
-`index()` (line 1451), a backward `toEnd()` and `queue.lastIndex()`
-(`StoreTailer.java:1039`), `excerptsInCycle` (line 1607) and backward traversal
-(lines 631 and 750). A forward `toEnd()` uses `moveToEndForRead`, which the PR
-does not change.
+The live codec's alias-period bound and stable full-position rereads remain.
+The same checks now guard the previously unprotected index, finite-position
+and forward-end shortcuts. The public forward-end path falls back to indexed
+recovery when the tracker pair cannot be proved.
 
-=== Major
+Repeated lookups can instead use a full position/sequence pair established by
+a committed write or by a successful scan from an independently known starting
+point. That pair belongs to one physical `MappedFile` and one thread. It is never constructed
+by treating a wrapped tracker result as trustworthy. A lookup scans forward
+from that immutable committed record, including any newly committed suffix.
+An earlier finite lookup does not discard a newer verified pair.
 
-. *The fix closes two of five tracker reads.* `linearScan0`
-  (`SCQIndexing.java:508`), `linearScanByPosition0` (line 608) and `moveToEnd`
-  (line 1090) still trust the tracker with no alias bound and no re-read. The
-  test below shows `moveToIndex(1)` reading record 2 with a one-record-stale
-  tracker. The defect exists on the base too, so the PR does not introduce it,
-  but the queue is not alias-safe after the merge either.
-. *Production comments narrate the test suite.* Fourteen `//!` comment blocks
-  name sixteen test methods. No tool checks the names. Keep the two
-  explanations of the alias mechanism and move the test mapping into the test
-  javadoc.
+This adds no file-format change, cross-process publication protocol,
+per-write allocation after initialization, or synchronization on the write
+path. A thread-local weak-key map lets stores reuse the pair while the same mapping
+remains live. It uses object identity rather than a pathname or cycle number,
+so replacing a cycle file does not inherit a previous mapping's pair. The cache
+does not reserve or retain mapped files. Nearby tailer scans may supply full
+queue indices; a cycle-relative sequence may only replace a starting index
+within the scan's bounds.
+The guarantee depends on committed queue records retaining their physical
+positions and sequence order; arbitrary external rewriting of committed
+records is outside that invariant.
 
-== Why the fix is safe below the period
+The retained `//!` comments associate each release-code decision with a
+discriminating test. These mappings are a review aid, not a substitute for the
+publication invariant. A mutation that removes an incidental scanner read
+should not become a failure merely because a test asserts an exact collaborator
+call count.
 
-The appender publishes the write position (`StoreAppender.java:799` and
-`:1362`) before the tracker (`:800` and `:1364`), under the write lock that
-`closeCleanup` releases afterwards. The tracker is therefore at most one record
-stale. A stable re-read of the write position below the period pins the pair
-to that position exactly. Above the period the pair can only alias when the
-previous record is exactly `k * period` bytes long.
+=== Cost boundary
 
-== Proof
+A warmed tail lookup scans records committed since its verified pair instead of
+rescanning the entire sparse-index interval. Single-appender and alternating
+`writingDocument()` calls, direct byte writes followed by a tail lookup, and
+repeated reader/index lookups and public `excerptsInCycle()` queries have
+deterministic bounded-work regressions.
+Those bounds apply to the controlled workload; an arbitrarily large intervening
+write burst can still require scanning its newly committed records.
 
-=== Unit test
+`excerptsInCycle()` releases its store in a `finally` block on every invocation.
+When the same mapping remains live, the replacement store now reuses the proved
+pair. A new mapping or thread with no verified pair still needs indexed recovery
+above the codec's alias period. The cache does not transfer proof between
+threads or processes. This update must not be described as eliminating every
+tail scan or completing issue
+https://github.com/OpenHFT/Chronicle-Queue/issues/1704[#1704]. That issue's separate
+scan-source counters and concurrent stress acceptance criteria remain open.
 
-`src/test/java/net/openhft/chronicle/queue/impl/single/SCQIndexingReviewEvidenceTest.java`
+== Rejected constant-time proofs
 
+Neither proposed shortcut establishes an exact pair:
+
+* Probing only `lastWritePos - period` misses an older data record two or more
+  periods behind. The probed offset can be inside its payload.
+* Even one period behind, metadata can separate consecutive data records.
+  The previous data record need not end at the newly published position.
+* A 30-bit limit on an individual physical record does not bound the total
+  distance between data publications. Metadata, structural records and padding
+  must also be included, as must supported recovery/publication paths.
+
+`SequenceAliasGapTest` uses actual queue files and the production codec with
+one- and two-period gaps, with and without intervening metadata. Both
+publication directions and both inclusive modes are covered. An independently mapped reader
+also checks the stale-tracker case without a previously verified pair.
+The proposed one-period header probe is executed as a mutation and is rejected
+by these tests. No 4 GiB Queue integration reproduction is claimed for the
+record-size exemption: it remains an unproved design candidate, and is not
+implemented.
+
+== Evidence tests
+
+`SCQIndexingReviewEvidenceTest` retains the three original cases and adds
+single-appender, alternating-appender, finite-position and forward-end controls,
+plus direct-byte-write, warmed-reader/index, repeated public count and
+replacement-file coverage. Sequence correctness
+is asserted before work bounds, and the alias reader tests check the physical
+record or position, not just a successful return code.
+
+`SequenceAliasGeometryTest` adds deterministic writer-advance interleavings for
+the three newly guarded shortcuts, including a capture below the alias period
+followed by publication above it. These hooks control when a real write occurs;
+they do not script a codec answer.
+
+[source,shell]
 ----
-mvn test -Dtest=SCQIndexingReviewEvidenceTest -Dsurefire.rerunFailingTestsCount=0
+mvn -B -ntp -nsu -DargLine=-XX:ActiveProcessorCount=4 \
+  -Dsurefire.rerunFailingTestsCount=0 \
+  -Dtest=SCQIndexingReviewEvidenceTest,SequenceAliasGapTest,SequenceAliasGeometryTest,SequenceForPositionSafetyTest,MaxPositionMutationTest,ScanLimitRegressionTest,PartialUpdateTest \
+  verify -l /tmp/pr1706-focused.log
 ----
 
-Three methods. Each fails on the PR head.
+== Benchmark methodology
 
-[cols="3,1,1,3"]
+`LastSequenceNumberJLBHBenchmark` supports `-Dappenders=1` and `2`. The write
+interval and the `excerptsInCycle()` interval have independent timestamps;
+both samples are recorded after both timed regions. Each invocation appends a
+record, and the harness prints actual population, last sequence, sparse-index
+anchor and distance from that anchor before warmup and after every run.
+
+`-Dpath` now identifies an existing parent directory for a newly created,
+uniquely named child. Cleanup deletes only that owned child. The validation
+runs leave a sentinel queue file in the supplied parent and check that its
+contents survive and the owned child is removed.
+
+Fresh comparison runs use the same corrected benchmark on the exact base and
+reviewed production revisions above. They use one 65,536-byte filler plus
+10,000 small records, 100 warmup writes, three runs of 500 writes at 500/s,
+and coordinated omission disabled. Population is 10,001 before warmup,
+10,101 before run 1, then 10,601, 11,101 and 11,601 after runs 1-3. The sparse
+anchor remains sequence 0. These are growing workloads, not steady-state
+10,000-record queues.
+
+Raw outputs, exact JVM options, hardware/filesystem details and reproduction
+commands accompany this report in link:pr-1706-evidence/README.adoc[the evidence directory]. The comparison is from
+one developer machine, not an isolated performance lab. Deterministic header
+counts are the acceptance gate; timings provide context.
+
+Median latency in microseconds, shown as run 2 / run 3; run 1 is excluded
+by the JLBH configuration. Host: AMD Ryzen 9 5950X, Linux x86_64, ext4,
+OpenJDK 21.0.12, `-XX:ActiveProcessorCount=4` (full options in raw output).
+
+[cols="2,1,2,2",options="header"]
 |===
-| Method | Head | Base | What it shows
-
-| `lastSequenceNumberStaysOnTheTrackerForHugeDailyXSparse` | fails | passes | one `lastSequenceNumber()` call reads 20,001 headers on the head, 2 on the base
-| `lastSequenceNumberStaysOnTheTrackerForHugeDailyAboveSixteenMiB` | fails | passes | 545 headers on the head, 2 on the base
-| `moveToIndexWithStaleAliasedTrackerLandsOnTheCorrectRecord` | fails | fails | `moveToIndex(1)` reads the 5-byte last record, not the 65,532-byte filler
+| Production revision | Appenders | Document write (us) | Public count (us)
+| Base `fc96fac3` | 1 | 0.39 / 0.32 | 32.16 / 26.72
+| Base `fc96fac3` | 2 | 0.30 / 0.25 | 31.26 / 27.74
+| Reviewed `b8665fc4` | 1 | 53.06 / 55.23 | 92.54 / 87.94
+| Reviewed `b8665fc4` | 2 | 53.18 / 55.62 | 91.26 / 89.47
+| Fixed `58e19d8c` | 1 | 0.44 / 0.37 | 32.96 / 27.36
+| Fixed `58e19d8c` | 2 | 0.43 / 0.40 | 31.26 / 28.90
 |===
 
-=== JLBH benchmark
+The fixed write and public-count measurements are close to the original base
+in this workload, while preserving the alias guards. The work-bound tests,
+not these machine-specific latency values, enforce the regression requirement.
 
-`src/test/java/net/openhft/chronicle/queue/bench/LastSequenceNumberJLBHBenchmark.java`
 
-----
-mvn -q exec:java -Dexec.classpathScope=test \
-  -Dexec.mainClass=net.openhft.chronicle.queue.bench.LastSequenceNumberJLBHBenchmark \
-  -DrollCycle=HUGE_DAILY_XSPARSE -Drecords=100000
-----
+The original report's 10,000/100,000-record write figures were author-reported
+measurements with a different harness configuration. Its count probe included
+sample-recording overhead. Those old count timings are not directly compared
+to the corrected probe. The approximately 5 ms cost near a million-record
+sparse interval was an extrapolation, not a presented measurement; it is not
+an acceptance result.
 
-Two appenders alternate writes on the harness thread, so every write finds the
-position moved and `writeHeader` calls `lastSequenceNumber()`. The end-to-end
-sample is one write. The probe samples `excerptsInCycle`. The queue starts with
-a filler record that spans the alias period, then `records` small records.
-Coordinated omission is off, so the numbers are service times. Median of runs
-2 and 3, 2,000 iterations per run at 200/s, on one developer machine with the
-default JVM flags. Use the ratios, not the absolute values.
+== Validation and workflow
 
-[cols="2,1,1,1,1"]
-|===
-| Roll cycle, records | Write, base | Write, head | excerptsInCycle, base | excerptsInCycle, head
+* Clean full `mvn verify` on OpenJDK 21.0.12: 1,191 reported tests, zero
+  failures/errors, 52 skipped. Licence and binary compatibility checks pass.
+* Clean focused verification on OpenJDK 8u502 and actual 32-bit OpenJDK
+  17.0.20 (`os.arch=i386`): 77 tests on each runtime, zero failures/errors/skips.
+* Surefire reruns are disabled. No new tests are disabled.
+* The final focused mutation run applies 23 independently compiled source
+  mutations; every mutation is rejected by its selected test. Compile errors
+  and missing test reports do not count as kills. Exact replacements, test
+  selectors and outcomes are in `pr-1706-evidence/mutation-*.json`.
+* All 31 explicit `ClassTest.method` references in production `//!` comments
+  resolve to existing test methods. The original retry/dispatch, suffix,
+  recovery and scan-limit cases remain in the focused suite.
+* `validation.json` records the verified source hashes and actual JVM versions.
+  Clean focused verification after mutation restoration discards mutated classes.
 
-| HUGE_DAILY_XSPARSE, 10,000 | 0.67 us | 62 to 70 us | 17 to 23 us | 86 to 93 us
-| HUGE_DAILY_XSPARSE, 100,000 | 0.7 to 1.5 us | 484 to 491 us | 22 to 26 us | 444 to 447 us
-| HUGE_DAILY, 10,000 | 0.79 us | 3.2 to 3.3 us | 17 to 23 us | 23 to 28 us
-|===
+The two original tail-work fixtures now each read two headers. Their work
+bounds are deterministic; the microsecond figures printed by tests are
+informational. Mutations cover the retained committed and scanned pairs,
+monotonic cache updates, reuse across store release, mapping isolation,
+cycle-relative versus full-index bounds, reader guards and stability rereads,
+live codec geometry, unsafe one-period probes, MAX_VALUE dispatch and suffix
+scanning.
 
-The head cost grows about 5 ns per record since the last index entry, hot in
-cache. `HUGE_DAILY_XSPARSE` indexes every 1,048,576th record, so a write
-reaches about 5 ms before the next index entry.
+The supplied findings commit's two new Java files used licence headers that
+the repository's verification rejected. Their headers now match the applicable
+Maven licence configuration. This is an observed build requirement.
 
-== Recommendation
+The original report did not identify an applicable repository policy requiring
+a Jira key or prohibiting the recorded AI co-author trailer. No such authority
+was found in the applicable instructions inspected for this update. These are
+unverified workflow questions, not established technical merge blockers; no
+published commits were rewritten to remove attribution.
 
-Keep the tracker above the period and prove the pair another way. Two options
-are exact and O(1), given that the tracker is at most one record stale:
+The original request explicitly requires `//!` test mappings. Their placement
+is therefore retained and repetitive wording shortened where practical, rather
+than treated as a correctness defect. PR #1705 overlaps this work and still
+requires an explicit reconciliation decision. Fresh CI must validate this
+updated head separately from local verification.
 
-. Skip the bound when a single record cannot span the period. A record length
-  has at most 30 bits, so for `cycleShift <= 33` the alias cannot occur. This
-  restores the standard cycles, `LARGE_HOURLY` and `SMALL_DAILY`, but not the
-  large and sparse cycles.
-. Above the period, read the header at `lastWritePos - period`. If that offset
-  is below the first data position, or the record there does not end exactly
-  at `lastWritePos`, the tracker cannot be one record stale by one period. A
-  false "unproven" costs only the fallback, never a wrong answer.
+== Decision log
 
-Apply the same proof to the three sites that the PR leaves unchanged, or state
-the scope in the PR body. Reconcile with PR #1705, which implements the same
-change and is still open.
+The review branch was integrated without rewriting its history. The report's
+single-appender explanation, timing, directory handling, measurement provenance
+and proposed proofs were corrected before being used as an implementation
+brief. Mutation survivors identified two missing controls: direct byte writes
+without assertion-driven scans, and a warmed reader's indexed lookup. Those
+controls now justify the relevant optimizations. Scan bookkeeping is retained
+once per completed scan rather than performed through a thread-local lookup
+for every header. Extending reuse across store releases exposed that nearby
+seeks pass full queue indices; the existing random-seek regression now also
+justifies the bound that keeps those separate from cycle-relative sequences.
+
+Recommend updating `TRACKER_PUBLICATION_REVIEW.md`
+(`/prompts:TRACKER_PUBLICATION_REVIEW`) and the corresponding AGENTS notes to
+require metadata/multiple-period gaps, both publication directions, cold versus
+warmed stores, single-appender controls, assertion-disabled production-path
+controls, safe benchmark-owned directories, exact-revision raw measurements,
+and clean compilation after mutation restoration.

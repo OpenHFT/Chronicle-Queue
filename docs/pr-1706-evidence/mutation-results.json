@@ -1,0 +1,272 @@
+[
+  {
+    "name": "mix-full-index-with-cycle-sequence",
+    "selection": "MoveToIndexTest#testRandomMove",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "testRandomMove"
+    ]
+  },
+  {
+    "name": "forget-anchor-on-store-reacquisition",
+    "selection": "SCQIndexingReviewEvidenceTest#repeatedPublicCountQueriesReuseTheMappedFileAnchor",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "repeatedPublicCountQueriesReuseTheMappedFileAnchor"
+    ]
+  },
+  {
+    "name": "share-anchor-between-mappings",
+    "selection": "SCQIndexingReviewEvidenceTest#scanAnchorsDoNotSurviveReplacementOfTheMappedFile",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "scanAnchorsDoNotSurviveReplacementOfTheMappedFile"
+    ]
+  },
+  {
+    "name": "omit-committed-anchor",
+    "selection": "SCQIndexingReviewEvidenceTest#tailLookupAfterDirectByteWritesUsesCommittedFullPosition",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "tailLookupAfterDirectByteWritesUsesCommittedFullPosition"
+    ]
+  },
+  {
+    "name": "omit-scanned-anchor",
+    "selection": "SCQIndexingReviewEvidenceTest#repeatedTailLookupRetainsTheLatestProvedFullPosition",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "repeatedTailLookupRetainsTheLatestProvedFullPosition"
+    ]
+  },
+  {
+    "name": "replace-newer-anchor-with-earlier-scan",
+    "selection": "SCQIndexingReviewEvidenceTest#repeatedTailLookupRetainsTheLatestProvedFullPosition",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "repeatedTailLookupRetainsTheLatestProvedFullPosition"
+    ]
+  },
+  {
+    "name": "omit-tail-anchor",
+    "selection": "SCQIndexingReviewEvidenceTest#lastSequenceNumberStaysOnTheTrackerForHugeDailyXSparse",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "lastSequenceNumberStaysOnTheTrackerForHugeDailyXSparse"
+    ]
+  },
+  {
+    "name": "omit-index-anchor",
+    "selection": "SCQIndexingReviewEvidenceTest#indexedLookupReusesTheProvedFullPosition",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "indexedLookupReusesTheProvedFullPosition"
+    ]
+  },
+  {
+    "name": "omit-finite-anchor",
+    "selection": "SCQIndexingReviewEvidenceTest#alternatingAppenderDocumentWritesHaveBoundedHeaderWork",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "alternatingAppenderDocumentWritesHaveBoundedHeaderWork"
+    ]
+  },
+  {
+    "name": "trust-wrapped-index",
+    "selection": "SCQIndexingReviewEvidenceTest#moveToIndexWithStaleAliasedTrackerLandsOnTheCorrectRecord",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "moveToIndexWithStaleAliasedTrackerLandsOnTheCorrectRecord"
+    ]
+  },
+  {
+    "name": "omit-index-stability",
+    "selection": "SequenceAliasGeometryTest#moveToIndexRejectsSubPeriodCaptureAfterWriterAdvances",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "moveToIndexRejectsSubPeriodCaptureAfterWriterAdvances"
+    ]
+  },
+  {
+    "name": "trust-wrapped-finite-position",
+    "selection": "SCQIndexingReviewEvidenceTest#finitePositionWithStaleAliasedTrackerReturnsThePhysicalSequence",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "finitePositionWithStaleAliasedTrackerReturnsThePhysicalSequence"
+    ]
+  },
+  {
+    "name": "omit-finite-stability",
+    "selection": "SequenceAliasGeometryTest#finitePositionRejectsSubPeriodCaptureAfterWriterAdvances",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "finitePositionRejectsSubPeriodCaptureAfterWriterAdvances"
+    ]
+  },
+  {
+    "name": "trust-wrapped-forward-end",
+    "selection": "SCQIndexingReviewEvidenceTest#forwardToEndWithStaleAliasedTrackerUsesThePhysicalTail",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "forwardToEndWithStaleAliasedTrackerUsesThePhysicalTail"
+    ]
+  },
+  {
+    "name": "omit-forward-end-stability",
+    "selection": "SequenceAliasGeometryTest#forwardToEndRejectsSubPeriodCaptureAfterWriterAdvances",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "forwardToEndRejectsSubPeriodCaptureAfterWriterAdvances"
+    ]
+  },
+  {
+    "name": "trust-wrapped-tail",
+    "selection": "SequenceAliasGapTest#staleTrackerAcrossMultiplePeriodsOrMetadata",
+    "tests": 6,
+    "failures": 6,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[1]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[2]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[3]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[4]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[5]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[6]"
+    ]
+  },
+  {
+    "name": "trust-wrapped-max-position",
+    "selection": "SequenceAliasGapTest",
+    "tests": 12,
+    "failures": 6,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[1]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[2]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[3]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[4]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[5]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[6]"
+    ]
+  },
+  {
+    "name": "assume-one-adjacent-period",
+    "selection": "SequenceAliasGapTest",
+    "tests": 12,
+    "failures": 6,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[1]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[2]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[3]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[4]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[5]",
+      "staleTrackerAcrossMultiplePeriodsOrMetadata(int, boolean, boolean)[6]"
+    ]
+  },
+  {
+    "name": "derive-bound-from-index-geometry",
+    "selection": "SequenceAliasGeometryTest#customIndexGeometryMustUseTheLiveCodecAliasPeriod",
+    "tests": 2,
+    "failures": 2,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "customIndexGeometryMustUseTheLiveCodecAliasPeriod(boolean)[1]",
+      "customIndexGeometryMustUseTheLiveCodecAliasPeriod(boolean)[2]"
+    ]
+  },
+  {
+    "name": "omit-max-stability",
+    "selection": "SequenceAliasGeometryTest#maxPositionRejectsSubPeriodCaptureAfterWriterAdvances",
+    "tests": 2,
+    "failures": 2,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "maxPositionRejectsSubPeriodCaptureAfterWriterAdvances(boolean)[1]",
+      "maxPositionRejectsSubPeriodCaptureAfterWriterAdvances(boolean)[2]"
+    ]
+  },
+  {
+    "name": "omit-tail-stability",
+    "selection": "SequenceAliasGeometryTest#lastSequenceNumberRejectsSubPeriodCaptureAfterWriterAdvances",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "lastSequenceNumberRejectsSubPeriodCaptureAfterWriterAdvances"
+    ]
+  },
+  {
+    "name": "always-index-max-position",
+    "selection": "MaxPositionMutationTest#maxPositionStartsAtPublishedWritePosition",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "maxPositionStartsAtPublishedWritePosition"
+    ]
+  },
+  {
+    "name": "omit-committed-suffix",
+    "selection": "MaxPositionMutationTest#maxPositionScansCommittedSuffixAfterPublishedWritePosition",
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "killed": true,
+    "failing_tests": [
+      "maxPositionScansCommittedSuffixAfterPublishedWritePosition"
+    ]
+  }
+]
