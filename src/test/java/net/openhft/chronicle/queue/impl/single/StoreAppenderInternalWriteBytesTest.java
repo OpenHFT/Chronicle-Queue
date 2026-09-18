@@ -5,7 +5,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -20,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +28,7 @@ import static java.lang.String.format;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
@@ -35,6 +36,7 @@ import static org.junit.Assume.assumeTrue;
 public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
     private static final int MESSAGES_TO_WRITE = 200;
+    private volatile ExecutorService copierPool;
 
     @Before
     public void check64bit() {
@@ -48,24 +50,18 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException {
+    public void internalWriteBytesShouldBeIdempotentUnderConcurrentUpdates() throws InterruptedException, ExecutionException {
         testInternalWriteBytes(5, true);
     }
 
     @Test
-    public void internalWriteBytesShouldBeIdempotent() throws InterruptedException {
+    public void internalWriteBytesShouldBeIdempotent() throws InterruptedException, ExecutionException {
         testInternalWriteBytes(5, false);
     }
 
-    private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
-        final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
-        final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
-        /**
-         final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
-         final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
-         IOTools.deleteDirWithFiles(sourceDir.toFile());
-         IOTools.deleteDirWithFiles(destinationDir.toFile());
-         */
+    private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException, ExecutionException {
+        final Path sourceDir = getTmpDir().toPath();
+        final Path destinationDir = getTmpDir().toPath();
 
         populateSourceQueue(sourceDir);
 
@@ -73,27 +69,32 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         assertQueueContentsAreTheSame(sourceDir, destinationDir);
 
-        IOTools.deleteDirWithFiles(sourceDir.toFile());
-        IOTools.deleteDirWithFiles(destinationDir.toFile());
     }
 
-    private void copySourceToDestination(int numCopiers, boolean concurrent, Path sourceDir, Path destinationDir) throws InterruptedException {
-        ExecutorService es = newFixedThreadPool(concurrent ? numCopiers : 1);
+    private void copySourceToDestination(int numCopiers, boolean concurrent, Path sourceDir, Path destinationDir)
+            throws InterruptedException, ExecutionException {
+        if (Thread.currentThread().isInterrupted())
+            throw new InterruptedException("Interrupted before starting copiers");
+        copierPool = newFixedThreadPool(concurrent ? numCopiers : 1);
+        List<Future<?>> copierFutures = new ArrayList<>();
+        for (int i = 0; i < numCopiers; i++)
+            copierFutures.add(copierPool.submit(new QueueCopier(sourceDir, destinationDir, i)));
+        copierPool.shutdown();
+        for (Future<?> future : copierFutures)
+            future.get();
+    }
+
+    @Override
+    protected void preAfter() {
+        // A timed-out Future.get must not leave copiers writing into later tests.
+        if (copierPool == null)
+            return;
+        copierPool.shutdownNow();
         try {
-            List<Future<?>> copierFutures = new ArrayList<>();
-            for (int i = 0; i < numCopiers; i++) {
-                copierFutures.add(es.submit(new QueueCopier(sourceDir, destinationDir, i)));
-            }
-            copierFutures.forEach(future -> {
-                try {
-                    future.get();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        } finally {
-            es.shutdown();
-            assert es.awaitTermination(30, TimeUnit.SECONDS) : "Copier threads didn't stop";
+            assertTrue("Copier threads did not stop", copierPool.awaitTermination(30, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while stopping copiers", e);
         }
     }
 
@@ -152,7 +153,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
                     Bytes<?> prev = Bytes.allocateElasticOnHeap(1024);
                     long index;
-                    while (true) {
+                    while (!Thread.currentThread().isInterrupted()) {
                         buffer.clear();
                         index = sourceTailer.index();
                         if (!sourceTailer.readBytes(buffer)) {

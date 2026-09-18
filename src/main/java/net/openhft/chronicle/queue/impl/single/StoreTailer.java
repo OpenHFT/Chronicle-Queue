@@ -939,18 +939,21 @@ class StoreTailer extends AbstractCloseable
      */
     private ExcerptTailer doToStart() {
         assert direction != BACKWARD;
-        final int firstCycle = queue.firstCycle();
+        int firstCycle = queue.firstCycle();
         if (firstCycle == Integer.MAX_VALUE) {
             state = UNINITIALISED;
             return this;
         }
-        if (firstCycle != this.cycle) {
-            // Move to the first cycle if it differs
-            final boolean found = cycle(firstCycle);
-            if (found)
-                state = FOUND_IN_CYCLE;
-            else if (store != null)
-                throw new MissingStoreFileException("Missing first store file cycle=" + firstCycle);
+        //! StoreAcquisitionDeletionTest#newTailerRecoversWhenFirstCycleIsDeletedDuringMapping:
+        //! refresh a deleted first cycle, but keep waiting if its file still exists and is being initialised.
+        while (firstCycle != this.cycle && !cycle(firstCycle)) {
+            queue.refreshDirectoryListing();
+            final int refreshedFirstCycle = queue.firstCycle();
+            if (refreshedFirstCycle <= firstCycle || refreshedFirstCycle == Integer.MAX_VALUE) {
+                state = UNINITIALISED;
+                return this;
+            }
+            firstCycle = refreshedFirstCycle;
         }
         index(queue.rollCycle().toIndex(cycle, 0));
 
@@ -1024,8 +1027,9 @@ class StoreTailer extends AbstractCloseable
      */
     private long approximateLastCycle2(int lastCycle) throws StreamCorruptedException, MissingStoreFileException {
         final RollCycle rollCycle = queue.rollCycle();
-        final SingleChronicleQueueStore wireStore = (cycle == lastCycle) ? this.store : queue.storeForCycle(
-                lastCycle, queue.epoch(), false, this.store);
+        //! StoreAcquisitionDeletionTest#backwardReaderDoesNotRecreateLastCycleDuringToEnd covers this acquisition path.
+        final SingleChronicleQueueStore wireStore = (cycle == lastCycle) ? this.store :
+                queue.storeForCycleForTailer(lastCycle, this.store);
 
         long sequenceNumber = -1;
         if (wireStore != null) {
@@ -1243,8 +1247,8 @@ class StoreTailer extends AbstractCloseable
                 return this;
             }
 
-            final SingleChronicleQueueStore wireStore = queue.storeForCycle(
-                    lastCycle, queue.epoch(), false, this.store);
+            //! StoreAcquisitionDeletionTest#forwardToEndDoesNotRecreateLastCycle covers the optimized acquisition path.
+            final SingleChronicleQueueStore wireStore = queue.storeForCycleForTailer(lastCycle, this.store);
             if (wireStore == null)
                 throw new MissingStoreFileException("Store not found for cycle " + Long.toHexString(lastCycle) + ". Probably the files were removed? queue=" + queue.fileAbsolutePath());
             this.setCycle(lastCycle);
@@ -1518,8 +1522,7 @@ class StoreTailer extends AbstractCloseable
         if (this.cycle == cycle && (state == FOUND_IN_CYCLE || state == NOT_REACHED_IN_CYCLE))
             return true;
 
-        final SingleChronicleQueueStore nextStore = queue.storeForCycle(
-                cycle, queue.epoch(), false, this.store);
+        final SingleChronicleQueueStore nextStore = queue.storeForCycleForTailer(cycle, this.store);
 
         if (nextStore == null && store == null)
             return false;

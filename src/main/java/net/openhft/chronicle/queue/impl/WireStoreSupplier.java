@@ -28,8 +28,11 @@ public interface WireStoreSupplier {
         /** Reinitialize existing file if the header is not ready, used for normalizing EOF. */
         REINITIALIZE_EXISTING,
 
-        /** Open the file in read-only mode. */
-        READ_ONLY
+        /** Read an existing store using the queue's mapping mode, without header recovery. */
+        READ_ONLY,
+
+        /** Read an existing file through a read-only mapping, without creating or recovering it. */
+        READ_ONLY_MAPPING
     }
 
     /**

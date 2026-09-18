@@ -6,23 +6,28 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.queue.rollcycles.LegacyRollCycles.HOURLY;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
-    private final AtomicBoolean failedToMoveToEnd = new AtomicBoolean(false);
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8,
             new NamedThreadFactory("test"));
 
@@ -33,32 +38,49 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldAlwaysBeAbleToTail() throws InterruptedException {
-        ChronicleQueue[] queues = new ChronicleQueue[10];
-        for (int i = 0; i < 10; i++) {
-            final ChronicleQueue queue = createNewQueue();
-            queues[i] = queue;
-            for (int j = 0; j < 4; j++) {
-                threadPool.submit(() -> attemptToMoveToTail(queue));
-            }
-
-            threadPool.submit(() -> appendToQueue(queue));
-
-            for (int j = 0; j < 4; j++) {
-                threadPool.submit(() -> attemptToMoveToTail(queue));
-            }
-        }
-
-        threadPool.shutdown();
-        assertTrue(threadPool.awaitTermination(5L, TimeUnit.SECONDS));
-        assertFalse(failedToMoveToEnd.get());
-        Closeable.closeQuietly((Object[]) queues);
+    public void shouldAlwaysBeAbleToTail() throws Exception {
+        runRace(new ArrayList<>(), this::attemptToMoveToTail);
     }
 
-    @Override
-    public void tearDown() {
-        super.tearDown();
-        threadPool.shutdownNow();
+    @Test
+    public void workerFailureIsReportedAndQueuesAreClosed() {
+        List<ChronicleQueue> queues = new ArrayList<>();
+        IllegalStateException failure = new IllegalStateException("injected tailer failure");
+        ExecutionException reported = assertThrows(ExecutionException.class,
+                () -> runRace(queues, queue -> { throw failure; }));
+        assertSame(failure, reported.getCause());
+        assertTrue(threadPool.isTerminated());
+        assertTrue(queues.stream().allMatch(ChronicleQueue::isClosed));
+    }
+
+    private void runRace(List<ChronicleQueue> queues, Consumer<ChronicleQueue> tailerAction) throws Exception {
+        List<Future<?>> workers = new ArrayList<>();
+        try {
+            for (int i = 0; i < 10; i++) {
+                final ChronicleQueue queue = createNewQueue();
+                queues.add(queue);
+                for (int j = 0; j < 4; j++)
+                    workers.add(threadPool.submit(() -> tailerAction.accept(queue)));
+
+                workers.add(threadPool.submit(() -> appendToQueue(queue)));
+
+                for (int j = 0; j < 4; j++)
+                    workers.add(threadPool.submit(() -> tailerAction.accept(queue)));
+            }
+
+            threadPool.shutdown();
+            assertTrue("Race workers timed out", threadPool.awaitTermination(5L, TimeUnit.SECONDS));
+            // Future.get surfaces acquisition failures as well as failures inside toEnd().
+            for (Future<?> worker : workers)
+                worker.get();
+        } finally {
+            threadPool.shutdownNow();
+            try {
+                assertTrue("Race workers did not stop", threadPool.awaitTermination(5L, TimeUnit.SECONDS));
+            } finally {
+                Closeable.closeQuietly(queues);
+            }
+        }
     }
 
     private void appendToQueue(final ChronicleQueue queue) {
@@ -74,13 +96,8 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     }
 
     private void attemptToMoveToTail(final ChronicleQueue queue) {
-        final StoreTailer tailer =
-                (StoreTailer) queue.createTailer();
-        try {
+        try (ExcerptTailer tailer = queue.createTailer()) {
             tailer.toEnd();
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-            failedToMoveToEnd.set(true);
         }
     }
 
