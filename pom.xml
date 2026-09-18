@@ -21,6 +21,8 @@
     <description>Java library for persisted low latency messaging (Java 8+)</description>
     <properties>
         <zero.cost.assertions>disabled</zero.cost.assertions>
+        <!-- Each reused test fork shares a bounded heap; leave room for native and mapped storage. -->
+        <queue.test.heapSize>1g</queue.test.heapSize>
         <!-- Define the target coverage thresholds as properties -->
         <jacoco.line.coverage>0.788</jacoco.line.coverage>
         <jacoco.branch.coverage>0.713</jacoco.branch.coverage>
@@ -262,7 +264,7 @@
                     <rerunFailingTestsCount>0</rerunFailingTestsCount>
                     <runOrder>hourly</runOrder>
                     <!-- propagate JPMS flags from parent into unit test JVMs -->
-                    <argLine>${argLine} ${jvm.requiredArgs}</argLine>
+                    <argLine>${argLine} ${jvm.requiredArgs} -Xmx${queue.test.heapSize}</argLine>
                 </configuration>
             </plugin>
 

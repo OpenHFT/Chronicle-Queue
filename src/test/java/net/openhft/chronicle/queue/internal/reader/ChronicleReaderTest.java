@@ -513,7 +513,7 @@ public class ChronicleReaderTest extends QueueTestCommon {
     public void shouldPrintTimestampsToLocalTime() throws IOException, InterruptedException {
         finishedNormally = false;
         final File queueDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).testBlockSize().build()) {
             final VanillaMethodWriterBuilder<SayWhen> methodWriterBuilder =
                     queue.methodWriterBuilder(SayWhen.class);
             final SayWhen events = methodWriterBuilder.build();
