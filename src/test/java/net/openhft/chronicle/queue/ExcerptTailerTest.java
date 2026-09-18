@@ -4,11 +4,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.File;
 
 import static org.junit.Assert.*;
 
@@ -19,15 +16,19 @@ public class ExcerptTailerTest extends QueueTestCommon {
 
     @Before
     public void setUp() {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "queue-test");
-        queue = ChronicleQueue.single(dir.getPath());
+        queue = ChronicleQueue.singleBuilder(getTmpDir()).testBlockSize().build();
         excerptTailer = queue.createTailer();
     }
 
-    @After
-    public void tearDown() {
-        excerptTailer.close();
-        queue.close();
+    @Override
+    public void preAfter() {
+        try {
+            if (excerptTailer != null)
+                excerptTailer.close();
+        } finally {
+            if (queue != null)
+                queue.close();
+        }
     }
 
     @Test
