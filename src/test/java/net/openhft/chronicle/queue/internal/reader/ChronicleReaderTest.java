@@ -518,10 +518,10 @@ public class ChronicleReaderTest extends QueueTestCommon {
 
     @RequiredForClient
     @Test(timeout = 20_000)
-    public void shouldPrintTimestampsToLocalTime() throws IOException {
+    public void shouldPrintTimestampsToLocalTime() throws Exception {
         finishedNormally = false;
         final File queueDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).build()) {
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDir).testBlockSize().build()) {
             final VanillaMethodWriterBuilder<SayWhen> methodWriterBuilder =
                     queue.methodWriterBuilder(SayWhen.class);
             final SayWhen events = methodWriterBuilder.build();
@@ -609,15 +609,12 @@ public class ChronicleReaderTest extends QueueTestCommon {
         assertEquals(4, capturedOutput.stream().filter(msg -> msg.contains("hello")).count());
     }
 
-    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) throws IOException {
+    private void assertTimesAreInZone(File queueDir, ZoneId zoneId, List<Long> timestamps) throws Exception {
         final Process readerProcess = JavaProcessBuilder.create(ChronicleReaderRunner.class)
                 .withProgramArguments(queueDir.toString())
                 .withJvmArguments("-D" + AbstractTimestampLongConverter.TIMESTAMP_LONG_CONVERTERS_ZONE_ID_SYSTEM_PROPERTY + "=" + zoneId.toString())
                 .start();
-        while (readerProcess.isAlive()) {
-            Jvm.pause(10);
-        }
-        String output = new String(IOTools.readAsBytes(readerProcess.getInputStream()));
+        String output = ReaderProcessOutput.readAndClose(readerProcess);
         MicroTimestampLongConverter mtlc = new MicroTimestampLongConverter(zoneId.toString());
         for (Long timestamp : timestamps) {
             final String expectedTimestamp = mtlc.asString(timestamp);
