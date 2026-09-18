@@ -76,9 +76,28 @@ public class QueueTestCommon {
                         + description.getClassName() + "."
                         + description.getMethodName()
                 );
+                traceResourceBoundary("start");
             }
         }
+
+        @Override
+        protected void finished(@NotNull Description description) {
+            if (TRACE_TEST_EXECUTION)
+                traceResourceBoundary("finish");
+        }
     };
+
+    //! Opt-in boundaries correlate per-process native/mapped samples with the active test.
+    //! Used/committed heap are observations, not per-test ownership or a resource limit.
+    //! Write directly so exception recording does not hide this diagnostic or turn it into a failure.
+    private void traceResourceBoundary(String phase) {
+        Runtime runtime = Runtime.getRuntime();
+        System.out.println("QueueTestExecution phase=" + phase + " timeMs=" + System.currentTimeMillis()
+                + " pid=" + OS.getProcessId() + " test=" + diagnosticTestName
+                + " heapUsed=" + (runtime.totalMemory() - runtime.freeMemory())
+                + " heapCommitted=" + runtime.totalMemory() + " heapMax=" + runtime.maxMemory()
+                + " target=" + OS.getTarget());
+    }
 
     private static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
