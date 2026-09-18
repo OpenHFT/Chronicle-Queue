@@ -32,8 +32,6 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     long positionAliasPeriod() {
-        //! SequenceAliasGeometryTest.customIndexGeometryMustUseTheLiveCodecAliasPeriod:
-        //! only the live encoding determines which full positions have matching fragments.
         return 1L << (64 - cycleShift);
     }
 

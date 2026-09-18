@@ -36,7 +36,7 @@ import static org.junit.Assert.assertTrue;
  * Tail lookup and writingDocument performance regressions are distinguished from the
  * pre-existing finite-position, moveToIndex and forward-toEnd alias defects.
  */
-public class SCQIndexingReviewEvidenceTest extends QueueTestCommon {
+public class SCQIndexingRegressionTest extends QueueTestCommon {
 
     private static final int RECORDS = 20_000;
 

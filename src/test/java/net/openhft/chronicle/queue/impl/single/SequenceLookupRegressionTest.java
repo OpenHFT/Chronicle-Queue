@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
-public class SequenceLookupAuditTest extends QueueTestCommon {
+public class SequenceLookupRegressionTest extends QueueTestCommon {
     @Test
     public void staleReaderAnchorMustNotPrecedeNewerSparseIndex() throws Exception {
         assertBurstLookup(false);

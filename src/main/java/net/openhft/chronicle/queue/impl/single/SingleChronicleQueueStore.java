@@ -71,8 +71,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             this.indexing = Objects.requireNonNull(wire.read(MetaDataField.indexing).typedMarshallable());
             this.indexing.writePosition = writePosition;
             this.sequence = new RollCycleEncodeSequence(writePosition, indexing.indexCount(), indexing.indexSpacing());
-            //! MaxPositionMutationTest.reopenedStoreUsesItsCodecForPublishedPositionLookup fails
-            //! if reopening omits the codec's alias bound and unnecessarily falls back to the sparse index.
             this.indexing.initSequence(sequence, mappedFile);
             final String fieldName = wire.readEvent(String.class);
             int version = 0;
@@ -379,11 +377,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws StreamCorruptedException {
         throwExceptionIfClosed();
-
-        //! MaxPositionMutationTest.maxPositionStartsAtPublishedWritePosition fails if MAX_VALUE
-        //! scans from the sparse index instead of the published write position.
-        //! MaxPositionMutationTest.finitePositionPreservesInclusiveAndExclusiveLookup fails if
-        //! finite positions are also routed through the MAX_VALUE lookup.
         return position == Long.MAX_VALUE
                 ? indexing.sequenceForMaxPosition(ec, inclusive)
                 : indexing.sequenceForPosition(ec, position, inclusive);
@@ -476,9 +469,6 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         throwExceptionIfClosedInSetter();
 
         sequence.setSequence(sequenceNumber, position);
-
-        //! SCQIndexingReviewEvidenceTest.tailLookupAfterDirectByteWritesUsesCommittedFullPosition:
-        //! retain the full pair supplied for this committed record, not a decoded position fragment.
         indexing.rememberSequence(sequenceNumber, position);
 
         long nextSequence = indexing.nextEntryToBeIndexed();
