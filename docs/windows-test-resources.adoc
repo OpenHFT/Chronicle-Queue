@@ -44,3 +44,14 @@ destroy request, the time forced destruction was requested and the process
 description. Final alive state is recorded on failure as well as success. These
 diagnostics distinguish a slow destruction request from delayed observed exit;
 they do not extend the existing termination deadline.
+
+The rolling fixture prepares each appender on its owning thread before releasing
+the original concurrent workload. A failed writer is reported with the original
+cause and written/read/index counters. Teardown interrupts all writers before a
+shared bounded join, and an outer rule waits for a timed-out fixture body to finish
+restoring global test state before the next test starts. Controls cover forced
+writer failure and cleanup with an already interrupted caller. The exact
+global-timeout/next-test interleaving has no separate controlled negative test.
+
+Last-index restart stores use registered temporary directories. Their tailer
+closes before common teardown drains releases and checks deletion.
