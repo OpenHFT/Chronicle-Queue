@@ -17,7 +17,7 @@ The more often you take measurements, the more accurate this running minimum is.
 
 == Avoid Interrupts
 
-For performance reasons, Chronicle Queue does not check for interrupts.
+For performance reasons, Chronicle Queue does not check for interrupts by default; this can be enabled with `SingleChronicleQueueBuilder.checkInterrupts(true)`.
 Because of this, it is recommended to avoid using Chronicle Queue with code that generates interrupts.
 If you can not avoid generating interrupts then we suggest that you create a separate instance of Chronicle Queue per thread.
 
