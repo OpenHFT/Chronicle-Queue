@@ -5,11 +5,8 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.junit.Before;
@@ -34,8 +31,7 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
     @Test
     public void testOneOne() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
-        String path = OS.getTarget() + "/MethodReaderObjectReuseTest-" + Time.uniqueId();
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().build()) {
             PingDTO.constructionExpected++;
             PingDTO pdtio = new PingDTO();
             PingDTO.constructionExpected++;
@@ -70,16 +66,13 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                     "ping !PingDTO {\n" +
                     "  bytes: hihihihi\n" +
                     "}\n", sb.toString());
-        } finally {
-            IOTools.deleteDirWithFiles(path);
         }
     }
 
     @Test
     public void testPayloadSnapshotWhenSourceMutates() {
         ClassAliasPool.CLASS_ALIASES.addAlias(PingDTO.class);
-        String path = OS.getTarget() + "/MethodReaderObjectReuseTest-snapshot-" + Time.uniqueId();
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().build()) {
             PingDTO.constructionCounter = 0;
             PingDTO.constructionExpected = 10;
             Pinger pinger = cq.methodWriter(Pinger.class);
@@ -95,18 +88,15 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                     (Pinger) pingDTO -> observed.set(pingDTO.bytes.toString()));
             assertTrue(reader.readOne());
             assertEquals("immutable", observed.get());
-        } finally {
-            IOTools.deleteDirWithFiles(path);
         }
     }
 
     @Test
     public void testZZDirectBytesSnapshotWhenSourceMutates() {
         ClassAliasPool.CLASS_ALIASES.addAlias(DirectPingDTO.class);
-        String path = OS.getTarget() + "/MethodReaderObjectReuseTest-direct-" + Time.uniqueId();
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(path).build()) {
+        try (ChronicleQueue cq = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().build();
+             DirectPingDTO dto = new DirectPingDTO()) {
             DirectPinger pinger = cq.methodWriter(DirectPinger.class);
-            DirectPingDTO dto = new DirectPingDTO();
             dto.bytes.append("direct");
             pinger.ping(dto);
             dto.bytes.clear().append("post-write-mutation");
@@ -116,9 +106,6 @@ public class MethodReaderObjectReuseTest extends QueueTestCommon {
                     (DirectPinger) pingDTO -> observed.set(pingDTO.bytes.toString()));
             assertTrue(reader.readOne());
             assertEquals("direct", observed.get());
-            dto.close();
-        } finally {
-            IOTools.deleteDirWithFiles(path);
         }
     }
 
