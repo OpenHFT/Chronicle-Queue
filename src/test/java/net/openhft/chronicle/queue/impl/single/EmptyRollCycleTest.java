@@ -101,6 +101,8 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
         final Path emptyRollCycle = dataDirectory.resolve(EMPTY_ROLL_CYCLE_NAME);
         final Process start = JavaProcessBuilder.create(LockingProcess.class)
+                // This helper owns one file lock; it does not need the parent test heap.
+                .withJvmArguments("-Xms32m", "-Xmx256m")
                 .withProgramArguments(emptyRollCycle.toString())
                 .start();
         try {
@@ -129,8 +131,10 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     public void recoveryCompletesWithDeferredUnmapping() throws InterruptedException, IOException {
         // A separate JVM can leave releases queued without changing global state in this fork.
         // On Windows the original recovery path then tries to rename its own live mapping.
+        // Bound this small helper independently so parent and child do not each reserve a full test heap.
         Process process = JavaProcessBuilder.create(DeferredRecoveryProcess.class)
-                .withJvmArguments("-Dbackground.releaser=true", "-Dbackground.releaser.thread=false",
+                .withJvmArguments("-Xms32m", "-Xmx256m",
+                        "-Dbackground.releaser=true", "-Dbackground.releaser.thread=false",
                         "-Dproject.build.directory=" + dataDirectory.toAbsolutePath())
                 .start();
         try {

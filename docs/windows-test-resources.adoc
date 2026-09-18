@@ -7,6 +7,10 @@ reference-tracing objects before a fork expands to several GiB. Native memory,
 mapped files and resident memory still need separate measurement; a heap cap
 does not bound those resources.
 
+Include child JVMs when measuring a test's total footprint. The small file-lock
+and deferred-recovery helpers in `EmptyRollCycleTest` use a 32 MiB initial heap
+and a 256 MiB maximum, independently of the parent fork's heap configuration.
+
 Small fixtures should use `testBlockSize()` and own their directories through
 `QueueTestCommon.getTmpDir()`. `TEST_SECONDLY` uses 2,048 index entries with spacing
 4. Its smaller index permits small blocks without changing the one-second roll
