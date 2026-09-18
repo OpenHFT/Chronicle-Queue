@@ -78,6 +78,10 @@ public class TableStoreWriteLockTestResourcesTest {
             AssertionError error = assertThrows(AssertionError.class,
                     () -> TableStoreWriteLockTestResources.stopProcess(process, 100, TimeUnit.MILLISECONDS));
             assertTrue(error.getMessage().contains("remains alive"));
+            assertTrue(error.getMessage().contains("elapsedMillis="));
+            assertTrue(error.getMessage().contains("destroyRequestMillis="));
+            assertTrue(error.getMessage().contains("forcedAfterMillis="));
+            assertTrue(error.getMessage().contains("process="));
             assertTrue("The termination budget was not used", System.nanoTime() - start >= TimeUnit.MILLISECONDS.toNanos(100));
             assertTrue(process.isAlive());
             assertEquals(0, process.forced.getCount());

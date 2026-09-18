@@ -28,3 +28,19 @@ before signalling and joins its worker before releasing storage.
 The existing `TestBinarySearch` parameter cases, `ChronicleHistoryReaderTest`,
 `ExcerptCommonTest`, `RollingCycleTest` and the appender-condition test retain
 their search, delivery and message-count assertions while exercising this ownership.
+
+The interrupted-appender fixture signals that it has left its semaphore handoff
+before the test interrupts queue acquisition. Its workers join before storage
+closes, including when the test body fails. `StoreAppenderTest` covers normal
+delivery and failure-body ownership without a scheduling sleep.
+
+The timestamp reader drains stdout and stderr concurrently while waiting for its
+child. `ReaderProcessOutputTest` covers output larger than both pipe buffers and
+an interrupted wait; child termination and output-worker shutdown share a bounded
+cleanup phase. Output capture is capped while excess output is still drained.
+
+Lock-holder termination failures retain elapsed time, the duration of the normal
+destroy request, the time forced destruction was requested and the process
+description. Final alive state is recorded on failure as well as success. These
+diagnostics distinguish a slow destruction request from delayed observed exit;
+they do not extend the existing termination deadline.

@@ -31,8 +31,11 @@ final class TableStoreWriteLockTestResources implements AutoCloseable {
             record(description + ": aliveBefore=" + process.isAlive()
                     + ", stdout=" + availableOutput(process.getInputStream())
                     + ", stderr=" + availableOutput(process.getErrorStream()));
-            stopProcess(process, 2, TimeUnit.SECONDS);
-            record(description + ": aliveAfter=" + process.isAlive());
+            try {
+                stopProcess(process, 2, TimeUnit.SECONDS);
+            } finally {
+                record(description + ": aliveAfter=" + process.isAlive());
+            }
         }, description);
         return process;
     }
@@ -109,20 +112,31 @@ final class TableStoreWriteLockTestResources implements AutoCloseable {
 
     // Preserve the single-budget forced-exit protocol already reviewed in Queue #1700.
     static void stopProcess(Process process, long timeout, TimeUnit unit) {
-        final long deadline = System.nanoTime() + unit.toNanos(timeout);
+        final long started = System.nanoTime();
+        final long deadline = started + unit.toNanos(timeout);
         boolean interrupted = Thread.interrupted();
         try {
             process.destroy();
+            final long destroyCompleted = System.nanoTime();
             boolean forced = interrupted;
-            if (forced)
+            long forcedAt = -1;
+            if (forced) {
+                forcedAt = System.nanoTime();
                 process.destroyForcibly();
+            }
             while (process.isAlive()) {
                 long remaining = deadline - System.nanoTime();
                 if (remaining <= 0) {
-                    if (!forced)
+                    if (!forced) {
+                        forcedAt = System.nanoTime();
                         process.destroyForcibly();
+                    }
                     throw new AssertionError("Locking subprocess remains alive after termination deadline ("
-                            + unit.toMillis(timeout) + " ms)");
+                            + unit.toMillis(timeout) + " ms); elapsedMillis="
+                            + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)
+                            + ", destroyRequestMillis=" + TimeUnit.NANOSECONDS.toMillis(destroyCompleted - started)
+                            + ", forcedAfterMillis=" + TimeUnit.NANOSECONDS.toMillis(forcedAt - started)
+                            + ", process=" + process);
                 }
                 try {
                     if (process.waitFor(forced ? remaining : remaining / 2, TimeUnit.NANOSECONDS))
@@ -131,6 +145,7 @@ final class TableStoreWriteLockTestResources implements AutoCloseable {
                     interrupted = true;
                 }
                 if (!forced) {
+                    forcedAt = System.nanoTime();
                     process.destroyForcibly();
                     forced = true;
                 }
