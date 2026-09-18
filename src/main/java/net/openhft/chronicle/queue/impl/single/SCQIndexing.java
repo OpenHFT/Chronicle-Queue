@@ -535,8 +535,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         // optimized if the `toIndex` is the last sequence
         long lastAddress = writePosition.getVolatileValue();
-        Sequence sequence = this.sequence;
-        long lastIndex = sequence == null ? Sequence.NOT_FOUND : sequence.getSequence(lastAddress);
+        Sequence currentSequence = this.sequence;
+        long lastIndex = currentSequence == null ? Sequence.NOT_FOUND : currentSequence.getSequence(lastAddress);
         if (toIndex == lastIndex && lastAddress > 0 && lastAddress < positionAliasPeriod
                 && writePosition.getVolatileValue() == lastAddress) {
             assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
@@ -638,7 +638,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         // Optimized path if the `toPosition` is the last written position.
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        Sequence currentSequence = this.sequence;
+        long lastIndex = currentSequence == null ? Sequence.NOT_FOUND : currentSequence.getSequence(lastAddress);
 
         i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
 
