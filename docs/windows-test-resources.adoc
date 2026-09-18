@@ -34,10 +34,10 @@ before the test interrupts queue acquisition. Its workers join before storage
 closes, including when the test body fails. `StoreAppenderTest` covers normal
 delivery and failure-body ownership without a scheduling sleep.
 
-The timestamp reader drains stdout and stderr concurrently while waiting for its
-child. `ReaderProcessOutputTest` covers output larger than both pipe buffers and
-an interrupted wait; child termination and output-worker shutdown share a bounded
-cleanup phase. Output capture is capped while excess output is still drained.
+The timestamp reader uses the upstream helper to drain both output pipes while
+waiting for its child. `ReaderProcessOutputTest` covers pipe pressure, nonzero
+exit, timeout and interruption. Cleanup terminates the child before closing its
+pipes. The fixture owns its small queue through the common directory cleanup.
 
 Lock-holder termination failures retain elapsed time, the duration of the normal
 destroy request, the time forced destruction was requested and the process
