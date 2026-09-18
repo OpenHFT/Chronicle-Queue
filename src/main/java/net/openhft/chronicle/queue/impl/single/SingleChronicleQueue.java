@@ -11,6 +11,7 @@ import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
@@ -1457,6 +1458,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             mappedFileCache.remove(path);
 
                             if (!readOnly && createStrategy != CreateStrategy.READ_ONLY && cycleFileRenamed != cycle) {
+                                // Windows cannot rename a mapped file. Closing the bytes/cache can queue
+                                // the unmapping, so finish pending releases before attempting recovery.
+                                BackgroundResourceReleaser.releasePendingResources();
                                 SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycle, cycleFile));
 
                                 if (acquired == null)

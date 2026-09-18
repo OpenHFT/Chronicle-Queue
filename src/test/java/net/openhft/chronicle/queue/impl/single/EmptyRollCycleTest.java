@@ -11,6 +11,9 @@ import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Request;
+import org.junit.runner.Result;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -63,7 +66,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     @Test
     public void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
-        ignoreException("Renamed un-acquirable segment file");
+        expectException("Renamed un-acquirable segment file");
         createQueueWithEmptyRollCycleAtEnd();
 
         long indexWritten = -1;
@@ -98,6 +101,8 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
         final Path emptyRollCycle = dataDirectory.resolve(EMPTY_ROLL_CYCLE_NAME);
         final Process start = JavaProcessBuilder.create(LockingProcess.class)
+                // This helper owns one file lock; it does not need the parent test heap.
+                .withJvmArguments("-Xms32m", "-Xmx256m")
                 .withProgramArguments(emptyRollCycle.toString())
                 .start();
         try {
@@ -119,6 +124,39 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         } finally {
             start.destroy();
             assertTrue(start.waitFor(5, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    public void recoveryCompletesWithDeferredUnmapping() throws InterruptedException, IOException {
+        // A separate JVM can leave releases queued without changing global state in this fork.
+        // On Windows the original recovery path then tries to rename its own live mapping.
+        // Bound this small helper independently so parent and child do not each reserve a full test heap.
+        Process process = JavaProcessBuilder.create(DeferredRecoveryProcess.class)
+                .withJvmArguments("-Xms32m", "-Xmx256m",
+                        "-Dbackground.releaser=true", "-Dbackground.releaser.thread=false",
+                        "-Dproject.build.directory=" + dataDirectory.toAbsolutePath())
+                .start();
+        try {
+            assertTrue("Deferred recovery process did not finish", process.waitFor(20, TimeUnit.SECONDS));
+            assertEquals(JavaProcessBuilder.getProcessStdErr(process), 0, process.exitValue());
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                assertTrue("Deferred recovery process survived termination", process.waitFor(5, TimeUnit.SECONDS));
+            }
+            process.getInputStream().close();
+            process.getErrorStream().close();
+            process.getOutputStream().close();
+        }
+    }
+
+    public static class DeferredRecoveryProcess {
+        public static void main(String[] args) {
+            Result result = new JUnitCore().run(Request.method(EmptyRollCycleTest.class,
+                    "appenderShouldTolerateEmptyRollCycleAtEnd"));
+            result.getFailures().forEach(failure -> System.err.println(failure.toString()));
+            System.exit(result.wasSuccessful() ? 0 : 1);
         }
     }
 
