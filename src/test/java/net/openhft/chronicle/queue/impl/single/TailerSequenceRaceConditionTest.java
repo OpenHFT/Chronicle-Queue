@@ -104,6 +104,7 @@ public final class TailerSequenceRaceConditionTest extends QueueTestCommon {
     private ChronicleQueue createNewQueue() {
         return SingleChronicleQueueBuilder.
                 binary(getTmpDir())
+                .testBlockSize()
                 .rollCycle(HOURLY)
                 .build();
     }

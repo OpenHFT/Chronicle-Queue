@@ -3,8 +3,6 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
@@ -15,9 +13,8 @@ public class AppenderListenerTest extends QueueTestCommon {
 
     @Test
     public void appenderListenerTest() {
-        String path = OS.getTarget() + "/appenderListenerTest";
         StringBuilder results = new StringBuilder();
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(path)
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.single(getTmpDir())
                 .testBlockSize()
                 .appenderListener((wire, index) -> {
                     long offset = ((index >>> 32) << 40) | wire.bytes().readPosition();
@@ -33,8 +30,6 @@ public class AppenderListenerTest extends QueueTestCommon {
             final HelloWorld writer = q.methodWriter(HelloWorld.class);
             writer.hello("G'Day");
             writer.hello("Bye-now");
-        } finally {
-            IOTools.deleteDirWithFiles(path);
         }
         assertEquals("" +
                 "hello G'Day, addr:4a100000010114, index: 4a1000000000\n" +

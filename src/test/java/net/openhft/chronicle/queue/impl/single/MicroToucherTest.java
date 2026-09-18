@@ -4,9 +4,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -32,7 +30,7 @@ public class MicroToucherTest extends QueueTestCommon {
 
     private void touchPage(Consumer<SingleChronicleQueueBuilder> configure, int pagesExpected) {
         long start = System.nanoTime();
-        String path = OS.getTarget() + "/touchPage-" + System.nanoTime();
+        String path = getTmpDir().getAbsolutePath();
         int pages = 0;
         final SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(path);
         configure.accept(builder);
@@ -69,7 +67,6 @@ public class MicroToucherTest extends QueueTestCommon {
             System.out.println("pages = " + pages);
 //        assertEquals(pagesExpected, pages);
             System.out.println("Time = " + (System.nanoTime() - start) / 1000000 / 1e3);
-            IOTools.deleteDirWithFiles(path);
         }
     }
 }
