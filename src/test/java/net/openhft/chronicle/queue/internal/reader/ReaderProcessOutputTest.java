@@ -21,7 +21,7 @@ public class ReaderProcessOutputTest {
     @Test
     public void drainsBothPipesBeforeWaitingForExit() throws Exception {
         withChild("noisy", process -> {
-            String output = ReaderProcessOutput.read(process, 5, TimeUnit.SECONDS);
+            String output = ReaderProcessOutput.read(process, "noisy child", 20, TimeUnit.SECONDS);
             assertEquals(256 * 1024 + "stdout complete".length(), output.length());
             assertTrue(output.endsWith("stdout complete"));
             assertFalse(process.isAlive());
@@ -32,9 +32,11 @@ public class ReaderProcessOutputTest {
     public void reportsNonzeroExitAndStderrEvenWhenStdoutMatches() throws Exception {
         withChild("fail", process -> {
             AssertionError failure = assertThrows(AssertionError.class,
-                    () -> ReaderProcessOutput.read(process, 5, TimeUnit.SECONDS));
+                    () -> ReaderProcessOutput.read(process, "Reader zone=+02:00", 20, TimeUnit.SECONDS));
+            assertTrue(failure.getMessage(), failure.getMessage().contains("Reader zone=+02:00 exited with code 7"));
+            assertTrue(failure.getMessage(), failure.getMessage().contains("elapsed="));
+            assertTrue(failure.getMessage(), failure.getMessage().contains("stdout complete"));
             assertTrue(failure.getMessage(), failure.getMessage().contains("child failure"));
-            assertTrue(failure.getMessage(), failure.getMessage().contains("7"));
             assertFalse(process.isAlive());
         });
     }
@@ -43,8 +45,8 @@ public class ReaderProcessOutputTest {
     public void timeoutTerminatesTheChildBeforeReturning() throws Exception {
         withChild("hang", process -> {
             AssertionError failure = assertThrows(AssertionError.class,
-                    () -> ReaderProcessOutput.read(process, 100, TimeUnit.MILLISECONDS));
-            assertTrue(failure.getMessage(), failure.getMessage().contains("did not exit within 100 ms"));
+                    () -> ReaderProcessOutput.read(process, "timed-out child", 100, TimeUnit.MILLISECONDS));
+            assertTrue(failure.getMessage(), failure.getMessage().contains("timed-out child did not exit within 100 ms"));
             assertFalse("Timed-out reader is still alive", process.isAlive());
         });
     }
@@ -54,8 +56,9 @@ public class ReaderProcessOutputTest {
         withChild("hang", process -> {
             Thread.currentThread().interrupt();
             try {
-                assertThrows(InterruptedException.class,
-                        () -> ReaderProcessOutput.read(process, 5, TimeUnit.SECONDS));
+                InterruptedException failure = assertThrows(InterruptedException.class,
+                        () -> ReaderProcessOutput.read(process, "interrupted child", 20, TimeUnit.SECONDS));
+                assertTrue(failure.getMessage(), failure.getMessage().contains("interrupted child interrupted"));
                 assertTrue(Thread.currentThread().isInterrupted());
                 assertFalse("Interrupted reader is still alive", process.isAlive());
             } finally {
@@ -72,8 +75,8 @@ public class ReaderProcessOutputTest {
             return null;
         });
         try {
-            // An independent guard also bounds the negative control with the old unbounded helper.
-            future.get(8, TimeUnit.SECONDS);
+            // Independently bound a regression to an unbounded or pipe-blocked helper.
+            future.get(40, TimeUnit.SECONDS);
         } catch (ExecutionException e) {
             if (e.getCause() instanceof Error)
                 throw (Error) e.getCause();
@@ -81,10 +84,14 @@ public class ReaderProcessOutputTest {
         } catch (TimeoutException e) {
             throw new AssertionError("Subprocess output helper did not complete", e);
         } finally {
+            future.cancel(true);
             process.destroyForcibly();
-            assertTrue("Test child did not terminate", process.waitFor(2, TimeUnit.SECONDS));
-            executor.shutdownNow();
-            assertTrue("Test worker did not terminate", executor.awaitTermination(2, TimeUnit.SECONDS));
+            try {
+                assertTrue("Test child did not terminate", process.waitFor(2, TimeUnit.SECONDS));
+            } finally {
+                executor.shutdownNow();
+                assertTrue("Test worker did not terminate", executor.awaitTermination(2, TimeUnit.SECONDS));
+            }
         }
     }
 
