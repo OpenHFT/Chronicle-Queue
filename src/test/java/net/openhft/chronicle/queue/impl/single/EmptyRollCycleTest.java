@@ -5,12 +5,10 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,12 +31,8 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
     @Before
     public void setUp() {
-        dataDirectory = IOTools.createTempDirectory("EmptyRollCycleTest");
-    }
-
-    @After
-    public void tearDown() {
-        IOTools.deleteDirWithFiles(dataDirectory.toFile());
+        // Keep the real empty-cycle recovery scenario inside an owned, checked fixture.
+        dataDirectory = getTmpDir().toPath();
     }
 
     @Test
@@ -48,6 +42,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
         // read through the queue
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .timeoutMS(100)
                 .build();
@@ -74,6 +69,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         long indexWritten = -1;
         // append to the queue
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .timeoutMS(100)
                 .build();
@@ -84,6 +80,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         }
 
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .build();
              ExcerptTailer tailer = queue.createTailer()) {
@@ -107,6 +104,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
             waitForFileToBeLocked(emptyRollCycle);
 
             try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                    .testBlockSize()
                     .rollCycle(RollCycles.TEN_MINUTELY)
                     .timeoutMS(100)
                     .build();
@@ -127,6 +125,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     private void createQueueWithEmptyRollCycleAtEnd() throws IOException {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .build();
