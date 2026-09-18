@@ -4,13 +4,12 @@
 package net.openhft.chronicle.queue.issue;
 
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
+
+import java.io.File;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -20,7 +19,7 @@ import static org.junit.Assert.assertFalse;
  * It checks the compatibility and visibility of data written with one Roll Cycle
  * and accessed with another.
  */
-public class ChangeRollCycleTest {
+public class ChangeRollCycleTest extends QueueTestCommon {
 
     @Test
     public void changeRollCycleWithReadOnlyTailer() {
@@ -38,14 +37,25 @@ public class ChangeRollCycleTest {
      * @param readOnly whether the tailer should be in read-only mode
      */
     private void testChangeRollCycle(boolean readOnly) {
+        final boolean effectiveReadOnly = readOnly && !OS.isWindows();
+        final RollCycle expectedRollCycle = effectiveReadOnly ? RollCycles.WEEKLY : RollCycles.FAST_DAILY;
+        if (effectiveReadOnly) {
+            expectException("Failback to readonly tablestore");
+            expectException("Overriding roll cycle from FAST_HOURLY to WEEKLY");
+        } else {
+            expectException("Overriding roll cycle from WEEKLY to FAST_DAILY");
+            expectException("Overriding roll cycle from FAST_HOURLY to FAST_DAILY");
+        }
+
         // Define the queue path
         String queuePath = OS.getTarget() + "/changeRollCycle-" + System.nanoTime();
 
         // Step 1: Open a queue with a FAST_DAILY roll cycle and a tailer
-        try (ChronicleQueue q1 = ChronicleQueue.singleBuilder(queuePath)
+        SingleChronicleQueueBuilder builder = ChronicleQueue.singleBuilder(queuePath)
                 .rollCycle(RollCycles.FAST_DAILY)
-                .readOnly(readOnly)
-                .build();
+                .readOnly(readOnly);
+        assertEquals("Builder should use the effective read-only mode", effectiveReadOnly, builder.readOnly());
+        try (ChronicleQueue q1 = builder.build();
              ExcerptTailer tailer = q1.createTailer()) {
 
             // Verify the queue is initially empty
@@ -58,6 +68,7 @@ public class ChangeRollCycleTest {
                     .rollCycle(RollCycles.WEEKLY)
                     .build();
                  ExcerptAppender appender2 = q2.createAppender()) {
+                assertEquals(expectedRollCycle, q2.rollCycle());
 
                 // Write a messages to the queue
                 appender2.writeText("Hello");
@@ -72,22 +83,14 @@ public class ChangeRollCycleTest {
                     // Write two messages to the queue
                     appender3.writeText("World");
 
-                    if (readOnly && !OS.isWindows())
-                        assertEquals("Roll cycle should match WEEKLY for read-only mode",
-                                RollCycles.WEEKLY, q3.rollCycle());
+                    assertEquals(expectedRollCycle, q3.rollCycle());
                 }
 
-                // If the tailer is read-only, the roll cycle cannot not be changed
-                // The read only case assumes there queue is historical and the roll cycle is fixed
-                if (readOnly) return;
+                // A read-only tailer retains its original roll cycle and cannot follow the new layout.
+                if (effectiveReadOnly) return;
 
                 // Step 4: Verify the data can be read back correctly
                 assertEquals("First message should match", "Hello", tailer.readText());
-
-                if (readOnly)
-                    assertEquals("Roll cycle should match WEEKLY for read-only mode",
-                            RollCycles.WEEKLY,
-                            q1.rollCycle());
 
                 assertEquals("Second message should match", "World", tailer.readText());
 
@@ -100,7 +103,7 @@ public class ChangeRollCycleTest {
             }
         } finally {
             // Clean up the queue directory to avoid leaving test artifacts
-            IOTools.deleteDirWithFiles(queuePath, 2);
+            deleteDirAfterCleanup(new File(queuePath));
         }
     }
 }

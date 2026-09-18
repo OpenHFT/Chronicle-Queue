@@ -6,7 +6,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -14,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.concurrent.*;
 
 import static org.junit.Assert.assertEquals;
@@ -100,10 +100,7 @@ public class OvertakeTest extends QueueTestCommon {
 
     @Override
     public void tearDown() {
-        try {
-            IOTools.deleteDirWithFiles(path, 2);
-        } catch (Exception ignored) {
-        }
+        deleteDirAfterCleanup(new File(path));
     }
 
     @Test

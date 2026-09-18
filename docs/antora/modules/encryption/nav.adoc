@@ -1,1 +1,1 @@
-* xref:encryption.adoc[Encryption ★]
+* xref:encryption.adoc[Encryption (Enterprise)]

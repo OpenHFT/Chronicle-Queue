@@ -35,6 +35,8 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     private static final String TEST_LOCK_NAME = "testLock";
     private static final long TIMEOUT_MS = 100;
+    private static final long PROCESS_START_TIMEOUT_MS = 10_000;
+    private static final long PROCESS_STOP_TIMEOUT_SECONDS = 2;
     private TableStore<Metadata.NoMeta> tableStore;
     private Path tempDir;
 
@@ -146,12 +148,14 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     public void unlockWillNotUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
-            waitForLockToBecomeLocked(testLock);
-            testLock.unlock();
-            assertTrue(testLock.locked());
-            expectException("Write lock was locked by someone else!");
-            process.destroy();
-            process.waitFor();
+            try {
+                waitForLockToBecomeLocked(testLock, process);
+                testLock.unlock();
+                assertTrue(testLock.locked());
+                expectException("Write lock was locked by someone else!");
+            } finally {
+                stopProcess(process);
+            }
         }
     }
 
@@ -159,12 +163,14 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     public void forceUnlockWillUnlockAndWarnIfLockedByAnotherProcess() throws IOException, InterruptedException, TimeoutException {
         try (final TableStoreWriteLock testLock = createTestLock()) {
             final Process process = runLockingProcess(true);
-            waitForLockToBecomeLocked(testLock);
-            testLock.forceUnlock();
-            assertFalse(testLock.locked());
-            expectException("Forced unlock for the lock");
-            process.destroy();
-            process.waitFor();
+            try {
+                waitForLockToBecomeLocked(testLock, process);
+                testLock.forceUnlock();
+                assertFalse(testLock.locked());
+                expectException("Forced unlock for the lock");
+            } finally {
+                stopProcess(process);
+            }
         }
     }
 
@@ -212,12 +218,12 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     public void forceUnlockIfProcessIsDeadWillFailWhenLockingProcessIsAlive() throws IOException, TimeoutException, InterruptedException {
         Process lockingProcess = runLockingProcess(true);
         try (TableStoreWriteLock lock = createTestLock()) {
-            waitForLockToBecomeLocked(lock);
+            waitForLockToBecomeLocked(lock, lockingProcess);
             assertFalse(lock.forceUnlockIfProcessIsDead());
             assertTrue(lock.locked());
+        } finally {
+            stopProcess(lockingProcess);
         }
-        lockingProcess.destroy();
-        lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
     }
 
     @Test(timeout = 15_000)
@@ -225,11 +231,12 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         ignoreException("Forced unlock");
         Process lockingProcess = runLockingProcess(false);
         try (TableStoreWriteLock lock = createTestLock()) {
-            waitForLockToBecomeLocked(lock);
-            lockingProcess.destroy();
-            lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
+            waitForLockToBecomeLocked(lock, lockingProcess);
+            stopProcess(lockingProcess);
             assertTrue(lock.forceUnlockIfProcessIsDead());
             assertFalse(lock.locked());
+        } finally {
+            stopProcess(lockingProcess);
         }
     }
 
@@ -241,13 +248,57 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         }
     }
 
-    private void waitForLockToBecomeLocked(TableStoreWriteLock lock) throws TimeoutException {
-        Pauser p = Pauser.balanced();
+    private void waitForLockToBecomeLocked(TableStoreWriteLock lock, Process process) throws TimeoutException {
+        final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(PROCESS_START_TIMEOUT_MS);
         while (!lock.locked()) {
-            p.pause(3_000, TimeUnit.SECONDS);
+            if (!process.isAlive())
+                fail("Locking subprocess exited before acquiring the lock, exit code " + process.exitValue()
+                        + "; stderr: " + JavaProcessBuilder.getProcessStdErr(process));
+            if (System.nanoTime() >= deadline)
+                throw new TimeoutException("Locking subprocess did not acquire the lock within "
+                        + PROCESS_START_TIMEOUT_MS + " ms; stderr: " + JavaProcessBuilder.getProcessStdErr(process));
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedRuntimeException("Interrupted waiting for lock to lock");
             }
+            Jvm.pause(10);
+        }
+    }
+
+    static void stopProcess(Process process) {
+        stopProcess(process, PROCESS_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    }
+
+    static void stopProcess(Process process, long timeout, TimeUnit unit) {
+        final long deadline = System.nanoTime() + unit.toNanos(timeout);
+        boolean interrupted = Thread.interrupted();
+        try {
+            process.destroy();
+            boolean forced = interrupted;
+            if (forced)
+                process.destroyForcibly();
+            while (process.isAlive()) {
+                final long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) {
+                    if (!forced)
+                        process.destroyForcibly();
+                    fail("Locking subprocess remains alive after termination deadline ("
+                            + unit.toMillis(timeout) + " ms)");
+                }
+                try {
+                    // Reserve half the initial budget for confirming forced termination.
+                    if (process.waitFor(forced ? remaining : remaining / 2, TimeUnit.NANOSECONDS))
+                        return;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+                if (!forced) {
+                    process.destroyForcibly();
+                    forced = true;
+                }
+            }
+        } finally {
+            if (interrupted)
+                Thread.currentThread().interrupt();
         }
     }
 
