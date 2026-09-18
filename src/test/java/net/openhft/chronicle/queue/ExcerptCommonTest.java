@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
 import org.junit.Test;
 
 import java.io.File;
@@ -16,7 +15,11 @@ import static org.junit.Assert.assertNull;
  */
 public class ExcerptCommonTest extends QueueTestCommon {
 
-    private static final String TEST_QUEUE = OS.getTarget() + "/ExcerptCommonTest";
+    //! Each test owns a tracked directory; the old static path left metadata behind after the suite.
+    //! Use the ordinary test block budget. Controls: testSourceId, testQueue, testCurrentFile, testSync.
+    private ChronicleQueue newQueue() {
+        return ChronicleQueue.singleBuilder(getTmpDir()).testBlockSize().build();
+    }
 
     class ExcerptCommonImpl implements ExcerptCommon<ExcerptCommonImpl> {
         private final int sourceId;
@@ -72,7 +75,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
 
     @Test
     public void testSourceId() {
-        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+        try (ChronicleQueue queue = newQueue()) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
             assertEquals(123, excerpt.sourceId());
         }
@@ -80,7 +83,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
 
     @Test
     public void testQueue() {
-        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+        try (ChronicleQueue queue = newQueue()) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
             assertEquals(queue, excerpt.queue());
         }
@@ -89,7 +92,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
     @Test
     public void testCurrentFile() {
         File file = new File("testfile.txt");
-        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+        try (ChronicleQueue queue = newQueue()) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, file);
             assertEquals(file, excerpt.currentFile());
 
@@ -100,7 +103,7 @@ public class ExcerptCommonTest extends QueueTestCommon {
 
     @Test
     public void testSync() {
-        try (ChronicleQueue queue = ChronicleQueue.single(TEST_QUEUE)) {
+        try (ChronicleQueue queue = newQueue()) {
             ExcerptCommonImpl excerpt = new ExcerptCommonImpl(123, queue, null);
             excerpt.sync(); // Would test actual sync if implemented
             // Verify no state change and queue remains the same
