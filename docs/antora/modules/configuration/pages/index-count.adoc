@@ -22,12 +22,10 @@ The default index count varies depending on the xref:configuration:roll-cycle.ad
 |===
 | Roll-cycle | Default index count
 | `HALF_HOURLY`, `TWENTY_MINUTELY`, `TEN_MINUTELY`, `FIVE_MINUTELY`, `MINUTELY`, `LARGE_HOURLY_XSPARSE` | 2048
-| `SIX_HOURLY`, `FOUR_HOURLY`, `TWO_HOURLY`, `FAST_HOURLY`, `HOURLY`, `LARGE_HOURLY_XSPARSE`, `FAST_DAILY`  | 4096
+| `SIX_HOURLY`, `FOUR_HOURLY`, `TWO_HOURLY`, `FAST_HOURLY`, `HOURLY`, `LARGE_HOURLY_SPARSE`, `FAST_DAILY`, `WEEKLY`  | 4096
 | `DAILY`, `LARGE_HOURLY` | 8192
 | `HUGE_DAILY_XSPARSE` | 16384
-| `LARGE_DAILY` | 32768
-| `XLARGE_DAILY` | 131072
-| `HUGE_DAILY` | 524288
+| `LARGE_DAILY`, `XLARGE_DAILY`, `HUGE_DAILY` | 32768
 |===
 
 TIP: For more information about queue indexing, see xref:queue-operations:indexing.adoc[Indexing].
