@@ -7,7 +7,7 @@ author: Julia Gustafsson
 
 == Chronicle Queue Enterprise Replication
 
-Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle Queue from one host, to one or more other hosts using TCP/IP or optionally UDP.
+Chronicle Queue Enterprise replication performs simple uni-directional, multi-way replication by copying a Chronicle Queue from one host, to one or more other hosts using TCP/IP.
 
 .Chronicle Queue Replication
 image::chronicle-queue.png[500,450]
@@ -38,15 +38,14 @@ The configuration for a cluster is as follows:
 
 [source,yaml]
 ----
-!QueueReplicationCfg {
-  cluster: {
-    context: !QueueClusterContext {
-      heartbeatIntervalMs: 300000,
-      heartbeatTimeoutMs: 500000,
-      baseSourcePath: "replica/source",
-      baseSinkPath: "replica/sink",
-    }
+!ChronicleQueueReplicationCfg {
+  context: !QueueClusterContext {
+    heartbeatIntervalMs: 300000,
+    heartbeatTimeoutMs: 500000,
+    basePath: "replica/$hostId",
+  },
 
+  hosts: {
     host1: {
       hostId: 1,
       connectUri: host.port1,
@@ -71,17 +70,17 @@ The configuration for a cluster is as follows:
 In the configuration shown above, the queue, `queue1`, is set to be replicated from `host1`
 (as indicated by `masterId`) to all other hosts defined for the cluster, without acknowledgement.
 
-Queues will use storage paths defined by `baseSourcePath` and `baseSinkPath` for `source` and `sink`, respectively, followed by the queue name.
-For this example, the `source` queue will be at `replica/source/queue1`, while the `sink` will be written to `replica/sink/queue1`.
+Queues will use the storage path defined by `basePath`, with `$hostId` replaced by each host's id, followed by the queue name.
+For this example, the `source` queue will be at `replica/1/queue1`, while the `sink` will be written to `replica/2/queue1`.
 
 === Using Enterprise Queue Replication
 
-To start replicating data, the user must create an instance of `ReplicatedQueue` for each host.
+To start replicating data, the user must create an instance of `QueueReplicator` for each host.
 This is done as follows:
 
 [source,java]
 ----
-try (ReplicatedQueue repl = new ReplicatedQueue(config(), hostId)) {
+try (QueueReplicator repl = new QueueReplicator(config(), hostId)) {
     repl.startReplication();
     ...
 }
@@ -110,8 +109,8 @@ public void shouldReplicate() throws Exception {
     });
     QueueClusterContext ctx = CONFIG.cluster().clusterContext();
     assert ctx != null;
-    SingleChronicleQueue source = QueueBuilderFromConfig.queueFromConfig(qCfg, CONFIG::queueConfig, path -> ctx.getSourcePath(path, (byte) 1));
-    SingleChronicleQueue sink = QueueBuilderFromConfig.queueFromConfig(qCfg, CONFIG::queueConfig, path -> ctx.getSinkPath(path, (byte) 2));
+    SingleChronicleQueue source = QueueBuilderFromConfig.queueFromConfig(CONFIG, qCfg, (byte) 1);
+    SingleChronicleQueue sink = QueueBuilderFromConfig.queueFromConfig(CONFIG, qCfg, (byte) 2);
 
     ExcerptTailer tailer = sink.createTailer();
 
@@ -145,7 +144,6 @@ This is controlled with the `software.chronicle.enterprise.queue.config.Replicat
 
 If the `acknowledge` property is set to false, then replication will proceed as quickly as possible, with no acknowledgement from the sink(s).
 Chronicle Queue Enterprise replication will take advantage of the underlying protocol to ensure correct ordering.
-Chronicle Queue Enterprise replication can use either TCP or an optimised custom protocol over UDP.
 
 The source queue itself keeps track of
 

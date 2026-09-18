@@ -38,13 +38,14 @@ The base size must be a power of `2`.
 
 [source,java]
 ----
-  int size = BytesRingBuffer.sizeFor(2 << 20);
-  NativeBytesStore nativeStore = BytesStore.nativeStoreWithFixedCapacity(size);
-  BytesRingBuffer ringBuffer = BytesRingBuffer.newInstance(nativeStore)
+  long size = BytesRingBuffer.sizeFor(2 << 20);
+  BytesStore<?, Void> nativeStore = BytesStore.nativeStoreWithFixedCapacity(size);
+  BytesRingBuffer ringBuffer = BytesRingBuffer.newInstance(nativeStore);
 
   int numReaders = 2;
-  NativeBytesStore nativeStore2 = BytesStore.nativeStoreWithFixedCapacity(size, numReaders);
-  MultiReaderBytesRingBuffer ringBuffer2 = newInstance(nativeStore2, numReaders)
+  long size2 = BytesRingBuffer.sizeFor(2 << 20, numReaders);
+  BytesStore<?, Void> nativeStore2 = BytesStore.nativeStoreWithFixedCapacity(size2);
+  MultiReaderBytesRingBuffer ringBuffer2 = BytesRingBuffer.newInstance(nativeStore2, numReaders);
 ----
 
 When created, it can be written to with `offer` (multiple threads can call `offer` at the same time).
@@ -69,7 +70,7 @@ If the queue is empty, `false` will be returned.
 There are two types of Chronicle Queue which are backed by the asynchronous buffer:
 
 * `software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue`
-* `software.chronicle.enterprise.queue.RingBufferChronicleQueue`
+* `software.chronicle.enterprise.ring.RingBufferChronicleQueue` (in the `software.chronicle:chronicle-ring` artifact)
 
 ==== software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue
 
@@ -151,17 +152,18 @@ NOTE: This example won't work on Windows as it uses /dev/shm.
 ----
 
 ===== Drainer thread
-When the queue's event loop is closed, the drainer thread will wait up to 5 seconds to finish draining to the underlying queue.
+When the queue's event loop is closed, the drainer thread will wait up to `drainerTimeoutMS` (10 seconds by default) to finish draining to the underlying queue.
 If draining can not complete, a warning message is logged
 
 ===== Unsupported operations
 The following operations are unsupported when using EnterpriseSingleChronicleQueue backed by an asynchronous buffer:
 
 * writing and reading of metadata
-* `ExcerptTailer.toStart()` and `ExcerptTailer.afterLastWritten()`
+* `ExcerptTailer.toStart()`
 * `ExcerptTailer.index()` and `ExcerptTailer.moveToIndex()`
+* `ExcerptTailer.direction(TailerDirection.BACKWARD)`
 
-==== software.chronicle.enterprise.queue.RingBufferChronicleQueue
+==== software.chronicle.enterprise.ring.RingBufferChronicleQueue
 
 This queue does not implement the full contract of `ChronicleQueue`, and will throw a `UnsupportedOperationException`
 from some methods.
@@ -174,7 +176,7 @@ It is created as in the example below, where:
 
 [source,java]
 ----
-    ChronicleQueue rbq = new RingBufferChronicleQueue(ringBuffer, wireType, pauser);
+    ChronicleQueue rbq = new RingBufferChronicleQueue(ringBuffer, wireType);
 ----
 
 It can be used in the same way as any other Chronicle Queue implementation, but it is recommended to use software.chronicle.enterprise.queue.EnterpriseSingleChronicleQueue in preference.

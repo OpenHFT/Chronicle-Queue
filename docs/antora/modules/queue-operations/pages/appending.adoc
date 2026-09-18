@@ -163,7 +163,7 @@ At the lowest abstraction level you get an address to raw memory where you can w
 ----
 // Unsafe low level
 appender.writeBytes(b -> {
-    long address = b.address(b.writePosition());
+    long address = b.addressForWrite(b.writePosition());
     Unsafe unsafe = UnsafeMemory.UNSAFE;
     unsafe.putByte(address, (byte) 0x12);
     address += 1;

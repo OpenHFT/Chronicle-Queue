@@ -62,20 +62,23 @@ $ mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.Archi
 Below is the command line interface used to configure `ArchiveRollFilesMain`:
 
 ----
-usage: ArchiveRollFilesMain -aa <archive-action> [-ad <archive-dir>] [-h] [-kc <key-class>] [-m <min-archive-age>] [-qbme <qbm-entries>] [-qbmn <qbm-name>] -qc <queue-config-file>
-       -qn <queue-name> [-r <roll-cycles-to-keep>] [-vc <value-class>]
+usage: ArchiveRollFilesMain -aa <archive-action> [-ad <archive-dir>] [-dryrun] [-h] [-hid <host-id>] [-kc <key-class>] [-m <min-archive-age>] [-qbme <qbm-entries>] [-qbmn
+       <qbm-name>] [-qc <queue-config-file>] [-qd <queue-dir>] [-qn <queue-name>] [-r <roll-cycles-to-keep>] [-vc <value-class>] [-z <roll-timezone>]
  -aa <archive-action>       Archiving action to perform (ARCHIVE or DELETE)
- -ad <archive-dir>          Directory to move files to if archiving
- -dryrun                    Perform dry run of archiving actions that would occur without actual processing
- -h                         Print this help and exit
+ -ad <archive-dir>          Directory to move files to if archiving.
+ -dryrun                    Perform dry run of archiving actions that would occur without actual processing.
+ -h                         Print this help and exit.
+ -hid <host-id>             Host ID in config file for current host. Required if -qc is specified.
  -kc <key-class>            Name of key class (if queue being archived is backing a QBM)
  -m <min-archive-age>       Archive files older than this age. Can be specified as milliseconds since epoch or local datetime. Either this or -r must be provided.
  -qbme <qbm-entries>        Maximum number of entries in QBM (if queue being archived is backing a QBM)
  -qbmn <qbm-name>           QBM name (if queue is backing a QBM)
- -qc <queue-config-file>    QueueReplicationConfig file containing queue configuration
- -qn <queue-name>           Name of queue as used in queue-config-file
+ -qc <queue-config-file>    QueueReplicationConfig file containing queue configuration. Either -qc or -qd must be specified.
+ -qd <queue-dir>            Directory containing queue files to archive. Either -qc or -qd must be specified.
+ -qn <queue-name>           Name of queue as used in queue-config-file. Required if -qc is specified.
  -r <roll-cycles-to-keep>   Number of roll cycles to keep when archiving. Either this or -m must be provided.
  -vc <value-class>          Name of value class (if queue being archived is backing a QBM)
+ -z <roll-timezone>         Time zone used for roll files. eg. 'Europe/Paris'. If not specified, time zone indicated specified in queue configuration is used, or defaults to UTC.
 ----
 
 === Command-Line Parameters
@@ -83,12 +86,15 @@ usage: ArchiveRollFilesMain -aa <archive-action> [-ad <archive-dir>] [-h] [-kc <
 |===
 | Parameter | Detail | Required?
 
-| -qc | Full or relative path to file to load configuration from for queue being archived. | Y
-| -qn | Name of queue being archived, as it appears in file specified by -qc. eg. `'queue1'` | Y
+| -qc | Full or relative path to file to load configuration from for queue being archived. | If `-qd` is not specified
+| -qn | Name of queue being archived, as it appears in file specified by -qc. eg. `'queue1'` | If `-qc` is specified
+| -qd | Full or relative path to the directory containing the queue files being archived. Cannot be combined with `-qc`. | If `-qc` is not specified
+| -hid | Host ID in the file specified by `-qc` identifying the current host, used to locate the queue directory. | If `-qc` is specified
 | -aa | Archive action being performed. Accepted values are `ARCHIVE` (move roll files to archive directory) or `DELETE` (delete eligible roll files permanently) | Y
 | -m | Minimum age for files to be eligible for archiving, specified as a local datetime in the format `yyyy-MM-dd'T'HH:mm:ss` (eg. `2024-05-23T23:55:01`). Compared against a roll file's last modified time. | If `-r` is not specified
 | -r | Number of roll cycles to retain. If this option is combined with `-m`, the minimum number of roll cycle files will be retained before considering files for archiving. | If `-m` is not specified
 | -dryrun | Output log of archiving actions that would occur, without any actual file processing | N
+| -z | Time zone used for roll files, eg. `'Europe/Paris'`. If not specified, the time zone indicated in the queue configuration is used, or defaults to UTC. | N
 |===
 
 === Map Enterprise Support
@@ -114,7 +120,7 @@ Invoking `ArchiveRollFiles` to delete all roll files older than the age specifie
 [source,shell script]
 ----
 $ mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
--Dexec.args="-qc config/queue-config.yaml -qn queue1 -m 2024-11-01T12:15:00 -aa DELETE"
+-Dexec.args="-qc config/queue-config.yaml -hid 1 -qn queue1 -m 2024-11-01T12:15:00 -aa DELETE"
 ----
 
 Invoking `ArchiveRollFiles` to archive roll files older than the age specified for an Enterprise Map queue.
@@ -122,8 +128,8 @@ Invoking `ArchiveRollFiles` to archive roll files older than the age specified f
 [source,shell script]
 ----
 $  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
--Dexec.args="-qc /tmp/qbm-replication.yaml -qn queue1 -m 2024-05-23T23:55:01 -aa ARCHIVE
--ad /mnt/share/queue-archive  --qbmn corr-map -qbme 10000 -kc java.lang.String -vc java.lang.Integer"
+-Dexec.args="-qc /tmp/qbm-replication.yaml -hid 1 -qn queue1 -m 2024-05-23T23:55:01 -aa ARCHIVE
+-ad /mnt/share/queue-archive  -qbmn corr-map -qbme 10000 -kc java.lang.String -vc java.lang.Integer"
 ----
 
 Invoking `ArchiveRollFiles` to archive all roll cycles except the last three for `queue1`.
@@ -131,7 +137,7 @@ Invoking `ArchiveRollFiles` to archive all roll cycles except the last three for
 [source,shell script]
 ----
 $  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
--Dexec.args="-qc /tmp/qbm-replication.yaml -qn queue1 -r 3 -aa ARCHIVE -ad /mnt/share/queue-archive"
+-Dexec.args="-qc /tmp/qbm-replication.yaml -hid 1 -qn queue1 -r 3 -aa ARCHIVE -ad /mnt/share/queue-archive"
 ----
 
 == ChronicleHistoryReaderMain
@@ -153,7 +159,7 @@ $ ./bin/history_reader.sh <options>
 Below is the command line interface used to configure `ChronicleHistoryReaderMain`:
 
 ----
-usage: ChronicleHistoryReaderMain
+usage: ChronicleHistoryReaderMain -d <directory> [-h] [-i <ignore>] [-m] [-p] [-t <time unit>] [-u <histo offset>] [-w <window>]
  -d <directory>      Directory containing chronicle queue files
  -h                  Print this help and exit
  -i <ignore>         How many items to ignore from start
@@ -184,19 +190,28 @@ $ ./bin/queue_reader.sh <options>
 Below is the command line interface used to configure `ChronicleReaderMain`:
 
 ----
-usage: ChronicleReaderMain
- -d <directory>       Directory containing chronicle queue files
- -e <exclude-regex>   Do not display records containing this regular
-                      expression
- -f                   Tail behaviour - wait for new records to arrive
- -h                   Print this help and exit
- -i <include-regex>   Display records containing this regular expression
- -l                   Squash each output message into a single line
- -m <max-history>     Show this many records from the end of the data set
- -n <from-index>      Start reading from this index (e.g. 0x123ABE)
- -r <interface>       Use when reading from a queue generated using a MethodWriter
- -s                   Display index
- -w <wire-type>       Control output i.e. JSON
+usage: ChronicleReaderMain [-a <binary-arg>] [-b <binary-search>] [-cbl <content-based-limiter>] [-cblArg <content-based-limiter-argument>] -d <directory> [-e <exclude-regex>] [-f]
+       [-g] [-h] [-i <include-regex>] [-k] [-l] [-m <max-history>] [-n <from-index>] [-named <named>] [-r <as-method-reader>] [-s] [-w <wire-type>] [-x <max-results>] [-z]
+ -a <binary-arg>                            Argument to pass to binary search class
+ -b <binary-search>                         Use this class as a comparator to binary search
+ -cbl <content-based-limiter>               Specify a content-based limiter
+ -cblArg <content-based-limiter-argument>   Specify an argument for use by the content-based limiter
+ -d <directory>                             Directory containing chronicle queue files
+ -e <exclude-regex>                         Do not display records containing this regular expression
+ -f                                         Tail behaviour - wait for new records to arrive
+ -g                                         Show message history (when using method reader)
+ -h                                         Print this help and exit
+ -i <include-regex>                         Display records containing this regular expression
+ -k                                         Read the queue in reverse
+ -l                                         Squash each output message into a single line
+ -m <max-history>                           Show this many records from the end of the data set
+ -n <from-index>                            Start reading from this index (e.g. 0x123ABE)
+ -named <named>                             Named tailer ID
+ -r <as-method-reader>                      Use when reading from a queue generated using a MethodWriter
+ -s                                         Display index
+ -w <wire-type>                             Control output i.e. JSON
+ -x <max-results>                           Limit the number of results to output
+ -z                                         Print timestamps using the local timezone
 ----
 
 == ChronicleWriterMain
@@ -218,7 +233,7 @@ $ ./bin/queue_writer.sh <options>
 Below is the command line interface used to configure `ChronicleWriterMain`:
 
 ----
-usage: ChronicleWriterMain
+usage: ChronicleWriterMain files.. -d <directory> [-i <interface>] -m <method>
  -d <directory>   Directory containing chronicle queue to write to
  -i <interface>   Interface to write via
  -m <method>      Method name
@@ -248,29 +263,34 @@ This will dump the `19700101-02.cq4` file out as text, as shown below:
 
 [source,yaml]
 ----
-!!meta-data #binary
+--- !!meta-data #binary
 header: !SCQStore {
-  wireType: !WireType BINARY,
-  writePosition: 0,
-  roll: !SCQSRoll {
-    length: !int 3600000,
-    format: yyyyMMdd-HH,
-    epoch: !int 3600000
-  },
+  writePosition: [
+    0,
+    0
+  ],
   indexing: !SCQSIndexing {
     indexCount: !short 4096,
-    indexSpacing: 4,
-    index2Index: 0,
+    indexSpacing: !short 256,
+    index2Index: 200,
     lastIndex: 0
   },
-  lastAcknowledgedIndexReplicated: -1,
-  recovery: !TimedStoreRecovery {
-    timeStamp: 0
-  }
+  dataFormat: 1
 }
 
+# position: 200, header: -1
+--- !!meta-data #binary
+index2index: [
+  # length: 4096, used: 1
+  33008 # truncated trailing zeros
+]
+# position: 33008, header: -1
+--- !!meta-data #binary
+index: [
+  # length: 4096, used:  # truncated trailing zeros
+]
 ...
-# 4198044 bytes remaining
+# 83820268 bytes remaining
 ----
 
 NOTE: The example above does not show any user data, because no user data was written to this example file.

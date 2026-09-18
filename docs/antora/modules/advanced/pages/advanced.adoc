@@ -37,31 +37,43 @@ Below follows an example of a queue header:
 
 [source,yaml]
 ----
+## myqueue/20260918F.cq4
 --- !!meta-data #binary # <1>
 header: !SCQStore { # <2>
-  wireType: !WireType BINARY,
-  writePosition: 413, # <3>
-  roll: !SCQSRoll { # <4>
-    length: !int 86400000,
-    format: yyyyMMdd,
-    epoch: 0
+  writePosition: [ # <3>
+    65808,
+    282643207815168
+  ],
+  indexing: !SCQSIndexing { # <4>
+    indexCount: !short 4096,
+    indexSpacing: !short 256,
+    index2Index: 200,
+    lastIndex: 256
   },
-  indexing: !SCQSIndexing { # <5>
-    indexCount: !short 16384,
-    indexSpacing: 16,
-    index2Index: 0,
-    lastIndex: 0
-  },
-  lastAcknowledgedIndexReplicated: 0 # <6>
+  dataFormat: 1
 }
+
+## myqueue/metadata.cq4t
+--- !!meta-data #binary
+header: !STStore {
+  wireType: !WireType BINARY_LIGHT,
+  metadata: !SCQMeta {
+    roll: !SCQSRoll { length: 86400000, format: yyyyMMdd'F', epoch: 0 }, # <5>
+    sourceId: 0
+  }
+}
+
+# position: 392, header: 6
+--- !!data #binary
+chronicle.lastAcknowledgedIndexReplicated: -1 # <6>
 ----
 <1> First message is meta-data written in binary
 <2> Type of header is aliased as the name `SCQStore`.
 <3> `writePosition` is the first bound value.
 It is the highest known byte which has been written to, and is updated atomically.
-<4> Roll cycle is daily.
-<5> This class controls how it will be indexed on-demand.
+<4> This class controls how it will be indexed on-demand.
 It adds meta-data entries for indexed lookup.
+<5> Roll cycle is daily.
 <6> The highest message index which was acknowledged by a replica.
 
 NOTE: The `SCQStore` "bootstraps" the queue itself.

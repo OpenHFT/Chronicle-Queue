@@ -11,8 +11,8 @@ The length of the cycle is determined by the `rollCycle` parameter passed to the
 
 Example configuration of `rollCycle`:
 
-* `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
-* `RollCycles.HOURLY` every hour, a new queue file will be created for written events
+* `RollCycles.FAST_DAILY` events stored in the queue will be grouped into 24-hour periods
+* `RollCycles.FAST_HOURLY` every hour, a new queue file will be created for written events
 
 As new files are created (the queue is rolled) to accommodate events being written to the queue, a persisted data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
 _cycle_ numbers present in the directory.
@@ -31,12 +31,12 @@ However, after a certain timeout, the tailers will act as if there is an EOF mar
 == Roll Cycle Configuration
 
 The interval for rolling is configured using the queue's attribute `rollCycle`.
-As an example, the queue can be configured to roll its file (i.e. create a new file) every day by providing the `RollCycles.DAILY`:
+As an example, the queue can be configured to roll its file (i.e. create a new file) every day by providing the `RollCycles.FAST_DAILY`:
 
 [source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
-    .rollCycle(RollCycles.DAILY)
+    .rollCycle(RollCycles.FAST_DAILY)
     .build();
 ----
 
@@ -64,13 +64,13 @@ Rolling occurs whenever a new time frame of the selected kind is started, meanin
 
 This behavior can be changed using Chronicle Queue’s attribute `epoch()`.
 Epoch refers to a milliseconds offset to the set time frame.
-In other words, if you set the epoch to be `epoch(1)` and use `RollCycles.DAILY` the queue will roll at 1 millisecond past midnight UTC time.
+In other words, if you set the epoch to be `epoch(1)` and use `RollCycles.FAST_DAILY` the queue will roll at 1 millisecond past midnight UTC time.
 Putting it together:
 
 [source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
-    .rollCycle(RollCycles.DAILY)
+    .rollCycle(RollCycles.FAST_DAILY)
     .epoch(1)
     .build();
 ----
@@ -84,7 +84,7 @@ For example, to roll daily at 21:15 UTC:
 [source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
-    .rollCycle(RollCycles.DAILY)
+    .rollCycle(RollCycles.FAST_DAILY)
     .rollTime(LocalTime.of(21, 15), ZoneOffset.UTC)
     .build();
 ----
@@ -101,35 +101,36 @@ This results in different roll-cycles having a maximum capacity in terms of thro
 The available roll-cycles and their capacities are summarized in the table below:
 
 |===
-| Roll-cycle name | Max nr of messages in each cycle in decimal | Max nr of messages in each cycle in hexadecimal | Max nr of messages per second over the length of the cycle (on average)
+| Enum Class | Roll-cycle name | Max nr of messages in each cycle in decimal | Max nr of messages in each cycle in hexadecimal | Max nr of messages per second over the length of the cycle (on average)
 
-| FIVE_MINUTELY | 1,073,741,824| 0x40000000 | 3,579,139
-| TEN_MINUTELY | 1,073,741,824| 0x40000000 | 1,789,569
-| TWENTY_MINUTELY | 1,073,741,824| 0x40000000 | 1,491,308
-| HALF_HOURLY | 1,073,741,824| 0x40000000 | 596,523
-| FAST_HOURLY | 4,294,967,295| 0xffffffff | 1,193,046
-| TWO_HOURLY | 4,294,967,295| 0xffffffff | 596,523
-| FOUR_HOURLY | 4,294,967,295| 0xffffffff | 298,261
-| SIX_HOURLY | 4,294,967,295| 0xffffffff | 198,841
-| FAST_DAILY | 4,294,967,295| 0xffffffff | 49,710
-| MINUTELY | 67,108,864| 0x4000000 | 1,118,481
-| HOURLY | 268,435,456| 0x10000000 | 74,565
-| DAILY | 4,294,967,295| 0xffffffff | 49,710
-| LARGE_HOURLY | 4,294,967,295| 0xffffffff | 49,710
-| LARGE_DAILY | 137,438,953,471| 0x1fffffffff | 1,590,728
-| XLARGE_DAILY | 4,398,046,511,103| 0x3ffffffffff | 50,903,316
-| HUGE_DAILY | 281,474,976,710,655| 0xffffffffffff | 3,257,812,230
-| SMALL_DAILY | 536,870,912| 0x20000000 | 6,213
-| LARGE_HOURLY_SPARSE | 17,179,869,183| 0x3ffffffff | 4,772,185
-| LARGE_HOURLY_XSPARSE | 4,398,046,511,103| 0x3ffffffffff | 1,221,679,586
-| HUGE_DAILY_XSPARSE | 281,474,976,710,655| 0xffffffffffff | 78,187,493,530
-| TEST_SECONDLY | 4,294,967,295| 0xffffffff | 4,294,967,295
-| TEST4_SECONDLY | 4,096| 0x1000 | 4,096
-| TEST_HOURLY | 1,024| 0x400 | 0
-| TEST_DAILY | 64| 0x40 | 0
-| TEST2_DAILY | 512| 0x200 | 0
-| TEST4_DAILY | 4,096| 0x1000 | 0
-| TEST8_DAILY | 131,072| 0x20000 | 1
+| net.openhft.chronicle.queue.RollCycles | FIVE_MINUTELY | 1,073,741,824| 0x40000000 | 3,579,139
+| net.openhft.chronicle.queue.RollCycles | TEN_MINUTELY | 1,073,741,824| 0x40000000 | 1,789,569
+| net.openhft.chronicle.queue.RollCycles | TWENTY_MINUTELY | 1,073,741,824| 0x40000000 | 894,784
+| net.openhft.chronicle.queue.RollCycles | HALF_HOURLY | 1,073,741,824| 0x40000000 | 596,523
+| net.openhft.chronicle.queue.RollCycles | FAST_HOURLY | 4,294,967,295| 0xffffffff | 1,193,046
+| net.openhft.chronicle.queue.RollCycles | TWO_HOURLY | 4,294,967,295| 0xffffffff | 596,523
+| net.openhft.chronicle.queue.RollCycles | FOUR_HOURLY | 4,294,967,295| 0xffffffff | 298,261
+| net.openhft.chronicle.queue.RollCycles | SIX_HOURLY | 4,294,967,295| 0xffffffff | 198,841
+| net.openhft.chronicle.queue.RollCycles | FAST_DAILY | 4,294,967,295| 0xffffffff | 49,710
+| net.openhft.chronicle.queue.RollCycles | WEEKLY | 4,294,967,295| 0xffffffff | 7,101
+| net.openhft.chronicle.queue.rollcycles.LegacyRollCycles | MINUTELY | 67,108,864| 0x4000000 | 1,118,481
+| net.openhft.chronicle.queue.rollcycles.LegacyRollCycles | HOURLY | 268,435,456| 0x10000000 | 74,565
+| net.openhft.chronicle.queue.rollcycles.LegacyRollCycles | DAILY | 4,294,967,295| 0xffffffff | 49,710
+| net.openhft.chronicle.queue.rollcycles.LargeRollCycles | LARGE_HOURLY | 4,294,967,295| 0xffffffff | 1,193,046
+| net.openhft.chronicle.queue.rollcycles.LargeRollCycles | LARGE_DAILY | 137,438,953,471| 0x1fffffffff | 1,590,728
+| net.openhft.chronicle.queue.rollcycles.LargeRollCycles | XLARGE_DAILY | 274,877,906,943| 0x3fffffffff | 3,181,457
+| net.openhft.chronicle.queue.rollcycles.LargeRollCycles | HUGE_DAILY | 1,099,511,627,775| 0xffffffffff | 12,725,829
+| net.openhft.chronicle.queue.rollcycles.SparseRollCycles | SMALL_DAILY | 536,870,912| 0x20000000 | 6,213
+| net.openhft.chronicle.queue.rollcycles.SparseRollCycles | LARGE_HOURLY_SPARSE | 17,179,869,183| 0x3ffffffff | 4,772,185
+| net.openhft.chronicle.queue.rollcycles.SparseRollCycles | LARGE_HOURLY_XSPARSE | 4,398,046,511,103| 0x3ffffffffff | 1,221,679,586
+| net.openhft.chronicle.queue.rollcycles.SparseRollCycles | HUGE_DAILY_XSPARSE | 281,474,976,710,655| 0xffffffffffff | 3,257,812,230
+| net.openhft.chronicle.queue.rollcycles.TestRollCycles | TEST_SECONDLY | 16,777,216| 0x1000000 | 16,777,216
+| net.openhft.chronicle.queue.rollcycles.TestRollCycles | TEST4_SECONDLY | 4,096| 0x1000 | 4,096
+| net.openhft.chronicle.queue.rollcycles.TestRollCycles | TEST_HOURLY | 1,024| 0x400 | 0
+| net.openhft.chronicle.queue.rollcycles.TestRollCycles | TEST_DAILY | 64| 0x40 | 0
+| net.openhft.chronicle.queue.rollcycles.TestRollCycles | TEST2_DAILY | 512| 0x200 | 0
+| net.openhft.chronicle.queue.rollcycles.TestRollCycles | TEST4_DAILY | 4,096| 0x1000 | 0
+| net.openhft.chronicle.queue.rollcycles.TestRollCycles | TEST8_DAILY | 131,072| 0x20000 | 1
 |===
 
 IMPORTANT: Roll-cycles named _TEST*_ should only be used in test environments.
@@ -178,8 +179,7 @@ Below is an example of a queue that performs daily rolls at 5 PM, London time:
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
     .rollTime(LocalTime.of(17, 0), ZoneId.of("Europe/London"))
-    .rollCycle(RollCycles.DAILY)
-    .timeProvider(System.currentTimeMillis())
+    .rollCycle(RollCycles.FAST_DAILY)
     .build();
 ----
 

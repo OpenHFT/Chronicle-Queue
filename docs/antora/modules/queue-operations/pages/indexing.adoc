@@ -108,7 +108,7 @@ To count the number of messages between two indexes you can use:
 
 [source,java]
 ----
-queue.countExcerpts(long fromIndex, long toIndex);
+((RollingChronicleQueue) queue).countExcerpts(fromIndex, toIndex);
 ----
 
 NOTE: Avoid calling this method on latency sensitive code.
