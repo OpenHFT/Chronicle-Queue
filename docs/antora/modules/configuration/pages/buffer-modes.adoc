@@ -19,4 +19,4 @@ These parameters define BufferMode for reads or writes that have the following o
 
 *bufferCapacity*
 
-Async mode buffer capacity in bytes when using `bufferMode: Asynchronous`
+Async mode buffer capacity in bytes when using `writeBufferMode: Asynchronous` or `readBufferMode: Asynchronous`

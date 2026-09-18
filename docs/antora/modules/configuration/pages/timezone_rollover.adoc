@@ -23,7 +23,7 @@ NOTE: This feature is only relevant to daily rollovers where `RollCycle` is one 
 ----
 
 NOTE: `rollTime()` allows the rollover time of the cycle file to be controlled in both Chronicle Queue open-source and Chronicle QueueEnterprise Edition. +
-If this is used with in the open-source version, any `zoneId` other than `UTC` will be converted to `UTC`, and a warning message logged.
+In the open-source version only `UTC` (or `Z`) is support; any other `zoneId` logs a warning and causes `build()` to throw `IllegalStateException`, due to configurable time zone rollover being an Enterprise feature.
 
 == Examples
 

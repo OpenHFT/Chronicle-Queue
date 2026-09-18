@@ -16,8 +16,8 @@ Pre-touching involves accessing pages of files/memory that are likely accessed i
 
 There are two ways to perform pre-touching, outlined below:
 
-Triggering pre-touches manually ::
-Perform pre-touching once for the current appender using `ExcerptAppender.pretouch()`
+Triggering pre-touches manually ★ ::
+Perform pre-touching once for the current appender using `ExcerptAppender.pretouch()` _(Enterprise feature)_
 Automatically pre-touching using Chronicle's preloader ★ ::
 The preloader automatically pre-touches segments at a given time interval _(Enterprise feature)_.
 
@@ -63,6 +63,22 @@ ChronicleQueue queue = ChronicleQueue.singleBuilder(".")
 ----
 
 <1> Interval in milliseconds to invoke the preloader
+
+=== In Process Pre-Touching ★
+
+It is possible to configure periodical pre-touching in-process. A pre-toucher `EventHandler` can be created and attached to an `EventLoop`
+
+[source, java]
+----
+EventLoop eg = EventGroupBuilder.builder().build();
+EventHandler handler = queue.createPretoucherEventHandler();
+eg.addHandler(handler);
+
+// make sure the event loop is started
+eg.start();
+----
+
+The handler will run in the monitoring thread and its interval can be configured with the system property `pretoucher.event_handler_delay_ms` (default is 250ms)
 
 IMPORTANT: The preloader is part of Chronicle Queue Enterprise.
 
