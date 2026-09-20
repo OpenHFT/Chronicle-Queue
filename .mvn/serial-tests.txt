@@ -1,3 +1,4 @@
-# FIX-292: develop already runs this suite with four reused workers.
-# Only demonstrated exceptions belong here. This non-matching sentinel keeps an empty serial execution empty.
-%regex[^$]
+# FIX-292: exceptions supported by observed local and platform CI failures.
+# Java 21 Surefire worker exited 134 during RollCycleTest; keep this class serial/fresh pending a new CI run. Isolation is not a diagnosis of the JVM crash.
+# TeamCity builds: 1365955
+net/openhft/chronicle/queue/impl/single/RollCycleTest.java
