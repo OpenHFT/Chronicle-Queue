@@ -246,9 +246,19 @@
                 <executions>
                     <execution>
                         <id>attach-sources</id>
+                        <phase>none</phase>
                         <goals>
                             <goal>jar</goal>
                             <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                    <!-- The package lifecycle has already generated sources; avoid repeating its earlier phases. -->
+                    <execution>
+                        <id>attach-sources-no-fork</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                            <goal>test-jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
