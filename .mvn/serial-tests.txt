@@ -1,0 +1,343 @@
+# Static FIX-292 isolation snapshot, 2026-09-20. Provisional entries require review before removal.
+# references changed/named test fixture
+net/openhft/chronicle/queue/AcquireReleaseTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/AppenderListenerTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/CheckHalfWrittenMsgNotSeenByTailerTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/ChronicleAppenderCycleTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/ChronicleHistoryReaderMainCliTest.java
+# Open PRs #1706
+net/openhft/chronicle/queue/ChronicleHistoryReaderMainTest.java
+# Open PRs #1741
+net/openhft/chronicle/queue/ChronicleQueueIndexTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ChronicleQueueMethodsWithoutParametersTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ChronicleQueueTest.java
+# affinity-or-global-handler
+net/openhft/chronicle/queue/ChronicleQueueTwoThreadsTest.java
+# process-global-setting
+net/openhft/chronicle/queue/ChronicleReaderMainCliTest.java
+# Open PRs #1770; process-global-setting
+net/openhft/chronicle/queue/ChronicleReaderMainTest.java
+# Open PRs #1700, #1705, #1756, #1770
+net/openhft/chronicle/queue/ChronicleRollingIssueTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ChronicleWriterMainCliTest.java
+# Open PRs #1705, #1770
+net/openhft/chronicle/queue/ChunkCountTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ContendedWriterTest.java
+# Open PRs #1700, #1741
+net/openhft/chronicle/queue/CreateAtIndexTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/CycleNotFoundTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/DiskSpaceMonitoringIntegrationTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/DtoBytesMarshallableTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/DumpQueueMainTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ExcerptAppenderTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/ExcerptCommonTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/ExcerptTailerTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/HugetlbfsTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/IgnoreMethodBasedOnFirstArgTest.java
+# process-global-setting
+net/openhft/chronicle/queue/IncompleteMessageTest.java
+# Open PRs #1740, #1741
+net/openhft/chronicle/queue/InternalAppenderWriteBytesTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/LastAcknowledgedTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/LastIndexAppendedTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/LatinCharTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/MappedFileSafeLimitTooSmallTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/MarshallableTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/MessageReaderWriterTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/MethodReaderObjectReuseTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/MoveIndexAfterFailedTailerTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/MoveToCycleMultiThreadedStressTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/MultipleNamedTailersTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/NoDataIsSkippedWithInterruptTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/NoMessageHistoryTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/OvertakeTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ProxyTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/QueueAppendAfterRollReplayedIssueTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/QueueReadBackwardsTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/QueueReadForwardSkippingACycleBiggerThanADayTest.java
+# Open PRs #1700; affinity-or-global-handler
+net/openhft/chronicle/queue/QueueTestCommonDiagnosticsTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/QueueTestCommonDiskSpaceTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/QueueWriteDocumentContextTest.java
+# process-global-setting
+net/openhft/chronicle/queue/RareAppenderLatencyTest.java
+# Open PRs #1301
+net/openhft/chronicle/queue/RawAccessJavaTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ReadOneBackwardsTest.java
+# Open PRs #1700, #1752, #1753
+net/openhft/chronicle/queue/ReadWriteTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/ReadmeTest.java
+# process-global-setting
+net/openhft/chronicle/queue/RollCycleDefaultingTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/RollCyclesDistinctnessTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/RollCyclesTest.java
+# Open PRs #1443; process-global-setting
+net/openhft/chronicle/queue/SingleChroniclePerfMainTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/Stackoveflow52274284Test.java
+# Open PRs #1770
+net/openhft/chronicle/queue/StoreTailerNotReachedTest.java
+# Open PRs #1443
+net/openhft/chronicle/queue/StridingAQueueTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/SurefireInterruptFlagTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/TableStorePutGetTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/TailerCloseInParallelTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/TailerDirectionTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/TestCallingToEndOnRoll.java
+# Open PRs #1730, #1737, #1739, #1755, #1756
+net/openhft/chronicle/queue/TestDeleteQueueFile.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ThreadedQueueTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ToEndPaddingTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/ValueStringArrayTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/VisibilityOfMessagesBetweenTailorsAndAppenderTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/WeeklyRollCycleTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/WriteBytesTest.java
+# Open PRs #1443, #1700, #1770
+net/openhft/chronicle/queue/WriteReadTextTest.java
+# Open PRs #1699, #1700
+net/openhft/chronicle/queue/cleanup/OnReleaseTest.java
+# Open PRs #1699, #1739
+net/openhft/chronicle/queue/impl/RollingChronicleQueueTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/RollingResourcesCacheCompatTest.java
+# Open PRs #1699, #1739, #1741
+net/openhft/chronicle/queue/impl/RollingResourcesCacheTest.java
+# Open PRs #1716, #1718, #1724, #1745
+net/openhft/chronicle/queue/impl/TableStoreTest.java
+# Open PRs #1699, #1700
+net/openhft/chronicle/queue/impl/single/AppenderFileHandleLeakTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/AppenderReleasesParkedStoreTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/impl/single/CheckIndicesTest.java
+# Open PRs #1739, #1741
+net/openhft/chronicle/queue/impl/single/CycleOverflowTest.java
+# Open PRs #1699; process-global-setting
+net/openhft/chronicle/queue/impl/single/DocumentOrderingTest.java
+# Open PRs #1756, #1770, #1775
+net/openhft/chronicle/queue/impl/single/EmptyRollCycleTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/impl/single/EntryCountNotBehindReadTest.java
+# process-global-setting
+net/openhft/chronicle/queue/impl/single/EofMarkerOnEmptyQueueTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/ExcerptsSkippedWhenTailerDirectionNoneTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/FileModificationTimeTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/IndexOffsetTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/IndexTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/IndexingLastSequenceNumberTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/IndexingMoveToCycleTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/IndexingMoveToIndexTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/IndexingSpacingAndCountTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/IndexingToEndTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/impl/single/InternalAppenderTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/JunkAfterShorterWriteTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/MappedMemoryUnmappingTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/MessageHistoryTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/MetadataDeletionTests.java
+# Open PRs #1770
+net/openhft/chronicle/queue/impl/single/MicroToucherTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/MoveToIndexTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/impl/single/MoveToWrongIndexThenToEndTest.java
+# Open PRs #1741, #1745, #1770; process-global-setting
+net/openhft/chronicle/queue/impl/single/NormaliseEOFsTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/impl/single/NotCompleteTest.java
+# Open PRs #1705, #1756
+net/openhft/chronicle/queue/impl/single/PartialUpdateTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/QueueEpochTest.java
+# Open PRs #1699; process-global-setting
+net/openhft/chronicle/queue/impl/single/QueueLockTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/ReferenceCountedCacheTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/RestartableTailerTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/RollAtEndOfCycleTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/RollCycleEncodeSequenceTest.java
+# Open PRs #1699, #1739
+net/openhft/chronicle/queue/impl/single/RollCycleTest.java
+# Open PRs #1700, #1739, #1770
+net/openhft/chronicle/queue/impl/single/RollingCycleTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/impl/single/SingleCQFormat2Test.java
+# Open PRs #1699, #1739
+net/openhft/chronicle/queue/impl/single/SingleCQFormatTest.java
+# Open PRs #1700, #1729
+net/openhft/chronicle/queue/impl/single/SingleChronicleQueueBuilderTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/SingleChronicleQueueCloseTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/impl/single/SingleChronicleQueueStoreTest.java
+# Open PRs #1739, #1740, #1741, #1745, #1770
+net/openhft/chronicle/queue/impl/single/SingleChronicleQueueTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/SparseBinarySearchTest.java
+# Open PRs #1741, #1756
+net/openhft/chronicle/queue/impl/single/StoreAppenderInternalWriteBytesTest.java
+# Open PRs #1739, #1740, #1741, #1770
+net/openhft/chronicle/queue/impl/single/StoreAppenderTest.java
+# Open PRs #1739, #1740, #1756
+net/openhft/chronicle/queue/impl/single/StoreTailerTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/StuckQueueTest.java
+# Open PRs #1739, #1774
+net/openhft/chronicle/queue/impl/single/TableDirectoryListingTest.java
+# Open PRs #1699, #1700, #1770; process-global-setting
+net/openhft/chronicle/queue/impl/single/TableStoreWriteLockTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/TailerIndexingQueueTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/TailerPollingEmptyQueueTest.java
+# Open PRs #1756, #1770
+net/openhft/chronicle/queue/impl/single/TailerSequenceRaceConditionTest.java
+# Open PRs #1752, #1770
+net/openhft/chronicle/queue/impl/single/TestBinarySearch.java
+# Open PRs #1700
+net/openhft/chronicle/queue/impl/single/TestEmptyFile.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/TestSecondlyIndexSizeTest.java
+# Open PRs #1699
+net/openhft/chronicle/queue/impl/single/ToEndInvalidIndexTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/ToEndTest.java
+# Open PRs #1741, #1770
+net/openhft/chronicle/queue/impl/single/WriteBytesIndexTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/jira/Queue28Test.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/jira/Queue36Test.java
+# references an isolated test or inherited/shared fixture
+net/openhft/chronicle/queue/impl/single/stress/RollCycleMultiThreadStressDoubleBufferTest.java
+# references an isolated test or inherited/shared fixture
+net/openhft/chronicle/queue/impl/single/stress/RollCycleMultiThreadStressPretouchEATest.java
+# references an isolated test or inherited/shared fixture
+net/openhft/chronicle/queue/impl/single/stress/RollCycleMultiThreadStressPretouchTest.java
+# references an isolated test or inherited/shared fixture
+net/openhft/chronicle/queue/impl/single/stress/RollCycleMultiThreadStressReadOnlyTest.java
+# references an isolated test or inherited/shared fixture
+net/openhft/chronicle/queue/impl/single/stress/RollCycleMultiThreadStressSharedWriterQueueTest.java
+# Open PRs #1699, #1752, #1753; affinity-or-global-handler; process-global-setting
+net/openhft/chronicle/queue/impl/single/stress/RollCycleMultiThreadStressTest.java
+# Open PRs #1699, #1739
+net/openhft/chronicle/queue/impl/single/stress/RollCycleMultiThreadTest.java
+# Open PRs #1752
+net/openhft/chronicle/queue/impl/single/stress/backwardstailer/BackwardsTailerBoundaryTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/impl/single/stress/backwardstailer/BackwardsTailerToEndPerfAcceptanceTest.java
+# Open PRs #1699, #1745
+net/openhft/chronicle/queue/impl/table/SingleTableStoreIntegrationTests.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/internal/main/InternalDumpMainTest.java
+# process-global-setting
+net/openhft/chronicle/queue/internal/main/InternalRemovableRollFileCandidatesMainTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/internal/reader/ChronicleHistoryReaderTest.java
+# Open PRs #1657, #1755, #1770
+net/openhft/chronicle/queue/internal/reader/ChronicleMethodReaderTest.java
+# Open PRs #1657, #1699, #1700, #1756, #1770
+net/openhft/chronicle/queue/internal/reader/ChronicleReaderTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/internal/reader/FieldlessMethodReaderTest.java
+# Open PRs #1700, #1756, #1770
+net/openhft/chronicle/queue/internal/reader/ReaderProcessOutputTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/internal/reader/RollEOFTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/internal/util/InternalFileUtilLinuxStateTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/internal/writer/ChronicleWriterTest.java
+# Open PRs #1700, #1739, #1741, #1770
+net/openhft/chronicle/queue/issue/ChangeRollCycleTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/issue/DeleteFileTest.java
+# Open PRs #1700
+net/openhft/chronicle/queue/issue/ReaderResizesFileTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/issue/TailerTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/jitter/BareSyncTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/main/DumpMainTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/method/BrokenChainTest.java
+# Open PRs #1770
+net/openhft/chronicle/queue/micros/OrderManagerTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/namedtailer/NamedTailerPreconditionTest.java
+# Open PRs #1699, #1770
+net/openhft/chronicle/queue/namedtailer/NamedTailerVersioningTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/util/FileUtilTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/util/PretouchUtilTest.java
+# references changed/named test fixture
+net/openhft/chronicle/queue/util/RollCyclesAsciiDocGeneratingTest.java

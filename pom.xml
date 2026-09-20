@@ -24,6 +24,8 @@
         <!-- Define the target coverage thresholds as properties -->
         <jacoco.line.coverage>0.788</jacoco.line.coverage>
         <jacoco.branch.coverage>0.713</jacoco.branch.coverage>
+        <chronicle.test.forkCount>8</chronicle.test.forkCount>
+        <chronicle.test.reuseForks>true</chronicle.test.reuseForks>
     </properties>
 
     <dependencyManagement>
@@ -256,8 +258,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <forkCount>4</forkCount>
-                    <reuseForks>true</reuseForks>
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
                     <!-- Keep the first failure visible, including when CI requests retries. -->
                     <rerunFailingTestsCount>0</rerunFailingTestsCount>
                     <runOrder>hourly</runOrder>
@@ -606,6 +608,72 @@
                             <!-- Disable unit tests -->
                             <skip>true</skip>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Use -T1: forkCount is a limit per execution, not across reactor modules. -->
+            <id>chronicle-eight-default</id>
+            <activation>
+                <property>
+                    <name>!test</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-test</id>
+                                <configuration>
+                                    <forkCount>${chronicle.test.forkCount}</forkCount>
+                                    <reuseForks>${chronicle.test.reuseForks}</reuseForks>
+                                    <excludes>
+                                        <exclude>**/*$*</exclude>
+                                    </excludes>
+                                    <excludesFile>${project.basedir}/.mvn/serial-tests.txt</excludesFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>serial-tests</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <forkCount>1</forkCount>
+                                    <reuseForks>false</reuseForks>
+                                    <!-- An empty list must select nothing, not Surefire's defaults. -->
+                                    <includes combine.self="override">
+                                        <include>%regex[^$]</include>
+                                    </includes>
+                                    <includesFile>${project.basedir}/.mvn/serial-tests.txt</includesFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>test-serial</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-test</id>
+                                <configuration>
+                                    <forkCount>1</forkCount>
+                                    <reuseForks>false</reuseForks>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
