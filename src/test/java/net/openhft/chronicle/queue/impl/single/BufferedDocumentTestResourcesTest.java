@@ -8,12 +8,43 @@ import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
 public class BufferedDocumentTestResourcesTest {
+    @Test
+    public void closesResourceCreatedAfterConstructionWaitTimesOut() throws Exception {
+        ExecutorService worker = Executors.newSingleThreadExecutor();
+        BufferedDocumentTestResources resources = new BufferedDocumentTestResources(worker);
+        CountDownLatch started = new CountDownLatch(1);
+        AtomicBoolean closed = new AtomicBoolean();
+        Future<?> construction = worker.submit(() -> {
+            started.countDown();
+            try {
+                new CountDownLatch(1).await();
+            } catch (InterruptedException expected) {
+                // Complete acquisition after teardown has started, as a timed-out factory can do.
+            }
+            resources.own(() -> {
+                assertTrue(worker.isTerminated());
+                closed.set(true);
+            });
+        });
+        try {
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            assertThrows(TimeoutException.class, () -> construction.get(50, TimeUnit.MILLISECONDS));
+            resources.close();
+            construction.get(5, TimeUnit.SECONDS);
+            assertTrue(closed.get());
+        } finally {
+            resources.close();
+        }
+    }
+
     @Test
     @SuppressWarnings("try")
     public void failedJoinRetainsStorageAndTheOriginalFailure() throws Exception {
