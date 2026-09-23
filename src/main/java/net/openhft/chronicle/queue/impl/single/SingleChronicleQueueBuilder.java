@@ -285,8 +285,15 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 queue.indexCount(),
                 queue.indexSpacing());
 
-        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
-        return wireStore;
+        //! StoreAcquisitionFailureTest#headerSerialisationFailureReleasesConstructedStore injects failure before the factory returns.
+        //! The supplier cannot close a store it has not received; release its bindings and file reservation here, not just its Bytes.
+        try {
+            wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+            return wireStore;
+        } catch (RuntimeException | Error e) {
+            Closeable.closeQuietly(wireStore);
+            throw e;
+        }
     }
 
     /**

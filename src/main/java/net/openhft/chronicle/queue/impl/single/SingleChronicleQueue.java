@@ -1404,6 +1404,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             @NotNull final RollingResourcesCache.Resource dateValue = that
                     .dateCache.resourceFor(cycle);
             MappedBytes mappedBytes = null;
+            SingleChronicleQueueStore wireStore = null;
+            boolean acquired = false;
             try {
                 File path = dateValue.path;
 
@@ -1440,7 +1442,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 wire.pauser(pauserSupplier.get());
                 wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
-                SingleChronicleQueueStore wireStore;
                 try {
                     if (!readOnly && createStrategy == CreateStrategy.CREATE && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
@@ -1457,12 +1458,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             mappedFileCache.remove(path);
 
                             if (!readOnly && createStrategy != CreateStrategy.READ_ONLY && cycleFileRenamed != cycle) {
-                                SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycle, cycleFile));
+                                SingleChronicleQueueStore recovered = acquire(cycle, backupCycleFile(cycle, cycleFile));
 
-                                if (acquired == null)
+                                if (recovered == null)
                                     throw e;
 
-                                return acquired;
+                                return recovered;
                             }
 
                             if (Jvm.debug().isEnabled(SingleChronicleQueue.class)) {
@@ -1472,12 +1473,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         }
 
                         final ValueIn valueIn = readWireStoreValue(wire);
-                        try {
-                            wireStore = valueIn.typedMarshallable();
-                        } catch (Throwable t) {
-                            mappedBytes.close();
-                            throw t;
-                        }
+                        wireStore = valueIn.typedMarshallable();
                     }
                 } catch (InternalError e) {
                     long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
@@ -1490,11 +1486,22 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     }
                     throw e;
                 }
+                acquired = wireStore != null;
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {
-                Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            } finally {
+                //! StoreAcquisitionFailureTest#factoryFailureReleasesProvisionalBytes covers unchecked failures (including Error)
+                //! before ownership reaches a store; catching only IOException leaks a mapping after a wrapped map failure.
+                //! #indexInitialisationFailureReleasesConstructedStore covers failure after construction: closing only the Bytes
+                //! leaves the store's separate mapped-file reservation live. Successful acquisition transfers both to the caller.
+                if (!acquired) {
+                    if (wireStore != null)
+                        Closeable.closeQuietly(wireStore);
+                    else
+                        Closeable.closeQuietly(mappedBytes);
+                }
             }
         }
 
