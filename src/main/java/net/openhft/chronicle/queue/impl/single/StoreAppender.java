@@ -1261,6 +1261,10 @@ class StoreAppender extends AbstractCloseable
         public void close(boolean unlock) {
             if (!closePreconditionsAreSatisfied()) return;
 
+            //! BufferedDocumentOwnershipTest#bufferedRollbackDoesNotUnlockAnotherAppender fails if private-buffer
+            //! rollback releases the PID-owned lock held by another appender. A buffered context owns no mapped
+            //! write lock; its eventual writeBytes call acquires/releases its own lock, including on failure.
+            unlock &= !buffered;
             try {
                 handleInterrupts();
                 if (handleRollbackOnClose()) return;
@@ -1270,8 +1274,6 @@ class StoreAppender extends AbstractCloseable
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
-                        unlock = false;
-                        wire.clear();
                     } else {
                         writeBytesInternal(wire.bytes(), metaData);
                         wire = StoreAppender.this.wire;
@@ -1283,7 +1285,15 @@ class StoreAppender extends AbstractCloseable
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
-                closeCleanup(unlock);
+                //! BufferedDocumentOwnershipTest#failedBufferedFlushDoesNotLeakPayloadIntoNextDocument rejects a
+                //! flush before copying, then reuses the buffer. Clear even on failure: success-only clearing makes
+                //! the next document publish payload from the rejected operation. Cleanup still runs if clear fails.
+                try {
+                    if (buffered && wire != null)
+                        wire.clear();
+                } finally {
+                    closeCleanup(unlock);
+                }
             }
         }
 
