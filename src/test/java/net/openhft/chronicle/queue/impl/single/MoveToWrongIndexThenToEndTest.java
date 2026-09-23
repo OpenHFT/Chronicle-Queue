@@ -82,7 +82,6 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
 
     @Test
     public void testBufferUnderflowException() throws InterruptedException {
-        finishedNormally = false;
         append();
         append();
 
@@ -134,7 +133,6 @@ public class MoveToWrongIndexThenToEndTest extends QueueTestCommon {
                 }
             }
         }
-        finishedNormally = true;
     }
 
     private long getLastIndex(Path queuePath) {

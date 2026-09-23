@@ -35,6 +35,11 @@ public class QueueLockTest extends QueueTestCommon {
 
     @Test
     public void testRecover() throws InterruptedException {
+        // The original writer releases a lock already released by the forced recovery.
+        expectException(key -> key.clazz() == TableStoreWriteLock.class
+                && key.message() != null
+                && key.message().startsWith("Write lock was already unlocked. For the lock file:")
+                && key.throwable() == null, "Original writer releases the forcibly recovered lock");
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try {
             check(false);
@@ -47,7 +52,6 @@ public class QueueLockTest extends QueueTestCommon {
     }
 
     private void check(boolean shouldThrowException) throws InterruptedException {
-        finishedNormally = false;
         ignoreException("Couldn't acquire write lock");
         if (!shouldThrowException)
             expectException("Forced unlock for the lock");
@@ -104,7 +108,6 @@ public class QueueLockTest extends QueueTestCommon {
                     assertTrue("timeout, time: " + time, time >= timeoutMs);
                 }
             }
-            finishedNormally = true;
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }

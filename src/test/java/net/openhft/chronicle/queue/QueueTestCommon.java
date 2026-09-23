@@ -23,6 +23,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -36,6 +40,7 @@ import java.util.stream.Stream;
 import static net.openhft.chronicle.core.onoes.LogLevel.DEBUG;
 import static net.openhft.chronicle.core.onoes.LogLevel.PERF;
 
+@ExtendWith(QueueTestCommon.JupiterLifecycle.class)
 public class QueueTestCommon {
     private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
@@ -44,10 +49,14 @@ public class QueueTestCommon {
     private final List<File> tmpDirs = new ArrayList<>();
 
     private ThreadDump threadDump;
+    /** @deprecated Binary compatibility only; verification uses the JUnit outcome. */
+    @Deprecated
     protected boolean finishedNormally;
     protected ExceptionTracker<ExceptionKey> exceptionTracker;
     private Map<ExceptionKey, Integer> recordedExceptions;
     private String diagnosticTestName = getClass().getName();
+    private String currentMethodName;
+    private boolean referenceTracingEnabled;
 
     static {
         System.setProperty("queue.check.index", "true");
@@ -63,6 +72,56 @@ public class QueueTestCommon {
 
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
+
+    @Rule(order = Integer.MIN_VALUE)
+    public final TestRule resourceLifecycle() {
+        return RuleChain.outerRule(new TestWatcher() {
+            @Override protected void finished(Description description) {
+                resetTestState();
+            }
+        }).around(new Verifier() {
+            @Override protected void verify() {
+                verifySuccessfulTest();
+            }
+        });
+    }
+
+    public static final class JupiterLifecycle implements BeforeEachCallback, AfterEachCallback {
+        @Override
+        public void beforeEach(ExtensionContext context) {
+            QueueTestCommon fixture = fixture(context);
+            fixture.currentMethodName = context.getRequiredTestMethod().getName();
+            fixture.diagnosticTestName = context.getRequiredTestClass().getName() + "." + fixture.currentMethodName;
+            fixture.recordTargetDirContents();
+            fixture.recordDiskSpace();
+            fixture.clearMessageHistory();
+            fixture.enableReferenceTracing();
+            fixture.recordExceptions();
+        }
+
+        @Override
+        public void afterEach(ExtensionContext context) {
+            QueueTestCommon fixture = fixture(context);
+            Throwable failure = attempt(null, fixture::afterChecks);
+            failure = attempt(failure, fixture::checkSpaceUsed);
+            failure = attempt(failure, fixture::deleteTargetDirTestArtifacts);
+            Throwable primary = context.getExecutionException().orElse(null);
+            if (primary == null && failure == null)
+                failure = attempt(null, fixture::verifySuccessfulTest);
+            failure = attempt(failure, fixture::resetTestState);
+            if (failure != null) {
+                if (primary != null && !(primary instanceof org.opentest4j.TestAbortedException))
+                    primary.addSuppressed(failure);
+                else
+                    throw Jvm.rethrow(failure);
+            }
+        }
+
+        private static QueueTestCommon fixture(ExtensionContext context) {
+            return context.getRequiredTestInstances().findInstance(QueueTestCommon.class)
+                    .orElseThrow(() -> new IllegalStateException("Missing Queue test fixture"));
+        }
+    }
 
     @NotNull
     @Rule
@@ -86,7 +145,7 @@ public class QueueTestCommon {
 
     @NotNull
     protected File getTmpDir() {
-        final String methodName = testName.getMethodName();
+        final String methodName = testName.getMethodName() == null ? currentMethodName : testName.getMethodName();
         String name = methodName == null ? "unknown" : methodName;
         final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
         tmpDirs.add(tmpDir);
@@ -135,9 +194,9 @@ public class QueueTestCommon {
         return new File(OS.getTarget()).getFreeSpace();
     }
 
-    @Before
+    /** @deprecated Compatibility bridge; JUnit determines whether verification runs. */
+    @Deprecated
     public void assumeFinishedNormally() {
-        finishedNormally = true;
     }
 
     @Before
@@ -148,6 +207,7 @@ public class QueueTestCommon {
     @Before
     public void enableReferenceTracing() {
         AbstractReferenceCounted.enableReferenceTracing();
+        referenceTracingEnabled = true;
     }
 
     public void assertReferencesReleased() {
@@ -224,7 +284,7 @@ public class QueueTestCommon {
      */
     @After
     public void deleteTargetDirTestArtifacts() {
-        if (HugetlbfsTestUtil.isHugetlbfsAvailable()) {
+        if (targetAllowList != null && HugetlbfsTestUtil.isHugetlbfsAvailable()) {
             String target = OS.getTarget();
             File[] files = new File(target).listFiles();
             if (files == null) {
@@ -250,20 +310,51 @@ public class QueueTestCommon {
     public void afterChecks() {
         // Report before cleanup can fail or exception checking can consume an expected warning.
         reportMethodWriterFallback();
-        preAfter();
-        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
-        CleaningThread.performCleanup(Thread.currentThread());
+        Throwable failure = attempt(null, this::preAfter);
+        failure = attempt(failure, () -> SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE);
+        failure = attempt(failure, () -> CleaningThread.performCleanup(Thread.currentThread()));
+        failure = attempt(failure, this::tearDown);
+        if (failure != null)
+            throw Jvm.rethrow(failure);
+    }
 
-        // find any discarded resources.
-        AbstractCloseable.waitForCloseablesToClose(100);
-
-        if (finishedNormally) {
-            assertReferencesReleased();
-            checkThreadDump();
+    private void verifySuccessfulTest() {
+        if (exceptionTracker != null)
             checkExceptions();
-        }
+        Throwable failure = attempt(null, () -> AbstractCloseable.waitForCloseablesToClose(100));
+        if (referenceTracingEnabled)
+            failure = attempt(failure, this::assertReferencesReleased);
+        failure = attempt(failure, this::checkThreadDump);
+        if (failure != null)
+            throw Jvm.rethrow(failure);
+    }
 
-        tearDown();
+    private void resetTestState() {
+        Throwable failure = attempt(null, Jvm::resetExceptionHandlers);
+        if (referenceTracingEnabled)
+            failure = attempt(failure, AbstractReferenceCounted::disableReferenceTracing);
+        referenceTracingEnabled = false;
+        threadDump = null;
+        exceptionTracker = null;
+        recordedExceptions = null;
+        targetAllowList = null;
+        currentMethodName = null;
+        tmpDirs.clear();
+        SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
+        if (failure != null)
+            throw Jvm.rethrow(failure);
+    }
+
+    private static Throwable attempt(Throwable failure, Runnable action) {
+        try {
+            action.run();
+        } catch (Throwable next) {
+            if (failure == null)
+                return next;
+            if (failure != next)
+                failure.addSuppressed(next);
+        }
+        return failure;
     }
 
     private void reportMethodWriterFallback() {
