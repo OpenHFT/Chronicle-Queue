@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -26,6 +25,7 @@ import static org.junit.Assert.assertTrue;
  * This test case replicates the assertion error in Chronicle StoreAppender's checkWritePositionHeaderNumber() method. see
  * https://github.com/OpenHFT/Chronicle-Queue/issues/611
  */
+@SuppressWarnings("try")
 public class ChronicleAppenderCycleTest extends QueueTestCommon {
 
     private static final long LATCH_TIMEOUT_MS = 5000;
@@ -40,18 +40,16 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
     public void testAppenderCycle() throws IOException {
         String id = "testAppenderCycle";
         Bytes<?> msg = Bytes.allocateDirect(64);
-        try {
+        try (FixtureCleanup ignored = new FixtureCleanup(msg::releaseLast)) {
             int n = 20;
             for (int i = 0; i < n; ++i)
                 runTest(id + '-' + i, msg);
-        } finally {
-            msg.releaseLast();
         }
     }
 
     private void runTest(String id, Bytes<?> msg) throws IOException {
         Path path = IOTools.createTempDirectory(id);
-        try {
+        try (FixtureCleanup ignored = FixtureCleanup.deleting(path.toFile())) {
             CountDownLatch steady = new CountDownLatch(2);
             CountDownLatch go = new CountDownLatch(1);
             CountDownLatch done = new CountDownLatch(2);
@@ -81,9 +79,6 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
 
             assertNull(thr1.get());
             assertNull(thr2.get());
-        } finally {
-            BackgroundResourceReleaser.releasePendingResources();
-            IOTools.deleteDirWithFilesOrThrow(path.toFile());
         }
     }
 

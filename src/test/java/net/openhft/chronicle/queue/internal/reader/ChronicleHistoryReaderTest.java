@@ -6,10 +6,9 @@ package net.openhft.chronicle.queue.internal.reader;
 import net.openhft.chronicle.bytes.MethodId;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.FixtureCleanup;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.reader.ChronicleHistoryReader;
@@ -25,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 
+@SuppressWarnings("try")
 public class ChronicleHistoryReaderTest extends QueueTestCommon {
 
     @Test
@@ -55,7 +55,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         File queuePath1 = getTmpDir();
         File queuePath2 = getTmpDir();
         File queuePath3 = getTmpDir();
-        try {
+        try (FixtureCleanup ignored = FixtureCleanup.deleting(queuePath1, queuePath2, queuePath3)) {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out
                         .methodWriterBuilder(dummyClass)
@@ -113,8 +113,6 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 Assert.assertEquals(5, histos.size());
                 Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
             }
-        } finally {
-            deleteHistoryStores(queuePath1, queuePath2, queuePath3);
         }
     }
 
@@ -207,7 +205,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         File queuePath1 = getTmpDir();
         File queuePath2 = getTmpDir();
         File queuePath3 = getTmpDir();
-        try {
+        try (FixtureCleanup ignored = FixtureCleanup.deleting(queuePath1, queuePath2, queuePath3)) {
             StringBuilder sb = new StringBuilder();
             try (ChronicleQueue q1 = queue(queuePath1, 1);
                  ChronicleQueue q2 = queue(queuePath2, 2);
@@ -261,20 +259,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                                 "worst:                     9           19            9           19           60 \n",
                         sb.toString());
             }
-        } finally {
-            deleteHistoryStores(queuePath1, queuePath2, queuePath3);
         }
-    }
-
-    //! History stores can still have deferred mapping releases after queue.close(). Drain them
-    //! before deletion, and make a failed deletion visible. Register paths with QueueTestCommon
-    //! as well so its final cleanup still owns them if an earlier cleanup step fails.
-    //! Controls: testWithQueueHistoryRecordHistoryInitial[MethodIds], testPredictable,
-    //! testPredictableStartIndex and testPredictableMeasurementWindow.
-    private void deleteHistoryStores(File... paths) {
-        BackgroundResourceReleaser.releasePendingResources();
-        for (File path : paths)
-            IOTools.deleteDirWithFilesOrThrow(path);
     }
 
     @NotNull

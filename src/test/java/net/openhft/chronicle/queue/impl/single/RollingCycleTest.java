@@ -5,13 +5,12 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.FixtureCleanup;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,6 +19,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
@@ -29,6 +29,7 @@ import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings("try")
 public class RollingCycleTest extends QueueTestCommon {
     private final boolean named;
 
@@ -52,7 +53,9 @@ public class RollingCycleTest extends QueueTestCommon {
 
         String basePath = getTmpDir().getAbsolutePath();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
+        // Declare deletion first so it runs after queue/appender close and preserves the primary failure.
+        try (FixtureCleanup ignored = FixtureCleanup.deleting(new File(basePath));
+             final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .timeoutMS(5)
                 .rollCycle(TEST_DAILY)
@@ -284,12 +287,6 @@ public class RollingCycleTest extends QueueTestCommon {
                 expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
             assertEquals(expected, dump);
 
-        } finally {
-            //! Windows cannot delete the mapped first cycle while this fixture still owns its queue.
-            //! Close the appender/queue first, drain deferred unmapping, then require deletion even on failure.
-            //! Control: testRollCycle with both named and unnamed tailers; preserve its exact page-size dump.
-            BackgroundResourceReleaser.releasePendingResources();
-            IOTools.deleteDirWithFilesOrThrow(basePath);
         }
     }
 

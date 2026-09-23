@@ -3706,7 +3706,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 }
             }, "condition-appender-test");
             worker.start();
-            try {
+            try (FixtureCleanup ignored = new FixtureCleanup(() -> finishConditionWorker(worker, gotAppender.get()))) {
                 assertTrue("Worker did not enter appender creation", entered.await(1, TimeUnit.SECONDS));
                 assertTrue("Worker did not release its lock in await", createAppenderLock.tryLock(1, TimeUnit.SECONDS));
                 try {
@@ -3718,17 +3718,33 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 YieldingPauser pauser = new YieldingPauser(0);
                 while (!gotAppender.get() && workerFailure.get() == null)
                     pauser.pause(1, TimeUnit.SECONDS);
-            } finally {
-                if (!gotAppender.get())
-                    worker.interrupt();
-                worker.join(1000);
-                if (worker.isAlive()) {
-                    worker.interrupt();
-                    worker.join(1000);
-                }
-                assertFalse("Appender worker survived fixture cleanup", worker.isAlive());
             }
             assertNull("Appender worker failed", workerFailure.get());
+        }
+    }
+
+    static void finishConditionWorker(Thread worker, boolean gotAppender) {
+        boolean interrupted = Thread.interrupted();
+        if (!gotAppender)
+            worker.interrupt();
+        try {
+            // Keep the existing two one-second join budgets, including the grace period after acquisition.
+            for (int attempt = 0; attempt < 2 && worker.isAlive(); attempt++) {
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+                while (worker.isAlive() && System.nanoTime() < deadline) {
+                    try {
+                        TimeUnit.NANOSECONDS.timedJoin(worker, Math.max(1, deadline - System.nanoTime()));
+                    } catch (InterruptedException ignored) {
+                        interrupted = true;
+                    }
+                }
+                if (worker.isAlive())
+                    worker.interrupt();
+            }
+            assertFalse("Appender worker survived fixture cleanup", worker.isAlive());
+        } finally {
+            if (interrupted)
+                Thread.currentThread().interrupt();
         }
     }
 
