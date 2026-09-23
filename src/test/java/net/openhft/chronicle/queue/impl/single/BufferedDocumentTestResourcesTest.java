@@ -15,6 +15,7 @@ import static org.junit.Assert.*;
 
 public class BufferedDocumentTestResourcesTest {
     @Test
+    @SuppressWarnings("try")
     public void failedJoinRetainsStorageAndTheOriginalFailure() throws Exception {
         ExecutorService worker = Executors.newSingleThreadExecutor();
         BufferedDocumentTestResources resources = new BufferedDocumentTestResources(worker, 100, TimeUnit.MILLISECONDS);
