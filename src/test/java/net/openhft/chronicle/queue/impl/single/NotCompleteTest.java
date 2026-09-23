@@ -31,6 +31,7 @@ import static org.junit.Assert.*;
  * We want to ensure that messages are completely written or not written - no half measures.
  */
 @RequiredForClient
+@SuppressWarnings("try")
 public class NotCompleteTest extends QueueTestCommon {
 
     @Override
@@ -43,7 +44,7 @@ public class NotCompleteTest extends QueueTestCommon {
     public void testInterruptOrExceptionDuringSerialisation() throws InterruptedException {
 
         final File tmpDir = DirectoryUtils.tempDir("testInterruptedDuringSerialisation");
-        try {
+        try (FixtureCleanup ignored = new FixtureCleanup(() -> deleteDirAfterCleanup(tmpDir))) {
             final List<String> names = Collections.synchronizedList(new ArrayList<>());
             final Person person1 = new Person(40, "Terry");
             final Person interrupter = new Person(50, Person.INTERRUPT);
@@ -126,8 +127,6 @@ public class NotCompleteTest extends QueueTestCommon {
                 assertEquals(person2.name, names.get(1));
                 assertFalse(reader.readOne());
             }
-        } finally {
-            deleteDirAfterCleanup(tmpDir);
         }
     }
 

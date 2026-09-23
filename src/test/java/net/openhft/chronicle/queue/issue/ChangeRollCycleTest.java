@@ -19,6 +19,7 @@ import static org.junit.Assert.assertFalse;
  * It checks the compatibility and visibility of data written with one Roll Cycle
  * and accessed with another.
  */
+@SuppressWarnings("try")
 public class ChangeRollCycleTest extends QueueTestCommon {
 
     @Test
@@ -56,7 +57,8 @@ public class ChangeRollCycleTest extends QueueTestCommon {
                 .rollCycle(RollCycles.FAST_DAILY)
                 .readOnly(readOnly);
         assertEquals("Builder should use the effective read-only mode", effectiveReadOnly, builder.readOnly());
-        try (ChronicleQueue q1 = builder.build();
+        try (FixtureCleanup ignored = new FixtureCleanup(() -> deleteDirAfterCleanup(new File(queuePath)));
+             ChronicleQueue q1 = builder.build();
              ExcerptTailer tailer = q1.createTailer()) {
 
             // Verify the queue is initially empty
@@ -104,9 +106,6 @@ public class ChangeRollCycleTest extends QueueTestCommon {
                     assertFalse("No more data should be present in the queue", dc.isPresent());
                 }
             }
-        } finally {
-            // Clean up the queue directory to avoid leaving test artifacts
-            deleteDirAfterCleanup(new File(queuePath));
         }
     }
 }

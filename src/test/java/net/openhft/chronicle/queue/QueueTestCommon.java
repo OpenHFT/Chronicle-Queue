@@ -359,20 +359,35 @@ public class QueueTestCommon {
 
     private static void deleteDirAfterCleanup(File dir, int maxDepth) {
         final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(DIRECTORY_DELETE_TIMEOUT_MS);
-        do {
-            BackgroundResourceReleaser.releasePendingResources();
-            if (!dir.exists())
-                return;
-            IOTools.deleteDirWithFiles(dir, maxDepth);
-            if (!dir.exists())
-                return;
-            Jvm.pause(10);
-        } while (System.nanoTime() < deadline && !Thread.currentThread().isInterrupted());
+        boolean interrupted = Thread.interrupted();
+        try {
+            do {
+                BackgroundResourceReleaser.releasePendingResources();
+                // The releaser restores interruption. Remember it without abandoning the original retry deadline.
+                interrupted |= Thread.interrupted();
+                if (!dir.exists())
+                    return;
+                IOTools.deleteDirWithFiles(dir, maxDepth);
+                if (!dir.exists())
+                    return;
+                long remaining = deadline - System.nanoTime();
+                if (remaining > 0) {
+                    try {
+                        TimeUnit.NANOSECONDS.sleep(Math.min(remaining, TimeUnit.MILLISECONDS.toNanos(10)));
+                    } catch (InterruptedException ignored) {
+                        interrupted = true;
+                    }
+                }
+            } while (System.nanoTime() < deadline);
 
-        if (dir.exists())
-            fail("Could not delete test directory " + dir.getAbsolutePath()
-                    + " within " + DIRECTORY_DELETE_TIMEOUT_MS + " ms (maximum depth " + maxDepth + "); remaining entries: "
-                    + Arrays.toString(dir.list()));
+            if (dir.exists())
+                fail("Could not delete test directory " + dir.getAbsolutePath()
+                        + " within " + DIRECTORY_DELETE_TIMEOUT_MS + " ms (maximum depth " + maxDepth + "); remaining entries: "
+                        + Arrays.toString(dir.list()));
+        } finally {
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
     }
 
     protected void tearDown() {

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RequiredForClient
+@SuppressWarnings("try")
 public class WriteBytesTest extends QueueTestCommon {
     private final Bytes<?> outgoingBytes = Bytes.elasticByteBuffer();
     private final byte[] incomingMsgBytes = new byte[100];
@@ -31,7 +32,8 @@ public class WriteBytesTest extends QueueTestCommon {
     @Test
     public void testWriteBytes() {
         File dir = getTmpDir();
-        try (ChronicleQueue queue = binary(dir)
+        try (FixtureCleanup ignored = new FixtureCleanup(() -> deleteDirAfterCleanup(dir));
+             ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
@@ -54,8 +56,6 @@ public class WriteBytesTest extends QueueTestCommon {
             fetchOneMessage(tailer, incomingMsgBytes);
             // System.out.println(new String(incomingMsgBytes));
 
-        } finally {
-            deleteDirAfterCleanup(dir);
         }
     }
 
@@ -67,7 +67,8 @@ public class WriteBytesTest extends QueueTestCommon {
                 .blockSize(OS.SAFE_PAGE_SIZE)
                 .rollCycle(TEST4_DAILY)
                 .timeProvider(new SetTimeProvider("2020/10/19T01:01:01"));
-        try (ChronicleQueue queue = builder
+        try (FixtureCleanup ignored = new FixtureCleanup(() -> deleteDirAfterCleanup(dir));
+             ChronicleQueue queue = builder
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
             for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
@@ -1037,15 +1038,14 @@ public class WriteBytesTest extends QueueTestCommon {
                     "...\n" +
                     "# 126928 bytes remaining\n", queue.dump());
 
-        } finally {
-            deleteDirAfterCleanup(dir);
         }
     }
 
     @Test
     public void testWriteBytesWithDirectBufferReuse() {
         File dir = getTmpDir();
-        try (ChronicleQueue queue = binary(dir)
+        try (FixtureCleanup ignored = new FixtureCleanup(() -> deleteDirAfterCleanup(dir));
+             ChronicleQueue queue = binary(dir)
                 .testBlockSize()
                 .build();
              ExcerptAppender appender = queue.createAppender();
@@ -1053,7 +1053,7 @@ public class WriteBytesTest extends QueueTestCommon {
 
             Bytes<?> directPayload = Bytes.allocateDirect(128).unchecked(true);
             Bytes<?> readBuffer = Bytes.elasticByteBuffer();
-            try {
+            try (FixtureCleanup buffers = new FixtureCleanup(directPayload::releaseLast, readBuffer::releaseLast)) {
                 for (int i = 0; i < 3; i++) {
                     directPayload.clear();
                     directPayload.writeUtf8("direct-entry-" + i);
@@ -1064,12 +1064,7 @@ public class WriteBytesTest extends QueueTestCommon {
                     assertEquals("direct-entry-" + i, readBuffer.readUtf8());
                     readBuffer.clear();
                 }
-            } finally {
-                directPayload.releaseLast();
-                readBuffer.releaseLast();
             }
-        } finally {
-            deleteDirAfterCleanup(dir);
         }
     }
 
@@ -1078,7 +1073,8 @@ public class WriteBytesTest extends QueueTestCommon {
         File dir = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider("2024/01/01T00:00:00")
                 .autoIncrement(0, TimeUnit.MILLISECONDS);
-        try (ChronicleQueue queue = binary(dir)
+        try (FixtureCleanup ignored = new FixtureCleanup(() -> deleteDirAfterCleanup(dir));
+             ChronicleQueue queue = binary(dir)
                 .rollCycle(TEST4_DAILY)
                 .timeProvider(timeProvider)
                 .testBlockSize()
@@ -1103,8 +1099,6 @@ public class WriteBytesTest extends QueueTestCommon {
             }
             assertEquals("Wire buffer capacity should remain stable across rolls", initialCapacity, postRollCapacity);
             assertNextUtf8(tailer, "cycle-2");
-        } finally {
-            deleteDirAfterCleanup(dir);
         }
     }
 
