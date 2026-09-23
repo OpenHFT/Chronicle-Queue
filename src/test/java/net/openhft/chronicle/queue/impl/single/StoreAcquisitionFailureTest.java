@@ -8,6 +8,9 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.wire.ValueOut;
@@ -20,6 +23,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.WireStoreSupplier.CreateStrategy.CREATE;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
@@ -50,6 +54,68 @@ public class StoreAcquisitionFailureTest extends QueueTestCommon {
         assertReleasedAfterFailure("index");
     }
 
+    @Test
+    public void factoryFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer() {
+        assertRepeatedFailureAndSuccessfulTransfer("factory");
+    }
+
+    @Test
+    public void headerFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer() {
+        assertRepeatedFailureAndSuccessfulTransfer("header");
+    }
+
+    @Test
+    public void indexFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer() {
+        assertRepeatedFailureAndSuccessfulTransfer("index");
+    }
+
+    private void assertRepeatedFailureAndSuccessfulTransfer(String phase) {
+        Throwable failure = error ? new AssertionError("injected " + phase) : new IORuntimeException("injected " + phase);
+        FailingBuilder builder = new FailingBuilder(phase, failure);
+        SetTimeProvider time = new SetTimeProvider();
+        builder.path(getTmpDir()).rollCycle(TEST_DAILY).testBlockSize().timeProvider(time);
+        try (SingleChronicleQueue queue = builder.build()) {
+            for (int attempt = 0; attempt < 2; attempt++) {
+                try {
+                    assertSame(failure, assertThrows(Throwable.class, () -> queue.storeSupplier().acquire(queue.cycle(), CREATE)));
+                    BackgroundResourceReleaser.releasePendingResources();
+                    assertFalse("Queue stays open across failures", queue.isClosed());
+                    if (builder.store != null)
+                        assertTrue("Failed store closes before Queue.close", builder.store.isClosed());
+                    assertEquals("Failed bytes release before Queue.close", 0, builder.bytes.refCount());
+                    assertEquals("Failed mapping releases before Queue.close", 0, builder.bytes.mappedFile().refCount());
+                } finally {
+                    // Reclaim deliberate baseline leaks after observing them, not before the assertions.
+                    Closeable.closeQuietly(builder.store, builder.bytes);
+                    BackgroundResourceReleaser.releasePendingResources();
+                }
+                // Use a fresh cycle to isolate acquisition ownership from incomplete-header recovery.
+                time.advanceMillis(TimeUnit.DAYS.toMillis(1));
+            }
+            builder.failuresEnabled = false;
+            try (SingleChronicleQueueStore store = queue.storeSupplier().acquire(queue.cycle(), CREATE)) {
+                assertNotNull(store);
+                assertSame(builder.store, store);
+                assertFalse("Successful return transfers a live store to its caller", store.isClosed());
+                assertTrue("Returned bytes remain reserved", builder.bytes.refCount() > 0);
+                assertTrue("Returned mapped bindings remain usable", store.writePosition() > 0);
+            }
+            BackgroundResourceReleaser.releasePendingResources();
+            assertTrue(builder.store.isClosed());
+            assertEquals(0, builder.bytes.refCount());
+            assertEquals(0, builder.bytes.mappedFile().refCount());
+            try (ExcerptAppender appender = queue.createAppender(); ExcerptTailer tailer = queue.createTailer()) {
+                appender.writeText("after failed acquisition");
+                assertTrue(tailer.moveToIndex(appender.lastIndexAppended()));
+                assertEquals("after failed acquisition", tailer.readText());
+                assertNull(tailer.readText());
+            }
+        } finally {
+            Closeable.closeQuietly(builder.store, builder.bytes);
+            BackgroundResourceReleaser.releasePendingResources();
+        }
+    }
+
     private void assertReleasedAfterFailure(String phase) {
         Throwable failure = error ? new AssertionError("injected " + phase) : new IORuntimeException("injected " + phase);
         FailingBuilder builder = new FailingBuilder(phase, failure);
@@ -76,6 +142,7 @@ public class StoreAcquisitionFailureTest extends QueueTestCommon {
         private final Throwable failure;
         private MappedBytes bytes;
         private SingleChronicleQueueStore store;
+        private boolean failuresEnabled = true;
 
         private FailingBuilder(String phase, Throwable failure) {
             this.phase = phase;
@@ -86,6 +153,10 @@ public class StoreAcquisitionFailureTest extends QueueTestCommon {
         public WireStoreFactory storeFactory() {
             return (queue, wire) -> {
                 bytes = (MappedBytes) wire.bytes();
+                if (!failuresEnabled) {
+                    store = super.storeFactory().apply(queue, wire);
+                    return store;
+                }
                 if ("factory".equals(phase))
                     throw Jvm.rethrow(failure);
                 if ("header".equals(phase)) {
