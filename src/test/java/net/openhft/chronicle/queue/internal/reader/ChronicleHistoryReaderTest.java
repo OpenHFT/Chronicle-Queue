@@ -55,6 +55,10 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         File queuePath1 = getTmpDir();
         File queuePath2 = getTmpDir();
         File queuePath3 = getTmpDir();
+        //! History stores can retain deferred mappings after queue.close(); drain before strict deletion.
+        //! The outer cleanup scope closes last, preserves the primary failure and attempts every owned path.
+        //! getTmpDir also registers each path with QueueTestCommon as a final cleanup fallback.
+        //! Controls: testWithQueueHistoryRecordHistoryInitial and testWithQueueHistoryRecordHistoryInitialMethodIds.
         try (FixtureCleanup ignored = FixtureCleanup.deleting(queuePath1, queuePath2, queuePath3)) {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out
@@ -205,6 +209,8 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         File queuePath1 = getTmpDir();
         File queuePath2 = getTmpDir();
         File queuePath3 = getTmpDir();
+        //! Close all history queues before draining/deleting; retain primary failure and remaining cleanup attempts.
+        //! Controls: testPredictable, testPredictableStartIndex and testPredictableMeasurementWindow.
         try (FixtureCleanup ignored = FixtureCleanup.deleting(queuePath1, queuePath2, queuePath3)) {
             StringBuilder sb = new StringBuilder();
             try (ChronicleQueue q1 = queue(queuePath1, 1);

@@ -53,7 +53,10 @@ public class RollingCycleTest extends QueueTestCommon {
 
         String basePath = getTmpDir().getAbsolutePath();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
-        // Declare deletion first so it runs after queue/appender close and preserves the primary failure.
+        //! Windows cannot delete the mapped first cycle while this fixture still owns its queue.
+        //! Declare deletion first: appender/queue close precedes draining deferred unmapping and strict deletion.
+        //! Control: testRollCycle with both named and unnamed tailers; preserve its exact page-size dump.
+        // The cleanup scope also preserves a primary body/close failure when deletion fails.
         try (FixtureCleanup ignored = FixtureCleanup.deleting(new File(basePath));
              final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
