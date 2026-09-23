@@ -5,14 +5,15 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Request;
+import org.junit.runner.Result;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -33,12 +34,8 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
     @Before
     public void setUp() {
-        dataDirectory = IOTools.createTempDirectory("EmptyRollCycleTest");
-    }
-
-    @After
-    public void tearDown() {
-        IOTools.deleteDirWithFiles(dataDirectory.toFile());
+        // Keep the real empty-cycle recovery scenario inside an owned, checked fixture.
+        dataDirectory = getTmpDir().toPath();
     }
 
     @Test
@@ -48,6 +45,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
         // read through the queue
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .timeoutMS(100)
                 .build();
@@ -68,12 +66,13 @@ public class EmptyRollCycleTest extends QueueTestCommon {
     @Test
     public void appenderShouldTolerateEmptyRollCycleAtEnd() throws IOException {
         ignoreException("Channel closed while unlocking");
-        ignoreException("Renamed un-acquirable segment file");
+        expectException("Renamed un-acquirable segment file");
         createQueueWithEmptyRollCycleAtEnd();
 
         long indexWritten = -1;
         // append to the queue
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .timeoutMS(100)
                 .build();
@@ -84,6 +83,7 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         }
 
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .build();
              ExcerptTailer tailer = queue.createTailer()) {
@@ -101,12 +101,15 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
         final Path emptyRollCycle = dataDirectory.resolve(EMPTY_ROLL_CYCLE_NAME);
         final Process start = JavaProcessBuilder.create(LockingProcess.class)
+                // This helper owns one file lock; it does not need the parent test heap.
+                .withJvmArguments("-Xms32m", "-Xmx256m")
                 .withProgramArguments(emptyRollCycle.toString())
                 .start();
         try {
             waitForFileToBeLocked(emptyRollCycle);
 
             try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                    .testBlockSize()
                     .rollCycle(RollCycles.TEN_MINUTELY)
                     .timeoutMS(100)
                     .build();
@@ -124,9 +127,43 @@ public class EmptyRollCycleTest extends QueueTestCommon {
         }
     }
 
+    @Test
+    public void recoveryCompletesWithDeferredUnmapping() throws InterruptedException, IOException {
+        // A separate JVM can leave releases queued without changing global state in this fork.
+        // On Windows the original recovery path then tries to rename its own live mapping.
+        // Bound this small helper independently so parent and child do not each reserve a full test heap.
+        Process process = JavaProcessBuilder.create(DeferredRecoveryProcess.class)
+                .withJvmArguments("-Xms32m", "-Xmx256m",
+                        "-Dbackground.releaser=true", "-Dbackground.releaser.thread=false",
+                        "-Dproject.build.directory=" + dataDirectory.toAbsolutePath())
+                .start();
+        try {
+            assertTrue("Deferred recovery process did not finish", process.waitFor(20, TimeUnit.SECONDS));
+            assertEquals(JavaProcessBuilder.getProcessStdErr(process), 0, process.exitValue());
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                assertTrue("Deferred recovery process survived termination", process.waitFor(5, TimeUnit.SECONDS));
+            }
+            process.getInputStream().close();
+            process.getErrorStream().close();
+            process.getOutputStream().close();
+        }
+    }
+
+    public static class DeferredRecoveryProcess {
+        public static void main(String[] args) {
+            Result result = new JUnitCore().run(Request.method(EmptyRollCycleTest.class,
+                    "appenderShouldTolerateEmptyRollCycleAtEnd"));
+            result.getFailures().forEach(failure -> System.err.println(failure.toString()));
+            System.exit(result.wasSuccessful() ? 0 : 1);
+        }
+    }
+
     private void createQueueWithEmptyRollCycleAtEnd() throws IOException {
         SetTimeProvider timeProvider = new SetTimeProvider();
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(RollCycles.TEN_MINUTELY)
                 .build();
