@@ -46,7 +46,7 @@ As shown above, the document context can be used to append data directly:
 [source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
-      dc.wire().write().text(“Your text data“);
+      dc.wire().write().text("Your text data");
 }
 ----
 
@@ -55,7 +55,7 @@ The length of the data is written to the header when the try-with-resources bloc
 [source,java]
 ----
 try (final DocumentContext dc = appender.writingDocument()) {
-    dc.wire().write().text(“your text data“);
+    dc.wire().write().text("your text data");
     System.out.println("your data was store to index="+ dc.index());
 }
 ----
