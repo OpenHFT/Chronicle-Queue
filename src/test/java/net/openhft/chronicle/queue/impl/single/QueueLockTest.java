@@ -35,11 +35,6 @@ public class QueueLockTest extends QueueTestCommon {
 
     @Test
     public void testRecover() throws InterruptedException {
-        // The original writer releases a lock already released by the forced recovery.
-        expectException(key -> key.clazz() == TableStoreWriteLock.class
-                && key.message() != null
-                && key.message().startsWith("Write lock was already unlocked. For the lock file:")
-                && key.throwable() == null, "Original writer releases the forcibly recovered lock");
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         try {
             check(false);
@@ -61,6 +56,15 @@ public class QueueLockTest extends QueueTestCommon {
 
             final long timeoutMs = 2_000;
             final File queueDir = DirectoryUtils.tempDir("check");
+            if (!shouldThrowException) {
+                // Require the original writer's expected unlock warning for this queue only.
+                String expectedWarning = "Write lock was already unlocked. For the lock file:"
+                        + new File(queueDir, "metadata.cq4t");
+                expectException(key -> key.clazz() == TableStoreWriteLock.class
+                        && key.level() == net.openhft.chronicle.core.onoes.LogLevel.WARN
+                        && expectedWarning.equals(key.message())
+                        && key.throwable() == null, "Original writer releases the forcibly recovered lock");
+            }
             try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
                     timeoutMS(timeoutMs).
                     build();
