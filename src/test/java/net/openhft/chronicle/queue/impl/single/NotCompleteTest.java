@@ -5,9 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -19,7 +17,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -130,13 +127,7 @@ public class NotCompleteTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
         } finally {
-            try {
-                IOTools.deleteDirWithFiles(tmpDir, 2);
-            } catch (Exception e) {
-                if (e instanceof AccessDeniedException && OS.isWindows())
-                    return;
-                throw e;
-            }
+            deleteDirAfterCleanup(tmpDir);
         }
     }
 
