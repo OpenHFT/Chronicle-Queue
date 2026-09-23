@@ -93,9 +93,22 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Acquires the necessary LongValues (maxCycle, minCycle, modCount) from the table store.
      */
     protected void initLongValues() {
-        maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
-        minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
-        modCount = tableStore.acquireValueFor(MOD_COUNT);
+        LongValue max = null;
+        LongValue min = null;
+        LongValue count;
+        try {
+            max = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
+            min = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
+            count = tableStore.acquireValueFor(MOD_COUNT);
+        } catch (RuntimeException | Error e) {
+            // A read-only listing can retry while metadata is being published.
+            // Release partial bindings before that retry can replace them.
+            Closeable.closeQuietly(min, max);
+            throw e;
+        }
+        maxCycleValue = max;
+        minCycleValue = min;
+        modCount = count;
     }
 
     /**
