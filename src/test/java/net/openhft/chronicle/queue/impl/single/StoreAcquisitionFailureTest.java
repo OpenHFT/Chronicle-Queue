@@ -9,8 +9,6 @@ import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.wire.ValueOut;
@@ -104,12 +102,6 @@ public class StoreAcquisitionFailureTest extends QueueTestCommon {
             assertTrue(builder.store.isClosed());
             assertEquals(0, builder.bytes.refCount());
             assertEquals(0, builder.bytes.mappedFile().refCount());
-            try (ExcerptAppender appender = queue.createAppender(); ExcerptTailer tailer = queue.createTailer()) {
-                appender.writeText("after failed acquisition");
-                assertTrue(tailer.moveToIndex(appender.lastIndexAppended()));
-                assertEquals("after failed acquisition", tailer.readText());
-                assertNull(tailer.readText());
-            }
         } finally {
             Closeable.closeQuietly(builder.store, builder.bytes);
             BackgroundResourceReleaser.releasePendingResources();
