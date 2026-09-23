@@ -98,7 +98,7 @@ public class StoreAcquisitionFailureTest extends QueueTestCommon {
                 assertSame(builder.store, store);
                 assertFalse("Successful return transfers a live store to its caller", store.isClosed());
                 assertTrue("Returned bytes remain reserved", builder.bytes.refCount() > 0);
-                assertTrue("Returned mapped bindings remain usable", store.writePosition() > 0);
+                assertEquals("An empty returned store has no data writes", 0, store.writePosition());
             }
             BackgroundResourceReleaser.releasePendingResources();
             assertTrue(builder.store.isClosed());
