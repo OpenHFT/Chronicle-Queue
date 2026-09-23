@@ -30,7 +30,6 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
     public void nonReplicatedNamedTailerShouldNotCreateVersionInMetdata() {
-        finishedNormally = false;
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
@@ -46,8 +45,6 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             LongValue longValue = queue.metaStore().acquireValueFor(String.format(SingleChronicleQueue.INDEX_VERSION_FORMAT, "named_1"));
             assertEquals(Long.MIN_VALUE, longValue.getValue());
             longValue.close();
-
-            finishedNormally = true;
         } finally {
             IOTools.deleteDirWithFiles(queuePath);
         }
