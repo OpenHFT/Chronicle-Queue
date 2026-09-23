@@ -4,10 +4,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
@@ -24,8 +21,8 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
 
     @Test
     public void test() {
-        String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
-        final SingleChronicleQueueBuilder myBuilder = SingleChronicleQueueBuilder.single(basePath)
+        // Register ownership so cleanup waits for deferred unmapping and checks deletion.
+        final SingleChronicleQueueBuilder myBuilder = SingleChronicleQueueBuilder.single(getTmpDir())
                 .testBlockSize()
                 .timeProvider(System::currentTimeMillis)
                 .rollCycle(HOURLY);
@@ -39,8 +36,6 @@ public class MoveIndexAfterFailedTailerTest extends QueueTestCommon {
 
         try (final ChronicleQueue myRead = myBuilder.build()) {
             read(myRead, messages);
-        } finally {
-            IOTools.deleteDirWithFiles(basePath);
         }
     }
 
