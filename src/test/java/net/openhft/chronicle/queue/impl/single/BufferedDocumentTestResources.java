@@ -3,6 +3,8 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -32,7 +34,7 @@ final class BufferedDocumentTestResources implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (closed)
             return;
         boolean interrupted = Thread.interrupted();
@@ -57,6 +59,7 @@ final class BufferedDocumentTestResources implements AutoCloseable {
                     try {
                         storage.get(i).close();
                     } catch (Exception | Error e) {
+                        interrupted |= e instanceof InterruptedException;
                         if (failure == null)
                             failure = e;
                         else if (failure != e)
@@ -65,10 +68,8 @@ final class BufferedDocumentTestResources implements AutoCloseable {
                 }
                 storage.clear();
             }
-            if (failure instanceof Error)
-                throw (Error) failure;
             if (failure != null)
-                throw (Exception) failure;
+                throw Jvm.rethrow(failure);
         } finally {
             if (interrupted)
                 Thread.currentThread().interrupt();
