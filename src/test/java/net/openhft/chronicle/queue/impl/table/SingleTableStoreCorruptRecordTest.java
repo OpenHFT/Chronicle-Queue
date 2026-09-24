@@ -253,6 +253,16 @@ public class SingleTableStoreCorruptRecordTest extends QueueTestCommon {
     }
 
     @Test
+    public void zeroValueCodeIsRejectedByEveryTraversal() throws IOException {
+        final File file = tableStoreWithTwoKeys();
+        replaceFirstValueCode(file, 0);
+
+        assertAcquireRejects(file, "key.one", "instead of a bound long");
+        assertAcquireRejects(file, "key.two", "instead of a bound long");
+        assertForEachKeyRejectsBeforeCallback(file, WireType.BINARY_LIGHT, "instead of a bound long");
+    }
+
+    @Test
     public void malformedBinaryPaddingIsRejected() throws IOException {
         File truncated = tableStoreWithTwoKeys();
         final long truncatedValueCodeAt = replaceFirstValueCode(truncated, BinaryWireCode.PADDING32);
@@ -584,7 +594,7 @@ public class SingleTableStoreCorruptRecordTest extends QueueTestCommon {
             final byte[] codeAndValue = new byte[1 + Long.BYTES];
             raf.readFully(codeAndValue);
             assertTrue("the table-store value did not use a bound-long code",
-                    (codeAndValue[0] & 0xff) == 0 || (codeAndValue[0] & 0xff) == BinaryWireCode.INT64);
+                    (codeAndValue[0] & 0xff) == BinaryWireCode.INT64);
             raf.seek(valueCodeAt - 1L);
             raf.write(codeAndValue);
             raf.write(BinaryWireCode.PADDING);
@@ -630,8 +640,9 @@ public class SingleTableStoreCorruptRecordTest extends QueueTestCommon {
             final int replacementLength;
             switch (mutation) {
                 case SHORTER_POSITIVE:
-                    assertTrue("record is too short to shorten positively: " + originalLength, originalLength > 1);
-                    replacementLength = 1;
+                    assertTrue("record is too short to shorten positively: " + originalLength,
+                            originalLength > Integer.BYTES);
+                    replacementLength = Integer.BYTES;
                     break;
                 case LONGER_IN_RANGE:
                     // Keep the end aligned so exact consumption, rather than header alignment, rejects the mutation.
@@ -665,7 +676,7 @@ public class SingleTableStoreCorruptRecordTest extends QueueTestCommon {
             final int originalCode = raf.read();
             assertTrue("the table-store value did not use a bound-long code: 0x"
                             + Integer.toHexString(originalCode),
-                    originalCode == 0 || originalCode == BinaryWireCode.INT64);
+                    originalCode == BinaryWireCode.INT64);
             raf.seek(valueCodeAt);
             raf.write(replacementCode);
         }
