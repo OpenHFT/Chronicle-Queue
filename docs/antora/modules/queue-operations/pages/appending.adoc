@@ -24,7 +24,7 @@ String message = "Hello World!";
 appender.writeText(message);
 ----
 
-There are however various ways of appending data, ranging from high-level abstractions such as `writeText` and xref:queue-operations:read-write-proxies.adoc#_methodwriter[write proxies] down to a low-level API, or even writing directly to raw memory.These alternatives are presented in more detail in the following sections.
+There are however various ways of appending data, ranging from high-level abstractions such as `writeText` and xref:queue-operations:read-write-proxies.adoc[write proxies] down to a low-level API, or even writing directly to raw memory.These alternatives are presented in more detail in the following sections.
 
 == Low-level API  
 
@@ -122,7 +122,7 @@ person.age = 40;
 appender.writeDocument(person);
 ----
 
-NOTE: Learn how to read the object from the queue in xref:tailing.adoc#_reading_an_object[Reading an Object].
+NOTE: Learn how to read the object from the queue in xref:tailing.adoc[Tailing].
 
 == Writing Raw Data
 
@@ -163,7 +163,7 @@ At the lowest abstraction level you get an address to raw memory where you can w
 ----
 // Unsafe low level
 appender.writeBytes(b -> {
-    long address = b.address(b.writePosition());
+    long address = b.addressForWrite(b.writePosition());
     Unsafe unsafe = UnsafeMemory.UNSAFE;
     unsafe.putByte(address, (byte) 0x12);
     address += 1;

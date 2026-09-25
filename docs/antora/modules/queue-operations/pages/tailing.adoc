@@ -81,7 +81,7 @@ or, you can get the underlying memory address and access the native memory.
 [source,java]
 ----
 assertTrue(tailer.readBytes(b -> {
-    long address = b.address(b.readPosition());
+    long address = b.addressForRead(b.readPosition());
     Unsafe unsafe = UnsafeMemory.UNSAFE;
     int code = unsafe.getByte(address);
     address++;
@@ -200,14 +200,9 @@ Chronicle Queue stores its data in binary format, with a file extension of `cq4`
 
 [source,text]
 ----
-\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
-ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
-���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-�����������������������������������������������������������������
+¡��@π�header∂�SCQStoreÇ™���ÕwritePositioné�����ç��������������������������������»indexing∂�SC
+QSIndexingÇL��� indexCount•��ÃindexSpacing•��Àindex2Indexèß»�������…lastIndexé����ß�������� d
+ataFormat°����
 ----
 
 This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.
@@ -262,29 +257,34 @@ This will dump the `19700101-02.cq4` file out as text, as shown below:
 
 [source,yaml]
 ----
-!!meta-data #binary
+--- !!meta-data #binary
 header: !SCQStore {
-  wireType: !WireType BINARY,
-  writePosition: 0,
-  roll: !SCQSRoll {
-    length: !int 3600000,
-    format: yyyyMMdd-HH,
-    epoch: !int 3600000
-  },
+  writePosition: [
+    0,
+    0
+  ],
   indexing: !SCQSIndexing {
     indexCount: !short 4096,
-    indexSpacing: 4,
-    index2Index: 0,
+    indexSpacing: !short 256,
+    index2Index: 200,
     lastIndex: 0
   },
-  lastAcknowledgedIndexReplicated: -1,
-  recovery: !TimedStoreRecovery {
-    timeStamp: 0
-  }
+  dataFormat: 1
 }
 
+# position: 200, header: -1
+--- !!meta-data #binary
+index2index: [
+  # length: 4096, used: 1
+  33008 # truncated trailing zeros
+]
+# position: 33008, header: -1
+--- !!meta-data #binary
+index: [
+  # length: 4096, used:  # truncated trailing zeros
+]
 ...
-# 4198044 bytes remaining
+# 83820268 bytes remaining
 ----
 
 NOTE: The example above does not show any user data, because no user data was written to this example file.
@@ -309,20 +309,31 @@ TIP: See xref:command-line:command_line_tools.adoc#_chroniclereadermain[] for th
 Below is the command line interface used to configure `ChronicleReaderMain`:
 
 ----
-usage: ChronicleReaderMain
- -d <directory>       Directory containing chronicle queue files
- -e <exclude-regex>   Do not display records containing this regular
-                      expression
- -f                   Tail behaviour - wait for new records to arrive
- -h                   Print this help and exit
- -i <include-regex>   Display records containing this regular expression
- -l                   Squash each output message into a single line
- -m <max-history>     Show this many records from the end of the data set
- -n <from-index>      Start reading from this index (e.g. 0x123ABE)
- -r <interface>       Use when reading from a queue generated using a MethodWriter
- -s                   Display index
- -w <wire-type>       Control output i.e. JSON
+usage: ChronicleReaderMain [-a <binary-arg>] [-b <binary-search>] [-cbl <content-based-limiter>] [-cblArg <content-based-limiter-argument>] -d <directory> [-e <exclude-regex>] [-f]
+       [-g] [-h] [-i <include-regex>] [-k] [-l] [-m <max-history>] [-n <from-index>] [-named <named>] [-r <as-method-reader>] [-s] [-w <wire-type>] [-x <max-results>] [-z]
+ -a <binary-arg>                            Argument to pass to binary search class
+ -b <binary-search>                         Use this class as a comparator to binary search
+ -cbl <content-based-limiter>               Specify a content-based limiter
+ -cblArg <content-based-limiter-argument>   Specify an argument for use by the content-based limiter
+ -d <directory>                             Directory containing chronicle queue files
+ -e <exclude-regex>                         Do not display records containing this regular expression
+ -f                                         Tail behaviour - wait for new records to arrive
+ -g                                         Show message history (when using method reader)
+ -h                                         Print this help and exit
+ -i <include-regex>                         Display records containing this regular expression
+ -k                                         Read the queue in reverse
+ -l                                         Squash each output message into a single line
+ -m <max-history>                           Show this many records from the end of the data set
+ -n <from-index>                            Start reading from this index (e.g. 0x123ABE)
+ -named <named>                             Named tailer ID
+ -r <as-method-reader>                      Use when reading from a queue generated using a MethodWriter
+ -s                                         Display index
+ -w <wire-type>                             Control output i.e. JSON
+ -x <max-results>                           Limit the number of results to output
+ -z                                         Print timestamps using the local timezone
 ----
+
+NOTE: The generated help labels `-s` as "Display index", but the option actually suppresses the index prefix. Omit `-s` to display indexes.
 
 Just as with `DumpQueue` you need the classes in the example above present on the class path.
 This can again be achieved by manually adding them and then run:
