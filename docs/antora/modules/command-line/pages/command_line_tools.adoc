@@ -50,6 +50,12 @@ In the above command invoking *DumpMain*,  _myqueue_ is the directory containing
 == ★ ArchiveRollFiles
 
 To facilitate housekeeping of older roll files, Chronicle Queue Enterprise provides the `ArchiveRollFiles` utility.
+The command-line utility is supported on Linux.
+
+NOTE: `-dryrun` skips the final roll-file moves/deletions and QueueBackedMap snapshot write.
+It still opens the source queue for writing during setup, so it is not a read-only inspection mode.
+Use a disposable copy when investigating its actions.
+The preview can continue after a non-removable file where an actual run would stop; it is not an exact prediction of a later run.
 
 .Invocation via Maven
 [source,shell script]
@@ -93,7 +99,7 @@ usage: ArchiveRollFilesMain -aa <archive-action> [-ad <archive-dir>] [-dryrun] [
 | -aa | Archive action being performed. Accepted values are `ARCHIVE` (move roll files to archive directory) or `DELETE` (delete eligible roll files permanently) | Y
 | -m | Minimum age for files to be eligible for archiving, specified as a local datetime in the format `yyyy-MM-dd'T'HH:mm:ss` (eg. `2024-05-23T23:55:01`). Compared against a roll file's last modified time. | If `-r` is not specified
 | -r | Number of roll cycles to retain. If this option is combined with `-m`, the minimum number of roll cycle files will be retained before considering files for archiving. | If `-m` is not specified
-| -dryrun | Output log of archiving actions that would occur, without any actual file processing | N
+| -dryrun | Log candidate actions without performing the final moves/deletions or map snapshot write; source-queue setup can still write. See the limitation above. | N
 | -z | Time zone used for roll files, eg. `'Europe/Paris'`. If not specified, the time zone indicated in the queue configuration is used, or defaults to UTC. | N
 |===
 
@@ -119,7 +125,7 @@ Invoking `ArchiveRollFiles` to delete all roll files older than the age specifie
 
 [source,shell script]
 ----
-$ mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
+$ mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain" \
 -Dexec.args="-qc config/queue-config.yaml -hid 1 -qn queue1 -m 2024-11-01T12:15:00 -aa DELETE"
 ----
 
@@ -127,7 +133,7 @@ Invoking `ArchiveRollFiles` to archive roll files older than the age specified f
 
 [source,shell script]
 ----
-$  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
+$  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain" \
 -Dexec.args="-qc /tmp/qbm-replication.yaml -hid 1 -qn queue1 -m 2024-05-23T23:55:01 -aa ARCHIVE
 -ad /mnt/share/queue-archive  -qbmn corr-map -qbme 10000 -kc java.lang.String -vc java.lang.Integer"
 ----
@@ -136,7 +142,7 @@ Invoking `ArchiveRollFiles` to archive all roll cycles except the last three for
 
 [source,shell script]
 ----
-$  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain"
+$  mvn exec:java -Dexec.mainClass="software.chronicle.enterprise.queue.util.ArchiveRollFilesMain" \
 -Dexec.args="-qc /tmp/qbm-replication.yaml -hid 1 -qn queue1 -r 3 -aa ARCHIVE -ad /mnt/share/queue-archive"
 ----
 
@@ -213,6 +219,8 @@ usage: ChronicleReaderMain [-a <binary-arg>] [-b <binary-search>] [-cbl <content
  -x <max-results>                           Limit the number of results to output
  -z                                         Print timestamps using the local timezone
 ----
+
+NOTE: The generated help labels `-s` as "Display index", but the option actually suppresses the index prefix. Omit `-s` to display indexes.
 
 == ChronicleWriterMain
 

@@ -27,11 +27,11 @@ In other words, different roll-cycles allow us to trade off the maximum number o
 Learn more about this in xref:configuration:roll-cycle.adoc[Roll Cycle]
 
 The convenience method below can help with properly forming an index, assuming the cycle and sequence number is known.
-See a full example xref:_tail_from_index[here].
+See a full example xref:#_tail_from_index[here].
 
 [source,java]
 ----
-long index = queue.rollCycle().toIndex(int cycle, long sequenceNumber); 
+long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
 ----
 
 == End Of Queue Index

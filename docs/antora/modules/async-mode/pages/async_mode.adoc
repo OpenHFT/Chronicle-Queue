@@ -160,8 +160,10 @@ The following operations are unsupported when using EnterpriseSingleChronicleQue
 
 * writing and reading of metadata
 * `ExcerptTailer.toStart()`
-* `ExcerptTailer.index()` and `ExcerptTailer.moveToIndex()`
-* `ExcerptTailer.direction(TailerDirection.BACKWARD)`
+* Any tailer direction other than `TailerDirection.FORWARD`
+
+The asynchronous tailer's `index()` reports a ring-buffer read location, not a persisted Queue index.
+Its `moveToIndex()` checks a ring-buffer read location for rollback; it does not provide arbitrary positioning by a persisted Queue index.
 
 ==== software.chronicle.enterprise.ring.RingBufferChronicleQueue
 
@@ -170,9 +172,10 @@ from some methods.
 It does not contain the full functionality of EnterpriseSingleChronicleQueue - it does not drain to an underlying queue, for example.
 It is created as in the example below, where:
 
-- `ringBuffer` is the buffer to back this queue with,
-- `wireType` is the wire type to use when appending and tailing,
-- `pauser` is the pauser to use by the appender when waiting for readers.
+- `ringBuffer` is a `MultiReaderWireRingBuffer` to back this queue with,
+- `wireType` is the wire type to use when appending and tailing.
+
+The two-argument constructor borrows the ring buffer. The caller remains responsible for closing the buffer after the queue and its users have closed.
 
 [source,java]
 ----

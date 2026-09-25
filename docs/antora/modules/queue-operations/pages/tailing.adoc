@@ -333,6 +333,8 @@ usage: ChronicleReaderMain [-a <binary-arg>] [-b <binary-search>] [-cbl <content
  -z                                         Print timestamps using the local timezone
 ----
 
+NOTE: The generated help labels `-s` as "Display index", but the option actually suppresses the index prefix. Omit `-s` to display indexes.
+
 Just as with `DumpQueue` you need the classes in the example above present on the class path.
 This can again be achieved by manually adding them and then run:
 

@@ -15,7 +15,6 @@ String basePath = OS.getTarget() + "/getting-started";
 ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
     .rollCycle(RollCycles.FAST_HOURLY)
     .build();
-}
 ----
 
 The table presented below shows the options which can be set using the Chronicle Queue builder.

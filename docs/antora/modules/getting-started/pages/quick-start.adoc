@@ -69,8 +69,8 @@ The example below creates a `SingleChronicleQueue`, which stores data and index 
 
 [source,java]
 ----
-    String basePath = OS.getTarget() + "/getting-started"
-    ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build()
+    String basePath = OS.getTarget() + "/getting-started";
+    ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build();
 ----
 
 The queue files will reside in the directory `getting-started`.
