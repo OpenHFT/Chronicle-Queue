@@ -938,8 +938,11 @@ class StoreTailer extends AbstractCloseable
      * @return The current tailer instance.
      */
     private ExcerptTailer doToStart() {
+        return doToStart(queue.firstCycle());
+    }
+
+    private ExcerptTailer doToStart(final int firstCycle) {
         assert direction != BACKWARD;
-        final int firstCycle = queue.firstCycle();
         if (firstCycle == Integer.MAX_VALUE) {
             resetToEmptyQueue();
             return this;
@@ -982,6 +985,11 @@ class StoreTailer extends AbstractCloseable
         try {
             return doToStart();
         } catch (MissingStoreFileException e) {
+            //! A read-only table listing cannot publish a refreshed minimum after historical deletion.
+            //! Resolve one filesystem snapshot and attempt that boundary once, without writing metadata.
+            //! ReadOnlyToStartAfterDeletionTest covers missing historical rolls, lookup bounds and byte preservation.
+            if (queue.isReadOnly())
+                return doToStart(queue.firstCycleInDirectory());
             queue.refreshDirectoryListing();
             if (!queueHasRollFiles()) {
                 resetToEmptyQueue();
