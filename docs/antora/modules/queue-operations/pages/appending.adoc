@@ -35,8 +35,14 @@ The high-level methods such as `writeText()` are convenience methods on directly
 [source,java]
 ----
 void writeText(CharSequence text) {
-    try (DocumentContext dc = writingDocument()) {
-        dc.wire().bytes().append8bit(text);
+    DocumentContext dc = writingDocument();
+    try {
+        dc.wire().getValueOut().text(text);
+    } catch (Throwable t) {
+        dc.rollbackOnClose();
+        throw Jvm.rethrow(t);
+    } finally {
+        dc.close();
     }
 }
 ----
@@ -163,7 +169,7 @@ At the lowest abstraction level you get an address to raw memory where you can w
 ----
 // Unsafe low level
 appender.writeBytes(b -> {
-    long address = b.address(b.writePosition());
+    long address = b.addressForWrite(b.writePosition());
     Unsafe unsafe = UnsafeMemory.UNSAFE;
     unsafe.putByte(address, (byte) 0x12);
     address += 1;
