@@ -108,6 +108,8 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
                 //! particularly on Windows where extending these files consumes disk space.
                 //! Keep the index geometry, all 3,200 writes and every boundary check;
                 //! the builder still grows mappings as the unchanged workload needs them.
+                //! Regression: BackwardsTailerBoundaryTest#verifyConsistency checks the budget before
+                //! the unchanged 3,200 writes, five cycles and backward boundary assertions.
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .path(path)

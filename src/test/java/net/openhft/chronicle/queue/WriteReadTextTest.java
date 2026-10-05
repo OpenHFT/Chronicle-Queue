@@ -161,12 +161,20 @@ public class WriteReadTextTest extends QueueTestCommon {
         //! Size each invocation for its actual largest input, preserving the existing
         //! four-times margin and 256 KiB floor. Small inputs need no huge-message mapping
         //! on Windows; the 21 MB case retains its capacity and all ten round trips.
+        //! Budget and round-trip regressions: WriteReadTextTest#testMinimal,
+        //! WriteReadTextTest#testConstructed, WriteReadTextTest#testRealistic and
+        //! WriteReadTextTest#testExtremelyLarge. A fixed large budget, smaller floor or lost margin fails.
         int largestInput = Arrays.stream(problematic).mapToInt(String::length).max().orElse(0);
 
         //! Register this fixture's directory before opening the queue, so it is cleaned
         //! even if construction, an assertion or resource closure fails. Reverse resource
         //! order closes the queue first; try-with-resources preserves the original failure
         //! and suppresses a later deletion failure instead of replacing useful evidence.
+        //! Ownership regressions: WriteReadTextTest#cleansOwnedDirectoryAfterSuccess,
+        //! WriteReadTextTest#cleansOwnedDirectoryAfterConstructionFailure,
+        //! WriteReadTextTest#cleansOwnedDirectoryAfterAssertionFailure and
+        //! WriteReadTextTest#cleansOwnedDirectoryAfterCloseFailure.
+        //! WriteReadTextTest#failedDeletionIsVisibleAndSuppressedBehindPrimaryFailure checks suppression.
         try (TestDirectory directory = new TestDirectory(myPath)) {
             SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(directory.path)
                     .blockSize(Maths.nextPower2(largestInput * 4, 256 << 10));
@@ -359,9 +367,13 @@ public class WriteReadTextTest extends QueueTestCommon {
         @Override
         public void close() {
             //! Queue close can enqueue unmapping; finish those releases before Windows deletion.
+            //! Regression: WriteReadTextTest#drainsPendingReleasesBeforeDeletion.
+            //! Its controlled JVM leaves a release pending until this drain; omission fails before deletion.
             BackgroundResourceReleaser.releasePendingResources();
             //! A false deletion result is a cleanup failure too. Limit deletion to the
             //! unique path created by this invocation, leaving other tests' files alone.
+            //! Regressions: WriteReadTextTest#failedDeletionIsVisibleAndSuppressedBehindPrimaryFailure
+            //! and WriteReadTextTest#cleansOwnedDirectoryAfterSuccess observe failure and the surviving sibling.
             if (path.exists() && !IOTools.deleteDirWithFiles(path))
                 throw new AssertionError("Could not delete test directory " + path);
         }

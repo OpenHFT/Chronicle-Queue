@@ -42,6 +42,8 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
                 //! Each enum parameter writes only two small messages. Small mappings
                 //! avoid a default-sized disk extent for every Windows invocation while
                 //! retaining FIELDLESS_BINARY, TEST_DAILY and all eight parameter cases.
+                //! Regression: FieldlessMethodReaderTest#test asserts the small budget before exercising
+                //! both original fieldless messages in every enum case; a default mapping fails the budget assertion.
                 .testBlockSize()
                 .wireType(WireType.FIELDLESS_BINARY).rollCycle(TestRollCycles.TEST_DAILY).build()) {
             org.junit.Assert.assertEquals("fixture mapping budget",

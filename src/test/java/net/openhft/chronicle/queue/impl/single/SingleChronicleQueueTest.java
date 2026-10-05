@@ -3692,6 +3692,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             //! Publish entry while holding its lock, then acquire that lock before signalling. Keep the
             //! existing one-second appender deadline and always join before closing the queue.
             //! Control: shouldWaitForConditionWhenCreatingAppender across all wire/named combinations.
+            //! Regressions: SingleChronicleQueueTest#shouldWaitForConditionWhenCreatingAppender and
+            //! SingleChronicleQueueTest#doesNotSignalAnUnreadyAppender. Replacing entry-wait with sleep
+            //! signals an unready condition and fails the latter deterministic rejection assertion.
             Thread worker = new Thread(() -> {
                 createAppenderLock.lock();
                 try {
@@ -3739,6 +3742,10 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         org.easymock.EasyMock.verify(condition);
     }
 
+    //! Wait for actual worker entry and lock release before signalling; a sleep can lose
+    //! the signal while the worker is still unready. Keep both one-second waits unchanged.
+    //! SingleChronicleQueueTest#doesNotSignalAnUnreadyAppender rejects a sleep-only control;
+    //! SingleChronicleQueueTest#shouldWaitForConditionWhenCreatingAppender checks the real worker.
     private static void signalReadyAppender(CountDownLatch entered, ReentrantLock lock,
                                             Condition condition, AtomicBoolean gotAppender)
             throws InterruptedException {

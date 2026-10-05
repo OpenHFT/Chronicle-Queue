@@ -90,6 +90,8 @@ public class QueueTestCommon {
     //! Opt-in boundaries correlate per-process native/mapped samples with the active test.
     //! Used/committed heap are observations, not per-test ownership or a resource limit.
     //! Write directly so exception recording does not hide this diagnostic or turn it into a failure.
+    //! Regression: QueueTestCommonResourceTest#boundariesAreOptInAndPreserveFailures
+    //! runs with tracing off and on; it observes output, unchanged primary failures, and recorded warnings.
     private void traceResourceBoundary(String phase) {
         Runtime runtime = Runtime.getRuntime();
         System.out.println("QueueTestExecution phase=" + phase + " timeMs=" + System.currentTimeMillis()
@@ -143,6 +145,8 @@ public class QueueTestCommon {
             //! Agent/build capacity checks must enforce headroom; fixture limits require
             //! explicitly owned paths. Use stdout because an error/warning handler can
             //! turn this diagnostic back into a test failure through ExceptionTracker.
+            //! Regression: QueueTestCommonResourceTest#sharedDiskDropIsContextAndUnrelatedWarningsStillFail
+            //! injects a shared-space decrease while preserving the failure for an unrelated warning.
             System.out.println("Shared filesystem free space decreased by "
                     + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB during "
                     + getClass().getName() + "." + testName.getMethodName()

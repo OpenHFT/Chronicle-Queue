@@ -60,6 +60,8 @@ public class IndexingTestCommon extends QueueTestCommon {
                 //! not a 64 MiB initial mapping. Request small chunks to avoid eagerly
                 //! allocating default-sized roll files on Windows. The builder retains
                 //! the index-geometry minimum and grows as larger indexing cases need it.
+                //! Regression: IndexingSpacingAndCountTest#everyNthEntryIsIndexable asserts the small
+                //! budget and unchanged geometry in setup, then writes enough entries to grow the mapping.
                 .testBlockSize()
                 .path(queuePath)
                 .timeProvider(timeProvider)

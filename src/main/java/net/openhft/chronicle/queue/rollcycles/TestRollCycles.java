@@ -22,6 +22,9 @@ public enum TestRollCycles implements RollCycle {
     //! messages in each one-second cycle: FIX/Queue does not write at that
     //! rate in these test workloads. Tests that hold their clock fixed must
     //! still respect this per-cycle capacity; the roll period is unchanged.
+    //! Regression: TestSecondlyContractTest#preservesSecondlyCapacityWithSmallInitialMapping
+    //! checks geometry, index capacity, the 64 KiB block and initial logical extent.
+    //! Physical allocation and Windows file-sharing behavior require separate platform qualification.
     TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, 2_048, 4),
     /**
      * 0x1000 entries - Only good for testing
