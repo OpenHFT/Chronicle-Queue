@@ -80,6 +80,10 @@ public class SparseBinarySearchTest extends QueueTestCommon {
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
 
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
+
             Set<Integer> entriesWithValues = new HashSet<>();
             Random random = new Random();
             for (int i = 0; i < numberOfMessages; i++) {

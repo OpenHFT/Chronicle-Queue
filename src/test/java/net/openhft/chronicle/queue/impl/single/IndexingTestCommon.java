@@ -38,6 +38,11 @@ public class IndexingTestCommon extends QueueTestCommon {
         queuePath = getTmpDir();
         IOTools.deleteDirWithFiles(queuePath);
         queue = createQueueInstance();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                Math.max(SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE, 32L * queue.indexCount()),
+                queue.blockSize(), "fixture mapping budget");
+        org.junit.jupiter.api.Assertions.assertEquals(rollCycle().defaultIndexCount(), queue.indexCount());
+        org.junit.jupiter.api.Assertions.assertEquals(rollCycle().defaultIndexSpacing(), queue.indexSpacing());
         appender = (StoreAppender) queue.createAppender();
         tailer = queue.createTailer();
     }

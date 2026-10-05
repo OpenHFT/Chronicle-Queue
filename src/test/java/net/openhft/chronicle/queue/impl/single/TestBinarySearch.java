@@ -88,6 +88,10 @@ public class TestBinarySearch extends QueueTestCommon {
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
 
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
+
             if (emptyCyclesStrategy.atStart()) {
                 writeEmptyCycles(appender);
                 writtenEmptyCycles = true;
@@ -120,14 +124,7 @@ public class TestBinarySearch extends QueueTestCommon {
                 writeEmptyCycles(appender);
             }
 
-            MyData reusableComparatorData = new MyData();
-            final Comparator<Wire> comparator = (o1, o2) -> {
-                reusableComparatorData.readMarshallable(o1);
-                int o1Key = reusableComparatorData.key;
-                reusableComparatorData.readMarshallable(o2);
-                int o2Key = reusableComparatorData.key;
-                return Integer.compare(o1Key, o2Key);
-            };
+            final Comparator<Wire> comparator = comparator();
 
             try (final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessagesToVerify; j++) {
@@ -160,6 +157,17 @@ public class TestBinarySearch extends QueueTestCommon {
         }
     }
 
+    Comparator<Wire> comparator() {
+        MyData reusableComparatorData = new MyData();
+        return (o1, o2) -> {
+            reusableComparatorData.readMarshallable(o1);
+            int o1Key = reusableComparatorData.key;
+            reusableComparatorData.readMarshallable(o2);
+            int o2Key = reusableComparatorData.key;
+            return Integer.compare(o1Key, o2Key);
+        };
+    }
+
     private void writeEmptyCycles(ExcerptAppender appender) {
         int numberOfEmptyCycles = emptyCyclesStrategy.single() ? 1 : 2;
         for (int i = 0; i < numberOfEmptyCycles; i++) {
@@ -172,7 +180,7 @@ public class TestBinarySearch extends QueueTestCommon {
     }
 
     @NotNull
-    private Wire toWire(int key) {
+    Wire toWire(int key) {
         final MyData myData = new MyData();
         myData.key = key;
         myData.value = Integer.toString(key);

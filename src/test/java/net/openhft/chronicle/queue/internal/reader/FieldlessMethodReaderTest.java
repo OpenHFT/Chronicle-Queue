@@ -44,6 +44,10 @@ public class FieldlessMethodReaderTest extends QueueTestCommon {
                 //! retaining FIELDLESS_BINARY, TEST_DAILY and all eight parameter cases.
                 .testBlockSize()
                 .wireType(WireType.FIELDLESS_BINARY).rollCycle(TestRollCycles.TEST_DAILY).build()) {
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * chronicle.indexCount()), chronicle.blockSize());
+
             EntityListener writer = chronicle.methodWriter(EntityListener.class);
             MethodReader methodReader = chronicle.createTailer().toEnd().methodReader((EntityListener) value -> msgCounter.incrementAndGet());
 

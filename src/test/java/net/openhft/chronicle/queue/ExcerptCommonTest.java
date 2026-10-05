@@ -21,6 +21,78 @@ public class ExcerptCommonTest extends QueueTestCommon {
         return ChronicleQueue.singleBuilder(getTmpDir()).testBlockSize().build();
     }
 
+    @Test
+    public void ownsAndDeletesFixtureAfterSuccess() throws Exception {
+        checkFixtureOwnership("normal");
+    }
+
+    @Test
+    public void ownsAndDeletesFixtureAfterAssertionFailure() throws Exception {
+        checkFixtureOwnership("assertion");
+    }
+
+    @Test
+    public void ownsAndDeletesFixtureAfterConstructionFailure() throws Exception {
+        checkFixtureOwnership("construction");
+    }
+
+    private void checkFixtureOwnership(String failureMode) throws Exception {
+        final File[] owned = new File[1];
+        final AssertionError bodyFailure = new AssertionError("injected fixture assertion");
+        File unrelated = getTmpDir();
+        java.nio.file.Files.createDirectories(unrelated.toPath());
+        java.nio.file.Files.write(new File(unrelated, "keep").toPath(), new byte[]{1});
+        ExcerptCommonTest fixture = new ExcerptCommonTest() {
+            @Override protected File getTmpDir() {
+                File path = super.getTmpDir();
+                owned[0] = path;
+                if ("construction".equals(failureMode)) {
+                    try {
+                        java.nio.file.Files.createDirectories(new File(path, "metadata.cq4t").toPath());
+                    } catch (java.io.IOException e) {
+                        throw new java.io.UncheckedIOException(e);
+                    }
+                }
+                return path;
+            }
+        };
+        ChronicleQueue opened = null;
+        try {
+            Throwable caught = null;
+            try (ChronicleQueue queue = opened = fixture.newQueue()) {
+                org.junit.Assert.assertEquals("factory path must be owned", owned[0], queue.file());
+                org.junit.Assert.assertEquals("excerpt fixture mapping budget",
+                        Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                                32L * ((net.openhft.chronicle.queue.impl.single.SingleChronicleQueue) queue).indexCount()), ((net.openhft.chronicle.queue.impl.single.SingleChronicleQueue) queue).blockSize());
+                if ("assertion".equals(failureMode))
+                    throw bodyFailure;
+            } catch (RuntimeException | AssertionError failure) {
+                caught = failure;
+            } finally {
+                fixture.tearDown();
+            }
+            if ("normal".equals(failureMode))
+                org.junit.Assert.assertNull(caught);
+            else if ("assertion".equals(failureMode))
+                org.junit.Assert.assertSame(bodyFailure, caught);
+            else {
+                org.junit.Assert.assertNotNull("construction must reject a directory as its metadata file", caught);
+                org.junit.Assert.assertNull("construction failed before returning a queue", opened);
+            }
+            org.junit.Assert.assertNotNull("factory registered the original directory", owned[0]);
+            org.junit.Assert.assertFalse("owned excerpt path remains", owned[0].exists());
+            org.junit.Assert.assertTrue("unrelated path survives", new File(unrelated, "keep").isFile());
+        } finally {
+            if (opened != null) {
+                opened.close();
+                net.openhft.chronicle.core.io.BackgroundResourceReleaser.releasePendingResources();
+                net.openhft.chronicle.core.io.IOTools.deleteDirWithFiles(opened.file());
+            }
+            if (owned[0] != null)
+                net.openhft.chronicle.core.io.IOTools.deleteDirWithFiles(owned[0]);
+        }
+    }
+
     class ExcerptCommonImpl implements ExcerptCommon<ExcerptCommonImpl> {
         private final int sourceId;
         private final ChronicleQueue queue;

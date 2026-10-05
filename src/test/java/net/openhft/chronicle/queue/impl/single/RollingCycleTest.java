@@ -290,6 +290,7 @@ public class RollingCycleTest extends QueueTestCommon {
             //! Control: testRollCycle with both named and unnamed tailers; preserve its exact page-size dump.
             BackgroundResourceReleaser.releasePendingResources();
             IOTools.deleteDirWithFilesOrThrow(basePath);
+            assertFalse("owned rolling directory remains", new java.io.File(basePath).exists());
         }
     }
 

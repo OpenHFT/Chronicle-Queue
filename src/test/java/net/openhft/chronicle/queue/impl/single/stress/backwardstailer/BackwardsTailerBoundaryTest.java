@@ -57,6 +57,10 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD)) {
 
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
+
             assertEquals("Backwards tailer should start at index 0 when no queue data", 0, tailer.index());
 
             long messagesPerCycle = (long) rollCycle.defaultIndexSpacing() * rollCycle.defaultIndexCount() * 5;

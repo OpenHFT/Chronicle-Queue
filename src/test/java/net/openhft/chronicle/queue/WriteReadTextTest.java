@@ -151,6 +151,12 @@ public class WriteReadTextTest extends QueueTestCommon {
     private void doTest(@NotNull String... problematic) {
 
         String myPath = OS.getTarget() + "/writeReadText-" + Time.uniqueId();
+        doTest(myPath, SingleChronicleQueueBuilder::build, problematic);
+    }
+
+    private void doTest(String myPath,
+                        java.util.function.Function<SingleChronicleQueueBuilder, ChronicleQueue> build,
+                        String... problematic) {
 
         //! Size each invocation for its actual largest input, preserving the existing
         //! four-times margin and 256 KiB floor. Small inputs need no huge-message mapping
@@ -161,51 +167,193 @@ public class WriteReadTextTest extends QueueTestCommon {
         //! even if construction, an assertion or resource closure fails. Reverse resource
         //! order closes the queue first; try-with-resources preserves the original failure
         //! and suppresses a later deletion failure instead of replacing useful evidence.
-        try (TestDirectory directory = new TestDirectory(myPath);
-             ChronicleQueue theQueue = SingleChronicleQueueBuilder
-                .single(directory.path)
-                .blockSize(Maths.nextPower2(largestInput * 4, 256 << 10))
-                .build();
-             ExcerptAppender appender = theQueue.createAppender();
-             ExcerptTailer tailer = theQueue.createTailer()) {
+        try (TestDirectory directory = new TestDirectory(myPath)) {
+            SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.single(directory.path)
+                    .blockSize(Maths.nextPower2(largestInput * 4, 256 << 10));
+            try (ChronicleQueue theQueue = build.apply(builder);
+                 ExcerptAppender appender = theQueue.createAppender();
+                 ExcerptTailer tailer = theQueue.createTailer()) {
+                long expectedBudget = 256L << 10;
+                for (String input : problematic)
+                    while (expectedBudget < input.length() * 4L)
+                        expectedBudget *= 2;
+                Assert.assertEquals("input mapping budget", expectedBudget, builder.blockSize());
+                StringBuilder tmpReadback = new StringBuilder();
 
-            StringBuilder tmpReadback = new StringBuilder();
+                // If the tests don't fail, try increasing the number of iterations
+                // Setting it very high may give you a JVM crash
+                final int tmpNumberOfIterations = 5;
 
-            // If the tests don't fail, try increasing the number of iterations
-            // Setting it very high may give you a JVM crash
-            final int tmpNumberOfIterations = 5;
-
-            for (int l = 0; l < tmpNumberOfIterations; l++) {
-                for (int p = 0; p < problematic.length; p++) {
-                    appender.writeText(problematic[p]);
+                for (int l = 0; l < tmpNumberOfIterations; l++) {
+                    for (int p = 0; p < problematic.length; p++) {
+                        appender.writeText(problematic[p]);
+                    }
+                    for (int p = 0; p < problematic.length; p++) {
+                        tailer.readText(tmpReadback);
+                        Assert.assertEquals("write/readText", problematic[p], tmpReadback.toString());
+                    }
                 }
-                for (int p = 0; p < problematic.length; p++) {
-                    tailer.readText(tmpReadback);
-                    Assert.assertEquals("write/readText", problematic[p], tmpReadback.toString());
-                }
-            }
 
-            for (int l = 0; l < tmpNumberOfIterations; l++) {
-                for (int p = 0; p < problematic.length; p++) {
-                    final String tmpText = problematic[p];
-                    appender.writeDocument(writer -> writer.getValueOut().text(tmpText));
+                for (int l = 0; l < tmpNumberOfIterations; l++) {
+                    for (int p = 0; p < problematic.length; p++) {
+                        final String tmpText = problematic[p];
+                        appender.writeDocument(writer -> writer.getValueOut().text(tmpText));
 
-                    tailer.readDocument(reader -> reader.getValueIn().textTo(tmpReadback));
-                    String actual = tmpReadback.toString();
-                    Assert.assertEquals(problematic[p].length(), actual.length());
-                    for (int i = 0; i < actual.length(); i += 1024)
-                        Assert.assertEquals("i: " + i, problematic[p].substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)));
-                    Assert.assertEquals(problematic[p], actual);
+                        tailer.readDocument(reader -> reader.getValueIn().textTo(tmpReadback));
+                        String actual = tmpReadback.toString();
+                        Assert.assertEquals(problematic[p].length(), actual.length());
+                        for (int i = 0; i < actual.length(); i += 1024)
+                            Assert.assertEquals("i: " + i, problematic[p].substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)));
+                        Assert.assertEquals(problematic[p], actual);
+                    }
                 }
             }
         }
+    }
+
+    @Test
+    public void cleansOwnedDirectoryAfterSuccess() throws Exception {
+        checkDirectoryCleanup("normal");
+    }
+
+    @Test
+    public void cleansOwnedDirectoryAfterConstructionFailure() throws Exception {
+        checkDirectoryCleanup("construction");
+    }
+
+    @Test
+    public void cleansOwnedDirectoryAfterAssertionFailure() throws Exception {
+        checkDirectoryCleanup("assertion");
+    }
+
+    @Test
+    public void cleansOwnedDirectoryAfterCloseFailure() throws Exception {
+        checkDirectoryCleanup("close");
+    }
+
+    private void checkDirectoryCleanup(String failureMode) throws Exception {
+        File owned = new File(getTmpDir(), "text-owned");
+        java.nio.file.Files.createDirectories(owned.getParentFile().toPath());
+        File unrelated = new File(owned.getParentFile(), "keep");
+        java.nio.file.Files.write(unrelated.toPath(), new byte[]{1});
+        final IllegalStateException primary = new IllegalStateException("injected " + failureMode);
+        final ChronicleQueue[] realQueue = new ChronicleQueue[1];
+        try {
+            Throwable caught = null;
+            try {
+                doTest(owned.toString(), builder -> {
+                    if ("construction".equals(failureMode)) {
+                        Assert.assertTrue(owned.mkdir());
+                        throw primary;
+                    }
+                    ChronicleQueue queue = realQueue[0] = builder.build();
+                    return (ChronicleQueue) java.lang.reflect.Proxy.newProxyInstance(
+                            getClass().getClassLoader(), new Class<?>[]{ChronicleQueue.class}, (proxy, method, args) -> {
+                                try {
+                                    Object result = method.invoke(queue, args);
+                                    if ("close".equals(method.getName()) && "close".equals(failureMode))
+                                        throw primary;
+                                    if ("createTailer".equals(method.getName()) && "assertion".equals(failureMode)) {
+                                        ExcerptTailer tailer = (ExcerptTailer) result;
+                                        return java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                                                new Class<?>[]{ExcerptTailer.class}, (tailerProxy, operation, values) -> {
+                                                    try {
+                                                        Object answer = operation.invoke(tailer, values);
+                                                        if ("readText".equals(operation.getName()) && values != null
+                                                                && values.length == 1 && values[0] instanceof StringBuilder)
+                                                            ((StringBuilder) values[0]).append("-corrupt");
+                                                        return answer;
+                                                    } catch (java.lang.reflect.InvocationTargetException e) {
+                                                        throw e.getCause();
+                                                    }
+                                                });
+                                    }
+                                    return result;
+                                } catch (java.lang.reflect.InvocationTargetException e) {
+                                    throw e.getCause();
+                                }
+                            });
+                }, "small input");
+            } catch (RuntimeException | AssertionError failure) {
+                caught = failure;
+            }
+            if ("normal".equals(failureMode))
+                Assert.assertNull(caught);
+            else if ("assertion".equals(failureMode)) {
+                Assert.assertTrue("original text assertion", caught instanceof AssertionError);
+                Assert.assertTrue(caught.getMessage().contains("write/readText"));
+            } else
+                Assert.assertSame("original construction/close failure", primary, caught);
+            if (realQueue[0] != null)
+                Assert.assertTrue("queue closed before directory cleanup", realQueue[0].isClosed());
+            Assert.assertFalse("owned text directory remains", owned.exists());
+            Assert.assertTrue("unrelated sibling remains", unrelated.isFile());
+        } finally {
+            if (realQueue[0] != null)
+                realQueue[0].close();
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFiles(owned);
+        }
+    }
+
+    @Test
+    public void drainsPendingReleasesBeforeDeletion() throws Exception {
+        if (FixtureProcessTestSupport.runDeferredReleaseTest(getClass(), "drainsPendingReleasesBeforeDeletion"))
+            return;
+        final java.util.concurrent.atomic.AtomicBoolean released = new java.util.concurrent.atomic.AtomicBoolean();
+        File owned = getTmpDir();
+        java.nio.file.Files.createDirectories(owned.toPath());
+        File observed = new File(owned.toString()) {
+            @Override public boolean exists() {
+                Assert.assertTrue("pending releases must finish before deletion", released.get());
+                return super.exists();
+            }
+        };
+        BackgroundResourceReleaser.run(() -> released.set(true));
+        Assert.assertFalse("control begins with a pending release", released.get());
+        try {
+            new TestDirectory(observed).close();
+            Assert.assertFalse("owned directory deleted", owned.exists());
+        } finally {
+            BackgroundResourceReleaser.releasePendingResources();
+        }
+    }
+
+    @Test
+    public void failedDeletionIsVisibleAndSuppressedBehindPrimaryFailure() throws Exception {
+        File unrelated = getTmpDir();
+        java.nio.file.Files.createDirectories(unrelated.toPath());
+        File undeletable = new File(unrelated, "owned-only") {
+            @Override public boolean exists() { return true; }
+            @Override public boolean isDirectory() { return true; }
+            @Override public File[] listFiles() { return new File[0]; }
+            @Override public boolean delete() { return false; }
+        };
+        AssertionError deletion = Assert.assertThrows(AssertionError.class,
+                () -> new TestDirectory(undeletable).close());
+        Assert.assertTrue(deletion.getMessage().contains("Could not delete test directory"));
+        IllegalStateException primary = new IllegalStateException("original body failure");
+        try {
+            try (TestDirectory ignored = new TestDirectory(undeletable)) {
+                throw primary;
+            }
+        } catch (IllegalStateException caught) {
+            Assert.assertSame(primary, caught);
+            Assert.assertEquals("cleanup failure is suppressed", 1, caught.getSuppressed().length);
+            Assert.assertTrue(caught.getSuppressed()[0] instanceof AssertionError);
+        }
+        Assert.assertTrue("cleanup did not delete the unrelated parent", unrelated.isDirectory());
     }
 
     private static final class TestDirectory implements AutoCloseable {
         private final File path;
 
         private TestDirectory(String path) {
-            this.path = new File(path);
+            this(new File(path));
+        }
+
+        private TestDirectory(File path) {
+            this.path = path;
         }
 
         @Override
