@@ -66,6 +66,8 @@ public class RollCycleTest extends QueueTestCommon {
             }
 
             thread.interrupt();
+            // the tailer of the observer must stop before the queue close unmaps the store files
+            thread.join();
         }
 
         assertEquals(1, observer.documentsRead);
@@ -282,6 +284,8 @@ public class RollCycleTest extends QueueTestCommon {
                 }
             } finally {
                 thread.interrupt();
+                // the tailer of the observer must stop before the queue close unmaps the store files
+                thread.join();
             }
 
             assertEquals(1 + cyclesToWrite, observer.documentsRead);
