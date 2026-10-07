@@ -328,6 +328,7 @@ public class WriteReadTextTest extends QueueTestCommon {
     }
 
     @Test
+    @SuppressWarnings("try")
     public void failedDeletionIsVisibleAndSuppressedBehindPrimaryFailure() throws Exception {
         File unrelated = getTmpDir();
         java.nio.file.Files.createDirectories(unrelated.toPath());
