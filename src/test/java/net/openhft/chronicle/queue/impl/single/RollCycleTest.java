@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 public class RollCycleTest extends QueueTestCommon {
@@ -67,7 +68,8 @@ public class RollCycleTest extends QueueTestCommon {
 
             thread.interrupt();
             // the tailer of the observer must stop before the queue close unmaps the store files
-            thread.join();
+            thread.join(5_000);
+            assertFalse("observer did not stop", thread.isAlive());
         }
 
         assertEquals(1, observer.documentsRead);
@@ -285,9 +287,10 @@ public class RollCycleTest extends QueueTestCommon {
             } finally {
                 thread.interrupt();
                 // the tailer of the observer must stop before the queue close unmaps the store files
-                thread.join();
+                thread.join(5_000);
             }
 
+            assertFalse("observer did not stop", thread.isAlive());
             assertEquals(1 + cyclesToWrite, observer.documentsRead);
         }
         finishedNormally = true;
