@@ -3,7 +3,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -14,7 +13,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
@@ -35,9 +33,9 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
 
     @Test
     public void testExcerptsPerCycleNotBehind() throws IOException {
-        final File file = Files.createTempDirectory("exact-excerpts-per-cycle").toFile();
+        final File file = getTmpDir();
         try (final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(file).build();
+                     SingleChronicleQueueBuilder.binary(file).testBlockSize().build();
              final ExcerptTailer tailer = queue.createTailer()) {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
@@ -55,16 +53,14 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
                     checkExactExcerptCount(queue, readIndex, tailer);
                 }
             }
-        } finally {
-            IOTools.deleteDirWithFiles(file);
         }
     }
 
     @Test
     public void testToEndNotBehind() throws IOException {
-        final File file = Files.createTempDirectory("to-end").toFile();
+        final File file = getTmpDir();
         try (final SingleChronicleQueue queue =
-                     SingleChronicleQueueBuilder.binary(file).build()) {
+                     SingleChronicleQueueBuilder.binary(file).testBlockSize().build()) {
 
             final CyclicBarrier startBarrier = new CyclicBarrier(3);
             final AtomicLong lastIndex = new AtomicLong();
@@ -81,8 +77,6 @@ public final class EntryCountNotBehindReadTest extends QueueTestCommon {
                     checkToEnd(queue, readIndex);
                 }
             }
-        } finally {
-            IOTools.deleteDirWithFiles(file);
         }
     }
 

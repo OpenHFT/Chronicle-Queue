@@ -4,11 +4,9 @@
 package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.DirectoryUtils;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.testframework.FlakyTestRunner;
@@ -57,7 +55,7 @@ public class OrderManagerTest extends QueueTestCommon {
 
     @Test
     public void testWithQueue() {
-        File queuePath = new File(OS.getTarget(), "testWithQueue-" + Time.uniqueId());
+        File queuePath = getTmpDir();
         try {
             try (ChronicleQueue queue = ChronicleQueue.singleBuilder(queuePath).testBlockSize().build()) {
                 OrderIdeaListener orderManager = queue.methodWriter(OrderIdeaListener.class, MarketDataListener.class);
@@ -92,10 +90,8 @@ public class OrderManagerTest extends QueueTestCommon {
 
             verify(listener);
         } finally {
-            try {
-                IOTools.shallowDeleteDirWithFiles(queuePath);
-            } catch (Exception e) {
-            }
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFilesOrThrow(queuePath);
         }
     }
 
@@ -105,8 +101,8 @@ public class OrderManagerTest extends QueueTestCommon {
     }
 
     private void testWithQueueHistory0() {
-        File queuePath = new File(OS.getTarget(), "testWithQueueHistory-" + Time.uniqueId());
-        File queuePath2 = new File(OS.getTarget(), "testWithQueueHistory-down-" + Time.uniqueId());
+        File queuePath = getTmpDir();
+        File queuePath2 = getTmpDir();
         try {
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
                     .testBlockSize()
@@ -164,18 +160,15 @@ public class OrderManagerTest extends QueueTestCommon {
                 assertFalse(reader.readOne());
             }
         } finally {
-            try {
-                IOTools.shallowDeleteDirWithFiles(queuePath);
-                IOTools.shallowDeleteDirWithFiles(queuePath2);
-            } catch (Exception e) {
-            }
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFilesOrThrow(queuePath, queuePath2);
         }
     }
 
     @Test
     public void testRestartingAService() {
-        File queuePath = DirectoryUtils.tempDir("testRestartingAService");
-        File queuePath2 = DirectoryUtils.tempDir("testRestartingAService-down");
+        File queuePath = getTmpDir();
+        File queuePath2 = getTmpDir();
         try {
 
             try (ChronicleQueue out = ChronicleQueue.singleBuilder(queuePath)
@@ -225,15 +218,8 @@ public class OrderManagerTest extends QueueTestCommon {
                 }
             }
         } finally {
-            try {
-                IOTools.shallowDeleteDirWithFiles(queuePath);
-            } catch (Exception ignore) {
-            }
-
-            try {
-                IOTools.shallowDeleteDirWithFiles(queuePath2);
-            } catch (Exception ignore) {
-            }
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFilesOrThrow(queuePath, queuePath2);
         }
     }
 }

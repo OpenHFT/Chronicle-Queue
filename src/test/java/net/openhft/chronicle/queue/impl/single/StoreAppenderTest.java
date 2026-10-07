@@ -17,11 +17,16 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
@@ -40,9 +45,9 @@ public class StoreAppenderTest extends QueueTestCommon {
 
     @Test
     public void writingDocumentAcquisitionWorksAfterInterruptedAttempt() throws InterruptedException, IOException {
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).build()) {
-            final BlockingWriter blockingWriter = new BlockingWriter(queue);
-            final BlockedWriter blockedWriter = new BlockedWriter(queue);
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder()).testBlockSize().build();
+             BlockedWriter blockedWriter = new BlockedWriter(queue);
+             BlockingWriter blockingWriter = new BlockingWriter(queue)) {
 
             writeSomeText(queue, 5);
             blockedWriter.makeSuccessfulWrite();
@@ -62,6 +67,28 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
+    public void failureClosesBothWritersBeforeTheirQueue() throws Exception {
+        AssertionError bodyFailure = new AssertionError("Deliberate failure with both writers owned");
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
+                .testBlockSize().build()) {
+            BlockedWriter blockedWriter = new BlockedWriter(queue);
+            BlockingWriter blockingWriter = new BlockingWriter(queue);
+            try (BlockedWriter ownedBlocked = blockedWriter;
+                 BlockingWriter ownedBlocking = blockingWriter) {
+                ownedBlocked.makeSuccessfulWrite();
+                ownedBlocking.blockWrites();
+                throw bodyFailure;
+            } catch (AssertionError actual) {
+                assertSame("Cleanup must preserve the original body failure", bodyFailure, actual);
+                assertEquals("Cleanup must finish without secondary failures", 0, actual.getSuppressed().length);
+            }
+            assertFalse(blockedWriter.t.isAlive());
+            assertFalse(blockingWriter.t != null && blockingWriter.t.isAlive());
+            assertFalse("The writers must terminate before the queue closes", queue.isClosed());
+        }
+    }
+
+    @Test
     public void testCanWriteAfterWriteAfterEOFExceptionIsThrown() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
 
@@ -69,6 +96,7 @@ public class StoreAppenderTest extends QueueTestCommon {
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(queueDirectory.newFolder())
                 .timeProvider(clock::get)
+                .testBlockSize()
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
 
@@ -109,12 +137,14 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
-    static class BlockedWriter {
+    static class BlockedWriter implements AutoCloseable {
 
         private Thread t;
         private final SingleChronicleQueue queue;
         private Semaphore waitingToAcquire;
         private Semaphore waitingAfterInterrupt;
+        private final CountDownLatch attemptingWrite = new CountDownLatch(1);
+        private final AtomicReference<Throwable> failure = new AtomicReference<>();
 
         BlockedWriter(SingleChronicleQueue queue) {
             this.queue = queue;
@@ -123,29 +153,42 @@ public class StoreAppenderTest extends QueueTestCommon {
         void makeSuccessfulWrite() {
             waitingToAcquire = new Semaphore(0);
             waitingAfterInterrupt = new Semaphore(0);
-            t = new Thread(this::makeInterruptedWriteAttemptThenTryAgain);
+            t = new Thread(() -> {
+                try {
+                    makeInterruptedWriteAttemptThenTryAgain();
+                } catch (Throwable thrown) {
+                    failure.set(thrown);
+                } finally {
+                    attemptingWrite.countDown();
+                }
+            });
             t.setName("blocked-writer");
             t.start();
-            waitForThreads(waitingToAcquire);
+            waitForThreads(waitingToAcquire, t, failure);
         }
 
-        void makeInterruptedAttemptToWrite() {
+        void makeInterruptedAttemptToWrite() throws InterruptedException {
             waitingToAcquire.release(1);
-            // Wait till the lock() call has been made
-            Jvm.pause(10);
+            // The worker must leave Semaphore.acquire before receiving the test interrupt.
+            // A fixed sleep races with that handoff on slower or heavily loaded JVMs.
+            assertTrue("Writer did not reach its queue acquisition", attemptingWrite.await(5, TimeUnit.SECONDS));
+            assertWorkerHealthy(t, failure);
             t.interrupt();
-            waitForThreads(waitingAfterInterrupt);
+            waitForThreads(waitingAfterInterrupt, t, failure);
         }
 
         void makePostInterruptAttemptToWrite() throws InterruptedException {
             waitingAfterInterrupt.release();
-            t.join();
+            joinWriter(t);
+            if (failure.get() != null)
+                throw new AssertionError("Interrupted writer failed", failure.get());
         }
 
         private void makeInterruptedWriteAttemptThenTryAgain() {
             try (final ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText(TEST_TEXT);
                 acquire(waitingToAcquire);
+                attemptingWrite.countDown();
                 try (final DocumentContext documentContext = appender.writingDocument()) {
                     throw new AssertionError("We shouldn't get here " + documentContext);
                 } catch (InterruptedRuntimeException e) {
@@ -156,28 +199,47 @@ public class StoreAppenderTest extends QueueTestCommon {
                 appender.writeText(TEST_TEXT);
             }
         }
+
+        @Override
+        public void close() {
+            if (t != null && t.isAlive()) {
+                waitingToAcquire.release();
+                waitingAfterInterrupt.release();
+                t.interrupt();
+                joinWriter(t);
+            }
+        }
     }
 
-    static class BlockingWriter {
+    static class BlockingWriter implements AutoCloseable {
 
         private Thread t;
         private final SingleChronicleQueue queue;
         private final Semaphore inWritingDocument = new Semaphore(0);
+        private final AtomicReference<Throwable> failure = new AtomicReference<>();
 
         BlockingWriter(SingleChronicleQueue queue) {
             this.queue = queue;
         }
 
         void blockWrites() {
-            t = new Thread(this::acquireWritingDocumentThenBlock);
+            t = new Thread(() -> {
+                try {
+                    acquireWritingDocumentThenBlock();
+                } catch (Throwable thrown) {
+                    failure.set(thrown);
+                }
+            });
             t.setName("blocking-writer");
             t.start();
-            waitForThreads(inWritingDocument);
+            waitForThreads(inWritingDocument, t, failure);
         }
 
-        void unblockWrites() throws InterruptedException {
+        void unblockWrites() {
             inWritingDocument.release(1);
-            t.join();
+            joinWriter(t);
+            if (failure.get() != null)
+                throw new AssertionError("Blocking writer failed", failure.get());
             t = null;
         }
 
@@ -189,19 +251,53 @@ public class StoreAppenderTest extends QueueTestCommon {
                 }
             }
         }
+
+        @Override
+        public void close() {
+            if (t != null && t.isAlive())
+                unblockWrites();
+        }
     }
 
     private static void acquire(Semaphore semaphore) {
         try {
             semaphore.acquire();
         } catch (InterruptedException e) {
-            throw new AssertionError("This shouldn't happen");
+            throw new AssertionError("Unexpected interrupt before the queue acquisition", e);
         }
     }
 
-    private static void waitForThreads(Semaphore semaphore) {
+    private static void waitForThreads(Semaphore semaphore, Thread worker, AtomicReference<Throwable> failure) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
         while (!semaphore.hasQueuedThreads()) {
-            Jvm.pause(10);
+            assertWorkerHealthy(worker, failure);
+            assertTrue("Writer did not reach its handoff: " + worker + ", state=" + worker.getState(),
+                    System.nanoTime() < deadline);
+            Jvm.pause(1);
+        }
+    }
+
+    private static void assertWorkerHealthy(Thread worker, AtomicReference<Throwable> failure) {
+        if (failure.get() != null)
+            throw new AssertionError("Writer failed before its handoff", failure.get());
+        assertTrue("Writer exited before its handoff: " + worker, worker.isAlive());
+    }
+
+    private static void joinWriter(Thread worker) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        boolean interrupted = Thread.interrupted();
+        try {
+            while (worker.isAlive() && System.nanoTime() < deadline) {
+                try {
+                    TimeUnit.NANOSECONDS.timedJoin(worker, Math.max(1, deadline - System.nanoTime()));
+                } catch (InterruptedException ignored) {
+                    interrupted = true;
+                }
+            }
+            assertFalse("Writer still alive: " + worker + ", state=" + worker.getState(), worker.isAlive());
+        } finally {
+            if (interrupted)
+                Thread.currentThread().interrupt();
         }
     }
 }

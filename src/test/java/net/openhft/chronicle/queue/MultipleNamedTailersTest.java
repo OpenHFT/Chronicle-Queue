@@ -3,8 +3,6 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
@@ -18,7 +16,7 @@ import static org.junit.Assert.assertTrue;
 public class MultipleNamedTailersTest extends QueueTestCommon {
     @Test
     public void multipleTailers() {
-        File tmpDir = new File(OS.getTarget(), "multipleTailers" + System.nanoTime());
+        File tmpDir = getTmpDir();
 
         try (ChronicleQueue q1 = SingleChronicleQueueBuilder.single(tmpDir).testBlockSize().rollCycle(TEST_SECONDLY).build();
              final ExcerptAppender appender = q1.createAppender();
@@ -36,8 +34,6 @@ public class MultipleNamedTailersTest extends QueueTestCommon {
                 check(tailer2, id0, index0);
                 check(namedTailer2, id0, index0);
             }
-        } finally {
-            IOTools.deleteDirWithFiles(tmpDir);
         }
     }
 

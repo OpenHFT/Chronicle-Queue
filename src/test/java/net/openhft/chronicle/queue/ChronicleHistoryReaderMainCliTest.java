@@ -20,7 +20,7 @@ public class ChronicleHistoryReaderMainCliTest extends QueueTestCommon {
 
     @Test
     public void runConfiguresReaderFromArguments() throws Exception {
-        final Path queueDir = Files.createTempDirectory("history-reader");
+        final Path queueDir = Files.createDirectories(getTmpDir().toPath());
         final TestChronicleHistoryReaderMain main = new TestChronicleHistoryReaderMain();
 
         main.run(new String[]{"-d", queueDir.toString(), "-p", "-m", "-t", "SECONDS", "-i", "2", "-w", "5", "-u", "1"});

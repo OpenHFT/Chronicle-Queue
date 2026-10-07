@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.InterruptedRuntimeException;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -13,12 +12,15 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.threads.Threads;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.junit.runners.model.MultipleFailureException;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -35,15 +37,39 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     private static final String TEST_LOCK_NAME = "testLock";
     private static final long TIMEOUT_MS = 100;
+    private static final long PROCESS_START_TIMEOUT_MS = 10_000;
+    private final TableStoreWriteLockTestResources resources = new TableStoreWriteLockTestResources();
     private TableStore<Metadata.NoMeta> tableStore;
     private Path tempDir;
+    private Process lockingProcess;
+
+    @Rule
+    public final TestWatcher failureDiagnostics = new TestWatcher() {
+        @Override
+        protected void failed(Throwable failure, Description description) {
+            addDiagnostics(failure, description.getDisplayName());
+        }
+    };
+
+    private void addDiagnostics(Throwable failure, String test) {
+        if (failure instanceof MultipleFailureException) {
+            for (Throwable cause : ((MultipleFailureException) failure).getFailures())
+                addDiagnostics(cause, test);
+        } else {
+            failure.addSuppressed(new AssertionError("Lock fixture: " + test + ", directory=" + tempDir
+                    + ", java=" + System.getProperty("java.runtime.version") + "\n" + resources.diagnostics()));
+        }
+    }
 
     @Before
     public void setUp() {
         tempDir = IOTools.createTempDirectory("namedTableStoreLockTest");
         tempDir.toFile().mkdirs();
+        resources.own(() -> TableStoreWriteLockTestResources.deleteDirectory(tempDir, 2, TimeUnit.SECONDS),
+                "directory " + tempDir);
         Path storeDirectory = tempDir.resolve("test_store.cq4t");
-        tableStore = SingleTableBuilder.binary(storeDirectory, Metadata.NoMeta.INSTANCE).build();
+        tableStore = resources.own(SingleTableBuilder.binary(storeDirectory, Metadata.NoMeta.INSTANCE).build(),
+                "table store " + storeDirectory);
     }
 
     @Override
@@ -54,8 +80,15 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
 
     @After
     public void tearDown() {
-        Closeable.closeQuietly(tableStore);
-        IOTools.deleteDirWithFiles(tempDir.toFile());
+        resources.close();
+    }
+
+    @Override
+    protected void preAfter() {
+        // JUnit runs teardown outside a timed-out test body. Close every registered owner
+        // before the shared leak checks, even when the body cannot leave a native read.
+        // TableStoreWriteLockTestLifecycleTest exercises that path with a real child JVM.
+        tearDown();
     }
 
     @Test(timeout = 5_000)
@@ -150,8 +183,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             testLock.unlock();
             assertTrue(testLock.locked());
             expectException("Write lock was locked by someone else!");
-            process.destroy();
-            process.waitFor();
+            TableStoreWriteLockTestResources.stopProcess(process, 2, TimeUnit.SECONDS);
         }
     }
 
@@ -163,8 +195,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             testLock.forceUnlock();
             assertFalse(testLock.locked());
             expectException("Forced unlock for the lock");
-            process.destroy();
-            process.waitFor();
+            TableStoreWriteLockTestResources.stopProcess(process, 2, TimeUnit.SECONDS);
         }
     }
 
@@ -191,19 +222,22 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         AtomicBoolean lockIsAcquired = new AtomicBoolean(false);
         try (final TableStoreWriteLock testLock = createTestLock(tableStore, 10_000)) {
             int numThreads = Math.min(6, Runtime.getRuntime().availableProcessors());
-            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
-            CyclicBarrier barrier = new CyclicBarrier(numThreads);
-            final Collection<Future<?>> futures = IntStream.range(0, numThreads)
-                    .mapToObj(v -> executorService.submit(new LockAcquirer(testLock, lockIsAcquired, 30, barrier)))
-                    .collect(Collectors.toList());
-            futures.forEach(fut -> {
-                try {
-                    fut.get();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            Threads.shutdown(executorService);
+            ExecutorService executorService = resources.ownExecutor(Executors.newFixedThreadPool(numThreads));
+            try {
+                CyclicBarrier barrier = new CyclicBarrier(numThreads);
+                final Collection<Future<?>> futures = IntStream.range(0, numThreads)
+                        .mapToObj(v -> executorService.submit(new LockAcquirer(testLock, lockIsAcquired, 30, barrier)))
+                        .collect(Collectors.toList());
+                futures.forEach(fut -> {
+                    try {
+                        fut.get();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            } finally {
+                TableStoreWriteLockTestResources.stopExecutor(executorService);
+            }
         }
         assertTrue(true); // if we got here without an exception, the test passes
     }
@@ -216,8 +250,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
             assertFalse(lock.forceUnlockIfProcessIsDead());
             assertTrue(lock.locked());
         }
-        lockingProcess.destroy();
-        lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
+        TableStoreWriteLockTestResources.stopProcess(lockingProcess, 2, TimeUnit.SECONDS);
     }
 
     @Test(timeout = 15_000)
@@ -226,8 +259,7 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
         Process lockingProcess = runLockingProcess(false);
         try (TableStoreWriteLock lock = createTestLock()) {
             waitForLockToBecomeLocked(lock);
-            lockingProcess.destroy();
-            lockingProcess.waitFor(3_000, TimeUnit.SECONDS);
+            TableStoreWriteLockTestResources.stopProcess(lockingProcess, 2, TimeUnit.SECONDS);
             assertTrue(lock.forceUnlockIfProcessIsDead());
             assertFalse(lock.locked());
         }
@@ -242,12 +274,16 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     private void waitForLockToBecomeLocked(TableStoreWriteLock lock) throws TimeoutException {
-        Pauser p = Pauser.balanced();
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(PROCESS_START_TIMEOUT_MS);
         while (!lock.locked()) {
-            p.pause(3_000, TimeUnit.SECONDS);
+            if (lockingProcess != null && !lockingProcess.isAlive())
+                fail("Lock-holder exited before acquiring " + tempDir + ", exit=" + lockingProcess.exitValue());
+            if (System.nanoTime() >= deadline)
+                throw new TimeoutException("Lock-holder did not acquire " + tempDir + " within " + PROCESS_START_TIMEOUT_MS + " ms");
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedRuntimeException("Interrupted waiting for lock to lock");
             }
+            Jvm.pause(10);
         }
     }
 
@@ -256,18 +292,22 @@ public class TableStoreWriteLockTest extends QueueTestCommon {
     }
 
     @NotNull
-    private static TableStoreWriteLock createTestLock(TableStore<Metadata.NoMeta> tableStore, long timeoutMilliseconds) {
-        return new TableStoreWriteLock(tableStore, Pauser::balanced, timeoutMilliseconds, TEST_LOCK_NAME);
+    private TableStoreWriteLock createTestLock(TableStore<Metadata.NoMeta> tableStore, long timeoutMilliseconds) {
+        return resources.own(new TableStoreWriteLock(tableStore, Pauser::balanced, timeoutMilliseconds, TEST_LOCK_NAME),
+                "parent lock for " + tableStore.file());
     }
 
     private Process runLockingProcess(boolean releaseAfterInterrupt) {
-        return JavaProcessBuilder.create(LockAndHoldUntilInterrupted.class)
-                .withProgramArguments(tableStore.file().getAbsolutePath(), String.valueOf(releaseAfterInterrupt)).start();
+        lockingProcess = resources.ownProcess(JavaProcessBuilder.create(LockAndHoldUntilInterrupted.class)
+                .withProgramArguments(tableStore.file().getAbsolutePath(), String.valueOf(releaseAfterInterrupt)).start(),
+                "lock-holder for " + tableStore.file());
+        return lockingProcess;
     }
 
     private static void lockAndHoldUntilInterrupted(String tableStorePath, boolean releaseWhenInterrupted) {
         try (TableStore<Metadata.NoMeta> tableStore = SingleTableBuilder.binary(tableStorePath, Metadata.NoMeta.INSTANCE).build();
-             TableStoreWriteLock lock = createTestLock(tableStore, 15_000)) {
+             TableStoreWriteLock lock = new TableStoreWriteLock(tableStore, Pauser::balanced, 15_000L, TEST_LOCK_NAME)) {
+            System.err.println("Lock-holder pid=" + Jvm.getProcessId() + ", store=" + tableStorePath);
             lock.lock();
             while (!Thread.currentThread().isInterrupted()) {
                 Jvm.pause(100);

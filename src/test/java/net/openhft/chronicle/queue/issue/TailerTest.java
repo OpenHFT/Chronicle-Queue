@@ -3,19 +3,15 @@
  */
 package net.openhft.chronicle.queue.issue;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.DocumentContext;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,19 +19,16 @@ import static org.junit.Assert.assertEquals;
 
 public class TailerTest extends QueueTestCommon {
 
-    private static final Path QUEUE_PATH = Paths.get(OS.getTarget() + "/host-1/queue/broker_out");
+    private Path queuePath;
     private static final int OFFSET = 3;
 
     @Before
-    @After
-    public void cleanupFiles() {
-        IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
+    public void createQueuePath() {
+        queuePath = getTmpDir().toPath().resolve("host-1/queue/broker_out");
     }
 
     @Test
     public void reproduce() {
-        IOTools.deleteDirWithFiles(QUEUE_PATH.toFile());
-
         long firstOutputIndex = Long.MAX_VALUE;
         long lastOutputIndex = Long.MIN_VALUE;
 
@@ -86,6 +79,6 @@ public class TailerTest extends QueueTestCommon {
     }
 
     private ChronicleQueue createQueue() {
-        return ChronicleQueue.singleBuilder(QUEUE_PATH).build();
+        return ChronicleQueue.singleBuilder(queuePath).testBlockSize().build();
     }
 }

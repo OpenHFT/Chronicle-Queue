@@ -133,10 +133,15 @@ public class TestBinarySearch extends QueueTestCommon {
                 for (int j = 0; j < numberOfMessagesToVerify; j++) {
                     int indexToVerify = (int) retrievalStrategy.retrieveIndex(j, numberOfMessages);
                     Wire key = toWire(indexToVerify);
-                    long index = BinarySearch.search(binarySearchTailer, key, comparator);
-                    long expectedIndex = keyToIndex.get(indexToVerify);
-                    assertEquals("Failed looking for item at index: " + expectedIndex, expectedIndex, index);
-                    key.bytes().releaseLast();
+                    //! Each search owns its key bytes even if search or the assertion fails.
+                    //! Control: all testBinarySearch parameter combinations, including missing keys below.
+                    try {
+                        long index = BinarySearch.search(binarySearchTailer, key, comparator);
+                        long expectedIndex = keyToIndex.get(indexToVerify);
+                        assertEquals("Failed looking for item at index: " + expectedIndex, expectedIndex, index);
+                    } finally {
+                        key.bytes().releaseLast();
+                    }
 
                     if (j > 0 && numberOfMessagesToVerify > 10 && j % (numberOfMessagesToVerify / 10) == 0) {
                         Jvm.startup().on(getClass(), "Verified " + j + " messages");
@@ -145,8 +150,12 @@ public class TestBinarySearch extends QueueTestCommon {
                 Jvm.startup().on(getClass(), "Verified " + numberOfMessagesToVerify + " messages");
 
                 Wire key = toWire(numberOfMessages);
-                long result = BinarySearch.search(binarySearchTailer, key, comparator);
-                Assert.assertTrue("Should not find non-existent", result < 0);
+                try {
+                    long result = BinarySearch.search(binarySearchTailer, key, comparator);
+                    Assert.assertTrue("Should not find non-existent", result < 0);
+                } finally {
+                    key.bytes().releaseLast();
+                }
             }
         }
     }

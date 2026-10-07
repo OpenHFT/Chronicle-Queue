@@ -37,6 +37,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -3675,36 +3676,59 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void shouldWaitForConditionWhenCreatingAppender() throws TimeoutException {
+    public void shouldWaitForConditionWhenCreatingAppender() throws TimeoutException, InterruptedException {
         File tmpDir = getTmpDir();
         AtomicBoolean gotAppender = new AtomicBoolean(false);
         ReentrantLock createAppenderLock = new ReentrantLock();
         final Condition createAppenderCondition = createAppenderLock.newCondition();
+        CountDownLatch entered = new CountDownLatch(1);
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(tmpDir)
                 .wireType(wireType)
+                .testBlockSize()
                 .createAppenderConditionCreator(q -> createAppenderCondition)
                 .build()) {
-            new Thread(() -> {
+            //! A sleep does not establish that the worker reached Condition.await; an early signal is lost.
+            //! Publish entry while holding its lock, then acquire that lock before signalling. Keep the
+            //! existing one-second appender deadline and always join before closing the queue.
+            //! Control: shouldWaitForConditionWhenCreatingAppender across all wire/named combinations.
+            Thread worker = new Thread(() -> {
                 createAppenderLock.lock();
-                try (final ExcerptAppender appender = queue.createAppender()) {
-                    gotAppender.set(true);
+                try {
+                    entered.countDown();
+                    try (final ExcerptAppender appender = queue.createAppender()) {
+                        gotAppender.set(true);
+                    }
+                } catch (Throwable failure) {
+                    workerFailure.set(failure);
+                } finally {
+                    createAppenderLock.unlock();
                 }
-            }).start();
-
-            // Assert createAppender is blocked
-            Jvm.pause(100L);
-            assertFalse(gotAppender.get());
-
-            // Release
-            createAppenderLock.lock();
-            createAppenderCondition.signal();
-            createAppenderLock.unlock();
-
-            // Assert appender is acquired
-            YieldingPauser pauser = new YieldingPauser(0);
-            while (!gotAppender.get()) {
-                pauser.pause(1, TimeUnit.SECONDS);
+            }, "condition-appender-test");
+            worker.start();
+            try {
+                assertTrue("Worker did not enter appender creation", entered.await(1, TimeUnit.SECONDS));
+                assertTrue("Worker did not release its lock in await", createAppenderLock.tryLock(1, TimeUnit.SECONDS));
+                try {
+                    assertFalse(gotAppender.get());
+                    createAppenderCondition.signal();
+                } finally {
+                    createAppenderLock.unlock();
+                }
+                YieldingPauser pauser = new YieldingPauser(0);
+                while (!gotAppender.get() && workerFailure.get() == null)
+                    pauser.pause(1, TimeUnit.SECONDS);
+            } finally {
+                if (!gotAppender.get())
+                    worker.interrupt();
+                worker.join(1000);
+                if (worker.isAlive()) {
+                    worker.interrupt();
+                    worker.join(1000);
+                }
+                assertFalse("Appender worker survived fixture cleanup", worker.isAlive());
             }
+            assertNull("Appender worker failed", workerFailure.get());
         }
     }
 

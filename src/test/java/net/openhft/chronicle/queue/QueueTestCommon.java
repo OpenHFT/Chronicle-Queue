@@ -76,9 +76,28 @@ public class QueueTestCommon {
                         + description.getClassName() + "."
                         + description.getMethodName()
                 );
+                traceResourceBoundary("start");
             }
         }
+
+        @Override
+        protected void finished(@NotNull Description description) {
+            if (TRACE_TEST_EXECUTION)
+                traceResourceBoundary("finish");
+        }
     };
+
+    //! Opt-in boundaries correlate per-process native/mapped samples with the active test.
+    //! Used/committed heap are observations, not per-test ownership or a resource limit.
+    //! Write directly so exception recording does not hide this diagnostic or turn it into a failure.
+    private void traceResourceBoundary(String phase) {
+        Runtime runtime = Runtime.getRuntime();
+        System.out.println("QueueTestExecution phase=" + phase + " timeMs=" + System.currentTimeMillis()
+                + " pid=" + OS.getProcessId() + " test=" + diagnosticTestName
+                + " heapUsed=" + (runtime.totalMemory() - runtime.freeMemory())
+                + " heapCommitted=" + runtime.totalMemory() + " heapMax=" + runtime.maxMemory()
+                + " target=" + OS.getTarget());
+    }
 
     private static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
@@ -309,11 +328,16 @@ public class QueueTestCommon {
     }
 
     protected void tearDown() {
-        // should be able to remove tmp dirs
+        // File deletion follows deferred unmapping. Report every remaining owned path
+        // as a failure: exception tracking has already finished by this point.
+        net.openhft.chronicle.core.io.BackgroundResourceReleaser.releasePendingResources();
+        List<File> remaining = new ArrayList<>();
         tmpDirs.forEach(file -> {
             if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
-                Jvm.error().on(getClass(), "Could not delete tmp dir " + file);
+                remaining.add(file);
             }
         });
+        if (!remaining.isEmpty())
+            throw new AssertionError("Could not delete owned test directories: " + remaining);
     }
 }

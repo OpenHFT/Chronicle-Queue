@@ -1,0 +1,57 @@
+= Windows test resources and diagnostics
+
+Queue's Surefire forks use a 1 GiB heap by default, shared by successive tests
+in each reused fork. Override it with `-Dqueue.test.heapSize=...` when investigating
+a particular workload. The cap encourages collection of temporary search and
+reference-tracing objects before a fork expands to several GiB. Native memory,
+mapped files and resident memory still need separate measurement; a heap cap
+does not bound those resources.
+
+Small fixtures should use `testBlockSize()` and own their directories through
+`QueueTestCommon.getTmpDir()`. `TEST_SECONDLY` uses 2,048 index entries with spacing
+4. Its smaller index permits small blocks without changing the one-second roll
+period. Use an explicit larger block only where the fixture's document size
+requires it.
+
+Enable `-Dqueue.traceTestExecution=true` to print test start and finish records
+containing the test name, timestamp, PID, fork target directory and heap used,
+committed and maximum bytes. Parameter names can contain spaces. Correlate the
+PID and timestamps with process/native-memory samples and the target path with
+file allocation samples. Committed heap, live heap after collection, mapped
+address space and allocated disk are different quantities.
+
+Cleanup closes tailers, appenders and queues before draining deferred releases
+and removing the owned directory. Search keys are released in `finally`, including
+the missing-key assertion. The condition-worker fixture establishes its wait
+before signalling and joins its worker before releasing storage.
+
+The existing `TestBinarySearch` parameter cases, `ChronicleHistoryReaderTest`,
+`ExcerptCommonTest`, `RollingCycleTest` and the appender-condition test retain
+their search, delivery and message-count assertions while exercising this ownership.
+
+The interrupted-appender fixture signals that it has left its semaphore handoff
+before the test interrupts queue acquisition. Its workers join before storage
+closes, including when the test body fails. `StoreAppenderTest` covers normal
+delivery and failure-body ownership without a scheduling sleep.
+
+The timestamp reader uses the upstream helper to drain both output pipes while
+waiting for its child. `ReaderProcessOutputTest` covers pipe pressure, nonzero
+exit, timeout and interruption. Cleanup terminates the child before closing its
+pipes. The fixture owns its small queue through the common directory cleanup.
+
+Lock-holder termination failures retain elapsed time, the duration of the normal
+destroy request, the time forced destruction was requested and the process
+description. Final alive state is recorded on failure as well as success. These
+diagnostics distinguish a slow destruction request from delayed observed exit;
+they do not extend the existing termination deadline.
+
+The rolling fixture prepares each appender on its owning thread before releasing
+the original concurrent workload. A failed writer is reported with the original
+cause and written/read/index counters. Teardown interrupts all writers before a
+shared bounded join, and an outer rule waits for a timed-out fixture body to finish
+restoring global test state before the next test starts. Controls cover forced
+writer failure and cleanup with an already interrupted caller. The exact
+global-timeout/next-test interleaving has no separate controlled negative test.
+
+Last-index restart stores use registered temporary directories. Their tailer
+closes before common teardown drains releases and checks deletion.

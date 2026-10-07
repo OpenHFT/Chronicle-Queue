@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This test case replicates the assertion error in Chronicle StoreAppender's checkWritePositionHeaderNumber() method. see
@@ -52,7 +54,7 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
         try {
             CountDownLatch steady = new CountDownLatch(2);
             CountDownLatch go = new CountDownLatch(1);
-            CountDownLatch done = new CountDownLatch(1);
+            CountDownLatch done = new CountDownLatch(2);
             int n = 468;
 
             AtomicReference<Throwable> thr1 = useAppender(path, appender -> {
@@ -80,13 +82,14 @@ public class ChronicleAppenderCycleTest extends QueueTestCommon {
             assertNull(thr1.get());
             assertNull(thr2.get());
         } finally {
-            IOTools.deleteDirWithFiles(path.toFile());
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFilesOrThrow(path.toFile());
         }
     }
 
     private void await(CountDownLatch latch, String name) {
         try {
-            latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            assertTrue("Timed out waiting for " + name, latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS));
         } catch (InterruptedException e) {
             throw new RuntimeException("Problem acquiring the \"" + name + "\" latch",
                     e);

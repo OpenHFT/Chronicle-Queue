@@ -39,6 +39,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
+    private boolean readOnlyWarningExpected;
 
     @Before
     public void before() {
@@ -80,9 +81,12 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @NotNull
     private ChronicleReader basicReader(Path path) {
-        if (OS.isWindows())
-            if (!testName.getMethodName().startsWith("shouldThrowExceptionIfInputDirectoryDoesNotExist"))
-                expectException("Read-only mode is not supported on Windows");
+        if (OS.isWindows() && !readOnlyWarningExpected) {
+            // The tracker consumes all matching occurrences for one expectation.
+            // Each reader opens read-only, but register the required warning only once per test.
+            expectException("Read-only mode is not supported on Windows");
+            readOnlyWarningExpected = true;
+        }
 
         return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
     }
@@ -190,7 +194,10 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
-        basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
+        // Validation can fail before opening a queue. The base fixture ignores an optional
+        // Windows read-only warning; this path must not require it to occur.
+        new ChronicleReader().withBasePath(Paths.get("/does/not/exist"))
+                .withMessageSink(capturedOutput::add).execute();
     }
 
     @Test
