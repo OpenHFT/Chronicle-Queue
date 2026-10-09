@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "kind": "draft_batch_tracking",
+  "issue": "FIX-292",
+  "batch": "0050-BA-Queue-ResizeRefCount",
+  "repository": "OpenHFT/Chronicle-Queue",
+  "recorded_at_utc": "2026-10-09T02:37:24.818180+00:00",
+  "phase_status_snapshot": "Awaiting implementation and reference-lifetime diagnosis",
+  "repair_delivered": false,
+  "summary": "ReaderResizesFileTest#testTailerRefCountStableDuringResize observes 18 references instead of 16 while the tailer document remains open.",
+  "tests": [
+    "net.openhft.chronicle.queue.issue.ReaderResizesFileTest.testTailerRefCountStableDuringResize"
+  ],
+  "teamcity_observations": [
+    {
+      "build_id": 1373324,
+      "url": "https://teamcity.chronicle.software/buildConfiguration/Chronicle_BuildAll_EnterpriseJava11SelfHost/1373324"
+    }
+  ],
+  "next_steps": [
+    "Determine whether the extra references are transient background releases or retained appender/mapping ownership.",
+    "Prove the bounded correction with source-tied controls while retaining the strict reference-count assertion."
+  ],
+  "retained_holds": [
+    "Implementation ownership held by batches 0017 and 0036.",
+    "No demonstrated repair is established.",
+    "A wait that hides retained references is not an acceptable correction."
+  ],
+  "related_prs": [
+    "https://github.com/OpenHFT/Chronicle-Queue/pull/1667",
+    "https://github.com/OpenHFT/Chronicle-Queue/pull/1668",
+    "https://github.com/OpenHFT/Chronicle-Queue/pull/1700",
+    "https://github.com/OpenHFT/Chronicle-Queue/pull/1770"
+  ],
+  "local_evidence_bindings": [
+    {
+      "path": "batches/0050-BA-Queue-ResizeRefCount/TASK.md",
+      "sha256": "e5999f8a841bb1015131d60f5d8d4c6096695c5f54a0d7a89460706b18f8279f"
+    },
+    {
+      "path": "batches/0050-BA-Queue-ResizeRefCount/batch.json",
+      "sha256": "914bfaeff00c9833bf27931f7830ea52cf48dececac3f30b0b369609c559c48a"
+    }
+  ]
+}
