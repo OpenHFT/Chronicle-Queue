@@ -572,6 +572,10 @@ class StoreTailer extends AbstractCloseable
         switch (wire.readDataHeader(includeMetaData)) {
             case NONE:
                 // no more polling - appender will always write (or recover) EOF
+                if (cycle < queue.lastCycle()) {
+                    // if we have got to the end the wire and there is another cycle after this, treat as EOF
+                    throw EOF_EXCEPTION;
+                }
                 return false;
             case META_DATA:
                 context.metaData(true);
