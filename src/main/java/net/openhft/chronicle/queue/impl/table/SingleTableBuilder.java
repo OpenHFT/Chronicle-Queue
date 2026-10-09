@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.table;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.util.Builder;
@@ -23,8 +24,9 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.nio.BufferUnderflowException;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Path;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -95,6 +97,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         }
 
         MappedBytes bytes = null;
+        boolean built = false;
         try {
             if (!readOnly && file.createNewFile() && !file.canWrite()) {
                 throw new IllegalStateException("Cannot write to tablestore file " + file);
@@ -108,8 +111,9 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             // to allocate the first byte store and that will cause lock overlap
             bytes.readVolatileInt(0);
             Wire wire = wireType.apply(bytes);
+            final TableStore<T> store;
             if (readOnly) {
-                return SingleTableStore.doWithSharedLock(file, v -> {
+                store = SingleTableStore.doWithSharedLock(file, v -> {
                     try {
                         return readTableStore(wire);
                     } catch (IOException ex) {
@@ -118,7 +122,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                 }, () -> null);
             } else {
                 MappedBytes finalBytes = bytes;
-                return SingleTableStore.doWithExclusiveLock(file, v -> {
+                store = SingleTableStore.doWithExclusiveLock(file, v -> {
                     try {
                         if (wire.writeFirstHeader()) {
                             return writeTableStore(finalBytes, wire);
@@ -130,22 +134,53 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                     }
                 }, () -> null);
             }
+            built = true;
+            return store;
         } catch (IOException e) {
             throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
         } finally {
-            if (bytes != null)
+            if (bytes != null) {
                 bytes.singleThreadedCheckReset();
+                // no table store took ownership of the mapping, so nothing else will release it
+                if (!built)
+                    bytes.close();
+            }
         }
     }
 
     @NotNull
     private TableStore<T> readTableStore(Wire wire) throws StreamCorruptedException {
-        wire.readFirstHeader();
+        TableStore<T> existing = null;
+        boolean handedOver = false;
+        try {
+            wire.readFirstHeader();
+            // readFirstHeader limits the read to the length that the first header declares
+            final long declaredEnd = wire.bytes().readLimit();
 
-        final ValueIn valueIn = readTableStoreValue(wire);
-        @NotNull TableStore<T> existing = Objects.requireNonNull(valueIn.typedMarshallable());
-        metadata.overrideFrom(existing.metadata());
-        return existing;
+            final ValueIn valueIn = readTableStoreValue(wire);
+            existing = valueIn.typedMarshallable();
+            if (existing == null)
+                throw new CorruptTableStoreException(file, "the first header holds no table store");
+
+            // Every later scan of this file uses the declared length. If the length disagrees with
+            // the content that it describes, the whole file is misaligned.
+            final long actualEnd = wire.bytes().readPosition();
+            if (actualEnd != declaredEnd)
+                throw new CorruptTableStoreException(file, "the first header declares " + declaredEnd
+                        + " bytes but its content ends at " + actualEnd);
+
+            metadata.overrideFrom(existing.metadata());
+            handedOver = true;
+            return existing;
+        } catch (StreamCorruptedException | BufferUnderflowException | OverlappingFileLockException e) {
+            // a corrupt length can move the read past the mapped region, and the mapping then takes
+            // a file lock that overlaps the lock this thread already holds
+            throw new CorruptTableStoreException(file, "the first header does not hold a readable table store", e);
+        } finally {
+            // the caller takes ownership of the table store only when this method returns it
+            if (!handedOver)
+                Closeable.closeQuietly(existing);
+        }
     }
 
     private ValueIn readTableStoreValue(@NotNull Wire wire) throws StreamCorruptedException {
