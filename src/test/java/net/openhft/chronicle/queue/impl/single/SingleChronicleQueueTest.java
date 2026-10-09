@@ -3692,6 +3692,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             //! Publish entry while holding its lock, then acquire that lock before signalling. Keep the
             //! existing one-second appender deadline and always join before closing the queue.
             //! Control: shouldWaitForConditionWhenCreatingAppender across all wire/named combinations.
+            //! Regressions: SingleChronicleQueueTest#shouldWaitForConditionWhenCreatingAppender and
+            //! SingleChronicleQueueTest#doesNotSignalAnUnreadyAppender. Replacing entry-wait with sleep
+            //! signals an unready condition and fails the latter deterministic rejection assertion.
             Thread worker = new Thread(() -> {
                 createAppenderLock.lock();
                 try {
@@ -3707,14 +3710,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             }, "condition-appender-test");
             worker.start();
             try {
-                assertTrue("Worker did not enter appender creation", entered.await(1, TimeUnit.SECONDS));
-                assertTrue("Worker did not release its lock in await", createAppenderLock.tryLock(1, TimeUnit.SECONDS));
-                try {
-                    assertFalse(gotAppender.get());
-                    createAppenderCondition.signal();
-                } finally {
-                    createAppenderLock.unlock();
-                }
+                signalReadyAppender(entered, createAppenderLock, createAppenderCondition, gotAppender);
                 YieldingPauser pauser = new YieldingPauser(0);
                 while (!gotAppender.get() && workerFailure.get() == null)
                     pauser.pause(1, TimeUnit.SECONDS);
@@ -3729,6 +3725,37 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
                 assertFalse("Appender worker survived fixture cleanup", worker.isAlive());
             }
             assertNull("Appender worker failed", workerFailure.get());
+        }
+    }
+
+    @Test
+    public void doesNotSignalAnUnreadyAppender() {
+        CountDownLatch entered = new CountDownLatch(1);
+        ReentrantLock lock = new ReentrantLock();
+        Condition condition = org.easymock.EasyMock.createStrictMock(Condition.class);
+        org.easymock.EasyMock.replay(condition);
+        AssertionError failure = org.junit.Assert.assertThrows(AssertionError.class,
+                () -> signalReadyAppender(entered, lock, condition, new AtomicBoolean(false)));
+        assertEquals("unready appender rejected before signal",
+                "Worker did not enter appender creation", failure.getMessage());
+        assertFalse("entry rejection does not retain the lock", lock.isLocked());
+        org.easymock.EasyMock.verify(condition);
+    }
+
+    //! Wait for actual worker entry and lock release before signalling; a sleep can lose
+    //! the signal while the worker is still unready. Keep both one-second waits unchanged.
+    //! SingleChronicleQueueTest#doesNotSignalAnUnreadyAppender rejects a sleep-only control;
+    //! SingleChronicleQueueTest#shouldWaitForConditionWhenCreatingAppender checks the real worker.
+    private static void signalReadyAppender(CountDownLatch entered, ReentrantLock lock,
+                                            Condition condition, AtomicBoolean gotAppender)
+            throws InterruptedException {
+        assertTrue("Worker did not enter appender creation", entered.await(1, TimeUnit.SECONDS));
+        assertTrue("Worker did not release its lock in await", lock.tryLock(1, TimeUnit.SECONDS));
+        try {
+            assertFalse(gotAppender.get());
+            condition.signal();
+        } finally {
+            lock.unlock();
         }
     }
 

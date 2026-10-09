@@ -81,12 +81,18 @@ public class TestBinarySearch extends QueueTestCommon {
         //! Default mappings reserve 80 MiB per roll on Windows; small blocks
         //! exercise the same search and empty-cycle cases without that disk
         //! allocation. Keep the message counts and one-second roll period.
+        //! Regression: TestBinarySearch#testBinarySearch asserts the small mapping budget
+        //! before its unchanged 42 message-count/empty-cycle parameter combinations.
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(TestRollCycles.TEST_SECONDLY)
                 .testBlockSize()
                 .timeProvider(stp)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
+
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
 
             if (emptyCyclesStrategy.atStart()) {
                 writeEmptyCycles(appender);
@@ -120,14 +126,7 @@ public class TestBinarySearch extends QueueTestCommon {
                 writeEmptyCycles(appender);
             }
 
-            MyData reusableComparatorData = new MyData();
-            final Comparator<Wire> comparator = (o1, o2) -> {
-                reusableComparatorData.readMarshallable(o1);
-                int o1Key = reusableComparatorData.key;
-                reusableComparatorData.readMarshallable(o2);
-                int o2Key = reusableComparatorData.key;
-                return Integer.compare(o1Key, o2Key);
-            };
+            final Comparator<Wire> comparator = comparator();
 
             try (final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessagesToVerify; j++) {
@@ -135,6 +134,13 @@ public class TestBinarySearch extends QueueTestCommon {
                     Wire key = toWire(indexToVerify);
                     //! Each search owns its key bytes even if search or the assertion fails.
                     //! Control: all testBinarySearch parameter combinations, including missing keys below.
+                    //! The existing parameter cases above check results, not heap-key lifetime. Lifetime regressions are
+                    //! TestBinarySearchResourceTest#releasesKeysAfterSuccessfulSearch,
+                    //! TestBinarySearchResourceTest#releasesKeyAfterMissingSearch,
+                    //! TestBinarySearchResourceTest#releasesKeyAfterSearchFailure,
+                    //! TestBinarySearchResourceTest#releasesKeyAfterAssertionFailure,
+                    //! TestBinarySearchResourceTest#releasesMissingKeyAfterSearchFailure and
+                    //! TestBinarySearchResourceTest#releasesMissingKeyAfterAssertionFailure. Each observes refCount zero.
                     try {
                         long index = BinarySearch.search(binarySearchTailer, key, comparator);
                         long expectedIndex = keyToIndex.get(indexToVerify);
@@ -160,6 +166,17 @@ public class TestBinarySearch extends QueueTestCommon {
         }
     }
 
+    Comparator<Wire> comparator() {
+        MyData reusableComparatorData = new MyData();
+        return (o1, o2) -> {
+            reusableComparatorData.readMarshallable(o1);
+            int o1Key = reusableComparatorData.key;
+            reusableComparatorData.readMarshallable(o2);
+            int o2Key = reusableComparatorData.key;
+            return Integer.compare(o1Key, o2Key);
+        };
+    }
+
     private void writeEmptyCycles(ExcerptAppender appender) {
         int numberOfEmptyCycles = emptyCyclesStrategy.single() ? 1 : 2;
         for (int i = 0; i < numberOfEmptyCycles; i++) {
@@ -172,7 +189,7 @@ public class TestBinarySearch extends QueueTestCommon {
     }
 
     @NotNull
-    private Wire toWire(int key) {
+    Wire toWire(int key) {
         final MyData myData = new MyData();
         myData.key = key;
         myData.value = Integer.toString(key);

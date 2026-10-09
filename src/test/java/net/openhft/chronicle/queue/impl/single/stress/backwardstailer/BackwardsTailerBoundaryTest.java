@@ -57,6 +57,10 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD)) {
 
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
+
             assertEquals("Backwards tailer should start at index 0 when no queue data", 0, tailer.index());
 
             long messagesPerCycle = (long) rollCycle.defaultIndexSpacing() * rollCycle.defaultIndexCount() * 5;
@@ -104,6 +108,8 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
                 //! particularly on Windows where extending these files consumes disk space.
                 //! Keep the index geometry, all 3,200 writes and every boundary check;
                 //! the builder still grows mappings as the unchanged workload needs them.
+                //! Regression: BackwardsTailerBoundaryTest#verifyConsistency checks the budget before
+                //! the unchanged 3,200 writes, five cycles and backward boundary assertions.
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .path(path)

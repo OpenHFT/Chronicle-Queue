@@ -288,8 +288,11 @@ public class RollingCycleTest extends QueueTestCommon {
             //! Windows cannot delete the mapped first cycle while this fixture still owns its queue.
             //! Close the appender/queue first, drain deferred unmapping, then require deletion even on failure.
             //! Control: testRollCycle with both named and unnamed tailers; preserve its exact page-size dump.
+            //! Regression: RollingCycleTest#testRollCycle now asserts directory absence before fallback cleanup.
+            //! Omitting this deletion fails both named variants on Linux; Windows sharing remains separately qualified.
             BackgroundResourceReleaser.releasePendingResources();
             IOTools.deleteDirWithFilesOrThrow(basePath);
+            assertFalse("owned rolling directory remains", new java.io.File(basePath).exists());
         }
     }
 
