@@ -19,7 +19,6 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.core.util.Updater;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.*;
-import net.openhft.chronicle.queue.impl.table.CorruptTableStoreException;
 import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.TableStoreUnavailableException;
@@ -571,23 +570,21 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         final boolean readOnly = readOnly();
         try {
             metaStore = SingleTableBuilder.binary(metapath, metadata).readOnly(readOnly).build();
-        //! Corruption remains an IORuntimeException for caller compatibility but must never enter the legacy read-only fallback:
-        //! a synthetic store would hide the damaged metadata rather than make it readable. The
-        //! SingleChronicleQueueCorruptMetadataTest#corruptMetadataBypassesReadonlyFallbackAndRemainsAnIORuntimeException test
-        //! fails if this catch is removed or reordered.
-        } catch (CorruptTableStoreException ex) {
-            throw ex;
         } catch (TableStoreUnavailableException ex) {
             //! Fall back only on non-Windows for the dedicated availability failure emitted while opening or awaiting the
-            //! metadata file. A writable request whose existing metadata is not writable deliberately becomes read-only.
-            //! Walking arbitrary decoder causes for FileNotFoundException lets persisted constructors disguise malformed
-            //! content as absence. SingleChronicleQueueCorruptMetadataTest
+            //! metadata file. Corruption is a sibling IORuntimeException, so it cannot enter this exact-type catch and be
+            //! hidden by a synthetic store. Walking arbitrary causes for FileNotFoundException lets persisted constructors
+            //! disguise malformed content as absence. SingleChronicleQueueCorruptMetadataTest
+            //! #corruptMetadataBypassesReadonlyFallbackAndRemainsAnIORuntimeException and
             //! #nestedFileNotFoundFromMetadataDoesNotActivateReadonlyFallback and
             //! ReadWriteTest#testNonWriteableFilesSetToReadOnly discriminate the provenance boundary.
             if (OS.isWindows())
                 throw ex;
 
-            Jvm.warn().on(getClass(), "Failback to readonly tablestore " + ex);
+            if (ex.getCause() == null)
+                Jvm.warn().on(getClass(), "Failback to readonly tablestore " + ex);
+            else
+                Jvm.warn().on(getClass(), "Failback to readonly tablestore", ex);
 
             // Fallback to read-only table store if metadata file is not found
             metaStore = new ReadonlyTableStore<>(metadata);
