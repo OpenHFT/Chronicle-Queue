@@ -94,11 +94,16 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      */
     //! Metadata keys become visible one at a time to the read-only 500 ms retry loop.
     //! Assigning fields during acquisition overwrites partial BinaryLongReference bindings
-    //! on retry and leaks them. Own locals until all three acquisitions succeed; on an
-    //! unchecked failure close the returned partial bindings and rethrow the same failure.
+    //! on retry and leaks them. Own locals until all three acquisitions succeed; a failed
+    //! acquisition must close partial bindings even when it throws a checked exception
+    //! or another Throwable. A finally guard preserves the original failure unchanged.
     //! TableDirectoryListingTest#closesPartialBindingsBeforeRetryingMissingLowestCycle and
     //! TableDirectoryListingTest#closesPartialBindingsBeforeRetryingMissingModCount reject
     //! the original acquisition and distinguish a repair that closes only the max binding.
+    //! TableDirectoryListingTest#closesPartialBindingsWhenLowestCycleThrowsCheckedException,
+    //! TableDirectoryListingTest#closesPartialBindingsWhenModCountThrowsCheckedException and
+    //! TableDirectoryListingTest#closesPartialBindingsWhenModCountThrowsThrowable reject
+    //! cleanup limited to RuntimeException and Error.
     protected void initLongValues() {
         LongValue max = null;
         LongValue min = null;
