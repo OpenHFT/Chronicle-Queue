@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "kind": "draft_batch_tracking",
+  "issue": "FIX-292",
+  "batch": "0021-BA-Queue-Cleanup",
+  "repository": "OpenHFT/Chronicle-Queue",
+  "recorded_at_utc": "2026-10-09T02:37:24.818180+00:00",
+  "phase_status_snapshot": "Awaiting implementation",
+  "repair_delivered": false,
+  "summary": "Repeated tailer interrupts can arrive during resource cleanup in ChronicleQueueTwoThreadsTest#testConcurrentShortRun.",
+  "tests": [
+    "net.openhft.chronicle.queue.ChronicleQueueTwoThreadsTest.testConcurrentShortRun"
+  ],
+  "teamcity_observations": [
+    {
+      "build_id": 1369847,
+      "url": "https://teamcity.chronicle.software/buildConfiguration/Chronicle_BuildAll_AzulZing17/1369847"
+    }
+  ],
+  "next_steps": [
+    "Reproduce the recorded cleanup interleaving on the exact source tuple.",
+    "Prove bounded termination with positive/negative controls while preserving cleanup assertions."
+  ],
+  "retained_holds": [
+    "Implementation ownership held by batches 0017 and 0036.",
+    "Cause and candidate qualification remain unproved."
+  ],
+  "related_prs": [],
+  "local_evidence_bindings": [
+    {
+      "path": "batches/0021-BA-Queue-Cleanup/TASK.md",
+      "sha256": "d2d5ea27b6af7bc0fee18f9f94b50f30cac2233a3fdfac8aa4f857d73dc1e1b7"
+    },
+    {
+      "path": "batches/0021-BA-Queue-Cleanup/batch.json",
+      "sha256": "8f5b56c26b28763c57800d0e5bb4606501c9d7797f966cf464d568bba8f75f72"
+    }
+  ]
+}
