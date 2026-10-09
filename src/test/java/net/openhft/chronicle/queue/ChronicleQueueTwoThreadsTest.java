@@ -16,10 +16,13 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 @RequiredForClient
@@ -68,6 +71,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         File name = getTmpDir();
 
         AtomicLong counter = new AtomicLong();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
             Bytes<?> bytes = tailerHeapBytes
@@ -119,25 +123,152 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
             }
         }, "appender thread");
 
+        captureWorkerFailure(tailerThread, workerFailure);
+        captureWorkerFailure(appenderThread, workerFailure);
+
         tailerThread.start();
         Jvm.pause(100);
 
         appenderThread.start();
-        appenderThread.join();
+        try {
+            appenderThread.join();
 
-        //Pause to allow tailer to catch up (if needed)
-        for (int i = 0; i < 10; i++) {
-            if (runs != counter.get())
-                Jvm.pause(Jvm.isDebug() ? 10000 : 100);
+            //Pause to allow tailer to catch up (if needed)
+            for (int i = 0; i < 10; i++) {
+                if (runs != counter.get())
+                    Jvm.pause(Jvm.isDebug() ? 10000 : 100);
+            }
+        } finally {
+            stopAndJoin(tailerThread);
         }
 
-        for (int i = 0; i < 10; i++) {
-            tailerThread.interrupt();
-            tailerThread.join(100);
-        }
-
+        rethrowWorkerFailure(workerFailure);
         assertEquals(runs, counter.get());
 
+    }
+
+    private static void stopAndJoin(Thread worker) throws InterruptedException {
+        //! FIX-292: the reader consumes the stop interrupt before closing its queue.
+        //! Repeating it in each join slice interrupts resource release and records a
+        //! warning. Keep the existing one-second bound and require actual thread exit;
+        //! ChronicleQueueTwoThreadsTest#cleanupIsNotInterruptedTwice and
+        //! ChronicleQueueTwoThreadsTest#stalledCleanupStillFails cover both outcomes.
+        worker.interrupt();
+        worker.join(1000);
+        assertFalse("Worker did not stop: " + worker.getName(), worker.isAlive());
+    }
+
+    //! FIX-292: uncaught writer/reader failures otherwise disappear on background
+    //! threads and can look like successful cleanup. Preserve them for JUnit;
+    //! ChronicleQueueTwoThreadsTest#workerFailureIsReported checks this shared
+    //! capture path and the original cause propagated by rethrowWorkerFailure.
+    private static void captureWorkerFailure(Thread worker, AtomicReference<Throwable> failure) {
+        worker.setUncaughtExceptionHandler((thread, cause) -> failure.compareAndSet(null, cause));
+    }
+
+    private static void rethrowWorkerFailure(AtomicReference<Throwable> failure) {
+        if (failure.get() != null)
+            throw new AssertionError("Queue worker failed", failure.get());
+    }
+
+    @Test
+    public void cleanupIsNotInterruptedTwice() throws Exception {
+        CountDownLatch reading = new CountDownLatch(1);
+        CountDownLatch cleanup = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch secondInterrupt = new CountDownLatch(1);
+        AtomicReference<Throwable> controllerFailure = new AtomicReference<>();
+        Thread worker = new Thread(() -> {
+            reading.countDown();
+            try {
+                new CountDownLatch(1).await();
+            } catch (InterruptedException stopping) {
+                cleanup.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException interruptedCleanup) {
+                    secondInterrupt.countDown();
+                }
+            }
+        }, "owned-cleanup-control");
+        Thread controller = new Thread(() -> {
+            try {
+                assertTrue(cleanup.await(5, TimeUnit.SECONDS));
+                secondInterrupt.await(150, TimeUnit.MILLISECONDS);
+            } catch (Throwable e) {
+                controllerFailure.set(e);
+            } finally {
+                release.countDown();
+            }
+        }, "owned-cleanup-controller");
+        worker.start();
+        controller.start();
+        try {
+            assertTrue(reading.await(5, TimeUnit.SECONDS));
+            stopAndJoin(worker);
+            assertEquals("Cleanup received another stop interrupt", 1, secondInterrupt.getCount());
+        } finally {
+            release.countDown();
+            worker.interrupt();
+            worker.join(1000);
+            controller.join(1000);
+            assertFalse(worker.isAlive());
+            assertFalse(controller.isAlive());
+            assertNull(controllerFailure.get());
+        }
+    }
+
+    @Test
+    public void stalledCleanupStillFails() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        Thread worker = new Thread(() -> {
+            started.countDown();
+            boolean interrupted = false;
+            while (release.getCount() != 0) {
+                try {
+                    release.await();
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }, "owned-stalled-cleanup");
+        worker.start();
+        try {
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            try {
+                stopAndJoin(worker);
+                fail("Stalled cleanup was accepted");
+            } catch (AssertionError expected) {
+                assertEquals("Worker did not stop: owned-stalled-cleanup", expected.getMessage());
+                assertTrue(worker.isAlive());
+            }
+        } finally {
+            release.countDown();
+            worker.join(1000);
+            assertFalse(worker.isAlive());
+        }
+    }
+
+    @Test
+    public void workerFailureIsReported() throws Exception {
+        RuntimeException original = new RuntimeException("controlled worker failure");
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Thread worker = new Thread(() -> { throw original; }, "owned-failed-worker");
+        captureWorkerFailure(worker, failure);
+        worker.start();
+        worker.join(1000);
+        assertFalse(worker.isAlive());
+        AssertionError reported = null;
+        try {
+            rethrowWorkerFailure(failure);
+        } catch (AssertionError expected) {
+            reported = expected;
+        }
+        assertNotNull("Worker failure was lost", reported);
+        assertSame(original, reported.getCause());
     }
 
     private ChronicleQueue buildQueue(File path, boolean buffered) {
