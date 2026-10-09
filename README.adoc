@@ -239,6 +239,19 @@ See the respective `package-info.java` files for details.
 
 == Chronicle Queue Versions and Remarkable Changes
 
+=== Verify tracked end-of-cycle anchors
+
+End-of-cycle lookup may use a tracked write position when an exact persisted index entry
+confirms its sequence. The two tracker words are published separately, and their encoded
+position bits can alias. Other cases use indexed recovery, including non-indexed tracked
+records. Both paths scan forward for completed records beyond stale metadata.
+
+`lastSequenceNumber()` and its fallback share one acquisition budget. The public
+`queue.lastIndex()` operation also creates and closes a tailer and reads the final document;
+internal scan timings do not measure that complete operation. No speedup is claimed.
+Optional `-Dchronicle.queue.track.scans=true` diagnostics count every scan branch in a fixed-size,
+saturating counter set; they are independent of sampled latency messages.
+
 === Changes from Version 4 to Version 5
 
 In Chronicle Queue v5 tailers are now read-only, in Chronicle Queue v4 we had the concept of lazy indexing, where appenders would not write indexes but instead the indexing could be done by the tailer.
