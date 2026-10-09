@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -122,6 +123,57 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     @Test
     public void closesPartialBindingsBeforeRetryingMissingModCount() {
         assertPartialBindingsClosedBeforeRetry(2);
+    }
+
+    @Test
+    public void preservesCheckedExceptionWhenFirstAcquisitionFails() {
+        assertPartialBindingsClosedOnFailure(0, new IOException("Highest-cycle acquisition failed"));
+    }
+
+    @Test
+    public void closesPartialBindingsWhenLowestCycleThrowsCheckedException() {
+        assertPartialBindingsClosedOnFailure(1, new IOException("Lowest-cycle acquisition failed"));
+    }
+
+    @Test
+    public void closesPartialBindingsWhenModCountThrowsCheckedException() {
+        assertPartialBindingsClosedOnFailure(2, new IOException("Mod-count acquisition failed"));
+    }
+
+    @Test
+    public void closesPartialBindingsWhenModCountThrowsThrowable() {
+        assertPartialBindingsClosedOnFailure(2, new Throwable("Mod-count acquisition failed"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertPartialBindingsClosedOnFailure(int failedKey, Throwable failure) {
+        String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
+        // A concrete mock lets checked failures escape without a Java interface
+        // proxy wrapping them in UndeclaredThrowableException.
+        TableStore<Metadata.NoMeta> failingStore = createStrictMock(SingleTableStore.class);
+        List<LongValue> partialBindings = new ArrayList<>();
+        TableDirectoryListingReadOnly readOnly =
+                new TableDirectoryListingReadOnly(failingStore, SystemTimeProvider.INSTANCE);
+        try {
+            for (int i = 0; i < failedKey; i++) {
+                LongValue value = tablestoreReadOnly.acquireValueFor(keys[i]);
+                partialBindings.add(value);
+                expect(failingStore.acquireValueFor(keys[i])).andReturn(value);
+            }
+            expect(failingStore.acquireValueFor(keys[failedKey])).andAnswer(() -> {
+                throw failure;
+            });
+            replay(failingStore);
+
+            assertSame("Cleanup must preserve the original failure", failure,
+                    assertThrows(Throwable.class, readOnly::initLongValues));
+            for (LongValue value : partialBindings)
+                assertTrue("Failed acquisition must release every returned binding", value.isClosed());
+            verify(failingStore);
+        } finally {
+            readOnly.close();
+            partialBindings.forEach(Closeable::closeQuietly);
+        }
     }
 
     @SuppressWarnings("unchecked")

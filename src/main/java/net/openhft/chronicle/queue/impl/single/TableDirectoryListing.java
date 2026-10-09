@@ -103,15 +103,18 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
         LongValue max = null;
         LongValue min = null;
         LongValue count;
+        boolean failed = true;
         try {
             max = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
             min = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
             count = tableStore.acquireValueFor(MOD_COUNT);
-        } catch (RuntimeException | Error e) {
-            // A read-only listing can retry while metadata is being published.
-            // Release partial bindings before that retry can replace them.
-            Closeable.closeQuietly(min, max);
-            throw e;
+            failed = false;
+        } finally {
+            if (failed) {
+                // A read-only listing can retry while metadata is being published.
+                // Release partial bindings before that retry can replace them.
+                Closeable.closeQuietly(min, max);
+            }
         }
         maxCycleValue = max;
         minCycleValue = min;
