@@ -84,7 +84,6 @@ public final class DocumentOrderingTest extends QueueTestCommon {
 
     @Test
     public void multipleThreadsMustWaitUntilPreviousCycleFileIsCompleted() throws InterruptedException, TimeoutException, ExecutionException {
-        finishedNormally = false;
         final File dir = getTmpDir();
         // must be different instances of queue to work around synchronization on acquireStore()
         try (final ChronicleQueue queue =
@@ -129,12 +128,10 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             expectValue(2, tailer);
             expectValue(3, tailer);
         }
-        finishedNormally = true;
     }
 
     @Test
     public void shouldRecoverFromUnfinishedFirstMessageInPreviousQueue() throws InterruptedException, TimeoutException, ExecutionException {
-        finishedNormally = false;
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");
         expectException("Forced unlock for the lock");
@@ -161,12 +158,10 @@ public final class DocumentOrderingTest extends QueueTestCommon {
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }
-        finishedNormally = true;
     }
 
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsEmpty() throws InterruptedException, TimeoutException, ExecutionException {
-        finishedNormally = false;
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 3_000L).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -192,12 +187,10 @@ public final class DocumentOrderingTest extends QueueTestCommon {
             expectValue(0, tailer);
             expectValue(1, tailer);
         }
-        finishedNormally = true;
     }
 
     @Test
     public void codeWithinPriorDocumentMustExecuteBeforeSubsequentDocumentWhenQueueIsNotEmpty() throws InterruptedException, TimeoutException, ExecutionException {
-        finishedNormally = false;
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), 3_000L).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
@@ -228,7 +221,6 @@ public final class DocumentOrderingTest extends QueueTestCommon {
                 expectValue(1, tailer);
             }
         }
-        finishedNormally = true;
     }
 
     @Override
