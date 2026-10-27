@@ -14,7 +14,6 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
-import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
@@ -25,10 +24,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
 import java.io.UncheckedIOException;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.function.Function;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
@@ -55,24 +52,19 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private final LongValue index2Index;
     private final Supplier<LongArrayValues> longArraySupplier;
     @NotNull
-    private final ThreadLocal<WeakReference<LongArrayValuesHolder>> index2indexArray;
+    private final ThreadLocal<LongArrayValuesHolder> index2indexArray;
     @NotNull
-    private final ThreadLocal<WeakReference<LongArrayValuesHolder>> indexArray;
+    private final ThreadLocal<LongArrayValuesHolder> indexArray;
     @NotNull
     private final WriteMarshallable index2IndexTemplate;
     @NotNull
     private final WriteMarshallable indexTemplate;
-    /**
-     * Extracted as field to prevent lambda creation on every method reference pass.
-     */
-    private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
-
     LongValue writePosition;
     Sequence sequence;
     // visible for testing
     int linearScanCount;
     int linearScanByPositionCount;
-    Collection<Closeable> closeables = new ArrayList<>();
+    final Collection<Closeable> closeables = ConcurrentHashMap.newKeySet();
     private long lastScannedIndex = -1;
 
     /**
@@ -121,8 +113,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.index2Index = index2Index;
         this.nextEntryToBeIndexed = nextEntryToBeIndexed;
         this.longArraySupplier = longArraySupplier;
-        this.index2indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
-        this.indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
+        // A collected holder must not leave its reserved view behind and create another on lookup.
+        // Capture the view collection, not this indexing owner, in thread cleanup callbacks.
+        Collection<Closeable> ownedViews = closeables;
+        this.index2indexArray = CleaningThreadLocal.withCleanup(h -> releaseHolder(ownedViews, h));
+        this.indexArray = CleaningThreadLocal.withCleanup(h -> releaseHolder(ownedViews, h));
         this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
         singleThreadedCheckDisabled(true);
@@ -139,13 +134,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     // Fetches the index-to-index array from thread-local storage.
     @NotNull
     private LongArrayValuesHolder getIndex2IndexArray() {
-        return ThreadLocalHelper.getTL(index2indexArray, longArraySupplier, arrayValuesSupplierCall);
+        return getOrCreate(index2indexArray);
     }
 
     // Fetches the index array from thread-local storage.
     @NotNull
     private LongArrayValuesHolder getIndexArray() {
-        return ThreadLocalHelper.getTL(indexArray, longArraySupplier, arrayValuesSupplierCall);
+        return getOrCreate(indexArray);
     }
 
     public long toAddress0(long index) {
@@ -172,21 +167,27 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         closeQuietly(index2Index, nextEntryToBeIndexed);
         closeQuietly(closeables);
         closeables.clear();
-        // Eagerly clean up the contents of thread locals but only for this thread.
-        // The contents of the thread local for other threads will be cleaned up in
-        // MappedFile.performRelease
-        closeTL(indexArray);
-        closeTL(index2indexArray);
+        // Other threads may retain a closed holder until their normal thread-local cleanup.
+        // Its mapped view has already been released above.
+        indexArray.remove();
+        index2indexArray.remove();
     }
 
-    // Helper method to close a thread-local LongArrayValuesHolder.
-    private void closeTL(ThreadLocal<WeakReference<LongArrayValuesHolder>> tl) {
-        WeakReference<LongArrayValuesHolder> weakReference = tl.get();
-        if (weakReference == null)
-            return;
-        LongArrayValuesHolder holder = weakReference.get();
-        if (holder != null)
+    private static void releaseHolder(Collection<Closeable> ownedViews, LongArrayValuesHolder holder) {
+        if (holder != null) {
             closeQuietly(holder.values());
+            ownedViews.remove(holder.values());
+        }
+    }
+
+    private LongArrayValuesHolder getOrCreate(ThreadLocal<LongArrayValuesHolder> tl) {
+        LongArrayValuesHolder holder = tl.get();
+        if (holder == null) {
+            throwExceptionIfClosed();
+            holder = newLogArrayValuesHolder(longArraySupplier);
+            tl.set(holder);
+        }
+        return holder;
     }
 
     /**
