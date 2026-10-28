@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,11 +32,13 @@ public class RollCyclesTest extends QueueTestCommon {
     private static final long SOME_EPOCH_OFFSET = 17L * 37L;
     private static List<Instant> incrementalTimes;
 
+    private final String cycleName;
     private final RollCycle cycle;
     private final AtomicLong clock = new AtomicLong();
     private final TimeProvider timeProvider = clock::get;
 
     public RollCyclesTest(final String cycleName, final RollCycle cycle) {
+        this.cycleName = cycleName;
         this.cycle = cycle;
     }
 
@@ -92,6 +95,14 @@ public class RollCyclesTest extends QueueTestCommon {
             long index = cycle.toIndex(currentCycle, 0);
             assertEquals(currentCycle, cycle.toCycle(index));
         }
+    }
+
+    @Test
+    public void valueOfEnumTest() {
+        if (cycle instanceof TestRollCycles) {
+            expectException("TestRollCycles should not be used in production code.");
+        }
+        assertEquals(cycle, RollCycle.valueOfEnum(cycleName));
     }
 
     private void assertCycleRollTimes(final long epochOffset, final TimeProvider timeProvider) {
