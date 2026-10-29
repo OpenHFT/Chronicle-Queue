@@ -3,9 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -17,25 +15,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface RollCycle {
 
-    /**
-     * Returns the roll cycle corresponding to the provided {@code name}. This method is intended for use with enum-based roll cycles.
-     * @param name the name of the enum constant
-     * @return the roll cycle corresponding to the provided {@code name}
-     */
-    static RollCycle valueOfEnum(@NotNull String name) {
-        for (RollCycle rollCycle : RollCycles.all()) {
-            if (rollCycle.getClass().isEnum()) {
-                Enum<?> enumConst = (Enum<?>) rollCycle;
-                if (enumConst.name().equals(name)) {
-                    if (enumConst.getClass().equals(TestRollCycles.class)) {
-                        Jvm.warn().on(RollCycles.class, "TestRollCycles should not be used in production code.");
-                    }
-                    return rollCycle;
-                }
-            }
-        }
-        throw new IllegalArgumentException("No enum constant " + RollCycles.class.getCanonicalName() + "." + name);
-    }
     /**
      * Returns the format that is to be applied when file names are calculated for a new roll cycle.
      * <p>
