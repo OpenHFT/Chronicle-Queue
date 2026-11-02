@@ -10,9 +10,10 @@ import java.util.function.LongConsumer;
  * The WriteLock interface provides methods to control locking mechanisms in a Chronicle Queue.
  * It defines locking, unlocking, and checking mechanisms, ensuring exclusive access to resources
  * while preventing race conditions.
- *
- * This interface is non-reentrant, meaning that once a lock is acquired, it cannot be reacquired by
- * the same process until it is explicitly released.
+ * <p>
+ * This interface is non-reentrant: the lock is held on behalf of a process, so once it is acquired it
+ * cannot be reacquired by any thread in the same process, including the thread that holds it, until it
+ * is explicitly released.
  */
 public interface WriteLock extends Closeable {
 
@@ -26,8 +27,8 @@ public interface WriteLock extends Closeable {
      * Acquires the lock, ensuring exclusive access to the resource.
      * <p>
      * This method is guaranteed to succeed in acquiring the lock, even if it involves waiting for a timeout or recovering
-     * from a previously held lock. The lock is not reentrant, meaning it cannot be reacquired by the same thread until it
-     * is released.
+     * from a previously held lock. The lock is not reentrant, meaning it cannot be reacquired by any thread in the same
+     * process, including the thread that holds it, until it is released.
      */
     void lock();
 
