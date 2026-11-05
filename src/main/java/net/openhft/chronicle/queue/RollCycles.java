@@ -3,7 +3,9 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.rollcycles.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -139,5 +141,25 @@ public enum RollCycles implements RollCycle {
     @Override
     public int toCycle(long index) {
         return arithmetic.toCycle(index);
+    }
+
+    /**
+     * Returns the roll cycle corresponding to the provided {@code name}. This method is intended for use with enum-based roll cycles.
+     * @param name the name of the enum constant
+     * @return the roll cycle corresponding to the provided {@code name}
+     */
+    public static RollCycle valueOfEnum(String name) {
+        for (RollCycle rollCycle : RollCycles.all()) {
+            if (rollCycle.getClass().isEnum()) {
+                Enum<?> enumConst = (Enum<?>) rollCycle;
+                if (enumConst.name().equals(name)) {
+                    if (enumConst instanceof TestRollCycles) {
+                        Jvm.warn().on(RollCycles.class, "TestRollCycles should not be used in production code");
+                    }
+                    return rollCycle;
+                }
+            }
+        }
+        throw new IllegalArgumentException("No RollCycle enum constant with name: '" + name + "' found in RollCycles.all()");
     }
 }
