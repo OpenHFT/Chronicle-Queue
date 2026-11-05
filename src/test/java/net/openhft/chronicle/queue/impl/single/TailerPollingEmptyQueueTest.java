@@ -16,9 +16,6 @@ public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
 
     @Test
     public void shouldNotGenerateExcessGarbage() {
-        // Perform a GC prior to the test to ensure an unrelated GC does not occur which would devalue this test
-        GcControls.waitForGcCycle();
-
         try (final SingleChronicleQueue queue = createQueue()) {
             queue.path.mkdirs();
             assertEquals(0, queue.path.list((d, n) -> n.endsWith(SingleChronicleQueue.SUFFIX)).length);
@@ -28,6 +25,9 @@ public final class TailerPollingEmptyQueueTest extends QueueTestCommon {
             for (int i = 0; i < 50; i++) {
                 assertFalse(tailer.readingDocument().isPresent());
             }
+
+            // Collect fixture and warm-up allocations before measuring empty polling.
+            GcControls.waitForGcCycle();
 
             final long startCollectionCount = GcControls.getGcCount();
 
