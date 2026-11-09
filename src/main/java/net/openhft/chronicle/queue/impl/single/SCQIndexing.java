@@ -172,21 +172,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         closeQuietly(index2Index, nextEntryToBeIndexed);
         closeQuietly(closeables);
         closeables.clear();
-        // Eagerly clean up the contents of thread locals but only for this thread.
-        // The contents of the thread local for other threads will be cleaned up in
-        // MappedFile.performRelease
-        closeTL(indexArray);
-        closeTL(index2indexArray);
-    }
-
-    // Helper method to close a thread-local LongArrayValuesHolder.
-    private void closeTL(ThreadLocal<WeakReference<LongArrayValuesHolder>> tl) {
-        WeakReference<LongArrayValuesHolder> weakReference = tl.get();
-        if (weakReference == null)
-            return;
-        LongArrayValuesHolder holder = weakReference.get();
-        if (holder != null)
-            closeQuietly(holder.values());
+        // Every holder's values were registered in closeables when created, so they are already closed above.
+        // Hence, we can just drop this thread's entries from the ThreadLocal.
+        indexArray.remove();
+        index2indexArray.remove();
     }
 
     /**
