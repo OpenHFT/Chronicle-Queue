@@ -61,7 +61,13 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
                 .rollCycle(net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY)
                 .build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
-            runStress(queue, excerptAppender, es);
+            try {
+                runStress(queue, excerptAppender, es);
+            } finally {
+                // A reader left running can acquire a store after the queue is closed, leaking it into a later test's
+                // resource checks
+                stopReaders(es);
+            }
         } finally {
             // always stop the pool, otherwise a failure leaves idle threads behind for the thread-leak check
             Threads.shutdown(es);
@@ -115,6 +121,13 @@ public class MoveToCycleMultiThreadedStressTest extends QueueTestCommon {
 
         if (failure != null)
             throw failure;
+    }
+
+    private void stopReaders(ExecutorService es) throws InterruptedException {
+        shutDown.set(true);
+        es.shutdownNow();
+        if (!es.awaitTermination(10, TimeUnit.SECONDS))
+            Jvm.warn().on(getClass(), "Reader threads did not terminate");
     }
 
     private Void append(ChronicleQueue queue) {
