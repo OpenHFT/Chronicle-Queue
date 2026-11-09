@@ -16,10 +16,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeTrue;
 
 @RequiredForClient
@@ -68,6 +70,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         File name = getTmpDir();
 
         AtomicLong counter = new AtomicLong();
+        AtomicBoolean running = new AtomicBoolean(true);
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
             Bytes<?> bytes = tailerHeapBytes
@@ -77,7 +80,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
 
                 ExcerptTailer tailer = rqueue.createTailer();
 
-                while (!Thread.interrupted()) {
+                while (running.get()) {
                     bytes.clear();
                     if (tailer.readBytes(bytes)) {
                         counter.incrementAndGet();
@@ -131,13 +134,11 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                 Jvm.pause(Jvm.isDebug() ? 10000 : 100);
         }
 
-        for (int i = 0; i < 10; i++) {
-            tailerThread.interrupt();
-            tailerThread.join(100);
-        }
+        running.set(false);
+        tailerThread.join(10_000);
+        assertFalse("tailer thread did not stop", tailerThread.isAlive());
 
         assertEquals(runs, counter.get());
-
     }
 
     private ChronicleQueue buildQueue(File path, boolean buffered) {
