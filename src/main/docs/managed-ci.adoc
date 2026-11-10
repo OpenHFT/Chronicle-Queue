@@ -24,6 +24,10 @@ The selected allocation was measured on native Linux with Java 21 and unchanged 
 
 All reused-worker allocations remain blocked from production promotion: the one-reused-worker diagnostic failed resource cleanup and timed out, although four/eight workers each passed once. Preserve and diagnose that evidence; this draft permits further qualification and does not establish reuse reliability.
 
+The managed profiles inherit JVM arguments from the active build configuration. They must not override argLine: the Sonar profile supplies late JaCoCo binding when coverage is enabled. Existing Sonar and managed CI routes remain separate; a combined scanner invocation must explicitly import the execution-specific test report directories.
+
+Java parent 2026.1 attaches the main source JAR with `jar-no-fork`. The child retains test-source attachment and inherits the main-source goal to avoid attaching the same artifact twice.
+
 == Retiring protected exceptions
 
 Fix demonstrated shared-state/resource hazards one test at a time; qualify never-tested exceptions without presuming a defect. Move only the proved-safe class into the ordinary batch, preserve assertions and full inventories, and require repeated concurrent PR and aggregate evidence. Global isolation can be removed only after cross-module interference is resolved.
