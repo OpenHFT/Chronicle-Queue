@@ -245,7 +245,6 @@
                     <execution>
                         <id>attach-sources</id>
                         <goals>
-                            <goal>jar</goal>
                             <goal>test-jar</goal>
                         </goals>
                     </execution>
@@ -434,7 +433,6 @@
                             <reuseForks>true</reuseForks>
                             <rerunFailingTestsCount>0</rerunFailingTestsCount>
                             <runOrder>alphabetical</runOrder>
-                            <argLine>${argLine} ${jvm.requiredArgs}</argLine>
                             <reportsDirectory>${project.build.directory}/ci-reports/surefire/default-cli</reportsDirectory>
                         </configuration>
                         <executions>
