@@ -1,0 +1,33 @@
+= Managed CI qualification
+:sectnums:
+:lang: en-GB
+:source-highlighter: rouge
+
+== FIX-292 execution contract
+
+The opt-in PR route uses 1 reactor threads and up to 8 ordinary forks per active module, within an eight-test-JVM budget. This is the selected local observation, not a production performance guarantee. Existing protected executions remain one fork with a fresh JVM. A one-worker preference is retained where measured; it is independent of the safety exceptions.
+
+[source,shell]
+----
+mvn -B -ntp -T1 -Dbuild-all=true -Drun-mapping-tests -Dchronicle.ci.mode=pr -Dchronicle.ci.stage=main clean verify
+----
+
+== Adoption and evidence
+
+The current Build-All remains unchanged. These profiles require an explicit `chronicle.ci.mode`; existing lifecycle and bare Surefire invocations keep their configuration. Individual managed PR checks must opt in explicitly. Existing Snapshot statuses alone do not prove this route executed.
+
+A separate Build-All Eight project can select `chronicle.ci.mode=build-all`, initially with one shared `-T4` reactor and per-module ordinary caps of at most two. Repository caps of one remain one. Do not nest this repository's PR reactor inside that aggregate. The alternative project must validate source dependency alignment and complete inventories before replacing the current Build-All.
+
+Surefire reports are separated under each module's `target/ci-reports/surefire/<execution>`. Import all executions and compare full testcase multisets including module, execution/mode, class, parameter identity, outcome and skip identity. A green Maven exit or equal total alone is not a completeness certificate. Keep package/artifact checks and intentional mode repetitions.
+
+The selected allocation was measured on native Linux with Java 21 and unchanged declared dependencies. Other JDKs, operating systems, explicit Snapshot profiles, targeted `-Dtest` and `test-serial` routes need their own qualification before activation. Use the complete command above for this trial. No retries are introduced.
+
+All reused-worker allocations remain blocked from production promotion: the one-reused-worker diagnostic failed resource cleanup and timed out, although four/eight workers each passed once. Preserve and diagnose that evidence; this draft permits further qualification and does not establish reuse reliability.
+
+The managed profiles inherit JVM arguments from the active build configuration. They must not override argLine: the Sonar profile supplies late JaCoCo binding when coverage is enabled. Existing Sonar and managed CI routes remain separate; a combined scanner invocation must explicitly import the execution-specific test report directories.
+
+Java parent 2026.1 attaches the main source JAR with `jar-no-fork`. The child retains test-source attachment and inherits the main-source goal to avoid attaching the same artifact twice.
+
+== Retiring protected exceptions
+
+Fix demonstrated shared-state/resource hazards one test at a time; qualify never-tested exceptions without presuming a defect. Move only the proved-safe class into the ordinary batch, preserve assertions and full inventories, and require repeated concurrent PR and aggregate evidence. Global isolation can be removed only after cross-module interference is resolved.

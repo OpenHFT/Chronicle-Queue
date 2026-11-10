@@ -245,7 +245,6 @@
                     <execution>
                         <id>attach-sources</id>
                         <goals>
-                            <goal>jar</goal>
                             <goal>test-jar</goal>
                         </goals>
                     </execution>
@@ -414,6 +413,110 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>chronicle-ci-policy</id>
+            <activation>
+                <property>
+                    <name>chronicle.ci.mode</name>
+                </property>
+            </activation>
+            <properties>
+                <chronicle.ci.forks.max8>8</chronicle.ci.forks.max8>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <forkCount>${chronicle.ci.forks.max8}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <rerunFailingTestsCount>0</rerunFailingTestsCount>
+                            <runOrder>alphabetical</runOrder>
+                            <reportsDirectory>${project.build.directory}/ci-reports/surefire/default-cli</reportsDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>default-test</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <forkCount>${chronicle.ci.forks.max8}</forkCount>
+                                    <rerunFailingTestsCount>0</rerunFailingTestsCount>
+                                    <runOrder>alphabetical</runOrder>
+                                    <reportsDirectory>${project.build.directory}/ci-reports/surefire/default-test</reportsDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>chronicle-ci-build-all-budget</id>
+            <activation>
+                <property>
+                    <name>chronicle.ci.mode</name>
+                    <value>build-all</value>
+                </property>
+            </activation>
+            <properties>
+                <chronicle.ci.forks.max8>2</chronicle.ci.forks.max8>
+            </properties>
+        </profile>
+        <profile>
+            <id>chronicle-ci-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-test</id>
+                                <configuration>
+                                    <forkCount>${chronicle.ci.forks.max8}</forkCount>
+                                    <reuseForks>true</reuseForks>
+                                    <excludes>
+                                        <exclude>**/*$*</exclude>
+                                    </excludes>
+                                    <excludesFile>${project.basedir}/.mvn/serial-tests.txt</excludesFile>
+                                    <rerunFailingTestsCount>0</rerunFailingTestsCount>
+                                    <runOrder>alphabetical</runOrder>
+                                    <reportsDirectory>${project.build.directory}/ci-reports/surefire/default-test</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>serial-tests</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <forkCount>1</forkCount>
+                                    <reuseForks>false</reuseForks>
+                                    <includes combine.self="override">
+                                        <include>%regex[^$]</include>
+                                    </includes>
+                                    <includesFile>${project.basedir}/.mvn/serial-tests.txt</includesFile>
+                                    <rerunFailingTestsCount>0</rerunFailingTestsCount>
+                                    <runOrder>alphabetical</runOrder>
+                                    <reportsDirectory>${project.build.directory}/ci-reports/surefire/serial-tests</reportsDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <activation>
+                <property>
+                    <name>chronicle.ci.mode</name>
+                </property>
+            </activation>
+        </profile>
+
         <profile>
             <id>assertions</id>
             <properties>

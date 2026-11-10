@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.internal.main;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.QueueTestCommon;
@@ -59,6 +60,7 @@ public class InternalRemovableRollFileCandidatesMainTest extends QueueTestCommon
             time.addAndGet(1_000);
             appender.writeText("second");
         }
+        BackgroundResourceReleaser.releasePendingResources();
         return dir;
     }
 
