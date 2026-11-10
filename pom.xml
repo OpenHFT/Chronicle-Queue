@@ -10,7 +10,7 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>2026.0.1-sonar-SNAPSHOT</version>
+        <version>2026.1</version>
         <relativePath />
     </parent>
 
