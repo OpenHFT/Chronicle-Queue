@@ -219,8 +219,8 @@ The length of the cycle is determined by the _rollCycle_ parameter passed to the
 
 Example configuration of _RollCycle_:
 
-* `RollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
-* `RollCycles.HOURLY` every hour, a new queue file will be created for written events
+* `RollCycles.FAST_DAILY` events stored in the queue will be grouped into 24-hour periods
+* `RollCycles.FAST_HOURLY` every hour, a new queue file will be created for written events
 
 As new files are created to accommodate events being written to the queue, a persisted data-structure (`directory-listing.cq4t`) is updated with the lowest and highest
 _cycle_ numbers present in the directory.
@@ -278,7 +278,7 @@ For instance, using the following code snippet will result in the queue files be
 
 [source,java]
 ----
-ChronicleQueue.singleBuilder(queuePath).rollCycle(RollCycles.HOURLY).build()
+ChronicleQueue.singleBuilder(queuePath).rollCycle(RollCycles.FAST_HOURLY).build()
 ----
 
 Once a queue's roll-cycle has been set, it cannot be changed at a later date.
