@@ -91,6 +91,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
+    private final transient long testBlockSizeCap = TestBlockSizeCap.configured();
     private File path;
     private RollCycle rollCycle;
     private Long epoch; // default is 1970-01-01 00:00:00.000 UTC
@@ -370,6 +371,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
+        if (testBlockSizeCap > 0)
+            blockSize(); // Reject invalid test geometry before opening metadata.
         preBuild();
 
         SingleChronicleQueue chronicleQueue;
@@ -382,6 +385,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             chronicleQueue = new SingleChronicleQueue(this);
 
         postBuild(chronicleQueue);
+        if (testBlockSizeCap > 0)
+            Jvm.startup().on(getClass(), "Test block-size cap=" + testBlockSizeCap
+                    + " bytes, effective blockSize=" + chronicleQueue.blockSize()
+                    + " bytes for " + path());
 
         return chronicleQueue;
     }
@@ -919,7 +926,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         // can add an index2index & an index in one go.
         long minSize = Math.max(SMALL_BLOCK_SIZE, 32L * indexCount());
-        return Math.max(minSize, bs);
+        return TestBlockSizeCap.apply(bs, minSize, testBlockSizeCap);
     }
 
     /**
