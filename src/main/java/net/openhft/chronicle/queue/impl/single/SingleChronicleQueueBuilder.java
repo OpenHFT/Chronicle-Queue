@@ -91,6 +91,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
+    // Wire honours transient independently of java.io.Serializable; do not serialise this local test setting.
+    @SuppressWarnings("java:S2065")
     private final transient long testBlockSizeCap = TestBlockSizeCap.configured();
     private File path;
     private RollCycle rollCycle;
