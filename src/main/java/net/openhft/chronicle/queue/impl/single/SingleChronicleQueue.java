@@ -1116,6 +1116,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return directoryListing.getMinCreatedCycle();
     }
 
+    /** Returns the first cycle from one directory snapshot without updating table-store metadata. */
+    int firstCycleInDirectory() {
+        try (FileSystemDirectoryListing listing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time)) {
+            listing.refresh(true);
+            return listing.getMinCreatedCycle();
+        }
+    }
+
     /**
      * allows the appenders to inform the queue that they have rolled
      *
