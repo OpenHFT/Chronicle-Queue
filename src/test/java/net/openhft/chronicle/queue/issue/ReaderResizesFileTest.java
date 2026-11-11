@@ -5,12 +5,19 @@ package net.openhft.chronicle.queue.issue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.io.ReferenceChangeListener;
+import net.openhft.chronicle.core.io.ReferenceCounted;
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
@@ -23,6 +30,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -80,44 +91,93 @@ public class ReaderResizesFileTest {
 
     @Test
     public void testTailerRefCountStableDuringResize() throws IOException {
-        int blockSize = 1 << 12;
-        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(QUEUE_DIR)
+        boolean saved = QueueSystemProperties.CHECK_INDEX;
+        try {
+            for (boolean checked : new boolean[]{false, true}) {
+                QueueSystemProperties.CHECK_INDEX = checked;
+                heldDocumentSurvivesResize(new File(QUEUE_DIR, "held-" + checked));
+            }
+        } finally {
+            QueueSystemProperties.CHECK_INDEX = saved;
+        }
+    }
+
+    private static void heldDocumentSurvivesResize(File path) {
+        final int blockSize = 1 << 12;
+        final int entries = blockSize / 16;
+        Set<BytesStore<?, ?>> observed = Collections.newSetFromMap(new IdentityHashMap<>());
+        ReferenceOwner observer = ReferenceOwner.temporary("held-resize-observer");
+        BytesStore<?, ?> heldStore = null;
+        boolean reserved = false;
+        try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(path)
                 .rollCycle(TestRollCycles.TEST4_DAILY)
                 .blockSize(blockSize)
                 .build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
-
-            final int entries = blockSize / 16;
             appender.writeBytes(bytes -> {
-                for (int i = 0; i < entries; i++) {
+                for (int i = 0; i < entries; i++)
                     bytes.writeLong(i);
-                }
             });
-
-            BytesStore<?, ?> heldStore = null;
-            long openRefCount = 0;
+            File cycle = soleCycleFile(path);
+            long originalLength = cycle.length();
+            int written = 1;
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent(), "Initial document should be present");
                 Bytes<?> tailerBytes = dc.wire().bytes();
                 heldStore = tailerBytes.bytesStore();
-                openRefCount = heldStore.refCount();
-
-                try (DocumentContext writing = appender.writingDocument()) {
-                    Bytes<?> bytes = writing.wire().bytes();
-                    for (int i = 0; i < entries; i++) {
-                        bytes.writeLong(i);
+                heldStore.reserve(observer);
+                reserved = true;
+                observed.add(heldStore);
+                AtomicBoolean tailerReleased = new AtomicBoolean();
+                ReferenceChangeListener listener = new ReferenceChangeListener() {
+                    @Override
+                    public void onReferenceRemoved(ReferenceCounted counted, ReferenceOwner owner) {
+                        if (owner == tailerBytes)
+                            tailerReleased.set(true);
                     }
+                };
+                heldStore.addReferenceChangeListener(listener);
+                try {
+                    while (appender.wire().bytes().bytesStore() == heldStore && written < 8) {
+                        try (DocumentContext writing = appender.writingDocument()) {
+                            for (int i = 0; i < entries; i++)
+                                writing.wire().bytes().writeLong(1000L * written + i);
+                        }
+                        written++;
+                        observed.add(appender.wire().bytes().bytesStore());
+                    }
+                } finally {
+                    heldStore.removeReferenceChangeListener(listener);
                 }
-
-                assertEquals(openRefCount, heldStore.refCount(),
-                        "RefCount should remain unchanged while the tailer document is held open");
+                assertNotSame(heldStore, appender.wire().bytes().bytesStore(), "Writer must cross a mapping boundary");
+                assertTrue(cycle.length() > originalLength, "The test must actually grow the file");
+                MappedFile mapped = Jvm.getValue(heldStore, "mappedFile");
+                assertTrue(mapped.chunkCount() >= 2, "At least two chunks must be mapped");
+                assertFalse(tailerReleased.get(), "The open document must retain its mapped-store ownership");
+                assertEquals(entries * 8L, tailerBytes.readRemaining());
+                for (int i = 0; i < entries; i++)
+                    assertEquals(i, tailerBytes.readLong());
             }
-
-            assertNotNull(heldStore);
-            assertTrue(heldStore.refCount() <= openRefCount,
-                    "RefCount should not increase after closing the tailer document");
+            for (int document = 1; document < written; document++) {
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent());
+                    observed.add(dc.wire().bytes().bytesStore());
+                    assertEquals(entries * 8L, dc.wire().bytes().readRemaining());
+                    for (int i = 0; i < entries; i++)
+                        assertEquals(1000L * document + i, dc.wire().bytes().readLong());
+                }
+            }
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent());
+            }
+        } finally {
+            if (reserved)
+                heldStore.release(observer);
+            BackgroundResourceReleaser.releasePendingResources();
         }
+        for (BytesStore<?, ?> store : observed)
+            assertEquals(0, store.refCount(), "Mapped stores must release all owners after close");
     }
 
     @Test
