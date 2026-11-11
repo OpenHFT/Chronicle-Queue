@@ -38,7 +38,7 @@ public class RamBackedQueueIntegrationTest {
             events.clear();
             try (ChronicleQueue readOnly = SingleChronicleQueueBuilder.binary(directory.toFile())
                     .readOnly(true).blockSize(512L << 20).build()) {
-                assertTrue(readOnly.isClosed() == false);
+                assertFalse(readOnly.isClosed());
                 assertEquals(0, warningCount(events));
             }
         } finally {
