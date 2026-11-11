@@ -19,6 +19,10 @@ public final class AnalyticsDebugOutputMain {
     }
 
     public static void main(String[] args) {
+        ClassLoader loader = AnalyticsDebugOutputMain.class.getClassLoader();
+        if (loader.getResource("org/junit/Test.class") != null
+                || loader.getResource("org/junit/jupiter/api/Test.class") != null)
+            throw new IllegalStateException("Analytics child must not inherit JUnit through a launcher manifest");
         final Map<ExceptionKey, Integer> recorded = Jvm.recordExceptions(true, false, false);
         AnalyticsHolder.instance();
         final boolean routed = recorded.keySet().stream()

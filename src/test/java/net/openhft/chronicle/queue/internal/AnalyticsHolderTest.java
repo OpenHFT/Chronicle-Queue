@@ -27,8 +27,11 @@ public class AnalyticsHolderTest extends QueueTestCommon {
         // while the facade is built; no event is sent
         final File home = getTmpDir();
         assertTrue(home.mkdirs() || home.isDirectory());
-        // Chronicle Analytics mutes itself when JUnit is visible, and Chronicle Core's test-jar shadows it with a stub
-        final String[] productionClasspath = Arrays.stream(System.getProperty("java.class.path").split(File.pathSeparator))
+        // Use Surefire's expanded classpath: java.class.path may only name a manifest launcher JAR.
+        // Filtering that JAR leaves JUnit and Core's test stub reachable through its manifest.
+        // Chronicle Analytics mutes itself when JUnit is visible.
+        final String[] productionClasspath = Arrays.stream(System.getProperty("surefire.test.class.path",
+                        System.getProperty("java.class.path")).split(File.pathSeparator))
                 .filter(entry -> !new File(entry).getName().startsWith("junit") && !entry.endsWith("-tests.jar"))
                 .toArray(String[]::new);
 
