@@ -51,7 +51,6 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
 
     @Test
     public void runTenTimes() throws InterruptedException {
-        finishedNormally = false;
         assumeTrue(OS.is64Bit());
 
         for (int t = 10; t >= 1; t--) {
@@ -67,7 +66,6 @@ public class TailerCloseInParallelTest extends QueueTestCommon {
         }
 
         Paths.get(file).toFile().delete();
-        finishedNormally = true;
     }
 
     private static void doPerfTest(String file, TestWriter<Bytes<?>> writer, TestReader<Bytes<?>> reader, int count, boolean print) throws InterruptedException {

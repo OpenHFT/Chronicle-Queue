@@ -35,7 +35,7 @@ public class QueueTestCommonDiagnosticsTest {
 
     @After
     public void restoreExceptionHandlers() {
-        // Deliberately failed and unfinished inner fixtures do not reset these handlers themselves.
+        // Keep the outer diagnostic probe isolated even if its inner fixture regresses.
         Jvm.resetExceptionHandlers();
     }
 
@@ -91,8 +91,10 @@ public class QueueTestCommonDiagnosticsTest {
     }
 
     @Test
-    public void unfinishedTestStillSkipsExceptionCheckingButReportsDiagnostic() {
-        assertPasses(run(Fixtures.class, "unfinishedTest"));
+    public void abortedTestSkipsExceptionCheckingButReportsDiagnostic() {
+        Result result = run(Fixtures.class, "abortedTest");
+        assertPasses(result);
+        assertEquals(1, result.getAssumptionFailureCount());
         assertDiagnosticPresent();
     }
 
@@ -168,9 +170,9 @@ public class QueueTestCommonDiagnosticsTest {
         }
 
         @Test
-        public void unfinishedTest() {
+        public void abortedTest() {
             warn(COMPILER_FAILURE);
-            finishedNormally = false;
+            org.junit.Assume.assumeTrue("deliberate abort", false);
         }
 
         @Test

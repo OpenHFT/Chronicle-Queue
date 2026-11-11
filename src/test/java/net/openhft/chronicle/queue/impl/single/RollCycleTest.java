@@ -78,7 +78,6 @@ public class RollCycleTest extends QueueTestCommon {
 
     @Test
     public void newRollCycleIgnored2() throws InterruptedException {
-        finishedNormally = false;
         File path = getTmpDir();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
 
@@ -293,7 +292,6 @@ public class RollCycleTest extends QueueTestCommon {
             assertFalse("observer did not stop", thread.isAlive());
             assertEquals(1 + cyclesToWrite, observer.documentsRead);
         }
-        finishedNormally = true;
     }
 
     @After
