@@ -72,14 +72,16 @@ public class ToolsUtilWarmupTest {
                 Files.createDirectories(scratch);
                 IllegalStateException second = assertThrows(IllegalStateException.class, ToolsUtil::warmup);
                 assertSame(first.getCause(), second.getCause());
-                assertEmpty(scratch);
+                assertNoWarmupFiles(scratch);
             } else {
                 Files.createDirectories(scratch);
+                Path unrelated = scratch.resolve("native-library-fixture.dll");
+                Files.write(unrelated, new byte[]{1, 2, 3});
                 try (WatchService watcher = scratch.getFileSystem().newWatchService()) {
                     scratch.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
                     Class.forName(ToolsUtil.class.getName());
                     ToolsUtil.warnIfResourceTracing();
-                    assertEmpty(scratch);
+                    assertNoWarmupFiles(scratch);
                     WatchKey initial = watcher.poll();
                     if (initial != null) {
                         assertEquals("Ordinary utility use started warm-up", 0, warmupDirectories(initial));
@@ -93,7 +95,7 @@ public class ToolsUtilWarmupTest {
                             calls.add(threads.submit(() -> {
                                 start.await();
                                 ToolsUtil.warmup();
-                                assertEmpty(scratch);
+                                assertNoWarmupFiles(scratch);
                                 return null;
                             }));
                         }
@@ -101,7 +103,8 @@ public class ToolsUtilWarmupTest {
                         for (Future<?> call : calls)
                             call.get(45, TimeUnit.SECONDS);
                         ToolsUtil.warmup();
-                        assertEmpty(scratch);
+                        assertNoWarmupFiles(scratch);
+                        assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(unrelated));
                         WatchKey key = watcher.poll(5, TimeUnit.SECONDS);
                         assertNotNull("No warm-up directory created", key);
                         long directories = warmupDirectories(key);
@@ -125,9 +128,12 @@ public class ToolsUtilWarmupTest {
                             && event.context().toString().startsWith("chronicle-queue-index-warmup-")).count();
         }
 
-        private static void assertEmpty(Path directory) throws Exception {
+        private static void assertNoWarmupFiles(Path directory) throws Exception {
             try (Stream<Path> files = Files.list(directory)) {
-                assertEquals("Warm-up files remain", 0, files.count());
+                // Native libraries may create their own files in java.io.tmpdir, particularly on Windows.
+                // Only this utility's owned directory prefix establishes its cleanup contract.
+                assertEquals("Warm-up files remain", 0, files.filter(path ->
+                        path.getFileName().toString().startsWith("chronicle-queue-index-warmup-")).count());
             }
         }
     }
