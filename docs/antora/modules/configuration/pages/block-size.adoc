@@ -27,3 +27,18 @@ It is also recommended using the same block size for each queue instance when re
 The block size is not written to the queue's metadata, so should ideally be set to the same value when creating the queue instances.
 
 NOTE: Avoid changing the `blockSize` unnecessarily.
+
+== Large blocks on RAM-backed storage
+
+Opening a writable queue with a block size of at least 512 MiB emits one advisory warning per queue instance when the filesystem provider identifies the queue directory's backing store as `tmpfs` or `ramfs`.
+The check resolves symbolic links and queries the actual directory; it does not infer storage from a name such as `/tmp`.
+Small blocks, read-only queues, unknown filesystem types and unavailable filesystem information do not trigger this warning.
+
+Mapping a block does not immediately allocate its full size in physical memory.
+Writing or pre-touching its pages can consume memory and, on tmpfs, swap; accumulating queues or cycle files can exhaust those resources.
+Choose disk-backed storage for persistent journals, consider a smaller block size for disposable workloads, and delete temporary queue directories after closing their queues.
+RAM-backed storage does not retain journals across reboot.
+
+This is a configuration warning, not a free-space monitor or a prediction of allocation failure.
+It does not change the block size, prevent opening a queue or repeat during appends and rolls.
+The 512 MiB threshold is a conservative diagnostic policy, not a safe memory budget.
