@@ -285,8 +285,20 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 queue.indexCount(),
                 queue.indexSpacing());
 
-        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
-        return wireStore;
+        //! Until header serialization succeeds, the builder owns the store; any Throwable must release it.
+        //! Otherwise its reservations leak; closing a successful return instead breaks caller ownership.
+        //! StoreAcquisitionFailureTest#headerFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer and
+        //! StoreAcquisitionFailureTest#checkedHeaderFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+        //! assert original failure identity, release before Queue.close and live successful transfer.
+        boolean failed = true;
+        try {
+            wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+            failed = false;
+            return wireStore;
+        } finally {
+            if (failed)
+                Closeable.closeQuietly(wireStore);
+        }
     }
 
     /**

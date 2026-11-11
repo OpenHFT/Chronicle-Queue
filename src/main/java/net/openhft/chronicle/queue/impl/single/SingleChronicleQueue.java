@@ -1404,6 +1404,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             @NotNull final RollingResourcesCache.Resource dateValue = that
                     .dateCache.resourceFor(cycle);
             MappedBytes mappedBytes = null;
+            SingleChronicleQueueStore wireStore = null;
+            boolean initialisingStore = false;
             try {
                 File path = dateValue.path;
 
@@ -1440,10 +1442,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 wire.pauser(pauserSupplier.get());
                 wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
-                SingleChronicleQueueStore wireStore;
                 try {
                     if (!readOnly && createStrategy == CreateStrategy.CREATE && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
+                        initialisingStore = true;
                         wireStore = storeFactory.apply(that, wire);
 
                         createIndexThenUpdateHeader(wire, cycle, wireStore);
@@ -1495,6 +1497,20 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            } catch (RuntimeException | Error e) {
+                if (initialisingStore) {
+                    //! A returned store owns reservations that survive closing its provisional bytes alone.
+                    //! StoreAcquisitionFailureTest#indexFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+                    //! fails "Failed store closes before Queue.close" before fixture cleanup if this close is omitted.
+                    if (wireStore != null)
+                        Closeable.closeQuietly(wireStore);
+                    else
+                        //! A factory failure transfers no store, so the supplier must release its provisional bytes.
+                        //! StoreAcquisitionFailureTest#factoryFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+                        //! fails the zero-bytes-reservation assertion before fixture cleanup if this close is omitted.
+                        Closeable.closeQuietly(mappedBytes);
+                }
+                throw e;
             }
         }
 
