@@ -19,10 +19,12 @@ public class PretoucherFactoryLoadingTest extends QueueTestCommon {
     static final Pretoucher DELEGATED = new Pretoucher() {
         @Override
         public void execute() {
+            // Identity-only factory sentinel: no native resources or pretouch work.
         }
 
         @Override
         public void close() {
+            // Identity-only factory sentinel: no native resources or pretouch work.
         }
     };
 
