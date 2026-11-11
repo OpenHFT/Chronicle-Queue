@@ -36,7 +36,9 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
@@ -314,6 +316,27 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
     }
 
     @Test
+    public void metadataRequiresMarshallableFraming() throws IOException {
+        final File file = newTableStoreFile("metadata-missing-frame");
+        try (TableStore<SecretMetadata> store = SingleTableBuilder.binary(file, new SecretMetadata()).build()) {
+            assertNotNull(store);
+        }
+        replaceLengthPrefixWithPadding(file, nestedMetadataLengthCodeAt(file));
+        SecretMetadata.READ_COUNT.set(0);
+
+        final CorruptTableStoreException thrown = assertCorruption(file, false);
+
+        assertTrue("message was " + thrown.getMessage(),
+                thrown.getMessage().contains("does not hold readable metadata"));
+        assertEquals("metadata without marshallable framing invoked its constructor", 0, SecretMetadata.READ_COUNT.get());
+        assertFileCanBeDeleted(file);
+
+        assertUnframedMetadataIsRejected("metadata-scalar-frame", value -> value.int32(17));
+        assertUnframedMetadataIsRejected("metadata-null-frame", ValueOut::nu11);
+        assertUnframedMetadataIsRejected("metadata-absent-frame", value -> { });
+    }
+
+    @Test
     public void outerTableStoreFramingFailureIsCorruptionWithoutConstruction() throws IOException {
         final File file = newTableStoreFile("outer-table-store-framing");
         try (TableStore<SecretMetadata> store = SingleTableBuilder.binary(file, new SecretMetadata()).build()) {
@@ -331,6 +354,27 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
         assertEquals("failed outer framing decode grew the file", corruptedLength, Files.size(file.toPath()));
         assertThrowableChainOmits(thrown, SecretMetadata.SECRET);
         assertFileCanBeDeleted(file);
+    }
+
+    @Test
+    public void outerSchemaRequiresMarshallableFraming() throws IOException {
+        final File file = newTableStoreFile("outer-missing-frame");
+        try (TableStore<SecretMetadata> store = SingleTableBuilder.binary(file, new SecretMetadata()).build()) {
+            assertNotNull(store);
+        }
+        replaceLengthPrefixWithPadding(file, outerTableStoreLengthCodeAt(file));
+        SecretMetadata.READ_COUNT.set(0);
+
+        final CorruptTableStoreException thrown = assertCorruption(file, false);
+
+        assertTrue("message was " + thrown.getMessage(),
+                thrown.getMessage().contains("does not hold a readable table store"));
+        assertEquals("STStore without marshallable framing invoked metadata", 0, SecretMetadata.READ_COUNT.get());
+        assertFileCanBeDeleted(file);
+
+        assertUnframedOuterStoreIsRejected("outer-scalar-frame", value -> value.int32(17));
+        assertUnframedOuterStoreIsRejected("outer-null-frame", ValueOut::nu11);
+        assertUnframedOuterStoreIsRejected("outer-absent-frame", value -> { });
     }
 
     @Test
@@ -408,6 +452,35 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
 
         assertFileCanBeDeleted(beforeWireType);
         assertFileCanBeDeleted(beforeMetadata);
+    }
+
+    @Test
+    public void legacyRecoveryFieldBeforeMetadataStillOpens() throws IOException {
+        final File file = writeFirstHeader("legacy-recovery", "header",
+                value -> value.typedMarshallable("STStore", wire -> {
+                    wire.write(MetaDataField.wireType).object(WireType.BINARY);
+                    wire.write(MetaDataField.recovery).typedMarshallable("LegacyTimedStoreRecovery",
+                            recovery -> recovery.write("timeStamp").int64(0L));
+                    wire.write(MetaDataField.metadata).typedMarshallable(new SecretMetadata());
+                    wire.writeAlignTo(Integer.BYTES, 0);
+                }));
+
+        try (TableStore<SecretMetadata> store = SingleTableBuilder
+                .builder(file, WireType.BINARY_LIGHT, new SecretMetadata())
+                .build();
+             LongValue value = store.acquireValueFor("legacy.recovery", 73L)) {
+            assertEquals(SecretMetadata.SECRET, store.metadata().payload);
+            assertEquals(73L, value.getValue());
+        }
+        try (TableStore<SecretMetadata> store = SingleTableBuilder
+                .builder(file, WireType.READ_ANY, new SecretMetadata())
+                .readOnly(true)
+                .build();
+             LongValue value = store.acquireValueFor("legacy.recovery", -1L)) {
+            assertEquals(SecretMetadata.SECRET, store.metadata().payload);
+            assertEquals(73L, value.getValue());
+        }
+        assertFileCanBeDeleted(file);
     }
 
     @Test
@@ -499,6 +572,38 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
     }
 
     @Test
+    public void writerAlwaysUsesCanonicalTableStoreAlias() throws Exception {
+        final File file = newTableStoreFile("canonical-writer-alias");
+        final String javaExecutable = new File(new File(System.getProperty("java.home"), "bin"), "java").getPath();
+        final java.util.List<String> command = new java.util.ArrayList<>();
+        command.add(javaExecutable);
+        command.addAll(java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments());
+        command.add("-cp");
+        command.add(System.getProperty("java.class.path"));
+        command.add(AliasFirstWriter.class.getName());
+        command.add(file.getAbsolutePath());
+        final Process writer = new ProcessBuilder(command)
+                .redirectError(ProcessBuilder.Redirect.INHERIT)
+                .start();
+
+        try {
+            assertTrue("alias-first writer did not terminate", writer.waitFor(15L, TimeUnit.SECONDS));
+            assertEquals("alias-first writer failed", 0, writer.exitValue());
+        } finally {
+            if (writer.isAlive()) {
+                writer.destroyForcibly();
+                writer.waitFor(15L, TimeUnit.SECONDS);
+            }
+        }
+        assertEquals("STStore", persistedOuterAlias(file));
+        try (TableStore<Metadata.NoMeta> store = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build();
+             LongValue value = store.acquireValueFor("alias.first", -1L)) {
+            assertEquals(47L, value.getValue());
+        }
+        assertFileCanBeDeleted(file);
+    }
+
+    @Test
     public void applicationCorruptionExceptionIsNotPromoted() throws IOException {
         final File file = tableStoreWithReadFailingMetadata("application-corruption");
         final CorruptTableStoreException direct =
@@ -566,6 +671,43 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
         assertSame("application constructor failure lost its identity", expected, findInChain(thrown, expected));
     }
 
+    private void assertReservedWriteFailureIsIsolated(String stem, RuntimeException expected) throws IOException {
+        final File file = newTableStoreFile(stem);
+        final IORuntimeException actual = assertThrows(IORuntimeException.class,
+                () -> SingleTableBuilder.binary(file, new ReservedSignalWriteMetadata(expected)).build());
+        assertFalse("application write failure became corruption", actual instanceof CorruptTableStoreException);
+        assertFalse("application write failure became availability", actual instanceof TableStoreUnavailableException);
+        assertSame(expected, actual.getCause());
+        assertFileCanBeDeleted(file);
+    }
+
+    private void assertUnframedMetadataIsRejected(String stem, Consumer<ValueOut> frameWriter) throws IOException {
+        final File file = writeFirstHeader(stem, "header", value -> value.typedMarshallable("STStore", wire -> {
+            wire.write(MetaDataField.wireType).object(WireType.BINARY_LIGHT);
+            final ValueOut metadataValue = wire.write(MetaDataField.metadata);
+            metadataValue.typePrefix(SecretMetadata.class);
+            frameWriter.accept(metadataValue);
+            wire.writeAlignTo(Integer.BYTES, 0);
+        }));
+        SecretMetadata.READ_COUNT.set(0);
+
+        assertCorruption(file, false);
+
+        assertEquals("unframed metadata invoked its constructor", 0, SecretMetadata.READ_COUNT.get());
+        assertFileCanBeDeleted(file);
+    }
+
+    private void assertUnframedOuterStoreIsRejected(String stem, Consumer<ValueOut> frameWriter) throws IOException {
+        final File file = writeFirstHeader(stem, "header", value -> {
+            value.typePrefix("STStore");
+            frameWriter.accept(value);
+        });
+
+        assertCorruption(file, false);
+
+        assertFileCanBeDeleted(file);
+    }
+
     private File tableStoreWithReadFailingMetadata(String stem) throws IOException {
         final File file = newTableStoreFile(stem);
         ReadFailingMetadata.FAILURE = null;
@@ -611,6 +753,22 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
                 final net.openhft.chronicle.wire.ValueIn storeValue = wire.read("header");
                 storeValue.typePrefix(new StringBuilder(), StringBuilder::append);
                 return wire.bytes().readPosition();
+            } finally {
+                bytes.singleThreadedCheckReset();
+            }
+        }
+    }
+
+    private String persistedOuterAlias(File file) throws IOException {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, true)) {
+            bytes.singleThreadedCheckDisabled(true);
+            try {
+                final Wire wire = WireType.BINARY_LIGHT.apply(bytes);
+                wire.readFirstHeader();
+                final net.openhft.chronicle.wire.ValueIn storeValue = wire.read("header");
+                final StringBuilder alias = new StringBuilder();
+                storeValue.typePrefix(alias, StringBuilder::append);
+                return alias.toString();
             } finally {
                 bytes.singleThreadedCheckReset();
             }
@@ -700,6 +858,25 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
             raf.seek(lengthCodeAt);
             raf.write(BinaryWireCode.BYTES_LENGTH32);
             raf.writeInt(Integer.reverseBytes(LENGTH_MASK));
+        }
+    }
+
+    private void replaceLengthPrefixWithPadding(File file, long lengthCodeAt) throws IOException {
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
+            raf.seek(lengthCodeAt);
+            final int code = raf.readUnsignedByte();
+            final int prefixWidth;
+            if (code == BinaryWireCode.BYTES_LENGTH8)
+                prefixWidth = 2;
+            else if (code == BinaryWireCode.BYTES_LENGTH16)
+                prefixWidth = 3;
+            else if (code == BinaryWireCode.BYTES_LENGTH32)
+                prefixWidth = 5;
+            else
+                throw new AssertionError("expected a marshallable length prefix, found 0x" + Integer.toHexString(code));
+            raf.seek(lengthCodeAt);
+            for (int i = 0; i < prefixWidth; i++)
+                raf.write(BinaryWireCode.PADDING);
         }
     }
 
@@ -796,6 +973,76 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
     }
 
     @Test
+    public void compactReadOnlyTableStoreObservesLaterGrowth() throws IOException {
+        final File file = newTableStoreFile("compact-growth");
+        try (TableStore<Metadata.NoMeta> store = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build();
+             LongValue value = store.acquireValueFor("compact.initial", 1L)) {
+            assertEquals(1L, value.getValue());
+        }
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
+            raf.setLength(64L * 1024L);
+        }
+
+        try (TableStore<Metadata.NoMeta> reader = SingleTableBuilder
+                .builder(file, WireType.READ_ANY, Metadata.NoMeta.INSTANCE)
+                .readOnly(true)
+                .build();
+             TableStore<Metadata.NoMeta> writer = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
+            final char[] keyChars = new char[180];
+            java.util.Arrays.fill(keyChars, 'k');
+            final String keyPrefix = new String(keyChars);
+            String lastKey = null;
+            for (int i = 0; i < 400; i++) {
+                lastKey = keyPrefix + i;
+                try (LongValue appended = writer.acquireValueFor(lastKey, i)) {
+                    assertEquals(i, appended.getValue());
+                }
+            }
+            try (LongValue value = reader.acquireValueFor(lastKey, -1L)) {
+                assertEquals(399L, value.getValue());
+            }
+            final AtomicInteger keyCount = new AtomicInteger();
+            reader.forEachKey(keyCount, (count, key, valueIn) -> count.incrementAndGet());
+            assertEquals(401, keyCount.get());
+        }
+        assertFileCanBeDeleted(file);
+    }
+
+    @Test
+    public void readOnlyOpenWaitsForFirstHeaderPublication() throws Exception {
+        final File file = newTableStoreFile("publication-window");
+        final int mappingPageSize = PageUtil.getPageSize(file.getAbsolutePath());
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
+            raf.setLength(2L * OS.mapAlign(OS.SAFE_PAGE_SIZE, mappingPageSize));
+        }
+        final AtomicReference<Throwable> creatorFailure = new AtomicReference<>();
+        final Thread creator = new Thread(() -> {
+            // Exceed the historical one-second short-file wait: a preallocated zero header uses the lock timeout instead.
+            Jvm.pause(1_500L);
+            try (TableStore<Metadata.NoMeta> created = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build()) {
+                if (created.metadata() != Metadata.NoMeta.INSTANCE)
+                    throw new AssertionError("creator published unexpected metadata");
+            } catch (Throwable t) {
+                creatorFailure.set(t);
+            }
+        }, "table-store-header-publisher");
+        creator.start();
+
+        try (TableStore<Metadata.NoMeta> store = SingleTableBuilder
+                .builder(file, WireType.READ_ANY, Metadata.NoMeta.INSTANCE)
+                .readOnly(true)
+                .build()) {
+            assertEquals(Metadata.NoMeta.INSTANCE, store.metadata());
+        } finally {
+            creator.join(5_000L);
+        }
+        assertFalse("creator did not terminate", creator.isAlive());
+        if (creatorFailure.get() != null)
+            throw new AssertionError("creator failed", creatorFailure.get());
+        assertFileCanBeDeleted(file);
+    }
+
+    @Test
     public void failedWritableOpenDoesNotGrowAnIncompleteFirstHeader() throws IOException {
         final File file = newTableStoreFile("incomplete-first-header");
         try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
@@ -852,6 +1099,20 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
 
         assertSame("the metadata failure was replaced", expected, thrown);
         assertFileCanBeDeleted(file);
+    }
+
+    @Test
+    public void metadataWriteCannotOriginateReservedTableStoreSignals() throws IOException {
+        final File unavailableFile = newTableStoreFile("reserved-unavailable");
+        assertTrue(unavailableFile.delete());
+        final TableStoreUnavailableException unavailable = new TableStoreUnavailableException(
+                unavailableFile, "application-owned availability signal");
+        assertReservedWriteFailureIsIsolated("write-unavailable", unavailable);
+
+        final File corruptFile = newTableStoreFile("reserved-corrupt");
+        final CorruptTableStoreException corrupt = new CorruptTableStoreException(
+                corruptFile, "application-owned corruption signal");
+        assertReservedWriteFailureIsIsolated("write-corrupt", corrupt);
     }
 
     private CorruptTableStoreException assertCorruption(File file, boolean readOnly) {
@@ -968,6 +1229,19 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
         }
     }
 
+    public static final class ReservedSignalWriteMetadata implements Metadata {
+        private final transient RuntimeException failure;
+
+        private ReservedSignalWriteMetadata(RuntimeException failure) {
+            this.failure = failure;
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull WireOut wire) {
+            throw failure;
+        }
+    }
+
     public static final class OverrideFailingMetadata implements Metadata {
         private final transient RuntimeException failure;
 
@@ -1073,6 +1347,18 @@ public class SingleTableBuilderCorruptMetadataTest extends QueueTestCommon {
         @Override
         protected void performClose() {
             CLOSE_COUNT.incrementAndGet();
+        }
+    }
+
+    public static final class AliasFirstWriter {
+        public static void main(String[] args) {
+            CLASS_ALIASES.addAlias(SingleTableStore.class, "AliasRegisteredBeforeBuilder");
+            final File file = new File(args[0]);
+            try (TableStore<Metadata.NoMeta> store = SingleTableBuilder.binary(file, Metadata.NoMeta.INSTANCE).build();
+                 LongValue value = store.acquireValueFor("alias.first", 47L)) {
+                if (value.getValue() != 47L)
+                    throw new AssertionError("unexpected stored value " + value.getValue());
+            }
         }
     }
 }
