@@ -17,14 +17,14 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class TableDirectoryListingTest extends QueueTestCommon {
@@ -115,43 +115,101 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         assertEquals(9, listingReadOnly.getMaxCreatedCycle());
     }
 
-    /**
-     * Simulates a read-only queue opening while a writer is still populating the metadata file: acquiring
-     * listing.modCount fails on the first attempt, so init() retries. Values acquired by the failed attempt
-     * must be closed rather than leaked.
-     */
     @Test
-    public void readOnlyInitRetryShouldNotLeakPartiallyAcquiredValues() {
-        final List<LongValue> acquired = new ArrayList<>();
-        final AtomicBoolean failedOnce = new AtomicBoolean();
-        @SuppressWarnings("unchecked")
-        final TableStore<Metadata.NoMeta> racingStore = (TableStore<Metadata.NoMeta>) Proxy.newProxyInstance(
-                TableStore.class.getClassLoader(),
-                new Class<?>[]{TableStore.class},
-                (proxy, method, args) -> {
-                    if ("acquireValueFor".equals(method.getName())
-                            && "listing.modCount".contentEquals((CharSequence) args[0])
-                            && failedOnce.compareAndSet(false, true))
-                        throw new IllegalStateException("simulated: key not yet written by the writer");
-                    final Object result;
-                    try {
-                        result = method.invoke(tablestore, args);
-                    } catch (InvocationTargetException e) {
-                        throw e.getCause();
-                    }
-                    if ("acquireValueFor".equals(method.getName()))
-                        acquired.add((LongValue) result);
-                    return result;
+    public void closesPartialBindingsBeforeRetryingMissingLowestCycle() {
+        assertPartialBindingsClosedBeforeRetry(1);
+    }
+
+    @Test
+    public void closesPartialBindingsBeforeRetryingMissingModCount() {
+        assertPartialBindingsClosedBeforeRetry(2);
+    }
+
+    @Test
+    public void preservesCheckedExceptionWhenFirstAcquisitionFails() {
+        assertPartialBindingsClosedOnFailure(0);
+    }
+
+    @Test
+    public void closesPartialBindingsWhenLowestCycleThrowsCheckedException() {
+        assertPartialBindingsClosedOnFailure(1);
+    }
+
+    @Test
+    public void closesPartialBindingsWhenModCountThrowsCheckedException() {
+        assertPartialBindingsClosedOnFailure(2);
+    }
+
+    private void assertPartialBindingsClosedOnFailure(int failedKey) {
+        String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
+        // A concrete mock lets checked failures escape without a Java interface
+        // proxy wrapping them in UndeclaredThrowableException.
+        TableStore<Metadata.NoMeta> failingStore = createStrictMock(TableStore.class);
+        List<LongValue> partialBindings = new ArrayList<>();
+        try (TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(failingStore, SystemTimeProvider.INSTANCE)) {
+            for (int i = 0; i < failedKey; i++) {
+                LongValue value = tablestoreReadOnly.acquireValueFor(keys[i]);
+                partialBindings.add(value);
+                expect(failingStore.acquireValueFor(keys[i])).andReturn(value);
+            }
+            IllegalStateException failure = new IllegalStateException("Acquisition failed for key " + keys[failedKey]);
+            expect(failingStore.acquireValueFor(keys[failedKey])).andAnswer(() -> {
+                throw failure;
+            });
+            replay(failingStore);
+
+            assertSame("Cleanup must preserve the original failure", failure,
+                    assertThrows(Throwable.class, readOnly::initLongValues));
+            for (LongValue value : partialBindings)
+                assertTrue("Failed acquisition must release every returned binding", value.isClosed());
+            verify(failingStore);
+        } finally {
+            partialBindings.forEach(Closeable::closeQuietly);
+        }
+    }
+
+    private void assertPartialBindingsClosedBeforeRetry(int missingKey) {
+        String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
+        TableStore<Metadata.NoMeta> incompleteStore = createStrictMock(TableStore.class);
+        List<LongValue> partialBindings = new ArrayList<>();
+        List<LongValue> successfulBindings = new ArrayList<>();
+        listing.onFileCreated(tempFile, 7);
+
+        try (TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(incompleteStore, SystemTimeProvider.INSTANCE)) {
+            // Use real mapped bindings; the store only controls when a key becomes visible.
+            for (int i = 0; i < missingKey; i++) {
+                LongValue value = tablestoreReadOnly.acquireValueFor(keys[i]);
+                partialBindings.add(value);
+                expect(incompleteStore.acquireValueFor(keys[i])).andReturn(value);
+            }
+            expect(incompleteStore.acquireValueFor(keys[missingKey]))
+                    .andThrow(new IllegalStateException("Metadata key not yet published"));
+            for (String key : keys) {
+                LongValue value = tablestoreReadOnly.acquireValueFor(key);
+                successfulBindings.add(value);
+                expect(incompleteStore.acquireValueFor(key)).andAnswer(() -> {
+                    for (LongValue partial : partialBindings)
+                        assertTrue("Failed attempt must release bindings before retry", partial.isClosed());
+                    return value;
                 });
+            }
+            replay(incompleteStore);
 
-        final TableDirectoryListingReadOnly racingListing =
-                new TableDirectoryListingReadOnly(racingStore, SystemTimeProvider.INSTANCE);
-        racingListing.init();
-        assertTrue("modCount acquisition should have failed once", failedOnce.get());
-        assertEquals("2 values from the failed attempt + 3 from the retry", 5, acquired.size());
+            readOnly.init();
 
-        racingListing.close();
-        for (LongValue value : acquired)
-            assertTrue("Not closed: " + value, ((Closeable) value).isClosed());
+            assertEquals(7, readOnly.getMinCreatedCycle());
+            assertEquals(7, readOnly.getMaxCreatedCycle());
+            assertEquals(listing.modCount(), readOnly.modCount());
+            for (LongValue value : successfulBindings)
+                assertFalse("Successful bindings belong to the open listing", value.isClosed());
+            verify(incompleteStore);
+            readOnly.close();
+            for (LongValue value : successfulBindings)
+                assertTrue("Closing the listing releases successful bindings", value.isClosed());
+        } finally {
+            // A failed control must not leak the real references it deliberately tracks.
+            partialBindings.forEach(Closeable::closeQuietly);
+            successfulBindings.forEach(Closeable::closeQuietly);
+        }
     }
 }
