@@ -3,6 +3,9 @@
  */
 package net.openhft.chronicle.queue.util;
 
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -41,12 +44,19 @@ public class ToolsUtilWarmupTest {
         runChild("failure");
     }
 
+    @Test
+    public void warmupDrainsDeferredResourceReleases() throws Exception {
+        runChild("deferred");
+    }
+
     private void runChild(String mode) throws Exception {
         Path scratch = temporary.getRoot().toPath().resolve("scratch");
         Path output = temporary.getRoot().toPath().resolve("child.log");
         List<String> command = new ArrayList<>();
         command.add(Paths.get(System.getProperty("java.home"), "bin", "java").toString());
         command.addAll(ManagementFactory.getRuntimeMXBean().getInputArguments());
+        if ("deferred".equals(mode))
+            command.add("-Dbackground.releaser.thread=false");
         command.add("-Djava.io.tmpdir=" + scratch.toAbsolutePath());
         command.add("-cp");
         command.add(System.getProperty("java.class.path"));
@@ -75,6 +85,9 @@ public class ToolsUtilWarmupTest {
                 assertNoWarmupFiles(scratch);
             } else {
                 Files.createDirectories(scratch);
+                AtomicBoolean released = new AtomicBoolean();
+                if ("deferred".equals(args[0]))
+                    BackgroundResourceReleaser.run(() -> released.set(true));
                 Path unrelated = scratch.resolve("native-library-fixture.dll");
                 Files.write(unrelated, new byte[]{1, 2, 3});
                 try (WatchService watcher = scratch.getFileSystem().newWatchService()) {
@@ -103,6 +116,8 @@ public class ToolsUtilWarmupTest {
                         for (Future<?> call : calls)
                             call.get(45, TimeUnit.SECONDS);
                         ToolsUtil.warmup();
+                        if ("deferred".equals(args[0]))
+                            assertTrue("Deferred releases remain after warm-up", released.get());
                         assertNoWarmupFiles(scratch);
                         assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(unrelated));
                         WatchKey key = watcher.poll(5, TimeUnit.SECONDS);

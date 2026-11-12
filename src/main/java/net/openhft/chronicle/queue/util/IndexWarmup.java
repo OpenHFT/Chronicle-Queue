@@ -3,6 +3,8 @@
  */
 package net.openhft.chronicle.queue.util;
 
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -36,6 +38,9 @@ final class IndexWarmup {
         } finally {
             if (directory != null) {
                 try {
+                    // Closing the queue can enqueue mapped-file releases. Windows cannot
+                    // delete those files until the releases have completed.
+                    BackgroundResourceReleaser.releasePendingResources();
                     deleteDirectory(directory);
                 } catch (IOException | RuntimeException e) {
                     failure = cleanupFailure(directory, failure, e);
