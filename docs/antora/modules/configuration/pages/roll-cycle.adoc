@@ -46,6 +46,24 @@ All available roll-cycles can be shown under <<available_roll_cycles>>.
 
 NOTE: The default roll-cycle is `RollCycles.FAST_DAILY`.
 
+=== Specialist roll-cycle imports
+
+The capacity table in <<available_roll_cycles>> includes constants from several enums.
+`LARGE_HOURLY`, `LARGE_DAILY`, `XLARGE_DAILY` and `HUGE_DAILY` belong to `LargeRollCycles` in the `net.openhft.chronicle.queue.rollcycles` package.
+For example, select `LARGE_DAILY` with these imports:
+
+[source,java]
+----
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
+
+RollCycle rollCycle = LargeRollCycles.LARGE_DAILY;
+----
+
+Pass this value to the queue builder's `.rollCycle(rollCycle)` method when creating a new queue.
+Choose the roll cycle before creating the queue, taking the cycle's capacity and expected file size into account.
+When reopening an existing queue, retain its persisted roll-cycle configuration as described below.
+
 === Overriding the roll cycle
 
 Once a queue’s roll-cycle has been set, it cannot be changed at a later time.
