@@ -1,0 +1,99 @@
+= Offline cleanup of completed Queue rolls
+
+This standalone maintenance tool reduces apparent file length. It changes no appender, rolling,
+close, reader or write-by-index behaviour. Automatic live trimming is a separate candidate.
+
+== Prerequisites
+
+Stop every Queue user, pretoucher and mapping; prevent new opens for the whole operation. Back up
+files first. This requirement applies to preview too: opening and closing a cycle descriptor inside
+a JVM with existing POSIX locks can disturb those locks. Use a separate CLI process.
+On Linux the tool checks `/proc/<pid>/fd` and `/proc/<pid>/maps` by device and inode,
+including mappings retained after their descriptors close. Visible users, inaccessible inspection,
+malformed mapping records and unsupported platforms cause refusal. This snapshot cannot prevent
+new opens or see processes hidden by a different PID namespace or restricted procfs mount.
+External exclusion remains mandatory; run where all Queue users are visible.
+
+With Queue and dependencies on the classpath and the JVM options required by that version:
+
+[source,shell]
+----
+java <Chronicle JVM options> -cp <classpath> \
+  net.openhft.chronicle.queue.main.TruncateRollFilesMain <root-directory>
+java <Chronicle JVM options> -cp <classpath> \
+  net.openhft.chronicle.queue.main.TruncateRollFilesMain <root-directory> --offline
+----
+
+The first command previews; only the second authorises changes. `--offline` is an operator assertion,
+not automatic detection of quiescence. Preview eligibility never promises a later apply will succeed.
+
+After packaging Queue, the supplied launcher selects `JAVA_HOME/bin/java` (or `java` on PATH)
+and supplies the required module access flags on Java 9 and later, including Java 21:
+
+[source,shell]
+----
+bin/truncate_rolls.sh /path/to/queues
+bin/truncate_rolls.sh /path/to/queues --offline
+----
+
+Use a supported JDK for the packaged Queue version. Java 8 receives no JPMS flags;
+this launcher selection does not imply that every Queue release supports every JDK.
+
+== Conservative selection and outcomes
+
+The root may contain many Queue subdirectories. Each must have `metadata.cq4t`. Every roll name in a
+queue must round-trip through its configured naming convention. Invalid dates, ambiguous names and
+symlinked roll files refuse that queue before any of its files change. Other directories continue.
+Symlink roots/parents are refused and directory links are not traversed. Any encountered symlink
+reports an error and makes the overall result INCOMPLETE; independent valid queues still continue.
+An unrelated dangling `.cq4` symlink does not turn its directory into a Queue.
+
+Only positive sizes exactly divisible by the system page size are considered, including rolls with a retained read-ahead page. The newest roll in each queue is
+always preserved. Before any mutation, every nonempty roll must have a supported store header.
+An empty future roll name cannot displace the newest genuine roll; a malformed nonempty header
+refuses the entire queue directory, including when it is the newest filename. Supported naming intervals are one second through one day; longer/weekly and
+unsupported profiles are refused conservatively. Unknown directories with regular `.cq4` files but
+no metadata produce an incomplete result, since their naming/selection cannot be established.
+
+The parser walks real records in little-endian binary `dataFormat: 1`, supports scalar and two-long
+write positions, and requires both END_OF_DATA and its complete binary EOF annotation. It never
+searches payloads for magic numbers, manufactures EOF or discards nonzero trailing data. File identity
+and size are rechecked before mutation; these checks detect changes but are not protection against
+adversarial path replacement. No public single-file bypass of the selection rules is supplied.
+Cycle files and metadata must have exactly one hard link. Multiple links or an unavailable link count cause refusal even though Linux user checks compare
+inodes. This retains conservative identity checks; it does not close the open-during-scan race.
+
+`SKIPPED_NEWEST`, `SKIPPED_SIZE`, `NO_EOF` and `OFFLINE_CONFIRMATION_REQUIRED` explain unchanged files;
+`TRUNCATED` records a change. Errors include the path and refusal reason. The final summary is
+COMPLETE or INCOMPLETE. Exit 0 means complete, 1 means incomplete or unsafe input, and 2 means
+invalid arguments. Exit 1 may follow successful cleanup in other directories. Java and C++ share
+these exit meanings; their human-readable summary layouts are not a shared machine API.
+Per-file failures do not abandon later independent files/directories.
+
+`SKIPPED_NONZERO_TAIL` means that a complete EOF was found but bytes after it are nonzero.
+This can be abandoned payload from normal crashed-writer recovery; it is not by itself proof of
+corruption. The conservative offline tool leaves that file unchanged and reports INCOMPLETE.
+There is no force option that discards this residue.
+
+A full scan and zero-tail check can be slow, but occur only in this offline tool. Record headers
+use 64 KiB read-ahead rather than a separate system call per header. Apply still rechecks the
+boundary and tail under its file lock; it does not claim constant work. Sparse files may
+already consume little disk space despite large apparent lengths. Existing writable Queue mappings
+can regrow a trimmed file on reopen: this tool does not change that behaviour or repair the separate
+Bytes stale-growth issue. Keep the backup and per-path output for review.
+
+== Quiet-period guard
+
+The default minimum modification age is five minutes. Eligible rolls modified more
+recently, or with future modification times, produce `WARN_RECENTLY_MODIFIED` and
+are skipped. The newest roll remains excluded regardless of its age.
+
+Use `--min-age-seconds=N` with preview or `--offline` to change the threshold; for
+example, `bin/truncate_rolls.sh /path/to/queues --offline --min-age-seconds=600`.
+Zero disables only this delay for controlled tests. Age does not prove the absence
+of users or mappings: the external-offline requirement and all EOF/identity checks
+still apply. A successful cleanup removes retained page padding to the exact EOF.
+
+`N` must contain only decimal digits and fit signed 64-bit milliseconds after multiplication by
+1000. Signs, fractional values, duplicate flags and unknown options are usage errors (exit 2).
+The `--offline` and `--min-age-seconds` options may appear in either order after the root.
