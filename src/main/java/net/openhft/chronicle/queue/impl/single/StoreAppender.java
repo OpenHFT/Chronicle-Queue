@@ -230,11 +230,14 @@ class StoreAppender extends AbstractCloseable
         try (DocumentContext dc = writingDocument()) {
             Bytes<?> bytes = dc.wire().bytes();
             long wp = bytes.writePosition();
-            marshallable.writeMarshallable(bytes);
-
-            // Rollback if no data was written
-            if (wp == bytes.writePosition())
-                dc.rollbackOnClose();
+            boolean encoded = false;
+            try {
+                marshallable.writeMarshallable(bytes);
+                encoded = true;
+            } finally {
+                // A failed encoder has not supplied a complete document.
+                if (!encoded || wp == bytes.writePosition()) dc.rollbackOnClose();
+            }
         }
     }
 
@@ -779,6 +782,9 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
+        boolean prepared = false;
+        boolean publishing = false;
+        long previousLimit = 0;
         try {
             int cycle = queue.cycle();
             if (wire == null)
@@ -787,12 +793,15 @@ class StoreAppender extends AbstractCloseable
             if (this.cycle != cycle)
                 rollCycleTo(cycle);
 
+            previousLimit = wire.bytes().writeLimit();
             this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
+            prepared = true;
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
             Bytes<?> wireBytes = wire.bytes();
             wireBytes.write(bytes);
+            publishing = true;
             wire.updateHeader(positionOfHeader, false, 0);
             lastIndex(wire.headerNumber());
             lastPosition = positionOfHeader;
@@ -801,7 +810,15 @@ class StoreAppender extends AbstractCloseable
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         } finally {
-            writeLock.unlock();
+            try {
+                if (prepared && !publishing) {
+                    ((InternalWire) wire).forceNotInsideHeader();
+                    wire.bytes().writeLimit(previousLimit);
+                    position0(positionOfHeader, positionOfHeader, wire.bytes());
+                }
+            } finally {
+                writeLock.unlock();
+            }
         }
     }
 
