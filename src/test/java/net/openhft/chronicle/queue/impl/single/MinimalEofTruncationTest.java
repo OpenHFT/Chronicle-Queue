@@ -26,6 +26,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 public class MinimalEofTruncationTest {
     @Rule public TemporaryFolder temporary = new TemporaryFolder();
@@ -37,11 +38,24 @@ public class MinimalEofTruncationTest {
                 BinaryWire wire = new BinaryWire(bytes);
                 assertTrue(wire.writeEndOfWire(1, TimeUnit.MILLISECONDS, offset));
                 assertEquals(offset + 8, bytes.writePosition());
+                long padded = file.length();
                 SingleChronicleQueueStore.truncateIfEOF(wire, bytes.mappedFile());
                 BackgroundResourceReleaser.releasePendingResources();
-                assertEquals(OS.pageAlign(offset + 8) + OS.pageSize(), file.length());
+                assertEquals(OS.isWindows() ? padded : OS.pageAlign(offset + 8) + OS.pageSize(), file.length());
             }
         }
+    }
+    @Test public void platformOutcomePreservesTheFileReservation() throws Exception {
+        File file = paddedFile();
+        Bytes<?> bytes = Bytes.allocateElasticOnHeap(128);
+        try (MappedFile mapped = MappedFile.mappedFile(file, 65536, 0)) {
+            bytes.writeInt(Wires.END_OF_DATA).writeInt(0x464f45c3);
+            int references = mapped.refCount();
+            SingleChronicleQueueStore.truncateIfEOF(new BinaryWire(bytes), mapped);
+            BackgroundResourceReleaser.releasePendingResources();
+            assertEquals(references, mapped.refCount());
+            assertEquals(OS.isWindows() ? 65536 : OS.pageAlign(8) + OS.pageSize(), file.length());
+        } finally { bytes.releaseLast(); }
     }
     @Test public void shortOrCorruptMarkerIsPreservedAndDiagnosedAtDebug() throws Exception {
         File file = paddedFile();
@@ -87,6 +101,7 @@ public class MinimalEofTruncationTest {
         } finally { bytes.releaseLast(); }
     }
     @Test public void eofTruncatesAndDoesNotGrowAnAlreadyShorterFile() throws Exception {
+        assumeFalse("Live mapped-file truncation is deferred on Windows", OS.isWindows());
         File file = paddedFile();
         Bytes<?> bytes = Bytes.allocateElasticOnHeap(128);
         try {
@@ -111,6 +126,7 @@ public class MinimalEofTruncationTest {
         } finally { bytes.releaseLast(); }
     }
     @Test public void backgroundFailureWarnsAndReleasesReservationEvenForErrors() throws Exception {
+        assumeFalse("No truncation task is scheduled on Windows", OS.isWindows());
         for (Throwable failure : new Throwable[]{new IllegalStateException("injected"), new AssertionError("injected")}) {
             File file = paddedFile();
             Bytes<?> bytes = Bytes.allocateElasticOnHeap(128);
@@ -154,7 +170,10 @@ public class MinimalEofTruncationTest {
             long padded = old.length();
             time.advanceMillis(1000); a.writeText("a-after");
             BackgroundResourceReleaser.releasePendingResources();
-            assertTrue("completed cycle should shrink", old.length() < padded);
+            if (OS.isWindows())
+                assertEquals("Windows must defer live truncation", padded, old.length());
+            else
+                assertTrue("completed cycle should shrink", old.length() < padded);
             b.writeText("b-after");
             try (ExcerptTailer tailer = first.createTailer()) {
                 assertEquals("a-before", tailer.readText()); assertEquals("b-before", tailer.readText());

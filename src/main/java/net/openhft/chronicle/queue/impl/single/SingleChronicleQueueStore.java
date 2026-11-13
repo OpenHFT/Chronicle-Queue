@@ -555,6 +555,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
                     + "; " + (end < 8 ? "fewer than 8 bytes (" + end + ")" : String.format("last8=0x%016x", last)));
             return;
         }
+        if (OS.isWindows()) {
+            Jvm.debug().on(SingleChronicleQueueStore.class, "Not truncating a live mapped file on Windows: " + file.file());
+            return;
+        }
         // Retain the EOF page and one read-ahead page, including a racing micro-touch.
         final long length = OS.pageAlign(end) + OS.pageSize();
         final ReferenceOwner owner = ReferenceOwner.temporary("EOF truncation");
