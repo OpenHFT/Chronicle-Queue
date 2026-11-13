@@ -545,6 +545,8 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         return written;
     }
 
+    // Best-effort cleanup must report even Errors without terminating the shared background releaser.
+    @SuppressWarnings("java:S1181")
     static void truncateIfEOF(Wire wire, MappedFile file) {
         final long end = wire.bytes().writePosition();
         // BinaryWire: END_OF_DATA then C3 'E' 'O' 'F', just written by this thread.
@@ -563,18 +565,15 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         final long length = OS.pageAlign(end) + OS.pageSize();
         final ReferenceOwner owner = ReferenceOwner.temporary("EOF truncation");
         file.reserve(owner); // Keep the checked inode open; never reopen its pathname.
-        BackgroundResourceReleaser.run(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    FileChannel channel = file.raf().getChannel();
-                    if (channel.size() > length)
-                        channel.truncate(length);
-                } catch (Throwable e) {
-                    Jvm.warn().on(SingleChronicleQueueStore.class, "Unable to truncate " + file.file(), e);
-                } finally {
-                    file.release(owner);
-                }
+        BackgroundResourceReleaser.run(() -> {
+            try {
+                FileChannel channel = file.raf().getChannel();
+                if (channel.size() > length)
+                    channel.truncate(length);
+            } catch (Throwable e) {
+                Jvm.warn().on(SingleChronicleQueueStore.class, "Unable to truncate " + file.file(), e);
+            } finally {
+                file.release(owner);
             }
         });
     }

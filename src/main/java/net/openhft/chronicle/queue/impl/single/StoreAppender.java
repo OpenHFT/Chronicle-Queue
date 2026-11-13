@@ -568,12 +568,12 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                int cycle = Math.max(this.cycle, queue.cycle());
+                int targetCycle = Math.max(this.cycle, queue.cycle());
                 if (wire == null)
-                    setWireIfNull(cycle);
+                    setWireIfNull(targetCycle);
 
-                if (this.cycle != cycle)
-                    rollCycleTo(cycle);
+                if (this.cycle != targetCycle)
+                    rollCycleTo(targetCycle);
 
                 long safeLength = queue.overlapSize();
                 resetPosition();
@@ -751,11 +751,11 @@ class StoreAppender extends AbstractCloseable
      */
     private void openContext(final boolean metaData, final long safeLength, final boolean advanceOnEOF) {
         assert wire != null;
-        this.positionOfHeader = advanceOnEOF ? writeHeaderForAppend(safeLength) : writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
+        this.positionOfHeader = advanceOnEOF ? writeHeaderForAppend(safeLength) : writeHeader(wire, safeLength);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
-        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+        context.wire = wire;
         context.metaData(metaData);
     }
 
@@ -816,12 +816,12 @@ class StoreAppender extends AbstractCloseable
         boolean publishing = false;
         long previousLimit = 0;
         try {
-            int cycle = Math.max(this.cycle, queue.cycle());
+            int targetCycle = Math.max(this.cycle, queue.cycle());
             if (wire == null)
-                setWireIfNull(cycle);
+                setWireIfNull(targetCycle);
 
-            if (this.cycle != cycle)
-                rollCycleTo(cycle);
+            if (this.cycle != targetCycle)
+                rollCycleTo(targetCycle);
 
             previousLimit = wire.bytes().writeLimit();
             this.positionOfHeader = writeHeaderForAppend(queue.overlapSize()); // writeHeader sets wire.byte().writePosition

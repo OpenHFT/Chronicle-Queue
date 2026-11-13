@@ -21,12 +21,14 @@ import org.junit.Test;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class RollCycleTest extends QueueTestCommon {
 
@@ -53,22 +55,18 @@ public class RollCycleTest extends QueueTestCommon {
             Thread thread = new Thread(observer);
             thread.start();
 
-            observer.await();
+            try {
+                observer.await();
 
-            // two days pass
-            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
-
-            appender.writeText("0");
-
-            // allow parallel tailer to finish iteration
-            for (int i = 0; i < 5_000 && observer.documentsRead != 1; i++) {
-                timeProvider.advanceMicros(100);
-                Thread.sleep(1);
+                // two days pass
+                timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
+                appender.writeText("0");
+                observer.awaitDocuments(1);
+            } finally {
+                thread.interrupt();
+                // the tailer must stop before the queue close unmaps the store files
+                thread.join(5_000);
             }
-
-            thread.interrupt();
-            // the tailer of the observer must stop before the queue close unmaps the store files
-            thread.join(5_000);
             assertFalse("observer did not stop", thread.isAlive());
         }
 
@@ -106,8 +104,7 @@ public class RollCycleTest extends QueueTestCommon {
                     appender.writeText(Integer.toString(i));
                 }
                 // Let the observer advance before inspecting the settled file lengths.
-                for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++)
-                    Thread.sleep(1);
+                observer.awaitDocuments(1 + cyclesToWrite);
                 assertEquals(1 + cyclesToWrite, observer.documentsRead);
                 awaitBackgroundRelease();
                 assertEquals("" +
@@ -284,11 +281,6 @@ public class RollCycleTest extends QueueTestCommon {
                                 "...\n" +
                                 "# 130660 bytes remaining\n",
                         queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
-
-                // allow parallel tailer to finish iteration
-                for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
-                    Thread.sleep(1);
-                }
             } finally {
                 thread.interrupt();
                 // the tailer of the observer must stop before the queue close unmaps the store files
@@ -309,6 +301,7 @@ public class RollCycleTest extends QueueTestCommon {
     static class ParallelQueueObserver implements Runnable, StoreFileListener {
         ChronicleQueue queue;
         CountDownLatch progressLatch;
+        final Semaphore completedDocuments = new Semaphore(0);
         volatile int documentsRead;
 
         ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
@@ -340,12 +333,17 @@ public class RollCycleTest extends QueueTestCommon {
                     int docId = Integer.parseInt(readText);
                     assertEquals(docId, lastDocId + 1);
                     lastDocId = docId;
+                    completedDocuments.release();
                 }
             }
         }
 
         void await() throws InterruptedException {
             progressLatch.await();
+        }
+
+        void awaitDocuments(int count) throws InterruptedException {
+            assertTrue("observer did not read " + count + " documents", completedDocuments.tryAcquire(count, 5, TimeUnit.SECONDS));
         }
 
         public int documentsRead() {
