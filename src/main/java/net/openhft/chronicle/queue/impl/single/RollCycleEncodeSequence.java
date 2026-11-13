@@ -31,6 +31,10 @@ class RollCycleEncodeSequence implements Sequence {
                 (TwoLongValue) writePositionAndSequence : null;
     }
 
+    long positionAliasPeriod() {
+        return 1L << (64 - cycleShift);
+    }
+
     /**
      * Sets the sequence value and position in the underlying TwoLongValue.
      *
