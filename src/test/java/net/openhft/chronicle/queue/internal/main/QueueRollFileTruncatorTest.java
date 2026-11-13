@@ -43,6 +43,48 @@ public class QueueRollFileTruncatorTest {
 
 
     @Test
+    public void malformedIndexingCannotProtectAnInvalidNewestRoll() throws Exception {
+        for (String field : new String[]{"indexCount", "indexSpacing", "SCQSIndexing"}) {
+            Path root = temporary.newFolder().toPath();
+            List<Path> files = createQueue(root);
+            Path newest = files.get(files.size() - 1);
+            byte[] data = Files.readAllBytes(newest);
+            if (field.equals("SCQSIndexing")) {
+                int type = new String(data, StandardCharsets.ISO_8859_1).indexOf(field);
+                assertTrue(type >= 0);
+                data[type + 3] = 'X';
+            } else {
+                net.openhft.chronicle.bytes.Bytes<?> bytes = net.openhft.chronicle.bytes.Bytes.wrapForRead(data);
+                try {
+                    bytes.readPosition(4);
+                    new net.openhft.chronicle.wire.BinaryWire(bytes).readEventName(new StringBuilder()).marshallable(w -> {
+                        w.read("writePosition").skipValue();
+                        w.read("indexing").marshallable(index -> {
+                            net.openhft.chronicle.wire.ValueIn value = index.read(field);
+                            index.consumePadding();
+                            int start = (int) bytes.readPosition();
+                            value.int64();
+                            java.util.Arrays.fill(data, start, (int) bytes.readPosition(), (byte) 0x8f);
+                            data[start] = 0; // Valid integer encoding with invalid indexing value.
+                        });
+                    });
+                } finally {
+                    bytes.releaseLast();
+                }
+            }
+            Files.write(newest, data);
+            List<byte[]> before = new java.util.ArrayList<>();
+            for (Path file : files) before.add(Files.readAllBytes(file));
+            for (boolean apply : new boolean[]{false, true}) {
+                String result = scan(root, apply);
+                assertTrue(result, result.contains("status=INCOMPLETE"));
+                for (int i = 0; i < files.size(); i++)
+                    assertArrayEquals(before.get(i), Files.readAllBytes(files.get(i)));
+            }
+        }
+    }
+
+    @Test
     public void recursivePreviewPreservesAllBytes() throws Exception {
         Path root = temporary.newFolder().toPath();
         List<Path> first = createQueue(root.resolve("first"));

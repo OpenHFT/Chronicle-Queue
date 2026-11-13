@@ -135,7 +135,7 @@ public class OfflineCycleFileTruncatorTest {
     public void corruptLengthIsRefusedWithoutMutation() throws IOException {
         Path file = fixture(1, false);
         byte[] bytes = Files.readAllBytes(file);
-        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putInt(tailOffset(bytes), 100000);
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putInt(tailOffset(bytes), Integer.MAX_VALUE);
         Files.write(file, bytes);
         assertThrows(IOException.class, () -> truncate(file, true));
         assertArrayEquals(bytes, Files.readAllBytes(file));
@@ -310,39 +310,62 @@ public class OfflineCycleFileTruncatorTest {
     }
 
     private Path fixture(int format, boolean eof, boolean scalar) throws IOException {
-        Bytes<?> bytes = Bytes.allocateElasticOnHeap();
-        byte[] header;
+        Path directory = temporary.newFolder().toPath();
+        SetTimeProvider clock = new SetTimeProvider(86400000L);
+        try (SingleChronicleQueue queue = builder(directory, clock).build()) {
+            ExcerptAppender appender = queue.createAppender();
+            appender.writeBytes(bytes -> bytes.writeInt(Wires.END_OF_DATA)); // marker-shaped payload
+            if (eof) {
+                clock.advanceMillis(86400000L);
+                appender.writeText("next cycle");
+            }
+        }
+        net.openhft.chronicle.core.io.BackgroundResourceReleaser.releasePendingResources();
+        Path file;
+        try (java.util.stream.Stream<Path> files = Files.list(directory)) {
+            file = files.filter(p -> p.toString().endsWith(".cq4")).sorted().findFirst().get();
+        }
+        byte[] data = Files.readAllBytes(file);
+        Bytes<?> bytes = Bytes.wrapForRead(data);
+        int[] offsets = new int[2];
         try {
-            new BinaryWire(bytes).writeEventName("header").typePrefix("SCQStore")
-                    .marshallable(w -> {
-                        try (net.openhft.chronicle.bytes.ref.BinaryTwoLongReference position =
-                                     new net.openhft.chronicle.bytes.ref.BinaryTwoLongReference()) {
-                            if (scalar)
-                                w.write("writePosition").int64(0);
-                            else
-                                w.write("writePosition").int128forBinding(0, 0, position);
-                            w.write("indexing").marshallable(index -> index.write("indexCount").int32(8));
-                            w.write("dataFormat").int32(format);
-                        }
-                    });
-            header = bytes.toByteArray();
+            bytes.readPosition(4);
+            new BinaryWire(bytes).readEventName(new StringBuilder()).marshallable(w -> {
+                net.openhft.chronicle.wire.ValueIn position = w.read("writePosition");
+                w.consumePadding();
+                offsets[0] = (int) w.bytes().readPosition();
+                position.skipValue();
+                w.read("indexing").skipValue();
+                w.read("dataFormat");
+                w.consumePadding();
+                offsets[1] = (int) w.bytes().readPosition();
+            });
         } finally {
             bytes.releaseLast();
         }
-        ByteBuffer data = ByteBuffer.allocate(4096).order(ByteOrder.LITTLE_ENDIAN);
-        data.putInt(Wires.META_DATA | header.length).put(header);
-        data.position((data.position() + 3) & ~3);
-        data.putInt(4).putInt(Wires.END_OF_DATA); // EOF-shaped payload, not a marker
-        data.putInt(eof ? Wires.END_OF_DATA : 0);
-        if (eof)
-            data.put(new byte[]{(byte) 0xc3, 'E', 'O', 'F'});
-        Path file = temporary.newFile().toPath();
-        Files.write(file, data.array());
+        assertEquals(0xa1, data[offsets[1]] & 255);
+        assertEquals(1, data[offsets[1] + 1]);
+        data[offsets[1] + 1] = (byte) format;
+        if (scalar) {
+            int pos = offsets[0];
+            assertEquals(0x8d, data[pos] & 255);
+            ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+            long value = buffer.getLong(pos + 17);
+            data[pos] = (byte) 0xa7; // scalar int64, retaining offsets with Wire padding
+            buffer.putLong(pos + 1, value);
+            Arrays.fill(data, pos + 9, pos + 33, (byte) 0x8f);
+        }
+        Files.write(file, data);
         return file;
     }
 
     private int tailOffset(byte[] bytes) {
-        int header = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt();
-        return ((4 + Wires.lengthOf(header) + 3) & ~3) + 8;
+        ByteBuffer buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+        int position = 0, header;
+        do {
+            header = buffer.getInt(position);
+            position = (position + 4 + Wires.lengthOf(header) + 3) & ~3;
+        } while (Wires.isReadyMetaData(header));
+        return position;
     }
 }

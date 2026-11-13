@@ -70,6 +70,12 @@ invalid arguments. Exit 1 may follow successful cleanup in other directories. Ja
 these exit meanings; their human-readable summary layouts are not a shared machine API.
 Per-file failures do not abandon later independent files/directories.
 
+`SYNC_FAILED_AFTER_TRUNCATE` means the file was shortened but the subsequent sync failed.
+The error gives the original and retained lengths; durability is uncertain and the exit remains 1.
+Before selecting newest, every nonempty roll must have `SCQSIndexing`, positive power-of-two
+index count/spacing in the signed 32-bit range, and nonnegative index positions. Invalid indexing
+refuses that directory before any roll is shortened; it cannot displace the genuine newest roll.
+
 `SKIPPED_NONZERO_TAIL` means that a complete EOF was found but bytes after it are nonzero.
 This can be abandoned payload from normal crashed-writer recovery; it is not by itself proof of
 corruption. The conservative offline tool leaves that file unchanged and reports INCOMPLETE.

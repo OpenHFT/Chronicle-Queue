@@ -114,7 +114,7 @@ final class CycleFileEnd {
                 } else {
                     position.int64();
                 }
-                w.read("indexing").skipValue();
+                indexing(w.read("indexing"));
                 format[0] = w.read("dataFormat").int32();
             });
             if (format[0] != 1)
@@ -125,6 +125,28 @@ final class CycleFileEnd {
         } finally {
             bytes.releaseLast();
         }
+    }
+
+    private static void indexing(ValueIn value) {
+        StringBuilder type = new StringBuilder();
+        value.typePrefix(type, StringBuilder::append);
+        if (!"SCQSIndexing".contentEquals(type))
+            throw new IllegalArgumentException("Unsupported indexing type: " + type);
+        if (!value.marshallable(w -> {
+            long count = requiredLong(w, "indexCount"), spacing = requiredLong(w, "indexSpacing");
+            if (count <= 0 || count > Integer.MAX_VALUE || (count & (count - 1)) != 0
+                    || spacing <= 0 || spacing > Integer.MAX_VALUE || (spacing & (spacing - 1)) != 0)
+                throw new IllegalArgumentException("Invalid indexing count/spacing");
+            if (requiredLong(w, "index2Index") < 0 || requiredLong(w, "lastIndex") < 0)
+                throw new IllegalArgumentException("Negative indexing position");
+        }))
+            throw new IllegalArgumentException("Missing indexing object");
+    }
+
+    private static long requiredLong(net.openhft.chronicle.wire.WireIn wire, String name) {
+        ValueIn value = wire.read(name);
+        if (!value.isPresent()) throw new IllegalArgumentException("Missing indexing field: " + name);
+        return value.int64();
     }
 
     private static void read(FileChannel channel, ByteBuffer buffer, long position) throws IOException {
