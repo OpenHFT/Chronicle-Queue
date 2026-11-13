@@ -22,19 +22,18 @@ public class QueueTestCommonResourceTest {
         PrintStream original = System.out;
         AssertionError primary = new AssertionError("primary test assertion");
         Map<ExceptionKey, Integer> recorded = Jvm.recordExceptions(false);
-        try {
-            System.setOut(new PrintStream(captured));
+        try (PrintStream outputStream = new PrintStream(captured)) {
+            System.setOut(outputStream);
             fixture.watcher.apply(new Statement() {
-                @Override public void evaluate() { }
+                @Override public void evaluate() {
+                    // A successful body exercises the normal finish boundary.
+                }
             }, description).evaluate();
-            try {
-                fixture.watcher.apply(new Statement() {
-                    @Override public void evaluate() { throw primary; }
-                }, description).evaluate();
-                fail("primary assertion was swallowed");
-            } catch (AssertionError caught) {
-                assertSame(primary, caught);
-            }
+            Statement failingBody = fixture.watcher.apply(new Statement() {
+                @Override public void evaluate() { throw primary; }
+            }, description);
+            AssertionError caught = assertThrows(AssertionError.class, failingBody::evaluate);
+            assertSame(primary, caught);
             String output = captured.toString("UTF-8");
             if (Boolean.getBoolean("queue.traceTestExecution")) {
                 assertEquals("two start boundaries", 2, occurrences(output, "QueueTestExecution phase=start"));
@@ -62,8 +61,8 @@ public class QueueTestCommonResourceTest {
         PrintStream original = System.out;
         fixture.assumeFinishedNormally();
         fixture.recordExceptions();
-        try {
-            System.setOut(new PrintStream(captured));
+        try (PrintStream outputStream = new PrintStream(captured)) {
+            System.setOut(outputStream);
             fixture.recordDiskSpace();
             fixture.checkSpaceUsed();
             String output = captured.toString("UTF-8");
