@@ -175,7 +175,8 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         List<LongValue> successfulBindings = new ArrayList<>();
         listing.onFileCreated(tempFile, 7);
 
-        try (TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(incompleteStore, SystemTimeProvider.INSTANCE)) {
+        TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(incompleteStore, SystemTimeProvider.INSTANCE);
+        try {
             // Use real mapped bindings; the store only controls when a key becomes visible.
             for (int i = 0; i < missingKey; i++) {
                 LongValue value = tablestoreReadOnly.acquireValueFor(keys[i]);
@@ -207,6 +208,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
             for (LongValue value : successfulBindings)
                 assertTrue("Closing the listing releases successful bindings", value.isClosed());
         } finally {
+            readOnly.close();
             // A failed control must not leak the real references it deliberately tracks.
             partialBindings.forEach(Closeable::closeQuietly);
             successfulBindings.forEach(Closeable::closeQuietly);
