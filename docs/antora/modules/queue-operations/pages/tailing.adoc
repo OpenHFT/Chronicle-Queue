@@ -127,23 +127,20 @@ while (running) {
 ----
 
 |===
-| Pauser (Chronicle Threads 2026.5) | How it waits before processor-count fallback | Typical use
+| Pauser | Waiting strategy | Typical use
 
 | `Pauser.busy()` | Spins (`Jvm.nanoPause()`); never sleeps | Latency-critical reader on its own core; uses that whole core
 | `Pauser.yielding()` | Spins briefly, then `Thread.yield()` | Low latency when cores are spare
-| `Pauser.balanced()` | Spins, yields, then parks from 0.2 ms backing off to 20 ms | General services
+| `Pauser.balanced()` | Spins, yields, then parks with backoff | General services
 | `Pauser.millis(1, 10)` | Parks 1 ms, backing off to 10 ms | Background readers
-| `Pauser.sleepy()` | Yields briefly, then parks 0.5 ms backing off to 20 ms | Lowest CPU use
+| `Pauser.sleepy()` | Yields briefly, then parks with backoff | Lowest CPU use
 |===
 
-`busy()`, `yielding()` and `timedBusy()` can return `balanced()` when the JVM reports fewer than 8 processors, and `sleepy()` below 4 (`-Dpauser.minProcessors`, default 4).
-The thresholds are calculated when `Pauser` is initialised. JVM processor-count reporting can be affected by affinity, container limits and JVM configuration.
-In the recorded Linux/JDK 21 check, starting under a three-CPU `taskset` mask selected `sleepy()`. `balanced()` also falls back to `sleepy()` below the minimum.
-Check `pauser.isBusy()`, or log the pauser's class, when the choice matters.
+Some pauser factories select a less CPU-intensive strategy when the JVM reports few processors.
+Check `pauser.isBusy()`, or log the pauser's class, when the choice matters; affinity, container limits and JVM configuration can affect processor counts.
 
 Parking trades CPU usage for wake-up latency; the requested duration is not a precise wake-up time.
-A recorded measurement on Linux 7.0.0-38, OpenJDK 21.0.12.1 and a Core Ultra 9 185H, with `/proc/self/timerslack_ns` reporting 50,000 ns, found `LockSupport.parkNanos(1_000)` took a median 54 µs and p99 65.5 µs.
-These are observations from one host, not a universal latency floor or a test threshold. Measure on the deployment host.
+Measure on the deployment host before choosing a strategy.
 
 Stop a spinning reader with a flag visible to the reading thread (for example a `volatile boolean running`).
 In tests, use a deadline and reset the pauser after successful reads. The following uses `java.util.concurrent.TimeUnit`.
