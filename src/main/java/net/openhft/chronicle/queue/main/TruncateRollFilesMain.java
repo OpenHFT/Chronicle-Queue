@@ -13,9 +13,9 @@ public final class TruncateRollFilesMain {
 
     /**
      * Preview by default. --offline requires all users stopped and new opens externally prevented.
+     * <p>Process exit is 0 for complete, 1 for incomplete/unsafe, and 2 for invalid arguments.
      * @param args root directory, optionally followed by --offline and --min-age-seconds=N
      * @throws IOException if the command cannot be invoked
-     * @implNote Process exit is 0 for complete, 1 for incomplete/unsafe, and 2 for invalid arguments.
      */
     public static void main(String[] args) throws IOException {
         InternalTruncateRollFilesMain.main(args);
