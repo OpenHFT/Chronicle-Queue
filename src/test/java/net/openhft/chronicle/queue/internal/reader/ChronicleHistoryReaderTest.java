@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.internal.reader;
 import net.openhft.chronicle.bytes.MethodId;
 import net.openhft.chronicle.bytes.MethodReader;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -51,9 +52,9 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         MessageHistory.set(mh);
 
         int extraTiming = 1;
-        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
-        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
-        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
+        File queuePath1 = getTmpDir();
+        File queuePath2 = getTmpDir();
+        File queuePath3 = getTmpDir();
         try {
             try (ChronicleQueue out = queue(queuePath1, 1)) {
                 DummyListener writer = out
@@ -113,7 +114,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                 Assert.assertEquals("[1, startTo1, 2, 1to2, endToEnd]", histos.keySet().toString());
             }
         } finally {
-            IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
+            deleteHistoryStores(queuePath1, queuePath2, queuePath3);
         }
     }
 
@@ -203,9 +204,9 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         mh.addSourceDetails(true);
         MessageHistory.set(mh);
 
-        File queuePath1 = IOTools.createTempFile(testName.getMethodName() + "1-");
-        File queuePath2 = IOTools.createTempFile(testName.getMethodName() + "2-");
-        File queuePath3 = IOTools.createTempFile(testName.getMethodName() + "3-");
+        File queuePath1 = getTmpDir();
+        File queuePath2 = getTmpDir();
+        File queuePath3 = getTmpDir();
         try {
             StringBuilder sb = new StringBuilder();
             try (ChronicleQueue q1 = queue(queuePath1, 1);
@@ -261,7 +262,84 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
                         sb.toString());
             }
         } finally {
-            IOTools.deleteDirWithFiles(queuePath1.toString(), queuePath2.toString(), queuePath3.toString());
+            deleteHistoryStores(queuePath1, queuePath2, queuePath3);
+        }
+    }
+
+    @Test
+    public void historyDeletionDrainsPendingReleases() throws Exception {
+        if (net.openhft.chronicle.queue.FixtureProcessTestSupport.runDeferredReleaseTest(
+                getClass(), "historyDeletionDrainsPendingReleases"))
+            return;
+        java.util.concurrent.atomic.AtomicBoolean released = new java.util.concurrent.atomic.AtomicBoolean();
+        File owned = getTmpDir();
+        java.nio.file.Files.createDirectories(owned.toPath());
+        File observed = new File(owned.toString()) {
+            private static final long serialVersionUID = 1L;
+
+            @Override public boolean exists() {
+                Assert.assertTrue("history releases must finish before deletion", released.get());
+                return super.exists();
+            }
+        };
+        BackgroundResourceReleaser.run(() -> released.set(true));
+        assertFalse("control begins with a pending release", released.get());
+        try {
+            deleteHistoryStores(observed);
+            assertFalse("history path deleted", owned.exists());
+        } finally {
+            BackgroundResourceReleaser.releasePendingResources();
+        }
+    }
+
+    @Test
+    public void historyDeletionFailureIsVisibleAndOwnedPathsRemainTracked() throws Exception {
+        ChronicleHistoryReaderTest fixture = new ChronicleHistoryReaderTest();
+        File owned = fixture.getTmpDir();
+        java.nio.file.Files.createDirectories(owned.toPath());
+        File unrelated = getTmpDir();
+        java.nio.file.Files.createDirectories(unrelated.toPath());
+        java.nio.file.Files.write(new File(owned, "data").toPath(), new byte[]{1});
+        java.nio.file.Files.write(new File(unrelated, "keep").toPath(), new byte[]{1});
+        File undeletable = new File(owned, "fake-undeletable") {
+            private static final long serialVersionUID = 1L;
+
+            @Override public boolean exists() { return true; }
+            @Override public boolean isDirectory() { return true; }
+            @Override public File[] listFiles() { return new File[0]; }
+            @Override public boolean delete() { return false; }
+        };
+        try {
+            AssertionError failure = Assert.assertThrows(AssertionError.class,
+                    () -> fixture.deleteHistoryStores(undeletable, owned));
+            assertTrue("deletion failure remains visible", failure.getMessage().contains("Could not delete"));
+            assertTrue("later owned path survives failed early cleanup", owned.exists());
+            fixture.tearDown();
+            assertFalse("fallback still owns the original directory", owned.exists());
+            assertTrue("unrelated path survives fallback", new File(unrelated, "keep").isFile());
+        } finally {
+            IOTools.deleteDirWithFiles(owned);
+        }
+    }
+
+    //! History stores can still have deferred mapping releases after queue.close(). Drain them
+    //! before deletion, and make a failed deletion visible. Register paths with QueueTestCommon
+    //! as well so its final cleanup still owns them if an earlier cleanup step fails.
+    //! Controls: testWithQueueHistoryRecordHistoryInitial[MethodIds], testPredictable,
+    //! testPredictableStartIndex and testPredictableMeasurementWindow.
+    //! The existing history controls now assert deletion before fallback teardown; their exact anchors are
+    //! ChronicleHistoryReaderTest#testWithQueueHistoryRecordHistoryInitial,
+    //! ChronicleHistoryReaderTest#testWithQueueHistoryRecordHistoryInitialMethodIds,
+    //! ChronicleHistoryReaderTest#testPredictable, ChronicleHistoryReaderTest#testPredictableStartIndex
+    //! and ChronicleHistoryReaderTest#testPredictableMeasurementWindow.
+    //! ChronicleHistoryReaderTest#historyDeletionDrainsPendingReleases controls pending releases;
+    //! ChronicleHistoryReaderTest#historyDeletionFailureIsVisibleAndOwnedPathsRemainTracked
+    //! checks failed deletion and fallback ownership without deleting an unrelated path.
+    private void deleteHistoryStores(File... paths) {
+        BackgroundResourceReleaser.releasePendingResources();
+        for (File path : paths) {
+            IOTools.deleteDirWithFilesOrThrow(path);
+            assertFalse("owned history directory remains", path.exists());
         }
     }
 
