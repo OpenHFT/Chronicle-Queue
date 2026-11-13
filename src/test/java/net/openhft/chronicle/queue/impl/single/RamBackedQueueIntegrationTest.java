@@ -27,8 +27,8 @@ public class RamBackedQueueIntegrationTest {
         Map<ExceptionKey, Integer> events = Jvm.recordExceptions(false);
         try {
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory.toFile())
-                    .blockSize(512L << 20).build()) {
-                assertEquals(512L << 20, queue.blockSize());
+                    .blockSize(1L << 30).build()) {
+                assertEquals(1L << 30, queue.blockSize());
                 assertEquals(1, warningCount(events));
                 try (java.util.stream.Stream<Path> files = Files.list(directory)) {
                     assertFalse(files.anyMatch(p -> p.toString().endsWith(".cq4")));
@@ -37,7 +37,7 @@ public class RamBackedQueueIntegrationTest {
             assertEquals(1, warningCount(events));
             events.clear();
             try (ChronicleQueue readOnly = SingleChronicleQueueBuilder.binary(directory.toFile())
-                    .readOnly(true).blockSize(512L << 20).build()) {
+                    .readOnly(true).blockSize(1L << 30).build()) {
                 assertFalse(readOnly.isClosed());
                 assertEquals(0, warningCount(events));
             }

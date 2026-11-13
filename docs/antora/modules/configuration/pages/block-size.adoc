@@ -30,7 +30,7 @@ NOTE: Avoid changing the `blockSize` unnecessarily.
 
 == Large blocks on RAM-backed storage
 
-Opening a writable queue with a block size of at least 512 MiB emits one advisory warning per queue instance when the filesystem provider identifies the queue directory's backing store as `tmpfs` or `ramfs`.
+Opening a writable queue with a block size of at least 1 GiB emits one advisory warning per queue instance when the filesystem provider identifies the queue directory's backing store as `tmpfs` or `ramfs`.
 The check resolves symbolic links and queries the actual directory; it does not infer storage from a name such as `/tmp`.
 Small blocks, read-only queues, unknown filesystem types and unavailable filesystem information do not trigger this warning.
 
@@ -41,4 +41,4 @@ RAM-backed storage does not retain journals across reboot.
 
 This is a configuration warning, not a free-space monitor or a prediction of allocation failure.
 It does not change the block size, prevent opening a queue or repeat during appends and rolls.
-The 512 MiB threshold is a conservative diagnostic policy, not a safe memory budget.
+The 1 GiB threshold is a conservative diagnostic policy, not a safe memory budget.

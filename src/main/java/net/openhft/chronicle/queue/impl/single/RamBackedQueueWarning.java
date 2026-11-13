@@ -12,7 +12,7 @@ import java.nio.file.Path;
 
 /** Advisory check performed once during construction, never on the append path. */
 final class RamBackedQueueWarning {
-    static final long LARGE_BLOCK_SIZE = 512L << 20;
+    static final long LARGE_BLOCK_SIZE = 1L << 30;
 
     private RamBackedQueueWarning() {
     }
