@@ -11,3 +11,15 @@ Enable `-Dqueue.traceTestExecution=true` for start/finish records with the test,
 timestamp, PID, target directory and used, committed and maximum heap. These
 are process observations, not per-test ownership or disk/memory limits.
 `QueueTestCommonResourceTest` checks opt-in output, preserved failures and warnings.
+
+== Subprocess ownership
+
+Lock-holder and deferred-release fixtures register each child before waiting.
+Cleanup observes exit under one bounded budget, forces termination when needed,
+continues after interruption and restores the caller's flag. Try-with-resources
+keeps a body failure primary and suppresses a later cleanup failure.
+Deferred-release child output is captured in an owned file and included on
+failure, rather than bypassing Surefire's event stream through `inheritIO()`.
+Small lock and deferred-release children use a 32 MiB initial and 256 MiB maximum heap.
+Controls cover delayed exit, repeated interruption, a surviving process,
+late ownership registration, captured output and fixture teardown after failure.
