@@ -16,6 +16,7 @@ public class CleanupAgeTest {
         assertTrue(InternalTruncateRollFilesMain.recentlyModified(now + 1, now, 0));
     }
     @Test public void modificationAfterCaptureIsRefused() throws Exception {
+        org.junit.Assume.assumeTrue("Linux file identity", net.openhft.chronicle.core.OS.isLinux());
         Path file = Files.createTempFile("cleanup-age-", ".cq4");
         try {
             Files.write(file, new byte[4096]);

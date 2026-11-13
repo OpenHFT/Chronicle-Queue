@@ -97,3 +97,25 @@ still apply. A successful cleanup removes retained page padding to the exact EOF
 `N` must contain only decimal digits and fit signed 64-bit milliseconds after multiplication by
 1000. Signs, fractional values, duplicate flags and unknown options are usage errors (exit 2).
 The `--offline` and `--min-age-seconds` options may appear in either order after the root.
+
+== Testing process inspection
+
+Both preview and apply inspect Linux `/proc/*/fd` and `/proc/*/maps`.
+An inaccessible process makes inspection incomplete; `--offline` does not bypass this check.
+Use an isolated Linux host with visibility of all relevant processes and mappings.
+External exclusion of existing users and new opens is still required: this inspection is a snapshot, not a lock against future users.
+
+The ordinary unit suite passes synthetic process trees through package-private overloads to
+exercise the same descriptor/map parser and refusal paths without privileged access.
+No public option, property or environment variable replaces `/proc`.
+
+Run actual CLI/process integration separately:
+
+[source,shell]
+----
+mvn -o -Poffline-cleanup-integration test
+----
+
+The profile fails its preflight, rather than skipping, if Linux process inspection is unavailable.
+A green unit suite does not substitute for this profile. On other platforms, tests explicitly
+check the unsupported-inspection refusal; Linux identity tests are labelled as platform-specific.

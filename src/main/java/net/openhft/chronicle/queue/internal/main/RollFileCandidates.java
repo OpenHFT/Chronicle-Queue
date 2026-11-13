@@ -25,11 +25,15 @@ final class RollFileCandidates {
     }
 
     static RollFileCandidates read(Path directory) throws IOException {
+        return read(directory, java.nio.file.Paths.get("/proc"));
+    }
+
+    static RollFileCandidates read(Path directory, Path procRoot) throws IOException {
         CycleFileIdentity.noSymlinks(directory);
         if (!Files.isRegularFile(directory.resolve("metadata.cq4t"), LinkOption.NOFOLLOW_LINKS))
             throw new IOException("SKIPPED_NO_METADATA");
         CycleFileIdentity.capture(directory.resolve("metadata.cq4t"));
-        CycleFileIdentity.requireClosed(directory.resolve("metadata.cq4t"));
+        OfflineFileUsers.requireClosed(directory.resolve("metadata.cq4t"), procRoot);
         RollFileCandidates inventory = new RollFileCandidates();
         Integer newestCycle = null;
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory.toFile()).readOnly(true).build();
@@ -49,7 +53,7 @@ final class RollFileCandidates {
                     throw new IOException("Noncanonical roll name: " + name);
                 CycleFileIdentity identity = CycleFileIdentity.capture(path);
                 if (Files.size(path) > 0) {
-                    CycleFileIdentity.requireClosed(path);
+                    OfflineFileUsers.requireClosed(path, procRoot);
                     try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)) {
                         identity.check(path);
                         CycleFileEnd.headerEnd(channel);

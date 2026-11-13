@@ -14,12 +14,12 @@ final class OfflineFileUsers {
     private OfflineFileUsers() { }
 
     static void requireClosed(Path file) throws IOException {
-        if (!OS.isLinux())
-            throw new IOException("REFUSED_OPEN_CHECK_UNSUPPORTED: " + file);
         requireClosed(file, Paths.get("/proc"));
     }
 
     static void requireClosed(Path file, Path proc) throws IOException {
+        if (!OS.isLinux())
+            throw new IOException("REFUSED_OPEN_CHECK_UNSUPPORTED: " + file);
         Map<String, Object> identity = Files.readAttributes(file, "unix:dev,ino");
         long device = ((Number) identity.get("dev")).longValue();
         long inode = ((Number) identity.get("ino")).longValue();

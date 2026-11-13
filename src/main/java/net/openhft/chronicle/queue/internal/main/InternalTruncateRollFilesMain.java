@@ -31,11 +31,11 @@ public final class InternalTruncateRollFilesMain {
      * @throws IOException if the directory cannot be safely inventoried before mutation
      */
     static int scan(Path directory, boolean confirmedOffline, PrintStream output) throws IOException {
-        return scan(directory, confirmedOffline, output, DEFAULT_MIN_AGE_MS);
+        return scan(directory, confirmedOffline, output, DEFAULT_MIN_AGE_MS, Paths.get("/proc"));
     }
 
-    private static int scan(Path directory, boolean confirmedOffline, PrintStream output, long minAgeMs) throws IOException {
-        RollFileCandidates inventory = RollFileCandidates.read(directory);
+    private static int scan(Path directory, boolean confirmedOffline, PrintStream output, long minAgeMs, Path procRoot) throws IOException {
+        RollFileCandidates inventory = RollFileCandidates.read(directory, procRoot);
         TreeMap<Integer, Path> files = inventory.files;
         if (files.isEmpty())
             return 0;
@@ -49,7 +49,7 @@ public final class InternalTruncateRollFilesMain {
                         : size == 0 || size % ALIGNMENT != 0 ? "SKIPPED_SIZE"
                         : recentlyModified(identity.modifiedMillis(), System.currentTimeMillis(), minAgeMs)
                         ? "WARN_RECENTLY_MODIFIED: skipped; minimum age " + minAgeMs / 1000 + "s"
-                        : OfflineCycleFileTruncator.truncate(file, confirmedOffline, identity).name();
+                        : OfflineCycleFileTruncator.truncate(file, confirmedOffline, identity, procRoot).name();
                 output.println(file.toAbsolutePath() + " " + outcome);
                 if ("SKIPPED_NONZERO_TAIL".equals(outcome))
                     errors++;
@@ -74,6 +74,11 @@ public final class InternalTruncateRollFilesMain {
     }
 
     static int scanTree(Path root, boolean confirmedOffline, PrintStream output, long minAgeMs) throws IOException {
+        return scanTree(root, confirmedOffline, output, minAgeMs, Paths.get("/proc"));
+    }
+
+    // Test seam only. Public entrypoints always inspect the actual /proc tree.
+    static int scanTree(Path root, boolean confirmedOffline, PrintStream output, long minAgeMs, Path procRoot) throws IOException {
         if (minAgeMs < 0) throw new IllegalArgumentException("Minimum age must not be negative");
         CycleFileIdentity.noSymlinks(root);
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS))
@@ -100,7 +105,7 @@ public final class InternalTruncateRollFilesMain {
         });
         for (Path directory : directories) {
             try {
-                errors[0] += scan(directory, confirmedOffline, output, minAgeMs);
+                errors[0] += scan(directory, confirmedOffline, output, minAgeMs, procRoot);
             } catch (IOException | RuntimeException e) {
                 error(output, directory, e);
                 errors[0]++;

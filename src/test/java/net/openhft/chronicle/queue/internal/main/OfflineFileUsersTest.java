@@ -14,6 +14,10 @@ import static org.junit.Assert.*;
 public class OfflineFileUsersTest {
     @Rule public TemporaryFolder temporary = new TemporaryFolder();
 
+    @org.junit.Before public void requiresLinuxIdentities() {
+        org.junit.Assume.assumeTrue("Linux inode identity parser", net.openhft.chronicle.core.OS.isLinux());
+    }
+
     private Path proc(String line) throws IOException {
         Path root = temporary.newFolder().toPath();
         Files.createDirectories(root.resolve("123/fd"));

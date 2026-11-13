@@ -35,8 +35,12 @@ final class OfflineCycleFileTruncator {
     }
 
     static Outcome truncate(Path file, boolean confirmedOffline, CycleFileIdentity expected) throws IOException {
+        return truncate(file, confirmedOffline, expected, java.nio.file.Paths.get("/proc"));
+    }
+
+    static Outcome truncate(Path file, boolean confirmedOffline, CycleFileIdentity expected, Path procRoot) throws IOException {
         expected.check(file);
-        CycleFileIdentity.requireClosed(file);
+        OfflineFileUsers.requireClosed(file, procRoot);
         if (!java.nio.file.Files.isWritable(file))
             throw new IOException("REFUSED_NOT_WRITABLE: " + file);
         if (!confirmedOffline) {

@@ -38,9 +38,23 @@ public class TruncateRollFilesArgumentsTest {
         assertEquals(2, run(root, "--min-age-seconds=0", "--min-age-seconds=1"));
     }
 
-    @Test public void unsafeOrMissingRootHasIncompleteExitCode() throws Exception {
+    @Test public void missingRootHasIncompleteExitCode() throws Exception {
         Path root = temporary.newFolder().toPath();
         assertEquals(1, run(root.resolve("missing").toString()));
+    }
+
+    @Test public void unsupportedPlatformRefusesInspection() throws Exception {
+        org.junit.Assume.assumeFalse("Linux success requires the integration profile", net.openhft.chronicle.core.OS.isLinux());
+        Path file = temporary.newFile("roll.cq4").toPath();
+        java.nio.file.Files.write(file, new byte[]{1, 2, 3});
+        java.io.IOException failure = assertThrows(java.io.IOException.class, () -> OfflineFileUsers.requireClosed(file));
+        assertTrue(failure.getMessage(), failure.getMessage().startsWith("REFUSED_OPEN_CHECK_UNSUPPORTED"));
+        assertArrayEquals(new byte[]{1, 2, 3}, java.nio.file.Files.readAllBytes(file));
+    }
+
+    @Test public void symlinkRootHasIncompleteExitCode() throws Exception {
+        org.junit.Assume.assumeFalse("Windows symlinks require separate privileges", net.openhft.chronicle.core.OS.isWindows());
+        Path root = temporary.newFolder().toPath();
         Path alias = root.resolve("alias");
         java.nio.file.Files.createSymbolicLink(alias, root);
         assertEquals(1, run(alias.toString()));

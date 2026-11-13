@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.internal.main;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -14,6 +15,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
@@ -29,6 +31,16 @@ import static org.junit.Assert.*;
 public class QueueRollFileTruncatorTest {
     @Rule
     public TemporaryFolder temporary = new TemporaryFolder();
+    private Path procRoot;
+
+    @org.junit.Before
+    public void processFixture() throws IOException {
+        org.junit.Assume.assumeTrue("Offline inspection uses Linux inode identities", OS.isLinux());
+        procRoot = temporary.newFolder("proc").toPath();
+        Files.createDirectories(procRoot.resolve("123/fd"));
+        Files.write(procRoot.resolve("123/maps"), new byte[0]);
+    }
+
 
     @Test
     public void recursivePreviewPreservesAllBytes() throws Exception {
@@ -98,8 +110,27 @@ public class QueueRollFileTruncatorTest {
         try (SingleChronicleQueue writer = SingleChronicleQueueBuilder.binary(root.toFile())
                 .testBlockSize().rollCycle(TestRollCycles.TEST_DAILY).build()) {
             writer.createAppender();
+            Files.createSymbolicLink(procRoot.resolve("123/fd/5"), root.resolve("metadata.cq4t"));
             assertTrue(scan(root, true).contains("REFUSED_FILE_STATE_OPEN"));
             assertArrayEquals(before, Files.readAllBytes(files.get(0)));
+        }
+    }
+
+    @Test
+    public void uncertainInspectionRefusesPreviewAndApplyWithoutChangingBytes() throws Exception {
+        Path root = temporary.newFolder().toPath();
+        List<Path> files = createQueue(root);
+        files.add(root.resolve("metadata.cq4t"));
+        List<byte[]> before = new java.util.ArrayList<>();
+        for (Path file : files) before.add(Files.readAllBytes(file));
+        Files.delete(procRoot.resolve("123/maps"));
+        Files.createDirectory(procRoot.resolve("123/maps")); // Deterministic read failure, including as root.
+        for (boolean offline : new boolean[]{false, true}) {
+            String result = scan(root, offline);
+            assertTrue(result, result.contains("REFUSED_OPEN_CHECK_UNCERTAIN"));
+            assertTrue(result, result.contains("status=INCOMPLETE"));
+            for (int i = 0; i < files.size(); i++)
+                assertArrayEquals(before.get(i), Files.readAllBytes(files.get(i)));
         }
     }
 
@@ -136,52 +167,6 @@ public class QueueRollFileTruncatorTest {
         Path root = temporary.newFolder().toPath();
         Files.createSymbolicLink(root.resolve("unused.cq4"), root.resolve("missing"));
         assertTrue(scan(root, true).contains("directories=0 errors=1 status=INCOMPLETE"));
-    }
-
-    @Test(timeout = 30000)
-    public void publicCliPreviewsAndAppliesInSeparateProcesses() throws Exception {
-        Path root = temporary.newFolder().toPath();
-        List<Path> files = createQueue(root.resolve("queue"));
-        byte[] before = Files.readAllBytes(files.get(0));
-        assertEquals(0, cli(root, false));
-        assertArrayEquals(before, Files.readAllBytes(files.get(0)));
-        assertEquals(0, cli(root, true));
-        assertTrue(Files.size(files.get(0)) < before.length);
-        replay(root.resolve("queue"));
-    }
-
-    @Test(timeout = 30000)
-    public void publicCliReturnsFailureAfterContinuingPastBadQueue() throws Exception {
-        Path root = temporary.newFolder().toPath();
-        createQueue(root.resolve("a-bad"));
-        Files.write(root.resolve("a-bad/19700231T1.cq4"), new byte[65536]);
-        List<Path> later = createQueue(root.resolve("z-good"));
-        long before = Files.size(later.get(0));
-        assertNotEquals(0, cli(root, true));
-        assertTrue(Files.size(later.get(0)) < before);
-    }
-
-    @Test(timeout = 30000)
-    public void publicCliRefusesHardLinksAndNonzeroResidueButContinues() throws Exception {
-        Path root = temporary.newFolder().toPath();
-        List<Path> linked = createQueue(root.resolve("a-linked"));
-        byte[] before = Files.readAllBytes(linked.get(0));
-        Path alias = temporary.getRoot().toPath().resolve("backup.bin");
-        Files.createLink(alias, linked.get(0));
-        List<Path> residue = createQueue(root.resolve("b-residue"));
-        byte[] dirty = Files.readAllBytes(residue.get(0));
-        dirty[dirty.length - 1] = 1;
-        Files.write(residue.get(0), dirty);
-        List<Path> good = createQueue(root.resolve("z-good"));
-        long goodSize = Files.size(good.get(0));
-        assertNotEquals(0, cli(root, true));
-        String output = new String(Files.readAllBytes(root.resolve("cli.log")), StandardCharsets.UTF_8);
-        assertTrue(output, output.contains("REFUSED_HARD_LINKS"));
-        assertTrue(output, output.contains("SKIPPED_NONZERO_TAIL"));
-        assertTrue(output, output.contains("status=INCOMPLETE"));
-        assertArrayEquals(before, Files.readAllBytes(alias));
-        assertArrayEquals(dirty, Files.readAllBytes(residue.get(0)));
-        assertTrue(Files.size(good.get(0)) < goodSize);
     }
 
     @Test
@@ -229,40 +214,15 @@ public class QueueRollFileTruncatorTest {
         assertArrayEquals(new byte[4096], Files.readAllBytes(files.get(2)));
     }
 
-    private int cli(Path root, boolean apply) throws Exception {
-        java.util.List<String> command = new java.util.ArrayList<>();
-        command.add(java.nio.file.Paths.get(System.getProperty("java.home"), "bin", "java").toString());
-        java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
-                .filter(a -> a.startsWith("--add-") || a.startsWith("--enable-"))
-                .forEach(command::add);
-        command.add("-Dchronicle.analytics.disable=true");
-        command.add("-cp"); command.add(System.getProperty("java.class.path"));
-        command.add("net.openhft.chronicle.queue.main.TruncateRollFilesMain");
-        command.add(root.toString());
-        command.add("--min-age-seconds=0");
-        if (apply) command.add("--offline");
-        Process child = new ProcessBuilder(command).redirectErrorStream(true)
-                .redirectOutput(root.resolve("cli.log").toFile()).start();
-        try {
-            assertTrue(child.waitFor(20, java.util.concurrent.TimeUnit.SECONDS));
-            if (child.exitValue() != 0)
-                System.err.println(new String(Files.readAllBytes(root.resolve("cli.log")), StandardCharsets.UTF_8));
-            return child.exitValue();
-        } finally {
-            child.destroyForcibly();
-            child.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
-        }
-    }
-
     private String scan(Path root, boolean offline) throws Exception {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (PrintStream output = new PrintStream(bytes, false, "UTF-8")) {
-            InternalTruncateRollFilesMain.scanTree(root, offline, output, 0);
+            InternalTruncateRollFilesMain.scanTree(root, offline, output, 0, procRoot);
         }
         return new String(bytes.toByteArray(), StandardCharsets.UTF_8);
     }
 
-    private List<Path> createQueue(Path directory) throws Exception {
+    static List<Path> createQueue(Path directory) throws Exception {
         Files.createDirectories(directory);
         SetTimeProvider clock = new SetTimeProvider(86400000L);
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory.toFile())
@@ -286,7 +246,7 @@ public class QueueRollFileTruncatorTest {
         return files;
     }
 
-    private void replay(Path directory) {
+    static void replay(Path directory) {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory.toFile()).readOnly(true).build();
              ExcerptTailer tailer = queue.createTailer()) {
             for (int i = 0; i < 3; i++)
