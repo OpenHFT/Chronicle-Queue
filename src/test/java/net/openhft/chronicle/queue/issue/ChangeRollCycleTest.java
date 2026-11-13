@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.issue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -43,6 +44,7 @@ public class ChangeRollCycleTest {
 
         // Step 1: Open a queue with a FAST_DAILY roll cycle and a tailer
         try (ChronicleQueue q1 = ChronicleQueue.singleBuilder(queuePath)
+                .testBlockSize()
                 .rollCycle(RollCycles.FAST_DAILY)
                 .readOnly(readOnly)
                 .build();
@@ -55,6 +57,7 @@ public class ChangeRollCycleTest {
 
             // Step 2: Reopen the queue with a WEEKLY roll cycle and write data
             try (ChronicleQueue q2 = ChronicleQueue.singleBuilder(queuePath)
+                    .testBlockSize()
                     .rollCycle(RollCycles.WEEKLY)
                     .build();
                  ExcerptAppender appender2 = q2.createAppender()) {
@@ -64,6 +67,7 @@ public class ChangeRollCycleTest {
 
                 // Step 3: Reopen the queue with a WEEKLY roll cycle and write data
                 try (ChronicleQueue q3 = ChronicleQueue.singleBuilder(queuePath)
+                        .testBlockSize()
                         .rollCycle(RollCycles.FAST_HOURLY)
                         .build();
                      ExcerptAppender appender3 = q3.createAppender()) {
@@ -99,8 +103,8 @@ public class ChangeRollCycleTest {
                 }
             }
         } finally {
-            // Clean up the queue directory to avoid leaving test artifacts
-            IOTools.deleteDirWithFiles(queuePath, 2);
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFilesOrThrow(queuePath);
         }
     }
 }

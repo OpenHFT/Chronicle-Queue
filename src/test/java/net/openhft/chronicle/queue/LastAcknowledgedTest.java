@@ -15,10 +15,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
 
@@ -67,13 +63,8 @@ public class LastAcknowledgedTest extends QueueTestCommon {
     }
 
     @Test
-    public void testReadBeforeAcknowledgment() throws IOException {
-
-        // Set up a Chronicle Queue and a StoreTailer for testing
-        String pathName = "target" + System.nanoTime();
-        Path tempDirectory = Files.createTempDirectory(pathName);
-
-        try (ChronicleQueue queue = ChronicleQueue.single(tempDirectory.toFile().getAbsolutePath())) {
+    public void testReadBeforeAcknowledgment() {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir()).testBlockSize().build()) {
             LongValue lastAcknowledgedIndexReplicatedLongValue = Jvm.getValue(queue, "lastAcknowledgedIndexReplicated");
             ExcerptAppender appender = queue.createAppender();
 
@@ -128,17 +119,12 @@ public class LastAcknowledgedTest extends QueueTestCommon {
      * each roll cycle. Later it won't be impossible to add support for this in the future but given there is usually a natural stall
      * all role anyway, it is not a high priority.
      *
-     * @throws IOException if the Chronicle Queue cannot be created
      */
     @Test
-    public void testReadBeforeAcknowledgmentOnRoll() throws IOException {
-
-        // Set up a Chronicle Queue and a StoreTailer for testing
-        String pathName = "target" + System.nanoTime();
-        Path tempDirectory = Files.createTempDirectory(pathName);
-
+    public void testReadBeforeAcknowledgmentOnRoll() {
         SetTimeProvider timeProvider = new SetTimeProvider();
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(tempDirectory.toFile().getAbsolutePath())
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir())
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY).build()) {
             LongValue lastAcknowledgedIndexReplicatedLongValue = Jvm.getValue(queue, "lastAcknowledgedIndexReplicated");

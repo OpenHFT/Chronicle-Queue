@@ -3,9 +3,6 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Test;
 
@@ -16,8 +13,9 @@ public class ReadmeTest extends QueueTestCommon {
 
     @Test
     public void createAQueue() {
-        final String basePath = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
+        // Register storage with the shared cleanup, which drains deferred releases and
+        // checks deletion. An unchecked immediate delete could leave mappings on Windows.
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.single(getTmpDir())
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build();
@@ -30,13 +28,12 @@ public class ReadmeTest extends QueueTestCommon {
             // write - TestMessage
             appender.writeText("TestMessage");
 
-            ExcerptTailer tailer = queue.createTailer();
+            try (ExcerptTailer tailer = queue.createTailer()) {
 
-            tailer.readDocument(w -> System.out.println("msg: " + w.read("msg").text()));
+                tailer.readDocument(w -> System.out.println("msg: " + w.read("msg").text()));
 
-            assertEquals("TestMessage", tailer.readText());
-        } finally {
-            IOTools.deleteDirWithFiles(basePath);
+                assertEquals("TestMessage", tailer.readText());
+            }
         }
     }
 }

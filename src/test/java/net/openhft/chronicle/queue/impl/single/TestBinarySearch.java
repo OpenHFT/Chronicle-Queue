@@ -81,12 +81,18 @@ public class TestBinarySearch extends QueueTestCommon {
         //! Default mappings reserve 80 MiB per roll on Windows; small blocks
         //! exercise the same search and empty-cycle cases without that disk
         //! allocation. Keep the message counts and one-second roll period.
+        //! Regression: TestBinarySearch#testBinarySearch asserts the small mapping budget
+        //! before its unchanged 42 message-count/empty-cycle parameter combinations.
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(TestRollCycles.TEST_SECONDLY)
                 .testBlockSize()
                 .timeProvider(stp)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
+
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
 
             if (emptyCyclesStrategy.atStart()) {
                 writeEmptyCycles(appender);
@@ -120,23 +126,28 @@ public class TestBinarySearch extends QueueTestCommon {
                 writeEmptyCycles(appender);
             }
 
-            MyData reusableComparatorData = new MyData();
-            final Comparator<Wire> comparator = (o1, o2) -> {
-                reusableComparatorData.readMarshallable(o1);
-                int o1Key = reusableComparatorData.key;
-                reusableComparatorData.readMarshallable(o2);
-                int o2Key = reusableComparatorData.key;
-                return Integer.compare(o1Key, o2Key);
-            };
+            final Comparator<Wire> comparator = comparator();
 
             try (final ExcerptTailer binarySearchTailer = queue.createTailer()) {
                 for (int j = 0; j < numberOfMessagesToVerify; j++) {
                     int indexToVerify = (int) retrievalStrategy.retrieveIndex(j, numberOfMessages);
                     Wire key = toWire(indexToVerify);
-                    long index = BinarySearch.search(binarySearchTailer, key, comparator);
-                    long expectedIndex = keyToIndex.get(indexToVerify);
-                    assertEquals("Failed looking for item at index: " + expectedIndex, expectedIndex, index);
-                    key.bytes().releaseLast();
+                    //! Each search owns its key bytes even if search or the assertion fails.
+                    //! Control: all testBinarySearch parameter combinations, including missing keys below.
+                    //! The existing parameter cases above check results, not heap-key lifetime. Lifetime regressions are
+                    //! TestBinarySearchResourceTest#releasesKeysAfterSuccessfulSearch,
+                    //! TestBinarySearchResourceTest#releasesKeyAfterMissingSearch,
+                    //! TestBinarySearchResourceTest#releasesKeyAfterSearchFailure,
+                    //! TestBinarySearchResourceTest#releasesKeyAfterAssertionFailure,
+                    //! TestBinarySearchResourceTest#releasesMissingKeyAfterSearchFailure and
+                    //! TestBinarySearchResourceTest#releasesMissingKeyAfterAssertionFailure. Each observes refCount zero.
+                    try {
+                        long index = BinarySearch.search(binarySearchTailer, key, comparator);
+                        long expectedIndex = keyToIndex.get(indexToVerify);
+                        assertEquals("Failed looking for item at index: " + expectedIndex, expectedIndex, index);
+                    } finally {
+                        key.bytes().releaseLast();
+                    }
 
                     if (j > 0 && numberOfMessagesToVerify > 10 && j % (numberOfMessagesToVerify / 10) == 0) {
                         Jvm.startup().on(getClass(), "Verified " + j + " messages");
@@ -145,10 +156,25 @@ public class TestBinarySearch extends QueueTestCommon {
                 Jvm.startup().on(getClass(), "Verified " + numberOfMessagesToVerify + " messages");
 
                 Wire key = toWire(numberOfMessages);
-                long result = BinarySearch.search(binarySearchTailer, key, comparator);
-                Assert.assertTrue("Should not find non-existent", result < 0);
+                try {
+                    long result = BinarySearch.search(binarySearchTailer, key, comparator);
+                    Assert.assertTrue("Should not find non-existent", result < 0);
+                } finally {
+                    key.bytes().releaseLast();
+                }
             }
         }
+    }
+
+    Comparator<Wire> comparator() {
+        MyData reusableComparatorData = new MyData();
+        return (o1, o2) -> {
+            reusableComparatorData.readMarshallable(o1);
+            int o1Key = reusableComparatorData.key;
+            reusableComparatorData.readMarshallable(o2);
+            int o2Key = reusableComparatorData.key;
+            return Integer.compare(o1Key, o2Key);
+        };
     }
 
     private void writeEmptyCycles(ExcerptAppender appender) {
@@ -163,7 +189,7 @@ public class TestBinarySearch extends QueueTestCommon {
     }
 
     @NotNull
-    private Wire toWire(int key) {
+    Wire toWire(int key) {
         final MyData myData = new MyData();
         myData.key = key;
         myData.value = Integer.toString(key);
