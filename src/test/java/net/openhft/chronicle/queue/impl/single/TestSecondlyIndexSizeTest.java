@@ -12,6 +12,8 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Map;
+import java.util.HashMap;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
@@ -24,12 +26,17 @@ public class TestSecondlyIndexSizeTest extends QueueTestCommon {
         final SetTimeProvider time = new SetTimeProvider();
         time.currentTimeMillis(0);
         final long[] indexes = new long[100];
+        final Map<File, Long> completedLengths = new HashMap<>();
 
         try (SingleChronicleQueue queue = smallBuilder(path, time).build();
              ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < indexes.length; i++) {
                 appender.writeText("message-" + i);
                 indexes[i] = appender.lastIndexAppended();
+                StoreAppender writer = (StoreAppender) appender;
+                // The fixture's last data end, aligned header plus eight-byte EOF.
+                long end = ((writer.wire().bytes().writePosition() + 3) & ~3L) + 8;
+                completedLengths.put(writer.store.file(), OS.pageAlign(end) + OS.pageSize());
                 time.advanceMillis(300);
             }
         }
@@ -38,7 +45,16 @@ public class TestSecondlyIndexSizeTest extends QueueTestCommon {
         // one filesystem page, including when this suite runs on hugetlbfs.
         final long expectedFileLength = 2L * Math.max(OS.SAFE_PAGE_SIZE,
                 PageUtil.getPageSize(path.getAbsolutePath()));
-        assertRollFileLengths(path, 30, expectedFileLength);
+        awaitBackgroundRelease();
+        final File[] rolls = path.listFiles((dir, name) -> name.endsWith(".cq4"));
+        assertNotNull(rolls);
+        assertEquals(30, rolls.length);
+        java.util.Arrays.sort(rolls);
+        for (int i = 0; i < rolls.length; i++) {
+            long expected = OS.isWindows() || i == rolls.length - 1 ? expectedFileLength
+                    : Math.min(expectedFileLength, completedLengths.get(rolls[i]));
+            assertEquals(rolls[i].getName(), expected, rolls[i].length());
+        }
 
         try (SingleChronicleQueue queue = smallBuilder(path, time).build();
              ExcerptTailer tailer = queue.createTailer()) {

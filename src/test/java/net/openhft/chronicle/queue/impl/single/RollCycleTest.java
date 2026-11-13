@@ -105,6 +105,11 @@ public class RollCycleTest extends QueueTestCommon {
                     timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
                     appender.writeText(Integer.toString(i));
                 }
+                // Let the observer advance before inspecting the settled file lengths.
+                for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++)
+                    Thread.sleep(1);
+                assertEquals(1 + cyclesToWrite, observer.documentsRead);
+                awaitBackgroundRelease();
                 assertEquals("" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
