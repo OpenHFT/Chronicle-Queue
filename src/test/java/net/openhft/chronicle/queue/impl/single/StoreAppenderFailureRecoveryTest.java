@@ -4,10 +4,12 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
@@ -17,6 +19,39 @@ import static org.junit.Assert.*;
 
 /** A rejected input must not poison the appender or publish a partial document. */
 public class StoreAppenderFailureRecoveryTest extends QueueTestCommon {
+    @Test
+    public void failedFirstWriteDoesNotRetainPreviousCycleTouchPosition() {
+        SetTimeProvider clock = new SetTimeProvider(1000);
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .blockSize(1 << 20).rollCycle(TestRollCycles.TEST_SECONDLY).timeProvider(clock).build();
+             StoreAppender appender = (StoreAppender) queue.createAppender()) {
+            for (int i = 0; i < 100; i++)
+                appender.writeBytes(bytes -> bytes.writeSkip(1024));
+            long previousPosition = appender.lastPosition;
+            clock.currentTimeMillis(2000);
+            assertThrows(IllegalStateException.class, () -> appender.writeBytes(bytes -> {
+                throw new IllegalStateException("first encoder failed");
+            }));
+            assertTrue(appender.lastPosition < previousPosition);
+            assertFalse(new MicroToucher(appender).execute());
+            appender.writeBytes(bytes -> bytes.writeLong(22));
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                for (int i = 0; i < 100; i++)
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        assertTrue(dc.isPresent());
+                        assertEquals(1024, dc.wire().bytes().readRemaining());
+                    }
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertTrue(dc.isPresent());
+                    assertEquals(22, dc.wire().bytes().readLong());
+                }
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    assertFalse(dc.isPresent());
+                }
+            }
+        }
+    }
+
     @Test
     public void byteStoreOverflowLeavesAppenderReusable() {
         try (SingleChronicleQueue queue = queue(); ExcerptAppender appender = queue.createAppender()) {

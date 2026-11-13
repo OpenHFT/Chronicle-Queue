@@ -408,6 +408,9 @@ class StoreAppender extends AbstractCloseable
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
         resetPosition();
+        // Rollback and micro-touch must use a position from this store, even if
+        // its first encoder fails before publishing a document.
+        lastPosition = store.writePosition();
         queue.onRoll(cycle);
     }
 
