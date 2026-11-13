@@ -7,9 +7,12 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
@@ -22,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.channels.FileChannel;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -534,7 +538,56 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @return true if the EOF marker was written successfully, false otherwise
      */
     boolean writeEOFAndShrink(@NotNull Wire wire, long timeoutMS) {
-        return wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+        boolean written = wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+        // Only a fresh EOF publication establishes this wire's exact final length.
+        if (written && wire.bytes() instanceof MappedBytes)
+            truncateIfEOF(wire, ((MappedBytes) wire.bytes()).mappedFile());
+        return written;
+    }
+
+    // Best-effort cleanup must report even Errors without terminating the shared background releaser.
+    @SuppressWarnings("java:S1181")
+    static void truncateIfEOF(Wire wire, MappedFile file) {
+        final long end = wire.bytes().writePosition();
+        // BinaryWire: END_OF_DATA then C3 'E' 'O' 'F', just written by this thread.
+        // Use a plain long read: the marker need only be four-byte aligned.
+        final long last = end < 8 ? 0 : wire.bytes().readLong(end - 8);
+        if (end < 8 || last != 0x464f45c3c0000000L) {
+            Jvm.debug().on(SingleChronicleQueueStore.class, "Not truncating without complete EOF: " + file.file()
+                    + "; " + (end < 8 ? "fewer than 8 bytes (" + end + ")" : String.format("last8=0x%016x", last)));
+            return;
+        }
+        if (OS.isWindows()) {
+            Jvm.debug().on(SingleChronicleQueueStore.class, "Not truncating a live mapped file on Windows: " + file.file());
+            return;
+        }
+        // Retain the EOF page and one read-ahead page, including a racing micro-touch.
+        final long length = OS.pageAlign(end) + OS.pageSize();
+        final ReferenceOwner owner = ReferenceOwner.temporary("EOF truncation");
+        final Thread submitter = Thread.currentThread();
+        final java.util.concurrent.atomic.AtomicBoolean submitting = new java.util.concurrent.atomic.AtomicBoolean(true);
+        file.reserve(owner); // Keep the checked inode open; never reopen its pathname.
+        try {
+            BackgroundResourceReleaser.run(() -> {
+                try {
+                    // Core runs inline when full or stopped. Optional cleanup must not
+                    // turn submission from an appender into synchronous filesystem work.
+                    if (Thread.currentThread() == submitter && submitting.get()) {
+                        Jvm.debug().on(SingleChronicleQueueStore.class, "Skipping EOF truncation: background releaser unavailable for " + file.file());
+                        return;
+                    }
+                    FileChannel channel = file.raf().getChannel();
+                    if (channel.size() > length)
+                        channel.truncate(length);
+                } catch (Throwable e) {
+                    Jvm.warn().on(SingleChronicleQueueStore.class, "Unable to truncate " + file.file(), e);
+                } finally {
+                    file.release(owner);
+                }
+            });
+        } finally {
+            submitting.set(false);
+        }
     }
 
     /**

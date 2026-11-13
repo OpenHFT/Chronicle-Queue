@@ -255,6 +255,7 @@ public class RollingCycleTest extends QueueTestCommon {
                     "...\n" +
                     "# 130524 bytes remaining\n";
 
+            awaitBackgroundRelease();
             long numRead = 0;
             final TestBytesMarshallable reusableData = new TestBytesMarshallable(0);
             final ExcerptTailer currentPosTailer = queue.createTailer(named ? "named" : null)
@@ -279,9 +280,6 @@ public class RollingCycleTest extends QueueTestCommon {
             // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
-            // was it truncated
-            if (dump.contains("\n4 bytes remaining"))
-                expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
             assertEquals(expected, dump);
 
             try {

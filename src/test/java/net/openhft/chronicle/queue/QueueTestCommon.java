@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
@@ -79,6 +80,17 @@ public class QueueTestCommon {
             }
         }
     };
+
+    /** Fail if Core's bounded drain timed out while a release was still executing. */
+    protected static void awaitBackgroundRelease() {
+        BackgroundResourceReleaser.releasePendingResources();
+        try {
+            AtomicLong pending = (AtomicLong) Jvm.getField(BackgroundResourceReleaser.class, "COUNTER").get(null);
+            org.junit.Assert.assertEquals("Background cleanup did not finish", 0L, pending.get());
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
 
     private static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
