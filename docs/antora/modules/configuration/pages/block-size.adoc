@@ -27,3 +27,32 @@ It is also recommended using the same block size for each queue instance when re
 The block size is not written to the queue's metadata, so should ideally be set to the same value when creating the queue instances.
 
 NOTE: Avoid changing the `blockSize` unnecessarily.
+
+== Disposable test queues
+
+Prefer `SingleChronicleQueueBuilder.binary(path).testBlockSize()` for small tests.
+It requests the platform's small block size; the effective size still respects the indexing minimum, `max(SMALL_BLOCK_SIZE, 32 * indexCount)`.
+It is unsuitable for large messages and can make larger workloads slower.
+Close queues and delete their directories after the test. A smaller mapping block is not a limit on total queue size or disk consumption.
+
+The existing `-DSingleChronicleQueueBuilder.blocksize=<size>` property changes the default requested block size.
+It is read when the builder class is initialised, accepts the size syntax supported by Chronicle Core's `Jvm.getSize`, and does not override an explicit `blockSize(...)` call or the indexing minimum.
+
+For a dedicated test JVM that needs to limit both default and explicit block sizes, opt in with both properties:
+
+[source,shell]
+----
+-Dchronicle.queue.testMode=true -Dchronicle.queue.maxBlockSize=1048576
+----
+
+`maxBlockSize` is a positive decimal byte count, here 1 MiB.
+Without `testMode=true`, the cap is ignored, including malformed values. Test mode without a cap leaves block-size behaviour unchanged.
+Each builder captures these two properties when it is created; changing properties later does not reconfigure an existing builder.
+
+The effective size is the normal geometry-adjusted size, limited to the cap.
+A cap below the required platform/indexing minimum is rejected with `IllegalArgumentException`; the minimum is never silently reduced or allowed to exceed the cap.
+Changing the builder's index count rechecks that requirement. Invalid, zero, negative or overflowing caps are rejected in test mode.
+A successful build reports the cap and effective block size at INFO level.
+
+Use this only for disposable test data, with the same settings for every participant opening a queue.
+It can invalidate large-message tests and change performance characteristics; it is not a production memory budget, disk quota or cleanup mechanism.
