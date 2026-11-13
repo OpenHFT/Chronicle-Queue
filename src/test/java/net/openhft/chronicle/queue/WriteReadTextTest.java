@@ -312,6 +312,8 @@ public class WriteReadTextTest extends QueueTestCommon {
         File owned = getTmpDir();
         java.nio.file.Files.createDirectories(owned.toPath());
         File observed = new File(owned.toString()) {
+            private static final long serialVersionUID = 1L;
+
             @Override public boolean exists() {
                 Assert.assertTrue("pending releases must finish before deletion", released.get());
                 return super.exists();
@@ -333,6 +335,8 @@ public class WriteReadTextTest extends QueueTestCommon {
         File unrelated = getTmpDir();
         java.nio.file.Files.createDirectories(unrelated.toPath());
         File undeletable = new File(unrelated, "owned-only") {
+            private static final long serialVersionUID = 1L;
+
             @Override public boolean exists() { return true; }
             @Override public boolean isDirectory() { return true; }
             @Override public File[] listFiles() { return new File[0]; }

@@ -275,6 +275,8 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         File owned = getTmpDir();
         java.nio.file.Files.createDirectories(owned.toPath());
         File observed = new File(owned.toString()) {
+            private static final long serialVersionUID = 1L;
+
             @Override public boolean exists() {
                 Assert.assertTrue("history releases must finish before deletion", released.get());
                 return super.exists();
@@ -300,6 +302,8 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         java.nio.file.Files.write(new File(owned, "data").toPath(), new byte[]{1});
         java.nio.file.Files.write(new File(unrelated, "keep").toPath(), new byte[]{1});
         File undeletable = new File(owned, "fake-undeletable") {
+            private static final long serialVersionUID = 1L;
+
             @Override public boolean exists() { return true; }
             @Override public boolean isDirectory() { return true; }
             @Override public File[] listFiles() { return new File[0]; }
