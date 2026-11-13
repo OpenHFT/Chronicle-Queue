@@ -72,7 +72,12 @@ final class OfflineCycleFileTruncator {
                 return Outcome.ALREADY_TRIMMED;
             expected.check(file);
             channel.truncate(end);
-            channel.force(true);
+            try {
+                channel.force(true);
+            } catch (IOException e) {
+                throw new IOException("SYNC_FAILED_AFTER_TRUNCATE: " + file + " shortened from "
+                        + size + " to " + end + " bytes; durability uncertain", e);
+            }
             return Outcome.TRUNCATED;
         } catch (java.nio.channels.OverlappingFileLockException e) {
             throw new IOException("REFUSED_LOCK_OVERLAP: " + file, e);
