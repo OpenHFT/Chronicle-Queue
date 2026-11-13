@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.util;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.threads.EventHandler;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -10,28 +11,49 @@ import net.openhft.chronicle.queue.impl.single.Pretoucher;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Utility class for creating {@link Pretoucher} and {@link EventHandler} instances.
  * <p>
  * This class provides a factory-based mechanism to support both enterprise and non-enterprise pretoucher functionality.
  * If enterprise features are available, it attempts to load the enterprise implementation, otherwise, it falls back
- * to a basic implementation.
+ * to a basic implementation whose {@link #createPretoucher(ChronicleQueue)} throws
+ * {@link UnsupportedOperationException}.
  */
 public final class PretouchUtil {
+    static final String ENTERPRISE_PRETOUCH_UTIL = "software.chronicle.enterprise.queue.pretoucher.EnterprisePretouchUtil";
     private static final PretoucherFactory INSTANCE;
 
     static {
-        PretoucherFactory instance;
-        try {
-            final Class<?> clazz = Class.forName("software.chronicle.enterprise.queue.pretoucher.EnterprisePretouchUtil");
-            instance = (PretoucherFactory) ObjectUtils.newInstance(clazz);
+        final PretoucherFactory instance = loadFactory(ENTERPRISE_PRETOUCH_UTIL);
+        if (instance instanceof PretouchFactoryEmpty) {
+            if (((PretouchFactoryEmpty) instance).cause == null)
+                SingleChronicleQueueBuilder.onlyAvailableInEnterprise("Pretoucher");
+        } else {
             assert SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable();
-        } catch (Exception e) {
-            instance = new PretouchFactoryEmpty();
-            SingleChronicleQueueBuilder.onlyAvailableInEnterprise("Pretoucher");
         }
         INSTANCE = instance;
+    }
+
+    /**
+     * Loads the named {@link PretoucherFactory}, falling back to a factory that reports why pretouching is unavailable.
+     * An absent class means Chronicle Queue Enterprise is not on the classpath; any other failure means an
+     * incompatible Enterprise extension was found, and is reported with its cause.
+     *
+     * @param className the fully qualified name of the factory to load
+     * @return the loaded factory, or the open-source fallback
+     */
+    @NotNull
+    static PretoucherFactory loadFactory(@NotNull final String className) {
+        try {
+            return (PretoucherFactory) ObjectUtils.newInstance(Class.forName(className));
+        } catch (ClassNotFoundException absent) {
+            return new PretouchFactoryEmpty(null);
+        } catch (Exception | LinkageError incompatible) {
+            Jvm.warn().on(PretouchUtil.class, "Pretoucher factory " + className + " is present but could not be loaded; pretouching is unavailable", incompatible);
+            return new PretouchFactoryEmpty(incompatible);
+        }
     }
 
     /**
@@ -49,6 +71,7 @@ public final class PretouchUtil {
      *
      * @param queue The {@link ChronicleQueue} instance
      * @return A new {@link Pretoucher} for the specified queue
+     * @throws UnsupportedOperationException if Chronicle Queue Enterprise is not available
      */
     public static Pretoucher createPretoucher(@NotNull final ChronicleQueue queue) {
         return INSTANCE.createPretoucher((SingleChronicleQueue) queue);
@@ -57,10 +80,15 @@ public final class PretouchUtil {
     /**
      * Fallback factory class for non-enterprise environments.
      * <p>
-     * Provides basic implementations for creating {@link EventHandler} and {@link Pretoucher} when enterprise features
-     * are not available.
+     * Provides a no-op {@link EventHandler}; creating a {@link Pretoucher} is not supported.
      */
-    private static class PretouchFactoryEmpty implements PretoucherFactory {
+    static final class PretouchFactoryEmpty implements PretoucherFactory {
+        @Nullable
+        final Throwable cause;
+
+        PretouchFactoryEmpty(@Nullable final Throwable cause) {
+            this.cause = cause;
+        }
 
         /**
          * Returns a no-op {@link EventHandler} that does nothing.
@@ -74,14 +102,17 @@ public final class PretouchUtil {
         }
 
         /**
-         * Creates a basic {@link Pretoucher} for the specified {@link SingleChronicleQueue}.
+         * Pretouching requires Chronicle Queue Enterprise.
          *
          * @param queue The {@link SingleChronicleQueue} instance
-         * @return A basic {@link Pretoucher} instance
+         * @throws UnsupportedOperationException always
          */
         @Override
         public Pretoucher createPretoucher(@NotNull final SingleChronicleQueue queue) {
-            return queue.createPretoucher();
+            final String message = cause == null
+                    ? "Pretoucher requires Chronicle Queue Enterprise, which is not on the classpath"
+                    : "Pretoucher requires Chronicle Queue Enterprise; the Enterprise pretoucher on the classpath could not be loaded";
+            throw new UnsupportedOperationException(message, cause);
         }
     }
 }

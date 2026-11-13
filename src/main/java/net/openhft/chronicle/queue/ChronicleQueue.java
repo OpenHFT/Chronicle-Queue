@@ -456,6 +456,7 @@ public interface ChronicleQueue extends Closeable {
      * <p>Enterprise Queue only
      *
      * @return pretoucher
+     * @throws UnsupportedOperationException if Chronicle Queue Enterprise is not available
      */
     default Pretoucher createPretoucher() {
         return PretouchUtil.createPretoucher(this);
