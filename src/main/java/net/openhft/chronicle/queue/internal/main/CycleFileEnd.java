@@ -38,7 +38,7 @@ final class CycleFileEnd {
                 return retainedEnd(channel, position + Integer.BYTES, size);
             if (!Wires.isReady(header))
                 return -1;
-            long end = position + Integer.BYTES + (long) Wires.lengthOf(header);
+            long end = position + Integer.BYTES + Wires.lengthOf(header);
             if (end > size)
                 throw new StreamCorruptedException("Record extends beyond cycle file at " + position);
             position = end;
@@ -74,7 +74,8 @@ final class CycleFileEnd {
             return -1;
         end += 4;
         ByteBuffer tail = ByteBuffer.allocate(64 * 1024);
-        for (long position = end; position < size;) {
+        long position = end;
+        while (position < size) {
             tail.clear().limit((int) Math.min(tail.capacity(), size - position));
             int count = tail.remaining();
             read(channel, tail, position);

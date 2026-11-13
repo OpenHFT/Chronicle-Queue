@@ -24,20 +24,23 @@ final class OfflineFileUsers {
         long device = ((Number) identity.get("dev")).longValue();
         long inode = ((Number) identity.get("ino")).longValue();
         try (DirectoryStream<Path> processes = Files.newDirectoryStream(proc, p -> p.getFileName().toString().matches("[0-9]+"))) {
-            for (Path process : processes) {
-                try {
-                    checkDescriptors(process.resolve("fd"), device, inode);
-                    checkMappings(process.resolve("maps"), device, inode);
-                } catch (NoSuchFileException ignored) {
-                    // A process may exit during inspection. Other I/O failures refuse cleanup.
-                }
-            }
+            for (Path process : processes)
+                checkProcess(process, device, inode);
         } catch (DirectoryIteratorException e) {
             throw new IOException("REFUSED_OPEN_CHECK_UNCERTAIN: " + proc + ": " + e.getCause(), e.getCause());
         } catch (IOException e) {
             if (e.getMessage() != null && e.getMessage().startsWith("REFUSED_"))
                 throw e;
             throw new IOException("REFUSED_OPEN_CHECK_UNCERTAIN: " + proc + ": " + e, e);
+        }
+    }
+
+    private static void checkProcess(Path process, long device, long inode) throws IOException {
+        try {
+            checkDescriptors(process.resolve("fd"), device, inode);
+            checkMappings(process.resolve("maps"), device, inode);
+        } catch (NoSuchFileException ignored) {
+            // A process may exit during inspection. Other I/O failures refuse cleanup.
         }
     }
 
@@ -66,7 +69,8 @@ final class OfflineFileUsers {
                             || !fields[3].matches("[0-9a-fA-F]+:[0-9a-fA-F]+") || !fields[4].matches("[0-9]+"))
                         throw new IllegalArgumentException("Malformed maps record");
                     String[] pair = fields[3].split(":");
-                    long major = Long.parseUnsignedLong(pair[0], 16), minor = Long.parseUnsignedLong(pair[1], 16);
+                    long major = Long.parseUnsignedLong(pair[0], 16);
+                    long minor = Long.parseUnsignedLong(pair[1], 16);
                     if ((major | minor) >>> 32 != 0)
                         throw new IllegalArgumentException("Device number exceeds Linux dev_t component");
                     // Linux makedev encoding; compare identity, not a pathname or '(deleted)' suffix.

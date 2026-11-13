@@ -44,7 +44,8 @@ public class OfflineFileUsersTest {
     @Test public void anotherInodeDoesNotBlockTheTarget() throws Exception {
         Path file = temporary.newFile().toPath();
         Path other = temporary.newFile().toPath();
-        OfflineFileUsers.requireClosed(file, proc(mapping(other)));
+        Path proc = proc(mapping(other));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> OfflineFileUsers.requireClosed(file, proc));
     }
 
     @Test public void descriptorAliasIsRefusedByIdentity() throws Exception {

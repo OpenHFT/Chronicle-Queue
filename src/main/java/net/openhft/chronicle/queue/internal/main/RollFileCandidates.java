@@ -30,10 +30,11 @@ final class RollFileCandidates {
 
     static RollFileCandidates read(Path directory, Path procRoot) throws IOException {
         CycleFileIdentity.noSymlinks(directory);
-        if (!Files.isRegularFile(directory.resolve("metadata.cq4t"), LinkOption.NOFOLLOW_LINKS))
+        Path metadata = directory.resolve(SingleChronicleQueue.QUEUE_METADATA_FILE);
+        if (!Files.isRegularFile(metadata, LinkOption.NOFOLLOW_LINKS))
             throw new IOException("SKIPPED_NO_METADATA");
-        CycleFileIdentity.capture(directory.resolve("metadata.cq4t"));
-        OfflineFileUsers.requireClosed(directory.resolve("metadata.cq4t"), procRoot);
+        CycleFileIdentity.capture(metadata);
+        OfflineFileUsers.requireClosed(metadata, procRoot);
         RollFileCandidates inventory = new RollFileCandidates();
         Integer newestCycle = null;
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory.toFile()).readOnly(true).build();
@@ -44,13 +45,7 @@ final class RollFileCandidates {
                     name -> directory.resolve(name + SingleChronicleQueue.SUFFIX).toFile(),
                     file -> file.getName().substring(0, file.getName().length() - SingleChronicleQueue.SUFFIX.length()));
             for (Path path : (Iterable<Path>) entries.filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX))::iterator) {
-                if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))
-                    throw new IOException("Unsupported roll entry: " + path);
-                String name = path.getFileName().toString();
-                String stem = name.substring(0, name.length() - SingleChronicleQueue.SUFFIX.length());
-                int cycle = cache.parseCount(stem);
-                if (!cache.resourceFor(cycle).text.equals(stem))
-                    throw new IOException("Noncanonical roll name: " + name);
+                int cycle = cycle(path, cache);
                 CycleFileIdentity identity = CycleFileIdentity.capture(path);
                 if (Files.size(path) > 0) {
                     OfflineFileUsers.requireClosed(path, procRoot);
@@ -70,5 +65,16 @@ final class RollFileCandidates {
             }
         }
         return inventory;
+    }
+
+    private static int cycle(Path path, RollingResourcesCache cache) throws IOException {
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))
+            throw new IOException("Unsupported roll entry: " + path);
+        String name = path.getFileName().toString();
+        String stem = name.substring(0, name.length() - SingleChronicleQueue.SUFFIX.length());
+        int cycle = cache.parseCount(stem);
+        if (!cache.resourceFor(cycle).text.equals(stem))
+            throw new IOException("Noncanonical roll name: " + name);
+        return cycle;
     }
 }

@@ -23,7 +23,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
 import static net.openhft.chronicle.queue.internal.main.OfflineCycleFileTruncator.Outcome.*;

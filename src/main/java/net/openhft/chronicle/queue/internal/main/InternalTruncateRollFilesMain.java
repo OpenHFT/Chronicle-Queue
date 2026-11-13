@@ -43,13 +43,7 @@ public final class InternalTruncateRollFilesMain {
         int errors = 0;
         for (Path file : files.values()) {
             try {
-                CycleFileIdentity identity = CycleFileIdentity.capture(file);
-                long size = Files.size(file);
-                String outcome = file.equals(newest) ? "SKIPPED_NEWEST"
-                        : size == 0 || size % ALIGNMENT != 0 ? "SKIPPED_SIZE"
-                        : recentlyModified(identity.modifiedMillis(), System.currentTimeMillis(), minAgeMs)
-                        ? "WARN_RECENTLY_MODIFIED: skipped; minimum age " + minAgeMs / 1000 + "s"
-                        : OfflineCycleFileTruncator.truncate(file, confirmedOffline, identity, procRoot).name();
+                String outcome = inspect(file, newest, confirmedOffline, minAgeMs, procRoot);
                 output.println(file.toAbsolutePath() + " " + outcome);
                 if ("SKIPPED_NONZERO_TAIL".equals(outcome))
                     errors++;
@@ -59,6 +53,18 @@ public final class InternalTruncateRollFilesMain {
             }
         }
         return errors;
+    }
+
+    private static String inspect(Path file, Path newest, boolean confirmedOffline, long minAgeMs, Path procRoot) throws IOException {
+        CycleFileIdentity identity = CycleFileIdentity.capture(file);
+        long size = Files.size(file);
+        if (file.equals(newest))
+            return "SKIPPED_NEWEST";
+        if (size == 0 || size % ALIGNMENT != 0)
+            return "SKIPPED_SIZE";
+        if (recentlyModified(identity.modifiedMillis(), System.currentTimeMillis(), minAgeMs))
+            return "WARN_RECENTLY_MODIFIED: skipped; minimum age " + minAgeMs / 1000 + "s";
+        return OfflineCycleFileTruncator.truncate(file, confirmedOffline, identity, procRoot).name();
     }
 
     /**
@@ -125,7 +131,8 @@ public final class InternalTruncateRollFilesMain {
     }
 
     /** Preview by default; --offline asserts external exclusion, not detected writer absence. */
-    public static void main(String[] args) throws IOException {
+    @SuppressWarnings("java:S106") // CLI results and diagnostics are an explicit stdout/stderr contract.
+    public static void main(String[] args) {
         int status = run(args, System.out, System.err);
         if (status != 0)
             System.exit(status);
