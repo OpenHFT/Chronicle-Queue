@@ -1,0 +1,13 @@
+= Queue test resources
+
+== Fork heap and resource diagnostics
+
+Surefire forks use a 1 GiB heap by default, shared by successive tests in each
+reused fork. Override it with `-Dqueue.test.heapSize=...`. The same bound applies
+to the Sonar profile without replacing its JaCoCo agent or coverage flag.
+Native memory, mapped storage and resident memory need separate measurement.
+
+Enable `-Dqueue.traceTestExecution=true` for start/finish records with the test,
+timestamp, PID, target directory and used, committed and maximum heap. These
+are process observations, not per-test ownership or disk/memory limits.
+`QueueTestCommonResourceTest` checks opt-in output, preserved failures and warnings.
