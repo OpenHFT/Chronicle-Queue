@@ -37,3 +37,21 @@ Its capacity and initial mapping geometry are checked without writing millions
 of messages; physical allocation and Windows sharing remain platform checks.
 Controls cover owned/unrelated paths, construction/assertion/close failures,
 deferred-release ordering, original-failure preservation and normal readback.
+
+== Worker coordination
+
+The interrupted-appender fixture signals that it has left the semaphore before
+the test interrupts Queue acquisition. The condition fixture waits for worker
+entry and lock release before signalling. Coordination and shutdown are bounded;
+background failures reach the test instead of becoming an eventual timeout.
+
+The appender-cycle fixture owns both workers, shared bytes and its directory.
+Early failures release the start gate, interrupt both workers and join them
+before releasing storage. A surviving worker fails cleanup while retaining its
+storage. Controls cover early body failure, worker failure before readiness and
+delayed cleanup with an interrupted caller.
+
+The rolling fixture prepares appenders on their owning threads before starting
+the concurrent workload. Its outer rule waits for a timed-out fixture body to
+restore global state. The exact global-timeout/next-test interleaving still has
+no separately controlled negative test.
