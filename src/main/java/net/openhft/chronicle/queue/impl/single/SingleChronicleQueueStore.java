@@ -564,18 +564,30 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         // Retain the EOF page and one read-ahead page, including a racing micro-touch.
         final long length = OS.pageAlign(end) + OS.pageSize();
         final ReferenceOwner owner = ReferenceOwner.temporary("EOF truncation");
+        final Thread submitter = Thread.currentThread();
+        final java.util.concurrent.atomic.AtomicBoolean submitting = new java.util.concurrent.atomic.AtomicBoolean(true);
         file.reserve(owner); // Keep the checked inode open; never reopen its pathname.
-        BackgroundResourceReleaser.run(() -> {
-            try {
-                FileChannel channel = file.raf().getChannel();
-                if (channel.size() > length)
-                    channel.truncate(length);
-            } catch (Throwable e) {
-                Jvm.warn().on(SingleChronicleQueueStore.class, "Unable to truncate " + file.file(), e);
-            } finally {
-                file.release(owner);
-            }
-        });
+        try {
+            BackgroundResourceReleaser.run(() -> {
+                try {
+                    // Core runs inline when full or stopped. Optional cleanup must not
+                    // turn submission from an appender into synchronous filesystem work.
+                    if (Thread.currentThread() == submitter && submitting.get()) {
+                        Jvm.debug().on(SingleChronicleQueueStore.class, "Skipping EOF truncation: background releaser unavailable for " + file.file());
+                        return;
+                    }
+                    FileChannel channel = file.raf().getChannel();
+                    if (channel.size() > length)
+                        channel.truncate(length);
+                } catch (Throwable e) {
+                    Jvm.warn().on(SingleChronicleQueueStore.class, "Unable to truncate " + file.file(), e);
+                } finally {
+                    file.release(owner);
+                }
+            });
+        } finally {
+            submitting.set(false);
+        }
     }
 
     /**

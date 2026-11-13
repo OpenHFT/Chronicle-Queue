@@ -25,11 +25,50 @@ import org.junit.rules.TemporaryFolder;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
 public class MinimalEofTruncationTest {
     @Rule public TemporaryFolder temporary = new TemporaryFolder();
+    @Test public void saturatedReleaserSkipsInlineCleanupAndReleasesReservation() throws Exception {
+        assumeFalse(OS.isWindows());
+        BackgroundResourceReleaser.releasePendingResources();
+        CountDownLatch started = new CountDownLatch(1), release = new CountDownLatch(1);
+        File file = paddedFile();
+        Bytes<?> bytes = Bytes.allocateElasticOnHeap(128);
+        try (MappedFile mapped = MappedFile.mappedFile(file, 65536, 0)) {
+            bytes.writeInt(Wires.END_OF_DATA).writeInt(0x464f45c3);
+            int references = mapped.refCount();
+            BackgroundResourceReleaser.run(() -> {
+                started.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            try {
+                assertTrue(started.await(5, TimeUnit.SECONDS));
+                for (int i = 0; i < 128; i++)
+                    BackgroundResourceReleaser.run(() -> { });
+                SingleChronicleQueueStore.truncateIfEOF(new BinaryWire(bytes), mapped);
+                assertEquals(65536, file.length());
+                assertEquals(references, mapped.refCount());
+            } finally {
+                release.countDown();
+                BackgroundResourceReleaser.releasePendingResources();
+            }
+            SingleChronicleQueueStore.truncateIfEOF(new BinaryWire(bytes), mapped);
+            BackgroundResourceReleaser.releasePendingResources();
+            assertEquals(OS.pageAlign(8) + OS.pageSize(), file.length());
+            assertEquals(references, mapped.refCount());
+        } finally {
+            release.countDown();
+            bytes.releaseLast();
+        }
+    }
+
     @Test public void completeMarkerWorksAtFourByteAndPageBoundaries() throws Exception {
         for (long offset : new long[]{120, 124, OS.pageSize() - 4}) {
             File file = paddedFile();
