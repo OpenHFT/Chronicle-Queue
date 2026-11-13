@@ -95,13 +95,11 @@ public class ReaderResizesFileTest {
                 }
             });
 
-            BytesStore<?, ?> heldStore = null;
-            long openRefCount = 0;
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent(), "Initial document should be present");
                 Bytes<?> tailerBytes = dc.wire().bytes();
-                heldStore = tailerBytes.bytesStore();
-                openRefCount = heldStore.refCount();
+                BytesStore<?, ?> heldStore = tailerBytes.bytesStore();
+                long openRefCount = heldStore.refCount();
 
                 try (DocumentContext writing = appender.writingDocument()) {
                     Bytes<?> bytes = writing.wire().bytes();
@@ -110,13 +108,14 @@ public class ReaderResizesFileTest {
                     }
                 }
 
-                assertEquals(openRefCount, heldStore.refCount(),
-                        "RefCount should remain unchanged while the tailer document is held open");
+                // The store's refCount is shared by every reservation on this chunk (appender, indexing, etc.),
+                // so it can occasionally grow, e.g. SCQIndexing re-creates its weakly held index array holders
+                // after a GC.  It should never decrease.
+                assertSame(heldStore, tailerBytes.bytesStore(),
+                        "Tailer should still be using the same store while the document is held open");
+                assertTrue(heldStore.refCount() >= openRefCount,
+                        "RefCount should not drop while the tailer document is held open");
             }
-
-            assertNotNull(heldStore);
-            assertTrue(heldStore.refCount() <= openRefCount,
-                    "RefCount should not increase after closing the tailer document");
         }
     }
 

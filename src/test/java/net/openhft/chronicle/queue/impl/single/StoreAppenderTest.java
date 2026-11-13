@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -115,6 +116,7 @@ public class StoreAppenderTest extends QueueTestCommon {
         private final SingleChronicleQueue queue;
         private Semaphore waitingToAcquire;
         private Semaphore waitingAfterInterrupt;
+        private CountDownLatch aboutToAcquireWritingDocument;
 
         BlockedWriter(SingleChronicleQueue queue) {
             this.queue = queue;
@@ -123,18 +125,19 @@ public class StoreAppenderTest extends QueueTestCommon {
         void makeSuccessfulWrite() {
             waitingToAcquire = new Semaphore(0);
             waitingAfterInterrupt = new Semaphore(0);
+            aboutToAcquireWritingDocument = new CountDownLatch(1);
             t = new Thread(this::makeInterruptedWriteAttemptThenTryAgain);
             t.setName("blocked-writer");
             t.start();
-            waitForThreads(waitingToAcquire);
+            waitForThreads(waitingToAcquire, t);
         }
 
-        void makeInterruptedAttemptToWrite() {
+        void makeInterruptedAttemptToWrite() throws InterruptedException {
             waitingToAcquire.release(1);
-            // Wait till the lock() call has been made
-            Jvm.pause(10);
+            // Don't interrupt until the writer has left Semaphore.acquire(), or the thread dies and the test hangs.
+            aboutToAcquireWritingDocument.await();
             t.interrupt();
-            waitForThreads(waitingAfterInterrupt);
+            waitForThreads(waitingAfterInterrupt, t);
         }
 
         void makePostInterruptAttemptToWrite() throws InterruptedException {
@@ -146,6 +149,7 @@ public class StoreAppenderTest extends QueueTestCommon {
             try (final ExcerptAppender appender = queue.createAppender()) {
                 appender.writeText(TEST_TEXT);
                 acquire(waitingToAcquire);
+                aboutToAcquireWritingDocument.countDown();
                 try (final DocumentContext documentContext = appender.writingDocument()) {
                     throw new AssertionError("We shouldn't get here " + documentContext);
                 } catch (InterruptedRuntimeException e) {
@@ -172,7 +176,7 @@ public class StoreAppenderTest extends QueueTestCommon {
             t = new Thread(this::acquireWritingDocumentThenBlock);
             t.setName("blocking-writer");
             t.start();
-            waitForThreads(inWritingDocument);
+            waitForThreads(inWritingDocument, t);
         }
 
         void unblockWrites() throws InterruptedException {
@@ -199,8 +203,10 @@ public class StoreAppenderTest extends QueueTestCommon {
         }
     }
 
-    private static void waitForThreads(Semaphore semaphore) {
+    private static void waitForThreads(Semaphore semaphore, Thread thread) {
         while (!semaphore.hasQueuedThreads()) {
+            if (!thread.isAlive())
+                throw new AssertionError(thread.getName() + " died before reaching the expected wait point");
             Jvm.pause(10);
         }
     }
