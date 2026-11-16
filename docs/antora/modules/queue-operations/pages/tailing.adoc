@@ -107,6 +107,64 @@ However, in general you only need one main tailer for a topic, with possibly, so
 As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic.
 Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
 
+== Waiting for new excerpts
+
+`readDocument(...)` and `readingDocument()` do not wait for a new excerpt to arrive.
+An empty read returns `false` (or a context whose `isPresent()` is `false`); this is not a guarantee that reading or mapping a file has bounded latency.
+That means "nothing yet", not "the writer has finished": decide completion from your own end record or count.
+
+The reading thread chooses how to wait. Import `net.openhft.chronicle.threads.Pauser`; the examples assume an open tailer and a `ReadMarshallable` handler. Reset the pauser after each excerpt and pause after each empty read:
+
+[source,java]
+----
+Pauser pauser = Pauser.busy();
+while (running) {
+    if (tailer.readDocument(handler))
+        pauser.reset();
+    else
+        pauser.pause();
+}
+----
+
+|===
+| Pauser | Waiting strategy | Typical use
+
+| `Pauser.busy()` | Spins (`Jvm.nanoPause()`); never sleeps | Latency-critical reader on its own core; uses that whole core
+| `Pauser.yielding()` | Spins briefly, then `Thread.yield()` | Low latency when cores are spare
+| `Pauser.balanced()` | Spins, yields, then parks with backoff | General services
+| `Pauser.millis(1, 10)` | Parks 1 ms, backing off to 10 ms | Background readers
+| `Pauser.sleepy()` | Yields briefly, then parks with backoff | Lowest CPU use
+|===
+
+Some pauser factories select a less CPU-intensive strategy when the JVM reports few processors.
+Check `pauser.isBusy()`, or log the pauser's class, when the choice matters; affinity, container limits and JVM configuration can affect processor counts.
+
+Parking trades CPU usage for wake-up latency; the requested duration is not a precise wake-up time.
+Measure on the deployment host before choosing a strategy.
+
+Stop a spinning reader with a flag visible to the reading thread (for example a `volatile boolean running`).
+In tests, use a deadline and reset the pauser after successful reads. The following uses `java.util.concurrent.TimeUnit`.
+The timeout bounds the polling loop's willingness to wait; it cannot interrupt a blocked handler, file operation or scheduler delay.
+
+[source,java]
+----
+Pauser pauser = Pauser.millis(1, 10);
+long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+int received = 0;
+while (received < expected) {
+    if (System.nanoTime() - deadline >= 0) {
+        throw new AssertionError("received " + received + " of " + expected
+                + ", tailer at index " + Long.toHexString(tailer.index()));
+    }
+    if (tailer.readDocument(handler)) {
+        received++;
+        pauser.reset();
+    } else {
+        pauser.pause();
+    }
+}
+----
+
 == Tailers and File Handlers Clean Up
 
 Chronicle Queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
