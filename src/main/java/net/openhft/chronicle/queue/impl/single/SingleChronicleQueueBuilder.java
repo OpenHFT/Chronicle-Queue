@@ -614,7 +614,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             // the code is slightly brutal and crude but should work for most cases. It will NOT work if files were created with
             // the following cycles: LARGE_HOURLY_SPARSE LARGE_HOURLY_XSPARSE LARGE_DAILY XLARGE_DAILY HUGE_DAILY HUGE_DAILY_XSPARSE
             // for such cases user MUST use correct roll cycle when creating the queue
-            String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+            String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX)
+                    && new File(d, name).isFile());
             if (list != null && list.length > 0) {
                 // Try to match the roll cycle by parsing the filename against known roll cycles
                 String filename = list[0];
