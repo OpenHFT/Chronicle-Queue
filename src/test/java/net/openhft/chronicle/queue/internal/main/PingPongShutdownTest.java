@@ -49,7 +49,9 @@ public class PingPongShutdownTest extends QueueTestCommon {
         List<String> command = new ArrayList<>();
         command.add(new File(System.getProperty("java.home"), "bin/java").getPath());
         for (String arg : java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments())
-            if (arg.startsWith("--add-opens") || arg.startsWith("--add-exports"))
+            // Shutdown is checked in a child JVM; include its execution in the coverage report.
+            if (arg.startsWith("--add-opens") || arg.startsWith("--add-exports")
+                    || (arg.startsWith("-javaagent:") && arg.contains("org.jacoco.agent")))
                 command.add(arg);
         Collections.addAll(command, "-ea", "-cp", System.getProperty("java.class.path"), Child.class.getName(), Integer.toString(duration), dir.getAbsolutePath());
         Process child = new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start();
