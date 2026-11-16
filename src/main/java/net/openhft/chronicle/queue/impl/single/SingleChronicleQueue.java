@@ -1482,14 +1482,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         }
                     }
                 } catch (InternalError e) {
-                    long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
-                    String s = Long.toHexString(pos);
-                    System.err.println("pos=" + s);
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
-                        for (String line; (line = br.readLine()) != null; )
-                            if (line.contains(".cq4"))
-                                System.err.println(line);
-                    }
+                    printMappingDiagnostics(mappedBytes, e);
                     throw e;
                 }
                 return wireStore;
@@ -1511,6 +1504,25 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         Closeable.closeQuietly(mappedBytes);
                 }
                 throw e;
+            }
+        }
+
+        private void printMappingDiagnostics(MappedBytes mappedBytes, InternalError failure) {
+            try {
+                if (mappedBytes.refCount() > 0 && ((Bytes<?>) mappedBytes).bytesStore() != null) {
+                    long pos = ((Bytes<?>) mappedBytes).bytesStore().addressForRead(0);
+                    System.err.println("pos=" + Long.toHexString(pos));
+                }
+                if (!OS.isLinux())
+                    return;
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
+                    for (String line; (line = br.readLine()) != null; )
+                        if (line.contains(".cq4"))
+                            System.err.println(line);
+                }
+            } catch (IOException | RuntimeException | InternalError diagnosticFailure) {
+                // Diagnostics must not hide the native failure or bypass acquisition cleanup.
+                failure.addSuppressed(diagnosticFailure);
             }
         }
 
