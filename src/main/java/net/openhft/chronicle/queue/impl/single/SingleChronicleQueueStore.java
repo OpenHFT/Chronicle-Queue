@@ -48,7 +48,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     private final MappedFile mappedFile;
     private final int dataVersion;
     @NotNull
-    private final transient Sequence sequence;
+    private final transient RollCycleEncodeSequence sequence;
 
     private int cycle;
 
@@ -71,7 +71,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
             this.indexing = Objects.requireNonNull(wire.read(MetaDataField.indexing).typedMarshallable());
             this.indexing.writePosition = writePosition;
             this.sequence = new RollCycleEncodeSequence(writePosition, indexing.indexCount(), indexing.indexSpacing());
-            this.indexing.sequence = sequence;
+            this.indexing.initSequence(sequence, mappedFile);
             final String fieldName = wire.readEvent(String.class);
             int version = 0;
 
@@ -114,9 +114,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
 
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newTwoLongReference().get();
-        this.indexing.sequence = this.sequence = new RollCycleEncodeSequence(writePosition,
+        this.sequence = new RollCycleEncodeSequence(writePosition,
                 rollCycle.defaultIndexCount(),
                 rollCycle.defaultIndexSpacing());
+        this.indexing.initSequence(sequence, mappedFile);
         this.dataVersion = 1;
 
         singleThreadedCheckDisabled(true);
@@ -376,8 +377,9 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     @Override
     public long sequenceForPosition(@NotNull final ExcerptContext ec, final long position, boolean inclusive) throws StreamCorruptedException {
         throwExceptionIfClosed();
-
-        return indexing.sequenceForPosition(ec, position, inclusive);
+        return position == Long.MAX_VALUE
+                ? indexing.sequenceForMaxPosition(ec, inclusive)
+                : indexing.sequenceForPosition(ec, position, inclusive);
     }
 
     /**
@@ -467,6 +469,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         throwExceptionIfClosedInSetter();
 
         sequence.setSequence(sequenceNumber, position);
+        indexing.rememberSequence(sequenceNumber, position);
 
         long nextSequence = indexing.nextEntryToBeIndexed();
         if (nextSequence > sequenceNumber)

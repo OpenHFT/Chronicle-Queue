@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.StackTrace;
@@ -28,6 +29,8 @@ import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -46,10 +49,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private static final boolean IGNORE_INDEXING_FAILURE = Jvm.getBoolean("queue.ignoreIndexingFailure");
     private static final boolean REPORT_LINEAR_SCAN = Jvm.getBoolean("chronicle.queue.report.linear.scan.latency");
     private static final long LINEAR_SCAN_WARN_THRESHOLD_NS = Long.getLong("linear.scan.warn.ns", 100_000);
+    private static final CleaningThreadLocal<Map<MappedFile, ScanAnchor>> SCAN_ANCHORS =
+            CleaningThreadLocal.withCleanup(WeakHashMap::new, Map::clear);
 
     final LongValue nextEntryToBeIndexed;
     private final int indexCount;
     private final int indexCountBits;
+    private long positionAliasPeriod;
     private final int indexSpacing;
     private final int indexSpacingBits;
     private final LongValue index2Index;
@@ -74,6 +80,22 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     int linearScanByPositionCount;
     Collection<Closeable> closeables = new ArrayList<>();
     private long lastScannedIndex = -1;
+    // A scan anchor is an exact full-position pair, independent of the truncated tracker.
+    // Each thread owns its pair; no additional cross-process publication protocol is involved.
+    private MappedFile mappedFile;
+
+    void rememberSequence(long sequenceNumber, long position) {
+        ScanAnchor anchor = scanAnchor();
+        if (position > anchor.position) {
+            anchor.position = position;
+            anchor.sequence = sequenceNumber;
+        }
+    }
+
+    private static final class ScanAnchor {
+        long position;
+        long sequence;
+    }
 
     /**
      * Constructor used for demarshalling via {@link Demarshallable}.
@@ -126,6 +148,16 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
         singleThreadedCheckDisabled(true);
+    }
+
+    void initSequence(RollCycleEncodeSequence sequence, MappedFile mappedFile) {
+        this.sequence = sequence;
+        this.positionAliasPeriod = sequence.positionAliasPeriod();
+        this.mappedFile = mappedFile;
+    }
+
+    private ScanAnchor scanAnchor() {
+        return SCAN_ANCHORS.get().computeIfAbsent(mappedFile, ignored -> new ScanAnchor());
     }
 
     // Helper method to create a new LongArrayValuesHolder
@@ -495,11 +527,18 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                    long knownAddress) {
         this.linearScanCount++;
         @NotNull final Bytes<?> bytes = wire.bytes();
+        ScanAnchor anchor = scanAnchor();
+        if (anchor.position > knownAddress && anchor.sequence >= fromKnownIndex && anchor.sequence <= toIndex) {
+            knownAddress = anchor.position;
+            fromKnownIndex = anchor.sequence;
+        }
 
         // optimized if the `toIndex` is the last sequence
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
-        if (toIndex == lastIndex) {
+        Sequence currentSequence = this.sequence;
+        long lastIndex = currentSequence == null ? Sequence.NOT_FOUND : currentSequence.getSequence(lastAddress);
+        if (toIndex == lastIndex && lastAddress > 0 && lastAddress < positionAliasPeriod
+                && writePosition.getVolatileValue() == lastAddress) {
             assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
             knownAddress = lastAddress;
             fromKnownIndex = lastIndex;
@@ -595,10 +634,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
         long i;
+        long lastDataPosition = 0;
 
         // Optimized path if the `toPosition` is the last written position.
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        Sequence currentSequence = this.sequence;
+        long lastIndex = currentSequence == null ? Sequence.NOT_FOUND : currentSequence.getSequence(lastAddress);
 
         i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
 
@@ -607,18 +648,18 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             WireIn.HeaderType headerType = wire.readDataHeader(true);
             if (headerType == WireIn.HeaderType.EOF) {
                 if (toPosition == Long.MAX_VALUE)
-                    return i;
+                    return finishSequenceScan(i, lastDataPosition);
                 throw new EOFException();
             }
 
             if (!inclusive && toPosition == bytes.readPosition())
-                return i;
+                return finishSequenceScan(i, lastDataPosition);
 
             switch (headerType) {
                 case NONE:
                     // Case where no data header is found
                     if (toPosition == Long.MAX_VALUE) {
-                        return i;
+                        return finishSequenceScan(i, lastDataPosition);
                     }
 
                     int header = bytes.readVolatileInt(bytes.readPosition());
@@ -630,6 +671,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 case DATA:
                     // Increment the index for each valid data entry
                     ++i;
+                    lastDataPosition = bytes.readPosition();
                     break;
                 case EOF:
                     throw new AssertionError("EOF should have been handled");
@@ -639,7 +681,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
             // If the current position matches the target, return the index
             if (bytes.readPosition() == toPosition)
-                return i;
+                return finishSequenceScan(i, lastDataPosition);
 
             // Skip over the current entry
             int header = bytes.readVolatileInt();
@@ -649,6 +691,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         return throwPositionNotAtStartOfMessage(toPosition, bytes);
+    }
+
+    private long finishSequenceScan(long sequenceNumber, long position) {
+        if (position > 0)
+            rememberSequence(sequenceNumber, position);
+        return sequenceNumber;
     }
 
     /**
@@ -665,10 +713,16 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      */
     private long calculateInitialValue(long toPosition, long indexOfNext, long startAddress, Bytes<?> bytes, long lastAddress, long lastIndex) {
         if (lastAddress > 0 && toPosition == lastAddress
-                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
+                && lastAddress < positionAliasPeriod && lastIndex >= 0
+                && writePosition.getVolatileValue() == lastAddress) {
             bytes.readPositionUnlimited(toPosition);
             return lastIndex - 1;
         } else {
+            ScanAnchor anchor = scanAnchor();
+            if (toPosition != Long.MAX_VALUE && anchor.position > startAddress && anchor.position <= toPosition) {
+                startAddress = anchor.position;
+                indexOfNext = anchor.sequence;
+            }
             bytes.readPositionUnlimited(startAddress);
             return indexOfNext - 1;
         }
@@ -707,6 +761,38 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     @Override
     public long nextEntryToBeIndexed() {
         return nextEntryToBeIndexed.getVolatileValue();
+    }
+
+    long sequenceForMaxPosition(@NotNull ExcerptContext ec,
+                                boolean inclusive) throws StreamCorruptedException {
+        for (int retry = 0; retry < 128; retry++) {
+            long lastWritePos = writePosition.getVolatileValue();
+            long latestSeq = sequence.getSequence(lastWritePos);
+            if (latestSeq >= 0) {
+                // The full write position and the encoded tracker are separate publications, and
+                // the tracker compares only the position bits below positionAliasPeriod, so
+                // positions that many bytes apart read back the same fragment. The pair therefore
+                // needs proof before it may seed the scan.
+                // At and above the period the bits can belong to another record: only indexed
+                // recovery is safe there.
+                if (lastWritePos >= positionAliasPeriod)
+                    return sequenceForPosition(ec, Long.MAX_VALUE, inclusive);
+                // Below the period the match is exact, provided the tracker belongs to this
+                // position: the tracker is published only after the write position covers its
+                // record, so a stable re-read pins the pair to exactly lastWritePos.
+                if (writePosition.getVolatileValue() == lastWritePos) {
+                    try {
+                        return linearScanByPosition(ec.wireForIndex(), Long.MAX_VALUE,
+                                latestSeq, lastWritePos, inclusive);
+                    } catch (EOFException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                }
+            }
+            if (latestSeq == Sequence.NOT_FOUND)
+                return sequenceForPosition(ec, Long.MAX_VALUE, inclusive);
+        }
+        return sequenceForPosition(ec, Long.MAX_VALUE, inclusive);
     }
 
     /**
@@ -976,6 +1062,17 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     break;
                 try {
                     Wire wireForIndex = ec.wireForIndex();
+                    if (wireForIndex != null) {
+                        if (address >= positionAliasPeriod) {
+                            ScanAnchor anchor = scanAnchor();
+                            if (anchor.position > 0 && anchor.sequence >= nextEntryToBeIndexed() - indexSpacing)
+                                return linearScanByPosition(wireForIndex, Long.MAX_VALUE,
+                                        anchor.sequence, anchor.position, true);
+                            break;
+                        }
+                        if (writePosition.getVolatileValue() != address)
+                            continue;
+                    }
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);
@@ -1023,36 +1120,53 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 if (endAddress == 0)
                     return -1;
                 long sequence = sequence1.getSequence(endAddress);
-                if (sequence == Sequence.NOT_FOUND_RETRY)
-                    continue;
                 if (sequence == Sequence.NOT_FOUND)
                     return -1;
+                if (sequence != Sequence.NOT_FOUND_RETRY) {
+                    if (endAddress >= positionAliasPeriod) {
+                        ScanAnchor anchor = scanAnchor();
+                        if (anchor.position == 0 || anchor.sequence < nextEntryToBeIndexed() - indexSpacing)
+                            return -1;
+                        endAddress = anchor.position;
+                        sequence = anchor.sequence;
+                    } else if (writePosition.getVolatileValue() != endAddress) {
+                        continue;
+                    }
 
-                Bytes<?> bytes = wire.bytes();
-                if (wire.usePadding())
-                    endAddress += BytesUtil.padOffset(endAddress);
-
-                bytes.readPosition(endAddress);
-
-                // Iterate through the wire to find the last complete entry.
-                for (; ; ) {
-                    int header = bytes.readVolatileInt(endAddress);
-                    if (header == 0 || Wires.isNotComplete(header))
-                        return sequence;
-
-                    int len = Wires.lengthOf(header) + 4;
-                    len += (int) BytesUtil.padOffset(len);
-
-                    bytes.readSkip(len);
-                    endAddress += len;
-
-                    if (Wires.isData(header))
-                        sequence += 1;
-
+                    return scanToEnd(wire, endAddress, sequence);
                 }
             }
         }
         return -1;
+    }
+
+    private long scanToEnd(Wire wire, long endAddress, long sequence) {
+        Bytes<?> bytes = wire.bytes();
+        if (wire.usePadding())
+            endAddress += BytesUtil.padOffset(endAddress);
+
+        bytes.readPosition(endAddress);
+        long lastDataPosition = 0;
+
+        // Iterate through the wire to find the last complete entry.
+        for (; ; ) {
+            int header = bytes.readVolatileInt(endAddress);
+            if (header == 0 || Wires.isNotComplete(header)) {
+                finishSequenceScan(sequence - 1, lastDataPosition);
+                return sequence;
+            }
+
+            if (Wires.isData(header)) {
+                lastDataPosition = endAddress;
+                sequence += 1;
+            }
+
+            int len = Wires.lengthOf(header) + 4;
+            len += (int) BytesUtil.padOffset(len);
+
+            bytes.readSkip(len);
+            endAddress += len;
+        }
     }
 
     /**
