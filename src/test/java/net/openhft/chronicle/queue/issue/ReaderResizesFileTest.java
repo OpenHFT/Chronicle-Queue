@@ -95,16 +95,16 @@ public class ReaderResizesFileTest {
         try {
             for (boolean checked : new boolean[]{false, true}) {
                 QueueSystemProperties.CHECK_INDEX = checked;
-                heldDocumentSurvivesResize(new File(QUEUE_DIR, "held-" + checked));
+                for (int blockSize : new int[]{1 << 12, 1 << 16})
+                    heldDocumentSurvivesResize(new File(QUEUE_DIR, "held-" + checked + "-" + blockSize), blockSize);
             }
         } finally {
             QueueSystemProperties.CHECK_INDEX = saved;
         }
     }
 
-    private static void heldDocumentSurvivesResize(File path) {
-        final int blockSize = 1 << 12;
-        final int entries = blockSize / 16;
+    private static void heldDocumentSurvivesResize(File path, int blockSize) {
+        final int entries = 256;
         Set<BytesStore<?, ?>> observed = Collections.newSetFromMap(new IdentityHashMap<>());
         ReferenceOwner observer = ReferenceOwner.temporary("held-resize-observer");
         BytesStore<?, ?> heldStore = null;
@@ -139,7 +139,10 @@ public class ReaderResizesFileTest {
                 };
                 heldStore.addReferenceChangeListener(listener);
                 try {
-                    while (appender.wire().bytes().bytesStore() == heldStore && written < 8) {
+                    // Mapping granularity differs across platforms; eight small documents
+                    // do not cross the first chunk on Windows or a larger-page host.
+                    long maxDocuments = heldStore.capacity() / (entries * (long) Long.BYTES) + 2;
+                    while (appender.wire().bytes().bytesStore() == heldStore && written < maxDocuments) {
                         try (DocumentContext writing = appender.writingDocument()) {
                             for (int i = 0; i < entries; i++)
                                 writing.wire().bytes().writeLong(1000L * written + i);
@@ -150,7 +153,7 @@ public class ReaderResizesFileTest {
                 } finally {
                     heldStore.removeReferenceChangeListener(listener);
                 }
-                assertNotSame(heldStore, appender.wire().bytes().bytesStore(), "Writer must cross a mapping boundary");
+                assertTrue(heldStore != appender.wire().bytes().bytesStore(), "Writer must cross a mapping boundary");
                 assertTrue(cycle.length() > originalLength, "The test must actually grow the file");
                 MappedFile mapped = Jvm.getValue(heldStore, "mappedFile");
                 assertTrue(mapped.chunkCount() >= 2, "At least two chunks must be mapped");
