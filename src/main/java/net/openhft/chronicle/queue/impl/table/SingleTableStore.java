@@ -272,16 +272,29 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      */
     @Override
     public synchronized LongValue acquireValueFor(CharSequence key, final long defaultValue) {
+        return acquireOrGetValueFor(key, defaultValue, true);
+    }
+
+    @Override
+    public synchronized LongValue getValueFor(CharSequence key) {
+        return acquireOrGetValueFor(key, 0, false);
+    }
+
+    private LongValue acquireOrGetValueFor(CharSequence key, long defaultValue, boolean createIfAbsent) {
 
         if (mappedBytes.isClosed())
             throw new ClosedIllegalStateException("Closed");
 
         mappedBytes.reserve(this);
+        final long previousReadPosition = mappedBytes.readPosition();
+        final long previousReadLimit = mappedBytes.readLimit();
+        final long previousWritePosition = mappedBytes.writePosition();
+        final long previousWriteLimit = mappedBytes.writeLimit();
+        boolean restoreState = true;
         try {
             mappedBytes.readPosition(0);
-            // if we set readLimit to realCapacity then we can run into DecoratedBufferUnderflowException: readLimit failed. Limit: xx > writeLimit: yy
-            // while reading from a TableStore which is being written to
-            mappedBytes.readLimit(Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity()));
+            mappedBytes.writeLimit(mappedBytes.capacity());
+            mappedBytes.readLimit(mappedBytes.realCapacity());
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
@@ -294,6 +307,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 }
                 mappedBytes.readPosition(readPosition + length);
             }
+            if (!createIfAbsent)
+                return null;
             if (mappedBytes.isBackingFileReadOnly())
                 throw new IllegalStateException("key " + key + " does not exist in readOnly TableStore and cannot be created");
             mappedBytes.writeLimit(mappedBytes.realCapacity());
@@ -310,13 +325,26 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
             if (end >= endOfChunk + overlapSize)
                 throw new IllegalStateException("Misaligned write");
+            // A successful creation retains the legacy write cursor; lookups are observational.
+            restoreState = false;
             return longValue;
 
         } catch (StreamCorruptedException | EOFException e) {
             throw new IORuntimeException(e);
 
         } finally {
-            mappedBytes.release(this);
+            try {
+                if (restoreState) {
+                    mappedBytes.readPosition(0);
+                    if (mappedBytes.writePosition() != previousWritePosition)
+                        mappedBytes.writePosition(previousWritePosition);
+                    mappedBytes.writeLimit(previousWriteLimit);
+                    mappedBytes.readLimit(previousReadLimit);
+                    mappedBytes.readPosition(previousReadPosition);
+                }
+            } finally {
+                mappedBytes.release(this);
+            }
         }
     }
 
