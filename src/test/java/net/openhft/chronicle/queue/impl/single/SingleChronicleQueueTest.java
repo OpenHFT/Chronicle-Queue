@@ -14,7 +14,6 @@ import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.testframework.FlakyTestRunner;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -245,11 +244,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     @Test
-    public void testCleanupDir() throws Throwable {
-        if (OS.isWindows())
-            FlakyTestRunner.builder(this::testCleanupDir0).build().run();
-        else
-            testCleanupDir0();
+    public void testCleanupDir() {
+        testCleanupDir0();
     }
 
     private void testCleanupDir0() {
@@ -266,7 +262,11 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         // explicitly call so as to clean and release everything
         afterChecks();
         recordExceptions();
-        IOTools.deleteDirWithFilesOrThrow(tmpDir);
+        if (OS.isWindows())
+            IOTools.deleteDirWithFilesOrWait(5_000, tmpDir);
+        else
+            IOTools.deleteDirWithFilesOrThrow(tmpDir);
+        assertFalse("the closed Queue directory must be deletable", tmpDir.exists());
     }
 
     @Test
