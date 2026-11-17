@@ -134,7 +134,8 @@ final class CycleFileEnd {
         if (!"SCQSIndexing".contentEquals(type))
             throw new IllegalArgumentException("Unsupported indexing type: " + type);
         if (!value.marshallable(w -> {
-            long count = requiredLong(w, "indexCount"), spacing = requiredLong(w, "indexSpacing");
+            long count = requiredLong(w, "indexCount");
+            long spacing = requiredLong(w, "indexSpacing");
             if (count <= 0 || count > Integer.MAX_VALUE || (count & (count - 1)) != 0
                     || spacing <= 0 || spacing > Integer.MAX_VALUE || (spacing & (spacing - 1)) != 0)
                 throw new IllegalArgumentException("Invalid indexing count/spacing");
