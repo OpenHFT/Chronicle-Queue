@@ -11,6 +11,7 @@ import net.openhft.chronicle.wire.Wires;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
+import java.nio.Buffer;
 import java.nio.channels.FileChannel;
 
 /** Reads record boundaries without mapping or extending a cycle file. */
@@ -76,7 +77,7 @@ final class CycleFileEnd {
         ByteBuffer tail = ByteBuffer.allocate(64 * 1024);
         long position = end;
         while (position < size) {
-            tail.clear().limit((int) Math.min(tail.capacity(), size - position));
+            ((Buffer) tail).clear().limit((int) Math.min(tail.capacity(), size - position));
             int count = tail.remaining();
             read(channel, tail, position);
             for (int i = 0; i < count; i++)
