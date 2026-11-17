@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StoreAppenderTest extends QueueTestCommon {
@@ -135,7 +136,8 @@ public class StoreAppenderTest extends QueueTestCommon {
         void makeInterruptedAttemptToWrite() throws InterruptedException {
             waitingToAcquire.release(1);
             // Don't interrupt until the writer has left Semaphore.acquire(), or the thread dies and the test hangs.
-            aboutToAcquireWritingDocument.await();
+            assertTrue("Blocked thread did not signal aboutToAcquireWritingDocument",
+                    aboutToAcquireWritingDocument.await(1, TimeUnit.SECONDS));
             t.interrupt();
             waitForThreads(waitingAfterInterrupt, t);
         }
