@@ -330,26 +330,40 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     @Override
     public synchronized <T> void forEachKey(T accumulator, TableStoreIterator<T> tsIterator) {
         mappedBytes.reserve(this);
+        final long readPosition = mappedBytes.readPosition();
+        final long readLimit = mappedBytes.readLimit();
+        final long writePosition = mappedBytes.writePosition();
+        final long writeLimit = mappedBytes.writeLimit();
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             StringBuilder sb = stlSb.get();
             mappedBytes.readPosition(0);
+            // Another mapped store may have published records beyond this view's old limit.
+            mappedBytes.writeLimit(mappedBytes.capacity());
             mappedBytes.readLimit(mappedBytes.realCapacity());
             while (mappedWire.readDataHeader()) {
                 final int header = mappedBytes.readVolatileInt();
                 if (Wires.isNotComplete(header))
                     break;
-                final long readPosition = mappedBytes.readPosition();
+                final long recordPosition = mappedBytes.readPosition();
                 final int length = Wires.lengthOf(header);
                 final ValueIn valueIn = mappedWire.readEventName(sb);
                 tsIterator.accept(accumulator, sb, valueIn);
-                mappedBytes.readPosition(readPosition + length);
+                mappedBytes.readPosition(recordPosition + length);
             }
 
         } catch (EOFException e) {
             throw new IORuntimeException(e);
 
         } finally {
-            mappedBytes.release(this);
+            try {
+                mappedBytes.readPosition(0);
+                mappedBytes.writePosition(writePosition);
+                mappedBytes.writeLimit(writeLimit);
+                mappedBytes.readLimit(readLimit);
+                mappedBytes.readPosition(readPosition);
+            } finally {
+                mappedBytes.release(this);
+            }
         }
     }
 
