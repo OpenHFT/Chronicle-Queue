@@ -39,6 +39,7 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     private final Queue<String> capturedOutput = new ConcurrentLinkedQueue<>();
     private Path dataDir;
+    private boolean readOnlyWarningExpected;
 
     @Before
     public void before() {
@@ -80,9 +81,13 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @NotNull
     private ChronicleReader basicReader(Path path) {
-        if (OS.isWindows())
-            if (!testName.getMethodName().startsWith("shouldThrowExceptionIfInputDirectoryDoesNotExist"))
+        // Identical warnings merge into one recorded key, and each expectation consumes one key, so a test
+        // that builds several readers must register the expectation once or fail with "No error for ...".
+        if (OS.isWindows() && !readOnlyWarningExpected)
+            if (!testName.getMethodName().startsWith("shouldThrowExceptionIfInputDirectoryDoesNotExist")) {
                 expectException("Read-only mode is not supported on Windows");
+                readOnlyWarningExpected = true;
+            }
 
         return new ChronicleReader().withBasePath(path).withMessageSink(capturedOutput::add);
     }
