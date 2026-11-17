@@ -1294,10 +1294,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null) {
+            if (longValue == null || longValue.isClosed()) {
                 synchronized (closers) {
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null) {
+                    if (longValue == null || longValue.isClosed()) {
                         longValue = metaStore.acquireValueFor(key, defaultValue);
                         int length = key.length();
                         HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
