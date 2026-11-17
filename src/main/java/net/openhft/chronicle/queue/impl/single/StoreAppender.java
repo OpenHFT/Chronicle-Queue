@@ -18,6 +18,7 @@ import net.openhft.chronicle.queue.QueueSystemProperties;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.queue.impl.WireStoreSupplier;
+import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.queue.util.MicroTouched;
 import net.openhft.chronicle.wire.*;
@@ -30,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
@@ -116,7 +118,7 @@ class StoreAppender extends AbstractCloseable
 
                             // If first non-EOF file is in the past, it's possible it will be replicated/backfilled to
                             if (eofCycle < lastExistingCycle)
-                                setCycle2(eofCycle + 1 /* TODO: Position on existing one? */, WireStoreSupplier.CreateStrategy.READ_ONLY);
+                                setCycle2(nextCycleAfterEOF(eofCycle), WireStoreSupplier.CreateStrategy.READ_ONLY);
                             break;
                         }
                     }
@@ -126,6 +128,7 @@ class StoreAppender extends AbstractCloseable
 
                     // Don't hold the back-scan's store open; the first write re-acquires it
                     releaseParkedStore();
+                    cycle = scannedCycle; // retain the forward floor without retaining its mapping
                 }
             } finally {
                 writeLock.unlock();
@@ -230,11 +233,14 @@ class StoreAppender extends AbstractCloseable
         try (DocumentContext dc = writingDocument()) {
             Bytes<?> bytes = dc.wire().bytes();
             long wp = bytes.writePosition();
-            marshallable.writeMarshallable(bytes);
-
-            // Rollback if no data was written
-            if (wp == bytes.writePosition())
-                dc.rollbackOnClose();
+            boolean encoded = false;
+            try {
+                marshallable.writeMarshallable(bytes);
+                encoded = true;
+            } finally {
+                // A failed encoder has not supplied a complete document.
+                if (!encoded || wp == bytes.writePosition()) dc.rollbackOnClose();
+            }
         }
     }
 
@@ -402,14 +408,16 @@ class StoreAppender extends AbstractCloseable
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
         resetPosition();
+        // Rollback and micro-touch must use a position from this store, even if
+        // its first encoder fails before publishing a document.
+        lastPosition = store.writePosition();
         queue.onRoll(cycle);
     }
 
     /**
      * Releases the store (and its wires) that the construction-time EOF back-scan left this appender
-     * parked on, returning the appender to the same "never written" state as one created on an empty
-     * queue. The next write re-acquires the current cycle. Only the mapped-file reservation and open
-     * FD are dropped; nothing on disk changes.
+     * parked on. The caller retains the discovered cycle as a forward floor for the next write.
+     * Only the mapped-file reservation and open FD are dropped; nothing on disk changes.
      */
     private void releaseParkedStore() {
         if (store == null)
@@ -563,19 +571,19 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
 
             try {
-                int cycle = queue.cycle();
+                int targetCycle = Math.max(this.cycle, queue.cycle());
                 if (wire == null)
-                    setWireIfNull(cycle);
+                    setWireIfNull(targetCycle);
 
-                if (this.cycle != cycle)
-                    rollCycleTo(cycle);
+                if (this.cycle != targetCycle)
+                    rollCycleTo(targetCycle);
 
                 long safeLength = queue.overlapSize();
                 resetPosition();
                 assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
                 // sets the writeLimit based on the safeLength
-                openContext(metaData, safeLength);
+                openContext(metaData, safeLength, true);
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
@@ -629,8 +637,7 @@ class StoreAppender extends AbstractCloseable
         final WriteLock writeLock = queue.writeLock();
         writeLock.lock();
         try {
-            // use the getter, not the raw field: after the construction-time back-scan releases its
-            // parked store the field is Integer.MIN_VALUE, and the getter resolves that to lastCycle
+            // The getter also resolves the initial cycle on an empty queue.
             normaliseEOFs0(cycle());
         } finally {
             writeLock.unlock();
@@ -706,7 +713,35 @@ class StoreAppender extends AbstractCloseable
         assert header != NOT_INITIALIZED;
         lastPos += lengthOf(bytes.readVolatileInt(lastPos)) + SPB_HEADER_SIZE;
         bytes.writePosition(lastPos);
-        return wire.enterHeader(safeLength);
+        boolean entered = false;
+        try {
+            long headerPosition = wire.enterHeader(safeLength);
+            entered = true;
+            return headerPosition;
+        } finally {
+            if (!entered)
+                ((InternalWire) wire).forceNotInsideHeader();
+        }
+    }
+
+    // Clock time is a forward hint. An EOF seal also advances ordinary appenders,
+    // even when time is frozen; indexed writes keep the strict writeHeader path.
+    private long writeHeaderForAppend(long safeLength) {
+        for (;;) {
+            try {
+                return writeHeader(wire, safeLength);
+            } catch (WriteAfterEOFException eof) {
+                rollCycleTo(nextCycleAfterEOF(cycle), true);
+            }
+        }
+    }
+
+    private int nextCycleAfterEOF(int sealedCycle) {
+        try {
+            return Math.max(Math.addExact(sealedCycle, 1), queue.nextCycle(sealedCycle, TailerDirection.FORWARD));
+        } catch (ParseException e) {
+            throw Jvm.rethrow(e);
+        }
     }
 
     /**
@@ -715,14 +750,15 @@ class StoreAppender extends AbstractCloseable
      *
      * @param metaData   indicates if the context is for metadata
      * @param safeLength the maximum length of data that can be safely written
+     * @param advanceOnEOF follow a seal for ordinary appends; keep indexed writes strict
      */
-    private void openContext(final boolean metaData, final long safeLength) {
+    private void openContext(final boolean metaData, final long safeLength, final boolean advanceOnEOF) {
         assert wire != null;
-        this.positionOfHeader = writeHeader(wire, safeLength); // sets wire.bytes().writePosition = position + 4;
+        this.positionOfHeader = advanceOnEOF ? writeHeaderForAppend(safeLength) : writeHeader(wire, safeLength);
         context.isClosed = false;
         context.rollbackOnClose = false;
         context.buffered = false;
-        context.wire = wire; // Jvm.isDebug() ? acquireBufferWire() : wire;
+        context.wire = wire;
         context.metaData(metaData);
     }
 
@@ -779,20 +815,26 @@ class StoreAppender extends AbstractCloseable
         throwExceptionIfClosed();
         checkAppendLock();
         writeLock.lock();
+        boolean prepared = false;
+        boolean publishing = false;
+        long previousLimit = 0;
         try {
-            int cycle = queue.cycle();
+            int targetCycle = Math.max(this.cycle, queue.cycle());
             if (wire == null)
-                setWireIfNull(cycle);
+                setWireIfNull(targetCycle);
 
-            if (this.cycle != cycle)
-                rollCycleTo(cycle);
+            if (this.cycle != targetCycle)
+                rollCycleTo(targetCycle);
 
-            this.positionOfHeader = writeHeader(wire, (int) queue.overlapSize()); // writeHeader sets wire.byte().writePosition
+            previousLimit = wire.bytes().writeLimit();
+            this.positionOfHeader = writeHeaderForAppend(queue.overlapSize()); // writeHeader sets wire.byte().writePosition
 
+            prepared = true;
             assert isInsideHeader(wire);
             beforeAppend(wire, wire.headerNumber() + 1);
             Bytes<?> wireBytes = wire.bytes();
             wireBytes.write(bytes);
+            publishing = true;
             wire.updateHeader(positionOfHeader, false, 0);
             lastIndex(wire.headerNumber());
             lastPosition = positionOfHeader;
@@ -801,7 +843,15 @@ class StoreAppender extends AbstractCloseable
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
         } finally {
-            writeLock.unlock();
+            try {
+                if (prepared && !publishing) {
+                    ((InternalWire) wire).forceNotInsideHeader();
+                    wire.bytes().writeLimit(previousLimit);
+                    position0(positionOfHeader, positionOfHeader, wire.bytes());
+                }
+            } finally {
+                writeLock.unlock();
+            }
         }
     }
 
@@ -887,7 +937,7 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            openContext(metadata, safeLength);
+            openContext(metadata, safeLength, false);
 
             try {
                 final Bytes<?> bytes0 = context.wire().bytes();
