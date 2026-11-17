@@ -1,0 +1,2 @@
+# Keep the Linux offline-tool launcher executable from Windows/WSL checkouts.
+bin/truncate_rolls.sh text eol=lf

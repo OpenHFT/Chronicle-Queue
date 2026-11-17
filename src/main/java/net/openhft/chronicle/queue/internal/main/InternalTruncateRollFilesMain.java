@@ -153,7 +153,7 @@ public final class InternalTruncateRollFilesMain {
                     String seconds = args[i].substring(18);
                     if (!seconds.matches("[0-9]+"))
                         throw new IllegalArgumentException("Invalid minimum age");
-                    minAgeMs = Math.multiplyExact(Long.parseLong(seconds), 1000);
+                    minAgeMs = Math.multiplyExact(Long.parseLong(seconds), 1000L);
                     ageSet = true;
                 } else throw new IllegalArgumentException("Unknown or repeated option: " + args[i]);
             }
