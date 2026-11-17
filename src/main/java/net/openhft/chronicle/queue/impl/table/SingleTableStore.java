@@ -362,7 +362,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         } finally {
             try {
                 mappedBytes.readPosition(0);
-                mappedBytes.writePosition(writePosition);
+                // Resetting an unchanged cursor at a mapping boundary can map/grow
+                // the next chunk while our caller still holds the structural lock.
+                if (mappedBytes.writePosition() != writePosition)
+                    mappedBytes.writePosition(writePosition);
                 mappedBytes.writeLimit(writeLimit);
                 mappedBytes.readLimit(readLimit);
                 mappedBytes.readPosition(readPosition);
