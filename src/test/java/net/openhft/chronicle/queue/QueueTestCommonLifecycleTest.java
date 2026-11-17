@@ -5,7 +5,9 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.onoes.Slf4jExceptionHandler;
 import net.openhft.chronicle.core.onoes.ThreadLocalisedExceptionHandler;
 import net.openhft.chronicle.core.time.SetTimeProvider;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
@@ -23,6 +26,7 @@ import org.junit.platform.launcher.listeners.TestExecutionSummary;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -68,9 +72,7 @@ class QueueTestCommonLifecycleTest {
         boolean successfulBeforeChecks = scenario == Scenario.SUCCESS || scenario == Scenario.LEAK ||
                 scenario == Scenario.WARNING || scenario == Scenario.WARNING_AND_LEAK ||
                 scenario == Scenario.MISSING_EXPECTED_EVENT;
-        boolean checkedResources = successfulBeforeChecks && scenario != Scenario.WARNING &&
-                scenario != Scenario.WARNING_AND_LEAK && scenario != Scenario.MISSING_EXPECTED_EVENT;
-        assertEquals(checkedResources ? 1 : 0, state.referenceChecks);
+        assertEquals(successfulBeforeChecks ? 1 : 0, state.referenceChecks);
 
         if (aborted) {
             assertEquals(1, result.getTestsAbortedCount());
@@ -97,6 +99,51 @@ class QueueTestCommonLifecycleTest {
         assertSame(state.primary, result.getFailures().get(0).getException());
         assertEquals(0, state.referenceChecks);
         assertEquals(1, state.cleanups);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"junit-vintage", "junit-jupiter"})
+    void observesWarningsProducedByResourceVerification(String engine) {
+        state = new State(Scenario.SUCCESS);
+        state.disableCloseableTracing = true;
+        TestExecutionSummary result = run(engine, "junit-vintage".equals(engine)
+                ? VintageTestCase.class : JupiterTestCase.class);
+        assertEquals(1, result.getTestsSucceededCount(), result.getFailures().toString());
+        assertEquals(1, state.referenceChecks);
+        assertEquals(1, state.cleanups);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"junit-vintage", "junit-jupiter"})
+    void releasesQueuedResourcesBeforeCleanup(String engine) throws InterruptedException {
+        org.junit.jupiter.api.Assumptions.assumeTrue(Jvm.getBoolean("background.releaser", true)
+                && Jvm.getBoolean("background.releaser.thread", true), "Control requires the background worker");
+        state = new State(Scenario.SUCCESS);
+        state.checkPendingRelease = true;
+        CountDownLatch workerStarted = new CountDownLatch(1);
+        CountDownLatch releaseWorker = new CountDownLatch(1);
+        try {
+            BackgroundResourceReleaser.run(() -> {
+                workerStarted.countDown();
+                try {
+                    if (!releaseWorker.await(15, TimeUnit.SECONDS))
+                        throw new AssertionError("Release control was not unblocked");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(e);
+                }
+            });
+            assertTrue(workerStarted.await(5, TimeUnit.SECONDS), "Background release control did not start");
+            State current = state;
+            BackgroundResourceReleaser.run(() -> current.pendingReleased = true);
+            TestExecutionSummary result = run(engine, "junit-vintage".equals(engine)
+                    ? VintageTestCase.class : JupiterTestCase.class);
+            assertEquals(1, result.getTestsSucceededCount(), result.getFailures().toString());
+            assertEquals(1, state.cleanups);
+        } finally {
+            releaseWorker.countDown();
+            BackgroundResourceReleaser.releasePendingResources();
+        }
     }
 
     @Test
@@ -153,6 +200,9 @@ class QueueTestCommonLifecycleTest {
         int referenceChecks;
         Bytes<?> leak;
         Throwable resourceFailure;
+        boolean disableCloseableTracing;
+        boolean checkPendingRelease;
+        volatile boolean pendingReleased;
 
         State(Scenario scenario) {
             this.scenario = scenario;
@@ -169,6 +219,10 @@ class QueueTestCommonLifecycleTest {
         }
 
         void bodyCase() {
+            if (state.disableCloseableTracing) {
+                expectException("closable tracing disabled");
+                AbstractCloseable.disableCloseableTracing();
+            }
             if (state.scenario == Scenario.LEAK || state.scenario == Scenario.BODY_AND_LEAK ||
                     state.scenario == Scenario.ABORT_AND_LEAK || state.scenario == Scenario.WARNING_AND_LEAK)
                 state.leak = Bytes.allocateDirect(8);
@@ -197,6 +251,8 @@ class QueueTestCommonLifecycleTest {
 
         @Override protected void tearDown() {
             state.cleanups++;
+            if (state.checkPendingRelease)
+                assertTrue(state.pendingReleased, "Queued release must finish before temporary storage cleanup");
             super.tearDown();
         }
 

@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -313,18 +314,25 @@ public class QueueTestCommon {
         Throwable failure = attempt(null, this::preAfter);
         failure = attempt(failure, () -> SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE);
         failure = attempt(failure, () -> CleaningThread.performCleanup(Thread.currentThread()));
+        // A closed queue may still own mapped files until its queued release runs.
+        failure = attempt(failure, BackgroundResourceReleaser::releasePendingResources);
         failure = attempt(failure, this::tearDown);
         if (failure != null)
             throw Jvm.rethrow(failure);
     }
 
     private void verifySuccessfulTest() {
-        if (exceptionTracker != null)
-            checkExceptions();
-        Throwable failure = attempt(null, () -> AbstractCloseable.waitForCloseablesToClose(100));
+        Throwable resourceFailure = attempt(null, () -> AbstractCloseable.waitForCloseablesToClose(100));
         if (referenceTracingEnabled)
-            failure = attempt(failure, this::assertReferencesReleased);
-        failure = attempt(failure, this::checkThreadDump);
+            resourceFailure = attempt(resourceFailure, this::assertReferencesReleased);
+        resourceFailure = attempt(resourceFailure, this::checkThreadDump);
+        // Resource verification can itself emit an expected warning. Collect it before
+        // checking the log, while retaining a logged failure as the primary diagnostic.
+        Throwable failure = exceptionTracker == null ? null : attempt(null, this::checkExceptions);
+        if (failure == null)
+            failure = resourceFailure;
+        else if (resourceFailure != null && resourceFailure != failure)
+            failure.addSuppressed(resourceFailure);
         if (failure != null)
             throw Jvm.rethrow(failure);
     }
