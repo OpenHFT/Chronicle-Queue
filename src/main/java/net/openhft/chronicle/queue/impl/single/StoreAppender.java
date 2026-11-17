@@ -535,7 +535,7 @@ class StoreAppender extends AbstractCloseable
         count++;
         try {
             return prepareAndReturnWriteContext(metaData);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | Error e) {
             count--;
             throw e;
         }
@@ -579,7 +579,7 @@ class StoreAppender extends AbstractCloseable
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
-            } catch (RuntimeException e) {
+            } catch (RuntimeException | Error e) {
                 writeLock.unlock();
                 throw e;
             }
