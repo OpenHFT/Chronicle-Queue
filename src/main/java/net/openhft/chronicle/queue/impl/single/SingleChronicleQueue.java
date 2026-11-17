@@ -25,6 +25,7 @@ import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -186,7 +187,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
 
-            if (metaStore.readOnly()) {
+            if (metaStore instanceof ReadonlyTableStore) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
             } else {
                 this.directoryListing = readOnly
@@ -760,6 +761,90 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     public LongValue indexForId(@NotNull String id) {
         return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
+    }
+
+    /**
+     * Returns detached committed named-tailer positions in raw name order without creating keys.
+     * Structural registration is locked during the scan; independently updated index values are
+     * not an atomic multi-tailer snapshot. Zero denotes a never-read or parked tailer.
+     * Replicated lock/version bookkeeping is excluded; distinguishable legacy ids are retained.
+     *
+     * @return a detached name-to-index map, empty when there is no metadata table
+     */
+    public NavigableMap<String, Long> namedTailerIndexes() {
+        throwExceptionIfClosed();
+        if (!metaStore.readOnly())
+            return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
+        if (!(metaStore instanceof SingleTableStore))
+            return new TreeMap<>();
+        File metadataFile = new File(path, QUEUE_METADATA_FILE);
+        return SingleTableStore.doWithSharedLock(metadataFile,
+                SingleChronicleQueue::scanNamedTailerIndexes, () -> metaStore);
+    }
+
+    private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
+        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
+            final String k = key.toString();
+            if (k.startsWith("index."))
+                acc.put(k.substring("index.".length()), value.int64());
+        });
+
+        return selectNamedTailerIndexes(metadataIndexes);
+    }
+
+    static NavigableMap<String, Long> selectNamedTailerIndexes(Map<String, Long> metadataIndexes) {
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        metadataIndexes.forEach((namedTailer, index) -> {
+            if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
+                return;
+            result.put(namedTailer, index);
+            if (hasMetadataShapedSuffix(namedTailer))
+                Jvm.warn().on(SingleChronicleQueue.class,
+                        "Named tailer id '" + namedTailer + "' uses a metadata-shaped suffix "
+                                + "'.lock' or '.version'. It remains in this snapshot for safe retention; "
+                                + "consider migrating its committed position to an unambiguous id.");
+        });
+        return result;
+    }
+
+    private static boolean isInternalNamedTailerMetadata(Map<String, Long> metadataIndexes,
+                                                          String candidate) {
+        final String suffix;
+        if (candidate.endsWith(".lock"))
+            suffix = ".lock";
+        else if (candidate.endsWith(".version"))
+            suffix = ".version";
+        else
+            return false;
+
+        final String owner = candidate.substring(0, candidate.length() - suffix.length());
+        if (!owner.startsWith(REPLICATED_NAMED_TAILER_PREFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, owner))
+            return false;
+
+        // Older releases allowed a replicated tailer whose primary id collided with this record.
+        // Its own lock and version records make that legacy registration distinguishable.
+        return !containsKeyIgnoreCase(metadataIndexes, candidate + ".lock")
+                || !containsKeyIgnoreCase(metadataIndexes, candidate + ".version");
+    }
+
+    private static boolean containsKeyIgnoreCase(Map<String, Long> metadataIndexes, String candidate) {
+        for (String persistedKey : metadataIndexes.keySet()) {
+            if (persistedKey.equalsIgnoreCase(candidate))
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean hasMetadataShapedSuffix(String value) {
+        return endsWithIgnoreCase(value, ".lock") || endsWithIgnoreCase(value, ".version");
+    }
+
+    private static boolean endsWithIgnoreCase(String value, String suffix) {
+        return value != null
+                && value.length() >= suffix.length()
+                && value.regionMatches(true, value.length() - suffix.length(), suffix, 0, suffix.length());
     }
 
     /**
