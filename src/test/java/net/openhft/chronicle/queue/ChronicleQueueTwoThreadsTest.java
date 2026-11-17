@@ -18,6 +18,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
 import static org.junit.Assert.assertEquals;
@@ -70,6 +71,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         File name = getTmpDir();
 
         AtomicLong counter = new AtomicLong();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
         AtomicBoolean running = new AtomicBoolean(true);
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
@@ -122,27 +124,36 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
             }
         }, "appender thread");
 
+        captureWorkerFailure(tailerThread, workerFailure);
+        captureWorkerFailure(appenderThread, workerFailure);
+
         tailerThread.start();
         Jvm.pause(100);
 
         appenderThread.start();
-        appenderThread.join();
+        try {
+            appenderThread.join(1000);
 
-        //Pause to allow tailer to catch up (if needed)
-        for (int i = 0; i < 10; i++) {
-            if (runs != counter.get())
-                Jvm.pause(Jvm.isDebug() ? 10000 : 100);
+            // Pause to allow tailer to catch up (if needed)
+            for (int i = 0; i < 10; i++) {
+                if (runs != counter.get())
+                    Jvm.pause(Jvm.isDebug() ? 10000 : 100);
+            }
+        }
+        finally {
+            running.set(false);
+            tailerThread.join(1000);
+            assertFalse("appender thread did not stop", appenderThread.isAlive());
+            assertFalse("tailer thread did not stop", tailerThread.isAlive());
         }
 
-        running.set(false);
-        tailerThread.join(10_000);
-        assertFalse("tailer thread did not stop", tailerThread.isAlive());
-
+        if (workerFailure.get() != null)
+            throw new AssertionError("Queue worker failed", workerFailure.get());
         assertEquals(runs, counter.get());
     }
 
-    private ChronicleQueue buildQueue(File path, boolean buffered) {
-        return buildQueue(path, buffered ? BufferMode.Asynchronous : BufferMode.None);
+    private static void captureWorkerFailure(Thread worker, AtomicReference<Throwable> failure) {
+        worker.setUncaughtExceptionHandler((thread, cause) -> failure.compareAndSet(null, cause));
     }
 
     private ChronicleQueue buildQueue(File path, BufferMode bufferMode) {
