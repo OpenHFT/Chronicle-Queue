@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -19,7 +18,7 @@ import static org.junit.Assert.*;
 public class WriteBytesIndexTest extends QueueTestCommon {
     @Test
     public void writeMultipleAppenders() {
-        File path = IOTools.createTempFile("writeMultipleAppenders");
+        File path = getTmpDir();
         try (ChronicleQueue q0 = createQueue(path);
              ExcerptAppender a0 = q0.createAppender();
              ExcerptTailer t0 = q0.createTailer();
@@ -58,8 +57,6 @@ public class WriteBytesIndexTest extends QueueTestCommon {
                     assertFalse(t0.readBytes(bytes2.clear()));
                 }
             }
-        } finally {
-            IOTools.deleteDirWithFiles(path);
         }
     }
 
