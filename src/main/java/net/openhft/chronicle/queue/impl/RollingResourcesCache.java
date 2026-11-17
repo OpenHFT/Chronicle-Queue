@@ -103,11 +103,14 @@ public class RollingResourcesCache {
                 if (parse.isSupported(weekFields.weekBasedYear()) && parse.isSupported(weekFields.weekOfWeekBasedYear())) {
                     int year = Math.toIntExact(parse.getLong(weekFields.weekBasedYear()));
                     int week = Math.toIntExact(parse.getLong(weekFields.weekOfWeekBasedYear()));
-                    LocalDate ld = LocalDate.now()
-                            .withYear(year)
-                            .with(weekFields.weekOfYear(), week)
-                            .with(weekFields.dayOfWeek(), 1);
-                    return Math.toIntExact(ld.toEpochDay());
+                    // Weekly names omit the weekday; the roll epoch supplies that boundary.
+                    int rollDayOfWeek = LocalDate.ofEpochDay(epoch / ONE_DAY_IN_MILLIS)
+                            .get(weekFields.dayOfWeek());
+                    LocalDate ld = LocalDate.of(year, 7, 1)
+                            .with(weekFields.weekBasedYear(), year)
+                            .with(weekFields.weekOfWeekBasedYear(), week)
+                            .with(weekFields.dayOfWeek(), rollDayOfWeek);
+                    return Maths.toInt32((ld.toEpochDay() * 86400 - epoch / 1000) / (length / 1000));
                 }
                 throw new UnsupportedOperationException("Unable to parse " + name + " using format " + format);
             }
