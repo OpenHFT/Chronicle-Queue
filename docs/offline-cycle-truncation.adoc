@@ -125,3 +125,14 @@ mvn -o -Poffline-cleanup-integration test
 The profile fails its preflight, rather than skipping, if Linux process inspection is unavailable.
 A green unit suite does not substitute for this profile. On other platforms, tests explicitly
 check the unsupported-inspection refusal; Linux identity tests are labelled as platform-specific.
+
+== Paired Java/native qualification
+
+The private `ChronicleSoftware/Chronicle-Dev-CPP` companion PR #84 supplies the
+`Paired offline cleanup` workflow and `tools/offline-cleanup/tests/paired.py`.
+It records the exact Java commit and checks both tools against Java/native
+fixtures, including unchanged preview bytes, newest-roll preservation, replay,
+malformed indexing and a failed sync after an applied truncate. The workflow
+runs on Java 8 and 25 in an isolated Linux PID/mount namespace. Its result must
+match the Java revision being considered for merge; a pass for an older pin is
+not qualification of new cleanup behaviour.
