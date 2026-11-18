@@ -24,6 +24,8 @@ import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -135,10 +137,14 @@ class QueueTestCommonLifecycleTest {
             });
             assertTrue(workerStarted.await(5, TimeUnit.SECONDS), "Background release control did not start");
             State current = state;
-            BackgroundResourceReleaser.run(() -> current.pendingReleased = true);
+            BackgroundResourceReleaser.run(() -> {
+                current.pendingReleased = true;
+                // The foreground drain must also let the worker finish before verification.
+                releaseWorker.countDown();
+            });
             TestExecutionSummary result = run(engine, "junit-vintage".equals(engine)
                     ? VintageTestCase.class : JupiterTestCase.class);
-            assertEquals(1, result.getTestsSucceededCount(), result.getFailures().toString());
+            assertEquals(1, result.getTestsSucceededCount(), () -> failures(result));
             assertEquals(1, state.cleanups);
         } finally {
             releaseWorker.countDown();
@@ -182,6 +188,12 @@ class QueueTestCommonLifecycleTest {
         state = new State(Scenario.SUCCESS);
         assertEquals(1, run("junit-jupiter", JupiterTestCase.class).getTestsSucceededCount());
         assertEquals(1, state.referenceChecks);
+    }
+
+    private static String failures(TestExecutionSummary result) {
+        StringWriter text = new StringWriter();
+        result.printFailuresTo(new PrintWriter(text));
+        return text.toString();
     }
 
     private static TestExecutionSummary run(String engine, Class<?> fixture) {
