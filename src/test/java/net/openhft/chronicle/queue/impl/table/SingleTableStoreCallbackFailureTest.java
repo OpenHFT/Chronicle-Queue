@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.table;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -38,12 +39,10 @@ public class SingleTableStoreCallbackFailureTest {
             calls.incrementAndGet();
             throw failure;
         };
-        assertSame(failure, assertThrows(OverlappingFileLockException.class, () -> {
-            if (shared)
-                SingleTableStore.doWithSharedLock(file, callback, () -> null);
-            else
-                SingleTableStore.doWithExclusiveLock(file, callback, () -> null);
-        }));
+        ThrowingRunnable operation = shared
+                ? () -> SingleTableStore.doWithSharedLock(file, callback, () -> null)
+                : () -> SingleTableStore.doWithExclusiveLock(file, callback, () -> null);
+        assertSame(failure, assertThrows(OverlappingFileLockException.class, operation));
         assertEquals("a callback may have performed non-repeatable work", 1, calls.get());
         assertEquals("released", SingleTableStore.doWithExclusiveLock(file, ignored -> "released", () -> null));
     }
