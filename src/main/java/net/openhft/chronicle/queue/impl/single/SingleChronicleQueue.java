@@ -72,6 +72,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String INDEX_LOCK_FORMAT = "index.%s.lock";
     public static final String INDEX_VERSION_FORMAT = "index.%s.version";
 
+    private static final String NAMED_TAILER_INDEX_PREFIX = "index.";
+    private static final String INDEX_LOCK_SUFFIX = ".lock";
+    private static final String INDEX_VERSION_SUFFIX = ".version";
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
 
@@ -760,7 +763,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
-        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
+        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(NAMED_TAILER_INDEX_PREFIX + id, 0L));
     }
 
     /**
@@ -786,8 +789,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
         tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
             final String k = key.toString();
-            if (k.startsWith("index."))
-                acc.put(k.substring("index.".length()), value.int64());
+            if (k.startsWith(NAMED_TAILER_INDEX_PREFIX))
+                acc.put(k.substring(NAMED_TAILER_INDEX_PREFIX.length()), value.int64());
         });
 
         return selectNamedTailerIndexes(metadataIndexes);
@@ -811,10 +814,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static boolean isInternalNamedTailerMetadata(Map<String, Long> metadataIndexes,
                                                           String candidate) {
         final String suffix;
-        if (candidate.endsWith(".lock"))
-            suffix = ".lock";
-        else if (candidate.endsWith(".version"))
-            suffix = ".version";
+        if (candidate.endsWith(INDEX_LOCK_SUFFIX))
+            suffix = INDEX_LOCK_SUFFIX;
+        else if (candidate.endsWith(INDEX_VERSION_SUFFIX))
+            suffix = INDEX_VERSION_SUFFIX;
         else
             return false;
 
@@ -825,8 +828,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
         // Older releases allowed a replicated tailer whose primary id collided with this record.
         // Its own lock and version records make that legacy registration distinguishable.
-        return !containsKeyIgnoreCase(metadataIndexes, candidate + ".lock")
-                || !containsKeyIgnoreCase(metadataIndexes, candidate + ".version");
+        return !containsKeyIgnoreCase(metadataIndexes, candidate + INDEX_LOCK_SUFFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, candidate + INDEX_VERSION_SUFFIX);
     }
 
     private static boolean containsKeyIgnoreCase(Map<String, Long> metadataIndexes, String candidate) {
@@ -838,7 +841,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     private static boolean hasMetadataShapedSuffix(String value) {
-        return endsWithIgnoreCase(value, ".lock") || endsWithIgnoreCase(value, ".version");
+        return endsWithIgnoreCase(value, INDEX_LOCK_SUFFIX) || endsWithIgnoreCase(value, INDEX_VERSION_SUFFIX);
     }
 
     private static boolean endsWithIgnoreCase(String value, String suffix) {
