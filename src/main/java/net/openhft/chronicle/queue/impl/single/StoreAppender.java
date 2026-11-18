@@ -533,11 +533,14 @@ class StoreAppender extends AbstractCloseable
         // we allow the sink process to write metaData
         checkAppendLock(metaData);
         count++;
+        boolean failed = true;
         try {
-            return prepareAndReturnWriteContext(metaData);
-        } catch (RuntimeException | Error e) {
-            count--;
-            throw e;
+            DocumentContext writeContext = prepareAndReturnWriteContext(metaData);
+            failed = false;
+            return writeContext;
+        } finally {
+            if (failed)
+                count--;
         }
     }
 
@@ -562,6 +565,7 @@ class StoreAppender extends AbstractCloseable
         } else {
             writeLock.lock();
 
+            boolean failed = true;
             try {
                 int cycle = queue.cycle();
                 if (wire == null)
@@ -579,9 +583,10 @@ class StoreAppender extends AbstractCloseable
 
                 // Move readPosition to the start of the context. i.e. readRemaining() == 0
                 wire.bytes().readPosition(wire.bytes().writePosition());
-            } catch (RuntimeException | Error e) {
-                writeLock.unlock();
-                throw e;
+                failed = false;
+            } finally {
+                if (failed)
+                    writeLock.unlock();
             }
         }
 
