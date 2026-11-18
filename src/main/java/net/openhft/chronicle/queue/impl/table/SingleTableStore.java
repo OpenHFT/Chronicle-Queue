@@ -3,6 +3,8 @@
  */
 package net.openhft.chronicle.queue.impl.table;
 
+import net.openhft.chronicle.bytes.domestic.ReentrantFileLock;
+
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -155,6 +157,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                                        @NotNull final Function<T, ? extends R> code,
                                        @NotNull final Supplier<T> target,
                                        final boolean shared) {
+        // Closing an extra channel can release this process's existing file lock on Unix.
+        if (!shared && ReentrantFileLock.isHeldByCurrentThread(file))
+            return code.apply(target.get());
+
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
@@ -162,7 +168,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final long startMs = System.currentTimeMillis();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
             for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
-                try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
+                // Metadata growth takes Bytes' reentrant file lock; an exclusive callback must use it too.
+                try (FileLock fileLock = shared
+                        ? channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, true)
+                        : ReentrantFileLock.tryLock(file, channel)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
                     }
