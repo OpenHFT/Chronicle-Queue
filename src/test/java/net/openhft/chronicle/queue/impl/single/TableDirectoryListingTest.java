@@ -126,24 +126,22 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void preservesCheckedExceptionWhenFirstAcquisitionFails() {
+    public void preservesExceptionWhenFirstAcquisitionFails() {
         assertPartialBindingsClosedOnFailure(0);
     }
 
     @Test
-    public void closesPartialBindingsWhenLowestCycleThrowsCheckedException() {
+    public void closesPartialBindingsWhenLowestCycleThrowsException() {
         assertPartialBindingsClosedOnFailure(1);
     }
 
     @Test
-    public void closesPartialBindingsWhenModCountThrowsCheckedException() {
+    public void closesPartialBindingsWhenModCountThrowsException() {
         assertPartialBindingsClosedOnFailure(2);
     }
 
     private void assertPartialBindingsClosedOnFailure(int failedKey) {
         String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
-        // A concrete mock lets checked failures escape without a Java interface
-        // proxy wrapping them in UndeclaredThrowableException.
         TableStore<Metadata.NoMeta> failingStore = createStrictMock(TableStore.class);
         List<LongValue> partialBindings = new ArrayList<>();
         try (TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(failingStore, SystemTimeProvider.INSTANCE)) {
