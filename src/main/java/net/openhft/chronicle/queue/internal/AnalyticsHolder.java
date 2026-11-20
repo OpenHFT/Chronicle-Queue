@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.internal;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.pom.PomProperties;
 
@@ -10,7 +11,7 @@ import net.openhft.chronicle.core.pom.PomProperties;
  * The {@code AnalyticsHolder} class is a utility to manage the initialization and access to an {@link AnalyticsFacade} instance.
  * <p>
  * It fetches the Chronicle Queue version and builds the analytics facade using standard configurations, including
- * a debug logger.
+ * a debug logger that routes through {@link Jvm#debug()} rather than printing directly to standard output.
  */
 public enum AnalyticsHolder {
     ; // none
@@ -19,7 +20,7 @@ public enum AnalyticsHolder {
 
     private static final AnalyticsFacade ANALYTICS = AnalyticsFacade.standardBuilder("G-4K5MBLGPLE", "k1hK3x2qQaKk4F5gL-PBhQ", VERSION)
             //.withReportDespiteJUnit()
-            .withDebugLogger(System.out::println)
+            .withDebugLogger(message -> Jvm.debug().on(AnalyticsHolder.class, message))
             //.withUrl("https://www.google-analytics.com/debug/mp/collect")
             .build();
 
