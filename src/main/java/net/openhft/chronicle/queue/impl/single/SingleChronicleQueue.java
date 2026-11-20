@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
@@ -86,7 +87,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     final File path;
     final String fileAbsolutePath;
-    // Uses this.closers as a lock. concurrent read, locking for write.
+    // Cache misses and close synchronize on the map; cache hits are lock-free.
     @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
     private final StoreSupplier storeSupplier;
@@ -960,9 +961,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     protected void performClose() {
-        synchronized (closers) {
+        synchronized (metaStoreMap) {
             metaStoreMap.values().forEach(Closeable::closeQuietly);
             metaStoreMap.clear();
+        }
+        synchronized (closers) {
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
 
@@ -1295,7 +1298,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
             if (longValue == null) {
-                synchronized (closers) {
+                synchronized (metaStoreMap) {
+                    if (isClosing())
+                        throw new ClosedIllegalStateException("Queue is closing: " + path);
                     longValue = metaStoreMap.get(keyBytes);
                     if (longValue == null) {
                         longValue = metaStore.acquireValueFor(key, defaultValue);
@@ -1309,6 +1314,19 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
             return longValue;
         }
+    }
+
+    LongValue tableStoreAcquireWithExclusiveLock(CharSequence key, long defaultValue) {
+        try (ScopedResource<Bytes<Void>> bytes = acquireBytesScoped()) {
+            LongValue value = metaStoreMap.get(asBytes(key, bytes.get()));
+            if (value != null)
+                return value;
+        }
+
+        // Named tailers in other JVMs use the same file lock. A cache miss waits for that lock
+        // outside the cache monitor and fails if the metadata lock timeout expires.
+        // Once locked, tableStoreAcquire rechecks the cache before binding or creating the entry.
+        return metaStore.doWithExclusiveLock(table -> tableStoreAcquire(key, defaultValue));
     }
 
     /**
