@@ -59,7 +59,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
         // Copy the data from src/test/resources
         Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").toURI());
-        Path targetPath = Paths.get(OS.getTarget()).resolve(templatePath.getFileName());
+        Path targetPath = getTmpDir().toPath();
         copyFolder(templatePath, targetPath);
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(targetPath).build();
@@ -82,6 +82,12 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         } finally {
             IOTools.deleteDirWithFiles(targetPath.toString());
         }
+    }
+
+    @Test
+    public void backwardsCompatibilityFixtureCanBeCopiedTwice() throws IOException, URISyntaxException {
+        verifyBackwardsCompatibility_tailerPositionsAreRetained();
+        verifyBackwardsCompatibility_tailerPositionsAreRetained();
     }
 
     @Test
