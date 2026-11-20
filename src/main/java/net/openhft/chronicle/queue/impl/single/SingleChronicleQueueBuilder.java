@@ -89,6 +89,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     private BufferMode writeBufferMode = BufferMode.None;
     private BufferMode readBufferMode = BufferMode.None;
+    private boolean exchangerRingBuffer;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
     private File path;
@@ -370,6 +371,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
+        if (exchangerRingBuffer && (writeBufferMode() != BufferMode.Asynchronous ||
+                readBufferMode() != BufferMode.None || asyncBufferCreator() != null || readOnly()))
+            throw new IllegalArgumentException("The exchanger ring requires a writable queue with default in-memory asynchronous writes and unbuffered reads");
         preBuild();
 
         SingleChronicleQueue chronicleQueue;
@@ -1008,6 +1012,24 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public long epoch() {
         return epoch == null ? Jvm.getLong(QueueSystemProperties.DEFAULT_EPOCH_PROPERTY, 0L) : epoch;
+    }
+
+    /**
+     * Selects the exchanger ring for this queue. This experimental Enterprise option requires asynchronous
+     * writes, the default process-local buffer, and ordinary Queue reads. It is disabled by default.
+     *
+     * @param enabled whether to select the exchanger ring
+     * @return this builder
+     */
+    @NotNull
+    public SingleChronicleQueueBuilder exchangerRingBuffer(boolean enabled) {
+        this.exchangerRingBuffer = enabled;
+        return this;
+    }
+
+    /** @return whether this queue requests the exchanger ring */
+    public boolean exchangerRingBuffer() {
+        return exchangerRingBuffer;
     }
 
     /**
