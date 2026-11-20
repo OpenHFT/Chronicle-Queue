@@ -93,9 +93,20 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Acquires the necessary LongValues (maxCycle, minCycle, modCount) from the table store.
      */
     protected void initLongValues() {
-        maxCycleValue = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
-        minCycleValue = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
-        modCount = tableStore.acquireValueFor(MOD_COUNT);
+        // Acquire all values before assigning any, to avoid leak if acquire fails
+        LongValue max = null;
+        LongValue min = null;
+        try {
+            max = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
+            min = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
+            final LongValue mod = tableStore.acquireValueFor(MOD_COUNT);
+            maxCycleValue = max;
+            minCycleValue = min;
+            modCount = mod;
+        } catch (RuntimeException e) {
+            Closeable.closeQuietly(max, min);
+            throw e;
+        }
     }
 
     /**
