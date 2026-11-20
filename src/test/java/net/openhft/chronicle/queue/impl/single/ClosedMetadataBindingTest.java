@@ -31,4 +31,17 @@ public class ClosedMetadataBindingTest extends QueueTestCommon {
             assertEquals(42, reopened.tableStoreGet("test.closed.value"));
         }
     }
+
+    @Test
+    public void closedWatermarkIsReacquiredBeforeTheAppenderReusesIt() {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).build()) {
+            String key = "normalisedEOFsTo";
+            LongValue first = queue.tableStoreAcquireWithExclusiveLock(key, 41);
+            first.close();
+            LongValue replacement = queue.tableStoreAcquireWithExclusiveLock(key, 0);
+            assertNotSame(first, replacement);
+            assertEquals(41, replacement.getVolatileValue());
+            assertSame(replacement, queue.tableStoreAcquireWithExclusiveLock(key, 99));
+        }
+    }
 }

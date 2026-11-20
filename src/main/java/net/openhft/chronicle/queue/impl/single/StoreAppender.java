@@ -652,7 +652,7 @@ class StoreAppender extends AbstractCloseable
         if (first == Integer.MAX_VALUE)
             return;
 
-        final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
+        final LongValue normalisedEOFsTo = queue.tableStoreAcquireWithExclusiveLock(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
         int eofCycle = Math.max(first, (int) normalisedEOFsTo.getVolatileValue());
         if (Jvm.isDebugEnabled(StoreAppender.class)) {
             Jvm.debug().on(StoreAppender.class, "Normalising from cycle " + eofCycle);
