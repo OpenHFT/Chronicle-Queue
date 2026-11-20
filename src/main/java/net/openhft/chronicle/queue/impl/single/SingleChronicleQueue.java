@@ -963,9 +963,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 return value;
         }
 
-        // A named tailer on another queue instance can append to this same metadata file.
-        // Take the structural lock before entering the cache monitor. tableStoreAcquire
-        // rechecks the cache and transfers the new binding to the queue before the lock is released.
+        // Named tailers in other JVMs use the same file lock. A cache miss waits for that lock
+        // outside the cache monitor and fails if the metadata lock timeout expires.
+        // Once locked, tableStoreAcquire rechecks the cache before binding or creating the entry.
         return metaStore.doWithExclusiveLock(table -> tableStoreAcquire(key, defaultValue));
     }
 
