@@ -1,0 +1,5 @@
+= Ignore directories when finding queue cycles
+:sectnums:
+:lang: en-GB
+
+Without a metadata file, roll-cycle inference considers only regular files ending in .cq4. A directory with a roll-file name does not override the configured cycle. Real roll files continue to provide the filename pattern used for inference.
