@@ -15,8 +15,10 @@ import net.openhft.chronicle.core.util.ClassNotFoundRuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.single.MetaDataKeys;
+import net.openhft.chronicle.queue.impl.single.SCQMeta;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimingPauser;
+import net.openhft.chronicle.wire.BinaryWireCode;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -34,6 +36,7 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 
@@ -125,35 +128,31 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         //! SingleTableStoreCorruptRecordTest#readAnyReopensExistingBinaryTableStore and
         //! #unsupportedWritableWireTypesFailBeforeCreatingAFile discriminate the two capabilities.
         SingleTableStore.requireSelectedWireType(wireType, readOnly);
-        if (readOnly) {
-            if (!file.exists())
-                throw new TableStoreUnavailableException(file, "Metadata file not found in readOnly mode");
-
-            // Wait a short time for the file to be initialized
-            TimingPauser pauser = Pauser.balanced();
-            try {
-                while (file.length() < OS.mapAlignment()) {
-                    pauser.pause(1, TimeUnit.SECONDS);
-                }
-            } catch (TimeoutException e) {
-                throw new TableStoreUnavailableException(file,
-                        "Metadata file found in readOnly mode, but not initialized yet", e);
-            }
-        }
+        if (readOnly)
+            awaitReadOnlyFirstHeader();
 
         MappedBytes bytes = null;
         //! The builder owns this mapping until a complete TableStore is returned; every earlier failure must close it.
         //! SingleTableBuilderCorruptMetadataTest#failedHeaderDecodePreservesTheFileAndReleasesTheMapping fails if this
         //! ownership guard is removed, because the failed mapping keeps the table-store file open on affected platforms.
         boolean handedOver = false;
+        final AtomicReference<TableStore<T>> provisionalStore = new AtomicReference<>();
         try {
             final int mappingPageSize = PageUtil.getPageSize(file.getAbsolutePath());
             final long mappedChunkSize = OS.mapAlign(OS.SAFE_PAGE_SIZE, mappingPageSize);
             final long firstWritableMappingSize = 2L * mappedChunkSize;
             if (!readOnly) {
-                final boolean created = file.createNewFile();
+                final boolean created;
+                try {
+                    created = file.createNewFile();
+                } catch (IOException e) {
+                    //! File creation is part of the availability boundary. A writable queue request against an unwritable
+                    //! directory historically falls back to a synthetic read-only table store on non-Windows platforms.
+                    //! ReadWriteTest#testNonWriteableDirectoryWithoutMetadataSetsQueueReadOnly loses this translation.
+                    throw new TableStoreUnavailableException(file, "Metadata file cannot be created", e);
+                }
                 if (created && !file.canWrite())
-                    throw new IllegalStateException("Cannot write to tablestore file " + file);
+                    throw new TableStoreUnavailableException(file, "Metadata file cannot be opened for writing");
 
                 //! A writable mapping grows a short file while acquiring its first chunk. Reject a ready first header whose
                 //! declared body is physically truncated before mapping, while retaining compact files whose header is whole.
@@ -172,20 +171,16 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                     //! SingleTableBuilderCorruptMetadataTest#readOnlyOpenRejectsHeaderBeyondPhysicalFileWithoutMutation
                     //! exercises the pre-mapping boundary and verifies that the original file is unchanged.
                     validateFirstHeaderBeforeMapping(physicalLength);
-                    //! A page-aligned compact store can use an exact single read-only mapping without mapping beyond EOF; it
-                    //! is an opening snapshot. Normal preallocated stores retain chunked mappings so long-lived readers can
-                    //! observe later appends and growth.
-                    //! SingleTableBuilderCorruptMetadataTest#readOnlyOpenRejectsHeaderBeyondPhysicalFileWithoutMutation
-                    //! exercises the pre-map bound; #compactCompleteTableStoreReopensReadOnly covers the compact snapshot and
-                    //! SingleTableStoreCorruptRecordTest#readOnlyStoreOpenedBeforeGrowthSeesLaterKeys protects normal growth.
-                    final boolean compactSnapshot = physicalLength < firstWritableMappingSize
+                    //! Released table stores can be page-aligned and only 64 KiB. Use exact, zero-overlap chunks for compact
+                    //! files so opening never maps beyond EOF but later file growth remains visible; a single mapping freezes
+                    //! the old capacity and misreports a healthy boundary-crossing record as corruption.
+                    //! SingleTableBuilderCorruptMetadataTest#compactReadOnlyTableStoreObservesLaterGrowth discriminates the
+                    //! growable mapping; #compactCompleteTableStoreReopensReadOnly retains the static positive control.
+                    final boolean compact = physicalLength < firstWritableMappingSize
                             && physicalLength % mappingPageSize == 0L;
-                    bytes = compactSnapshot
-                            ? MappedBytes.singleMappedBytes(file, physicalLength, true)
-                            : MappedBytes.mappedBytes(
-                                    file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, mappingPageSize, true);
-                    if (compactSnapshot)
-                        bytes.writeLimit(physicalLength);
+                    bytes = compact
+                            ? MappedBytes.mappedBytes(file, physicalLength, 0L, mappingPageSize, true)
+                            : MappedBytes.mappedBytes(file, OS.SAFE_PAGE_SIZE, OS.SAFE_PAGE_SIZE, mappingPageSize, true);
                     bytes.readLimit(physicalLength);
                     readBound = physicalLength;
                 } else {
@@ -228,7 +223,9 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                         //! against the old limit and touch stale mapped bytes before this bound takes effect.
                         readOnlyBytes.readPosition(0L);
                         readOnlyBytes.readLimit(lockedReadBound);
-                        return readTableStore(readOnlyBytes, wire, lockedReadBound);
+                        final TableStore<T> opened = readTableStore(readOnlyBytes, wire, lockedReadBound);
+                        provisionalStore.set(opened);
+                        return opened;
                     } catch (IOException ex) {
                         throw Jvm.rethrow(ex);
                     }
@@ -238,13 +235,17 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                 store = SingleTableStore.doWithExclusiveLock(file, v -> {
                     try {
                         if (wire.writeFirstHeader()) {
-                            return writeTableStore(finalBytes, wire);
+                            final TableStore<T> opened = writeTableStore(finalBytes, wire);
+                            provisionalStore.set(opened);
+                            return opened;
                         } else {
                             //! A builder can observe the file before a concurrent creator publishes its first header, then
                             //! acquire the lock afterwards. Read the mapped channel's size under that lock rather than reusing
                             //! the pre-lock observation. RollCycleMultiThreadStressTest#stress exercises that publication race.
                             final long lockedReadBound = finalBytes.mappedFile().actualSize();
-                            return readTableStore(finalBytes, wire, lockedReadBound);
+                            final TableStore<T> opened = readTableStore(finalBytes, wire, lockedReadBound);
+                            provisionalStore.set(opened);
+                            return opened;
                         }
                     } catch (IOException ex) {
                         throw Jvm.rethrow(ex);
@@ -260,6 +261,12 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         } catch (IOException e) {
             throw new IORuntimeException("file=" + file.getAbsolutePath(), e);
         } finally {
+            //! A body can finish constructing a store before lock or channel cleanup fails. Keep that provisional owner
+            //! reachable until the lock helper returns, and close it if no caller receives it. The scripted cleanup tests in
+            //! SingleTableStoreLockTest cover propagation; no public FileChannel seam deterministically injects this exact
+            //! post-construction builder edge, so the ownership guard currently has static rather than losing-test evidence.
+            if (!handedOver)
+                Closeable.closeQuietly(provisionalStore.get());
             if (bytes != null) {
                 // A provisional store closes the same mapping when construction fails after deserialisation.
                 if (!bytes.isClosed()) {
@@ -333,6 +340,10 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
 
                 final ValueIn valueIn = readTableStoreValue(wire);
                 preflightTableStoreType(valueIn);
+                //! The trusted type prefix must be followed by BinaryWire's explicit marshallable framing. Permissive scalar,
+                //! null, padding-only or absent framing can otherwise invoke the STStore constructor on malformed input.
+                //! SingleTableBuilderCorruptMetadataTest#outerSchemaRequiresMarshallableFraming covers each rejected form.
+                requireMarshallableFrame(valueIn, "the first header does not hold a readable table store");
                 //! Only the trusted mapping-owning SingleTableStore schema may receive this builder mapping. Accepting any
                 //! TableStore can return an object that neither retains nor closes these MappedBytes. Consume the allowlisted
                 //! prefix and construct SingleTableStore directly so a mutable global alias cannot substitute a foreign class.
@@ -360,7 +371,7 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
                         } catch (SingleTableStore.SchemaCorruptionException e) {
                             throw e;
                         } catch (SingleTableStore.MetadataConstructorFailed e) {
-                            throw new TableStoreConstructorFailed(e.getCause());
+                            throw new TableStoreConstructorFailed(e.getCause(), e.metadataType());
                         } catch (RuntimeException e) {
                             throw new SingleTableStore.SchemaCorruptionException(
                                     "the first header does not hold a readable table store", e);
@@ -390,8 +401,13 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             throw new CorruptTableStoreException(file, e.getMessage(), e);
         } catch (TableStoreConstructorFailed e) {
             final Throwable constructorFailure = e.getCause();
-            if (constructorFailure instanceof Error)
-                throw (Error) constructorFailure;
+            if (e.metadataType() == SCQMeta.class) {
+                //! SCQMeta and its nested SCQRoll are Queue-owned persisted schema, not application constructor hooks. A
+                //! decode failure inside that body is corruption just like a damaged STStore envelope, with redacted detail.
+                //! SingleChronicleQueueCorruptMetadataTest#queueOwnedMetadataBodyDamageIsCorruption discriminates the scope.
+                throw new CorruptTableStoreException(file, "the queue metadata body cannot be decoded",
+                        redactedDecodeCause(constructorFailure));
+            }
             if (constructorFailure instanceof IORuntimeException
                     && !(constructorFailure instanceof CorruptTableStoreException)
                     && !(constructorFailure instanceof TableStoreUnavailableException))
@@ -401,13 +417,6 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
             //! SingleChronicleQueueCorruptMetadataTest#constructorAvailabilitySignalDoesNotActivateReadonlyFallback
             //! discriminates this boundary.
             throw new IORuntimeException("Persisted table-store constructor failed", constructorFailure);
-        } catch (CorruptTableStoreException e) {
-            //! CorruptTableStoreException is public, so extensible metadata code can throw it too. Queue-generated failures
-            //! use the package-owned marker above; preserve an application-created instance as constructor failure context
-            //! rather than promoting it as Queue's disk diagnosis.
-            //! SingleTableBuilderCorruptMetadataTest#applicationCorruptionExceptionIsNotPromoted covers direct and wrapped
-            //! application failures.
-            throw new IORuntimeException("Persisted table-store constructor threw a corruption exception", e);
         } catch (StreamCorruptedException | BufferUnderflowException | BufferOverflowException | ClassNotFoundRuntimeException |
                  OverlappingFileLockException e) {
             //! Event-name, type-alias and bounded-underflow failures arise before any caller policy hook and identify an
@@ -441,6 +450,46 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         //! Preserve the decoder's failure class as bounded diagnostic context without retaining its data-bearing message.
         //! SingleTableBuilderCorruptMetadataTest#corruptionCauseChainDoesNotExposeStoredContent covers event and alias input.
         return new IORuntimeException("First-header decoding failed with " + failure.getClass().getName());
+    }
+
+    private void awaitReadOnlyFirstHeader() {
+        if (!file.exists())
+            throw new TableStoreUnavailableException(file, "Metadata file not found in readOnly mode");
+
+        //! A creator grows the file before taking the table-store lock and publishing its first header. Zero and
+        //! NOT_COMPLETE therefore mean "not published yet", not corruption; wait before acquiring the shared lock.
+        //! SingleTableBuilderCorruptMetadataTest#readOnlyOpenWaitsForFirstHeaderPublication loses this distinction.
+        final TimingPauser shortFilePauser = Pauser.balanced();
+        final TimingPauser publicationPauser = Pauser.balanced();
+        try {
+            while (true) {
+                boolean preallocated = false;
+                try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+                    final long physicalLength = raf.length();
+                    preallocated = physicalLength >= OS.mapAlignment();
+                    if (physicalLength >= Integer.BYTES) {
+                        final int header = Integer.reverseBytes(raf.readInt());
+                        if (Wires.isReady(header)) {
+                            if (Wires.lengthOf(header) > physicalLength - Integer.BYTES)
+                                throw new CorruptTableStoreException(file,
+                                        "the first header extends beyond the physical file");
+                            return;
+                        }
+                    }
+                } catch (FileNotFoundException e) {
+                    throw new TableStoreUnavailableException(file, "Metadata file is unavailable", e);
+                } catch (IOException e) {
+                    throw new TableStoreUnavailableException(file, "Metadata file cannot be inspected", e);
+                }
+                if (preallocated)
+                    publicationPauser.pause(SingleTableStore.lockTimeoutMillis(), TimeUnit.MILLISECONDS);
+                else
+                    shortFilePauser.pause(1L, TimeUnit.SECONDS);
+            }
+        } catch (TimeoutException e) {
+            throw new TableStoreUnavailableException(file,
+                    "Metadata file found in readOnly mode, but not initialized yet", e);
+        }
     }
 
     private void validateFirstHeaderPhysicalBound(MappedBytes mappedBytes, long readBound) {
@@ -507,11 +556,41 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         }
     }
 
+    static void requireMarshallableFrame(ValueIn valueIn, String failureMessage) {
+        if (valueIn.wireIn().bytes().readRemaining() == 0L)
+            throw new SingleTableStore.SchemaCorruptionException(failureMessage);
+        final int code = valueIn.wireIn().bytes().peekUnsignedByte();
+        if (code != BinaryWireCode.BYTES_LENGTH8
+                && code != BinaryWireCode.BYTES_LENGTH16
+                && code != BinaryWireCode.BYTES_LENGTH32)
+            throw new SingleTableStore.SchemaCorruptionException(failureMessage);
+
+        final long start = valueIn.wireIn().bytes().readPosition();
+        final long length;
+        try {
+            length = valueIn.readLength();
+        } catch (RuntimeException e) {
+            throw new SingleTableStore.SchemaCorruptionException(failureMessage, e);
+        } finally {
+            valueIn.wireIn().bytes().readPosition(start);
+        }
+        final int prefixLength = code == BinaryWireCode.BYTES_LENGTH8 ? 2
+                : code == BinaryWireCode.BYTES_LENGTH16 ? 3 : 5;
+        if (length < 0L || length > valueIn.wireIn().bytes().readRemaining() - prefixLength)
+            throw new SingleTableStore.SchemaCorruptionException(failureMessage);
+    }
+
     private static final class TableStoreConstructorFailed extends RuntimeException {
         private static final long serialVersionUID = 0L;
+        private final Class<? extends Metadata> metadataType;
 
-        TableStoreConstructorFailed(Throwable cause) {
+        TableStoreConstructorFailed(Throwable cause, Class<? extends Metadata> metadataType) {
             super(cause);
+            this.metadataType = metadataType;
+        }
+
+        Class<? extends Metadata> metadataType() {
+            return metadataType;
         }
     }
 
@@ -536,7 +615,17 @@ public class SingleTableBuilder<T extends Metadata> implements Builder<TableStor
         final TableStore<T> store = new SingleTableStore<>(wireType, bytes, metadata);
         boolean handedOver = false;
         try {
-            wire.writeEventName("header").object(store);
+            try {
+                //! Persist Queue's fixed outer alias instead of consulting the mutable global class-to-name mapping. A custom
+                //! alias registered before this builder initializes must not make its own healthy output unreadable.
+                //! SingleTableBuilderCorruptMetadataTest#writerAlwaysUsesCanonicalTableStoreAlias discriminates this choice.
+                wire.writeEventName("header").typedMarshallable("STStore", store);
+            } catch (CorruptTableStoreException | TableStoreUnavailableException e) {
+                //! Public Queue diagnosis types thrown by application metadata do not acquire file-open provenance merely
+                //! because they occur during initial serialization. Preserve them as causes of an ordinary write failure.
+                //! SingleTableBuilderCorruptMetadataTest#metadataWriteCannotOriginateReservedTableStoreSignals covers both.
+                throw new IORuntimeException("Initial table-store metadata serialization failed", e);
+            }
             wire.updateFirstHeader();
             handedOver = true;
             return store;

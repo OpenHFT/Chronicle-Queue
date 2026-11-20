@@ -54,6 +54,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     private static final long timeoutMS = Jvm.getLong("chronicle.table.store.timeoutMS", 10_000L);
 
+    static long lockTimeoutMillis() {
+        return timeoutMS;
+    }
+
     //! Use a package-owned marker for Queue-established schema failures during reflective construction. Searching for the
     //! public corruption API in arbitrary constructor causes lets application code relabel its own failure as disk corruption.
     //! SingleTableBuilderCorruptMetadataTest#applicationCorruptionExceptionIsNotPromoted protects that origin boundary.
@@ -71,9 +75,19 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
     static final class MetadataConstructorFailed extends RuntimeException {
         private static final long serialVersionUID = 0L;
+        private final Class<? extends Metadata> metadataType;
 
         MetadataConstructorFailed(Throwable cause) {
+            this(cause, null);
+        }
+
+        MetadataConstructorFailed(Throwable cause, Class<? extends Metadata> metadataType) {
             super(cause);
+            this.metadataType = metadataType;
+        }
+
+        Class<? extends Metadata> metadataType() {
+            return metadataType;
         }
     }
 
@@ -105,6 +119,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 decodedWireType = Objects.requireNonNull(
                         readTableStoreField(wire, MetaDataField.wireType).object(WireType.class),
                         "the table-store header has no wire type");
+            } catch (SchemaCorruptionException e) {
+                throw e;
             } catch (RuntimeException e) {
                 //! The wire type is Queue-owned schema, not an extensible constructor hook. A missing or unreadable value
                 //! proves that this header cannot describe a table store; retrying the file lock cannot repair it.
@@ -120,10 +136,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
             final ValueIn metadataValue;
             try {
-                consumeTableStorePadding(wire);
-                metadataValue = wire.bytes().readRemaining() > 0
-                        ? readTableStoreField(wire, MetaDataField.metadata)
-                        : null;
+                metadataValue = readTableStoreMetadata(wire);
+            } catch (SchemaCorruptionException e) {
+                throw e;
             } catch (RuntimeException e) {
                 //! Padding and the metadata field token belong to Queue's persisted schema, before any extensible constructor
                 //! is entered. SingleTableBuilderCorruptMetadataTest
@@ -133,6 +148,11 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             }
             if (metadataValue != null) {
                 final Class<? extends Metadata> metadataType = preflightMetadataType(metadataValue);
+                //! A typed value must still contain one of BinaryWire's explicit marshallable length prefixes. Its permissive
+                //! applyToMarshallable path also accepts scalars and missing frames, which can invoke a constructor on corrupt
+                //! Queue framing. SingleTableBuilderCorruptMetadataTest#metadataRequiresMarshallableFraming discriminates it.
+                SingleTableBuilder.requireMarshallableFrame(
+                        metadataValue, "the first header does not hold readable metadata");
                 final Object decodedMetadata;
                 try {
                     decodedMetadata = metadataValue.applyToMarshallable(nestedWire -> {
@@ -144,12 +164,14 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                             mappedBytes.writeLimit(mappedBytes.readLimit());
                             return Demarshallable.newInstance(metadataType, nestedWire);
                         } catch (Throwable e) {
-                            throw new MetadataConstructorFailed(e);
+                            throw new MetadataConstructorFailed(e, metadataType);
                         } finally {
                             mappedBytes.writeLimit(containingWriteLimit);
                         }
                     });
                 } catch (MetadataConstructorFailed e) {
+                    throw e;
+                } catch (SchemaCorruptionException e) {
                     throw e;
                 } catch (RuntimeException e) {
                     //! Framing around the nested marshallable is persisted Queue schema, while only the callback invokes
@@ -180,6 +202,8 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 //! #writerProducedFinalPaddingAcrossAllAlignmentsReopens covers the current writer's four alignment outcomes;
                 //! it is current-encoding compatibility evidence, not a claim about released historical fixtures.
                 consumeTableStorePadding(wire);
+            } catch (SchemaCorruptionException e) {
+                throw e;
             } catch (RuntimeException e) {
                 throw new SchemaCorruptionException("the table-store body has unreadable trailing padding", e);
             }
@@ -246,21 +270,52 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         }
     }
 
+    private static ValueIn readTableStoreMetadata(WireIn wire) {
+        consumeTableStorePadding(wire);
+        if (wire.bytes().readRemaining() == 0)
+            return null;
+
+        try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
+            final StringBuilder fieldName = stlSb.get();
+            ValueIn value = readTableStoreField(wire, fieldName);
+            if (StringUtils.isEqual(fieldName, MetaDataField.recovery.name())) {
+                //! Queue releases 5.16.9 through 5.17.9 wrote one recovery value between wireType and metadata. Skip that
+                //! bounded legacy value without resolving its alias, then resume the modern ordered schema. The older
+                //! recovery-only shape remains outside the readable contract because develop already required metadata.
+                //! SingleTableBuilderCorruptMetadataTest#legacyRecoveryFieldBeforeMetadataStillOpens discriminates this
+                //! released-file compatibility path; other unknown fields remain corruption.
+                value.skipValue();
+                consumeTableStorePadding(wire);
+                if (wire.bytes().readRemaining() == 0)
+                    throw new SchemaCorruptionException("the table-store body has recovery but no metadata field");
+                fieldName.setLength(0);
+                value = readTableStoreField(wire, fieldName);
+            }
+            if (!StringUtils.isEqual(fieldName, MetaDataField.metadata.name()))
+                throw new SchemaCorruptionException("the table-store body does not contain the expected field");
+            return value;
+        }
+    }
+
     private static ValueIn readTableStoreField(WireIn wire, MetaDataField expected) {
         //! STStore is a closed, ordered Queue-owned schema: general WireKey lookup scans over unknown fields and makes their
         //! acceptance depend on where they occur. Read the immediate field and validate its name instead.
         //! SingleTableBuilderCorruptMetadataTest#unknownTableStoreFieldsAreRejectedAtEveryPosition loses this boundary.
-        final int code = wire.bytes().peekUnsignedByte();
-        if (code != BinaryWireCode.FIELD_NAME_ANY
-                && (code < BinaryWireCode.FIELD_NAME0 || code > BinaryWireCode.FIELD_NAME31))
-            throw new SchemaCorruptionException("the table-store body does not contain the expected field");
         try (ScopedResource<StringBuilder> stlSb = Wires.acquireStringBuilderScoped()) {
             final StringBuilder actual = stlSb.get();
-            final ValueIn value = wire.read(actual);
+            final ValueIn value = readTableStoreField(wire, actual);
             if (!StringUtils.isEqual(actual, expected.name()))
                 throw new SchemaCorruptionException("the table-store body does not contain the expected field");
             return value;
         }
+    }
+
+    private static ValueIn readTableStoreField(WireIn wire, StringBuilder actual) {
+        final int code = wire.bytes().peekUnsignedByte();
+        if (code != BinaryWireCode.FIELD_NAME_ANY
+                && (code < BinaryWireCode.FIELD_NAME0 || code > BinaryWireCode.FIELD_NAME31))
+            throw new SchemaCorruptionException("the table-store body does not contain the expected field");
+        return wire.read(actual);
     }
 
     /**
@@ -373,12 +428,16 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
+        final LockRuntime runtime;
         try {
-            return doWithLock(file, code, target, shared, TimeUnit.MILLISECONDS.toNanos(timeoutMS),
-                    new FileChannelLockRuntime(file, readOrWrite, shared));
+            runtime = new FileChannelLockRuntime(file, readOrWrite, shared);
         } catch (IOException e) {
-            throw new IllegalStateException("I/O failure while using the " + type + " file lock on " + file, e);
+            throw lockIOException(file, type, e);
         }
+        //! Restrict the checked opening catch to channel construction. A supplier or body can sneaky-throw IOException; once
+        //! the channel is open that failure must pass through as the original object rather than becoming a lock I/O failure.
+        //! SingleTableStoreLockTest#publicLockMethodsPreserveCheckedSupplierAndBodyFailures discriminates all four paths.
+        return doWithLock(file, code, target, shared, TimeUnit.MILLISECONDS.toNanos(timeoutMS), runtime);
     }
 
     static <T, R> R doWithLock(@NotNull final File file,
@@ -395,7 +454,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         //! #scriptedNullContentionTimesOutWithoutInventingACause exercise the Queue-owned deadline branches; the
         //! real-lock contention tests retain integration evidence without claiming control of the operating-system clock.
         Throwable lastAcquisitionFailure = null;
-        try (LockRuntime runtime = lockRuntime) {
+        Throwable operationFailure = null;
+        Throwable cleanupSuppressionTarget = null;
+        try {
+            final LockRuntime runtime = lockRuntime;
             final long startNanos = runtime.nanoTime();
             for (int count = 1; runtime.nanoTime() - startNanos < timeoutNanos; count++) {
                 boolean locked = false;
@@ -410,9 +472,11 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     //! exclusiveContentionIsRetriedBeforeBodyRunsOnce prove the same-JVM signal waits
                     //! and then runs the body exactly once with a real FileChannel. #subprocessContentionRetriesNullBeforeBody
                     //! observes the null result while a separate JVM holds the range, then releases it before body execution.
-                    //! In contrast, IOException is the API's terminal "other I/O error" signal; the
-                    //! scriptedAcquisitionIOExceptionRetainsExactCauseAndSkipsBody test proves Queue propagates
-                    //! the exact cause without invoking either the target or body.
+                    //! In contrast, IOException is the API's terminal "other I/O error" signal; develop retried that broad
+                    //! category, but no supported-platform evidence identifies it as contention. The supplied Mac build 1828
+                    //! log contains no tryLock IOException and predates this branch. The
+                    //! scriptedAcquisitionIOExceptionRetainsExactCauseAndSkipsBody test proves Queue propagates the exact
+                    //! cause without invoking either the target or body; platform evidence remains an explicit open item.
                     lastAcquisitionFailure = e;
                     // failed to acquire the lock, wait until other operation completes
                     if (count > 9) {
@@ -447,7 +511,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                             runtime.closeLock();
                         } catch (Throwable closeFailure) {
                             if (bodyFailed != null)
-                                bodyFailed.addSuppressed(closeFailure);
+                                addSuppressedIfDistinct(bodyFailed.getCause(), closeFailure);
                             else
                                 throw Jvm.rethrow(closeFailure);
                         }
@@ -469,20 +533,54 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                 timeout.initCause(lastAcquisitionFailure);
             throw timeout;
         } catch (BodyFailed e) {
-            //! Lock and channel cleanup run while BodyFailed is primary, so Java attaches their failures
-            //! to the wrapper. Move those suppressed failures onto the original body Throwable before
-            //! rethrowing it; otherwise unwrapping would silently discard cleanup evidence.
+            //! Preserve the body Throwable itself and attach only distinct cleanup failures. Reusing the same Throwable for
+            //! the body and cleanup must not trigger Java's self-suppression guard and replace the primary failure.
+            //! SingleTableStoreLockTest#sameFailureObjectIsNeverSelfSuppressed discriminates this identity edge.
             final Throwable bodyFailure = e.getCause();
             for (Throwable suppressed : e.getSuppressed())
-                bodyFailure.addSuppressed(suppressed);
+                addSuppressedIfDistinct(bodyFailure, suppressed);
+            operationFailure = bodyFailure;
+            cleanupSuppressionTarget = bodyFailure;
             throw Jvm.rethrow(bodyFailure);
         } catch (IOException e) {
             //! Once cleanup failures are no longer discarded, IOException can come from opening,
             //! acquiring, releasing, or closing the lock channel. Report that honest common boundary
             //! and retain the concrete cause. SingleTableStoreLockTest's scripted acquisition and cleanup
             //! tests discriminate Queue's propagation and suppression rules without claiming a platform failure.
-            throw new IllegalStateException("I/O failure while using the " + type + " file lock on " + file, e);
+            operationFailure = lockIOException(file, type, e);
+            cleanupSuppressionTarget = e;
+            throw (IllegalStateException) operationFailure;
+        } catch (Throwable t) {
+            operationFailure = t;
+            cleanupSuppressionTarget = t;
+            throw Jvm.rethrow(t);
+        } finally {
+            try {
+                lockRuntime.close();
+            } catch (Throwable closeFailure) {
+                if (operationFailure != null) {
+                    addSuppressedIfDistinct(cleanupSuppressionTarget, closeFailure);
+                } else if (closeFailure instanceof IOException) {
+                    throw lockIOException(file, type, (IOException) closeFailure);
+                } else {
+                    throw Jvm.rethrow(closeFailure);
+                }
+            }
         }
+    }
+
+    private static IllegalStateException lockIOException(File file, String type, IOException cause) {
+        return new IllegalStateException("I/O failure while using the " + type + " file lock on " + file, cause);
+    }
+
+    private static void addSuppressedIfDistinct(Throwable primary, Throwable cleanup) {
+        if (primary == cleanup)
+            return;
+        for (Throwable suppressed : primary.getSuppressed()) {
+            if (suppressed == cleanup)
+                return;
+        }
+        primary.addSuppressed(cleanup);
     }
 
     interface LockRuntime extends java.io.Closeable {
@@ -680,11 +778,11 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             StringBuilder sb = stlSb.get();
 
             mappedBytes.readPosition(0);
-            // A read limit above writeLimit can fail while another TableStore is being written.
-            //! Capture one immutable scan bound no greater than either this Bytes view's write limit or mapped capacity.
-            //! This is a local bounds guarantee, not a durable logical EOF or a concurrent-publication barrier; the public
-            //! TableStore API does not expose the internal Bytes view needed for a direct losing test.
-            final long scanLimit = Math.min(mappedBytes.writeLimit(), mappedBytes.realCapacity());
+            //! Start from the current physical capacity, even when another writable view previously left this Bytes view's
+            //! logical write limit stale. Otherwise forEachKey can silently omit records already published by that writer.
+            //! The compact-growth compatibility test exercises post-open growth; a deterministic cross-writer publication
+            //! interleaving is not exposed by the public API, so the stale-limit refresh also has static evidence.
+            long scanLimit = currentScanLimit();
             mappedBytes.readLimit(scanLimit);
             positionAfterTableStoreHeader(scanLimit);
             while (true) {
@@ -711,9 +809,19 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
                 final long bodyStart = mappedBytes.readPosition();
                 final int length = Wires.lengthOf(header);
-                //! Subtraction avoids overflow while proving the declared end remains inside the snapshotted scan limit.
+                //! Subtraction avoids overflow while proving the declared end remains inside the scan limit. If a writer
+                //! publishes a record that straddles the initial physical boundary, refresh once before calling it corrupt.
+                //! SingleTableBuilderCorruptMetadataTest#compactReadOnlyTableStoreObservesLaterGrowth covers completed growth;
+                //! the narrower mid-scan publication race currently has static evidence because no callback precedes it.
                 //! SingleTableStoreCorruptRecordTest#recordBeyondTheReadLimitIsRejected checks this exact diagnostic,
                 //! before Wire can turn the invalid boundary into an unrelated parsing failure.
+                if (length > scanLimit - bodyStart) {
+                    final long refreshedLimit = currentScanLimit();
+                    if (refreshedLimit > scanLimit) {
+                        scanLimit = refreshedLimit;
+                        mappedBytes.readLimit(scanLimit);
+                    }
+                }
                 if (length > scanLimit - bodyStart)
                     throw new CorruptTableStoreException(file(), "the record at " + recordStart
                             + " declares a length of " + length + ", which does not fit inside the read limit of " + scanLimit);
@@ -738,10 +846,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     //! and field-number tokens as present identifiers, so ValueIn presence alone cannot enforce this schema.
                     //! SingleTableStoreCorruptRecordTest#missingEventNameIsRejectedByEveryTraversal covers a value-only body;
                     //! #nonCanonicalFieldNameTokenIsRejectedByEveryTraversal loses the exact-token guard; and
-                    //! #explicitEmptyEventNameRemainsValid proves presence, rather than key length, is the schema boundary.
-                    if (!valueIn.isPresent())
-                        throw new CorruptTableStoreException(file(), "the record at " + recordStart
-                                + " has no present event name");
+                    //! #explicitEmptyEventNameRemainsValid proves token presence, rather than key length, is the boundary.
                     valueStart = mappedBytes.readPosition();
                     validateRecordConsumption(recordStart, recordEnd);
                 } catch (CorruptTableStoreException e) {
@@ -772,6 +877,13 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             }
             return null;
         }
+    }
+
+    private long currentScanLimit() {
+        final long physicalCapacity = mappedBytes.realCapacity();
+        if (mappedBytes.writeLimit() < physicalCapacity)
+            mappedBytes.writeLimit(mappedBytes.capacity());
+        return physicalCapacity;
     }
 
     private void positionAfterTableStoreHeader(long scanLimit) throws EOFException {
@@ -818,7 +930,11 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         //! FLOAT64 without changing the record length and fails if generic skipValue validation is restored.
         final long valueCodeAt = mappedBytes.readPosition();
         final int valueCode = mappedBytes.peekUnsignedByte();
-        if (valueCode != 0 && valueCode != BinaryWireCode.INT64)
+        //! Queue's table-store writer has emitted INT64 for bound longs since the format was introduced. BinaryWire's
+        //! binding API also accepts zero, but scalar iteration reads that same marker as the number zero and ignores its
+        //! payload. Reject the ambiguous representation instead of returning different values through the two traversals.
+        //! SingleTableStoreCorruptRecordTest#zeroValueCodeIsRejectedByEveryTraversal discriminates this consistency rule.
+        if (valueCode != BinaryWireCode.INT64)
             throw new CorruptTableStoreException(file(), "the record at " + recordStart
                     + " holds Wire type 0x" + Integer.toHexString(valueCode) + " instead of a bound long");
 
@@ -832,7 +948,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         if (mappedBytes.readRemaining() < 1L + Long.BYTES)
             throw new CorruptTableStoreException(file(), "the record at " + recordStart
                     + " ends inside its bound long");
-        // BinaryWire's binding reader accepts zero as a legacy long marker and consumes its following eight bytes.
         mappedBytes.readSkip(1L + Long.BYTES);
         consumeExplicitBinaryPadding(recordStart);
 
