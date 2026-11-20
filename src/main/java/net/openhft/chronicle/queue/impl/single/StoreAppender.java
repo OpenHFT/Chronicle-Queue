@@ -1261,6 +1261,8 @@ class StoreAppender extends AbstractCloseable
         public void close(boolean unlock) {
             if (!closePreconditionsAreSatisfied()) return;
 
+            // A private buffer owns no mapped lock; writeBytes acquires its own when flushing.
+            unlock &= !buffered;
             try {
                 handleInterrupts();
                 if (handleRollbackOnClose()) return;
@@ -1270,8 +1272,6 @@ class StoreAppender extends AbstractCloseable
                 } else if (wire != null) {
                     if (buffered) {
                         writeBytes(wire.bytes());
-                        unlock = false;
-                        wire.clear();
                     } else {
                         writeBytesInternal(wire.bytes(), metaData);
                         wire = StoreAppender.this.wire;
@@ -1283,7 +1283,13 @@ class StoreAppender extends AbstractCloseable
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             } finally {
-                closeCleanup(unlock);
+                try {
+                    // A failed flush must not leave rejected payload in the next document.
+                    if (buffered && wire != null)
+                        wire.clear();
+                } finally {
+                    closeCleanup(unlock);
+                }
             }
         }
 
