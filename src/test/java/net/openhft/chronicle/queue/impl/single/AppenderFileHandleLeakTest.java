@@ -49,11 +49,18 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     private static final DateTimeFormatter ROLL_CYCLE_FORMATTER = DateTimeFormatter.ofPattern(ROLL_CYCLE.format()).withZone(ZoneId.of("UTC"));
     private static final int TRIES = 10;
 
-    private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT,
-            new NamedThreadFactory("test"));
+    private final ExecutorService threadPool;
     private final TrackingStoreFileListener storeFileListener = new TrackingStoreFileListener();
     private final AtomicLong currentTime = new AtomicLong(System.currentTimeMillis());
     private File queuePath;
+
+    public AppenderFileHandleLeakTest() {
+        this(Executors.newFixedThreadPool(THREAD_COUNT, new NamedThreadFactory("test")));
+    }
+
+    AppenderFileHandleLeakTest(ExecutorService threadPool) {
+        this.threadPool = threadPool;
+    }
 
     private static void readMessage(final ChronicleQueue queue,
                                     final boolean manuallyReleaseResources,
@@ -299,14 +306,28 @@ public final class AppenderFileHandleLeakTest extends QueueTestCommon {
     }
 
     @Override
-    public void assertReferencesReleased() {
+    protected void preAfter() {
         threadPool.shutdownNow();
+        boolean interrupted = Thread.interrupted();
+        final long deadline = System.nanoTime() + SECONDS.toNanos(5L);
         try {
-            assertTrue(threadPool.awaitTermination(5L, SECONDS));
-        } catch (InterruptedException e) {
-            throw new AssertionError(e);
+            while (!threadPool.isTerminated()) {
+                final long remaining = deadline - System.nanoTime();
+                assertTrue("Appender test workers did not terminate within 5 seconds", remaining > 0);
+                try {
+                    threadPool.awaitTermination(remaining, TimeUnit.NANOSECONDS);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            try {
+                BackgroundResourceReleaser.releasePendingResources();
+            } finally {
+                if (interrupted)
+                    Thread.currentThread().interrupt();
+            }
         }
-        super.assertReferencesReleased();
     }
 
     private boolean queueFilesAreAllClosed() {
