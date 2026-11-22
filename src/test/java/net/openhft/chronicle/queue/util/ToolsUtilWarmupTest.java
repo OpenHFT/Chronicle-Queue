@@ -4,7 +4,9 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.Jvm;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -16,9 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -90,16 +89,19 @@ public class ToolsUtilWarmupTest {
                     BackgroundResourceReleaser.run(() -> released.set(true));
                 Path unrelated = scratch.resolve("native-library-fixture.dll");
                 Files.write(unrelated, new byte[]{1, 2, 3});
-                try (WatchService watcher = scratch.getFileSystem().newWatchService()) {
-                    scratch.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+                // A polling WatchService can miss a directory created and deleted between polls.
+                // The child process captures the synchronous creation diagnostic instead.
+                AtomicInteger directories = new AtomicInteger();
+                Jvm.setDebugExceptionHandler((logger, message, failure) -> {
+                    if (IndexWarmup.class.getName().equals(logger.getName())
+                            && message.startsWith("Warming Queue indexing in "))
+                        directories.incrementAndGet();
+                });
+                {
                     Class.forName(ToolsUtil.class.getName());
                     ToolsUtil.warnIfResourceTracing();
                     assertNoWarmupFiles(scratch);
-                    WatchKey initial = watcher.poll();
-                    if (initial != null) {
-                        assertEquals("Ordinary utility use started warm-up", 0, warmupDirectories(initial));
-                        initial.reset();
-                    }
+                    assertEquals("Ordinary utility use started warm-up", 0, directories.get());
                     ExecutorService threads = Executors.newFixedThreadPool(8);
                     CountDownLatch start = new CountDownLatch(1);
                     List<Future<?>> calls = new ArrayList<>();
@@ -120,14 +122,7 @@ public class ToolsUtilWarmupTest {
                             assertTrue("Deferred releases remain after warm-up", released.get());
                         assertNoWarmupFiles(scratch);
                         assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(unrelated));
-                        WatchKey key = watcher.poll(5, TimeUnit.SECONDS);
-                        assertNotNull("No warm-up directory created", key);
-                        long directories = warmupDirectories(key);
-                        assertEquals("Warm-up must create exactly one queue", 1, directories);
-                        key.reset();
-                        WatchKey additional = watcher.poll();
-                        if (additional != null)
-                            assertEquals("Unexpected additional warm-up", 0, warmupDirectories(additional));
+                        assertEquals("Warm-up must create exactly one queue", 1, directories.get());
                     } finally {
                         threads.shutdownNow();
                         assertTrue(threads.awaitTermination(5, TimeUnit.SECONDS));
@@ -135,12 +130,6 @@ public class ToolsUtilWarmupTest {
                 }
             }
             System.out.println("warm-up checks passed");
-        }
-
-        private static long warmupDirectories(WatchKey key) {
-            return key.pollEvents().stream().filter(event ->
-                    event.kind() == StandardWatchEventKinds.ENTRY_CREATE
-                            && event.context().toString().startsWith("chronicle-queue-index-warmup-")).count();
         }
 
         private static void assertNoWarmupFiles(Path directory) throws Exception {
