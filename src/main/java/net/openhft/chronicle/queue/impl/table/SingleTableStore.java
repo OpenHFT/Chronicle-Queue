@@ -9,6 +9,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.StackTrace;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
@@ -260,6 +261,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     /**
      * Acquires a {@link LongValue} mapped to a specific key in the table store.
      * If the key does not exist, it will create a new entry with the specified default value.
+     * A failed creation releases its provisional binding; the original publication failure is retained.
      *
      * @param key          The key for the value to acquire.
      * @param defaultValue The default value to use if the key doesn't exist.
@@ -296,19 +298,30 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             mappedBytes.writePosition(start);
             final long pos = mappedWire.enterHeader(256L);
             final LongValue longValue = wireType.newLongReference().get();
-            mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
-            mappedWire.writeAlignTo(Integer.BYTES, 0);
-            mappedWire.updateHeader(pos, false, 0);
-            long end = mappedBytes.writePosition();
-            long chuckSize = mappedFile.chunkSize();
-            long overlapSize = mappedFile.overlapSize();
-            long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
-            if (end >= endOfChunk + overlapSize)
-                throw new IllegalStateException("Misaligned write");
-            return longValue;
+            boolean acquired = false;
+            try {
+                mappedWire.writeEventName(key).int64forBinding(defaultValue, longValue);
+                mappedWire.writeAlignTo(Integer.BYTES, 0);
+                mappedWire.updateHeader(pos, false, 0);
+                long end = mappedBytes.writePosition();
+                long chuckSize = mappedFile.chunkSize();
+                long overlapSize = mappedFile.overlapSize();
+                long endOfChunk = (start + chuckSize - 1) / chuckSize * chuckSize;
+                if (end >= endOfChunk + overlapSize)
+                    throw new IllegalStateException("Misaligned write");
+                acquired = true;
+                return longValue;
+            } finally {
+                // Publication can fail after the binding reserves mapped bytes. The caller never owns that value.
+                // FailedMetadataPublicationTest covers checked failures, runtime failures and errors.
+                if (!acquired)
+                    Closeable.closeQuietly(longValue);
+            }
 
         } catch (StreamCorruptedException | EOFException e) {
-            throw new IORuntimeException(e);
+            throw new IORuntimeException("Unable to acquire table value in " + file()
+                    + ", readPosition=" + mappedBytes.readPosition() + ", readLimit=" + mappedBytes.readLimit()
+                    + ", writePosition=" + mappedBytes.writePosition() + ", writeLimit=" + mappedBytes.writeLimit(), e);
 
         } finally {
             mappedBytes.release(this);
