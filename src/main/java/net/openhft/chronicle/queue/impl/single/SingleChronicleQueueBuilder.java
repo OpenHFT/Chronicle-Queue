@@ -532,12 +532,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Sets the roll time for the queue using the provided {@link LocalTime}.
+     * Uses UTC when no roll time zone has been configured.
      *
      * @param rollTime the roll time to set
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime) {
-        rollTime(rollTime, rollTimeZone);
+        rollTime(rollTime, rollTimeZone == null ? ZoneId.of("UTC") : rollTimeZone);
         return this;
     }
 
@@ -552,12 +553,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Sets the roll time zone for the queue using the provided {@link ZoneId}.
+     * Uses midnight when no roll time has been configured.
      *
      * @param rollTimeZone the time zone to set
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder rollTimeZone(@NotNull final ZoneId rollTimeZone) {
-        rollTime(rollTime, rollTimeZone);
+        rollTime(rollTime == null ? LocalTime.MIDNIGHT : rollTime, rollTimeZone);
         return this;
     }
 
