@@ -55,3 +55,11 @@ The rolling fixture prepares appenders on their owning threads before starting
 the concurrent workload. Its outer rule waits for a timed-out fixture body to
 restore global state. The exact global-timeout/next-test interleaving still has
 no separately controlled negative test.
+
+== Deferred recovery
+
+Empty/dead-header recovery closes bytes and removes their cache entry, drains
+pending releases, then attempts the existing rename. A child-JVM regression
+disables automatic background release and checks recovery plus message readback.
+Linux success does not establish the Windows rename cause or resolution; retain
+matched Windows baseline/candidate checks with zero retries as a release gate.
