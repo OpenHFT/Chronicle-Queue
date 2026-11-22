@@ -30,6 +30,7 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -122,7 +123,31 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public static <T, R> R doWithSharedLock(@NotNull final File file,
                                             @NotNull final Function<T, ? extends R> code,
                                             @NotNull final Supplier<T> target) {
-        return doWithLock(file, code, target, true);
+        return doWithLock(file, code, target, true, timeoutMS);
+    }
+
+    /**
+     * Executes a callback under a shared structural lock with a caller-supplied acquisition
+     * timeout. A zero timeout attempts acquisition once. The callback itself is not timed out
+     * or retried; its failures propagate after releasing the lock.
+     *
+     * @param file table-store file to lock
+     * @param timeoutMillis non-negative maximum acquisition wait in milliseconds
+     * @param code callback to execute while holding the lock
+     * @param target supplier of the callback target, invoked only after acquisition
+     * @param <T> target type
+     * @param <R> result type
+     * @return the callback result
+     * @throws IllegalArgumentException if the timeout is negative
+     * @throws IllegalStateException if the lock cannot be acquired
+     */
+    public static <T, R> R doWithSharedLock(@NotNull final File file,
+                                          final long timeoutMillis,
+                                          @NotNull final Function<T, ? extends R> code,
+                                          @NotNull final Supplier<T> target) {
+        if (timeoutMillis < 0)
+            throw new IllegalArgumentException("timeoutMillis must not be negative");
+        return doWithLock(file, code, target, true, timeoutMillis);
     }
 
     /**
@@ -138,7 +163,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     public static <T, R> R doWithExclusiveLock(@NotNull final File file,
                                                @NotNull final Function<T, ? extends R> code,
                                                @NotNull final Supplier<T> target) {
-        return doWithLock(file, code, target, false);
+        return doWithLock(file, code, target, false, timeoutMS);
     }
 
     /**
@@ -148,6 +173,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * @param code    The function to execute.
      * @param target  The target supplier.
      * @param shared  Whether to use a shared lock.
+     * @param timeoutMillis Maximum acquisition wait in milliseconds.
      * @param <T>     Type of the target object.
      * @param <R>     Return type of the function.
      * @return The result of the function applied to the target.
@@ -155,35 +181,46 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     private static <T, R> R doWithLock(@NotNull final File file,
                                        @NotNull final Function<T, ? extends R> code,
                                        @NotNull final Supplier<T> target,
-                                       final boolean shared) {
+                                       final boolean shared,
+                                       final long timeoutMillis) {
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
-        final long timeoutAt = System.currentTimeMillis() + timeoutMS;
-        final long startMs = System.currentTimeMillis();
+        final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        final long startNanos = System.nanoTime();
         try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-            for (int count = 1; System.currentTimeMillis() < timeoutAt; count++) {
-                try (FileLock fileLock = channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared)) {
+            for (int count = 1; ; count++) {
+                try (FileLock fileLock = tryLock(channel, shared, file, count, startNanos)) {
                     if (fileLock != null) {
                         return code.apply(target.get());
                     }
-                } catch (IOException | OverlappingFileLockException e) {
-                    // failed to acquire the lock, wait until other operation completes
-                    if (count > 9) {
-                        if (Jvm.isDebugEnabled(SingleTableStore.class)) {
-                            final long elapsedMs = System.currentTimeMillis() - startMs;
-                            final String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file=" + file.getAbsolutePath() + ", count=" + count + ", elapsed=" + elapsedMs + " ms";
-                            Jvm.debug().on(SingleTableStore.class, "", new StackTrace(message));
-                        }
-                    }
                 }
-                int delay = Math.min(250, count * count);
-                Jvm.pause(delay);
+                final long remaining = timeoutNanos - (System.nanoTime() - startNanos);
+                if (remaining <= 0)
+                    break;
+                final long delay = Math.min(250L, (long) count * count);
+                Jvm.pause(Math.min(delay, TimeUnit.NANOSECONDS.toMillis(remaining)));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
         }
         throw new IllegalStateException("Unable to claim exclusive " + type + " lock on file " + file);
+    }
+
+    private static FileLock tryLock(FileChannel channel, boolean shared, File file,
+                                    int count, long startNanos) {
+        try {
+            return channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared);
+        } catch (IOException | OverlappingFileLockException unavailable) {
+            if (count > 9 && Jvm.isDebugEnabled(SingleTableStore.class)) {
+                final String type = shared ? "shared" : "exclusive";
+                final long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+                final String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file="
+                        + file.getAbsolutePath() + ", count=" + count + ", elapsed=" + elapsedMs + " ms";
+                Jvm.debug().on(SingleTableStore.class, "", new StackTrace(message));
+            }
+            return null;
+        }
     }
 
     @NotNull
