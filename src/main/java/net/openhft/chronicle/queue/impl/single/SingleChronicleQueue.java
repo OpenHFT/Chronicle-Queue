@@ -1268,6 +1268,19 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Decodes a roll filename using this queue's persisted roll cycle and epoch.
+     * This describes a filename; it does not establish that the file exists or is safe to remove.
+     *
+     * @param file a file with the Queue roll suffix
+     * @return the cycle encoded by its filename
+     */
+    public int cycleForFile(@NotNull File file) {
+        if (!file.getName().endsWith(SUFFIX))
+            throw new IllegalArgumentException("Not a Queue roll file: " + file);
+        return fileNameToCycleFunction().applyAsInt(file.getName());
+    }
+
+    /**
      * Puts a new value in the table store for the given key and index. If the index is Long.MIN_VALUE,
      * it sets the value as volatile, otherwise, it sets the max value.
      *
