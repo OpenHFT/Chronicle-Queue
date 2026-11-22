@@ -3732,14 +3732,16 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     public void doesNotSignalAnUnreadyAppender() {
         CountDownLatch entered = new CountDownLatch(1);
         ReentrantLock lock = new ReentrantLock();
-        Condition condition = org.easymock.EasyMock.createStrictMock(Condition.class);
-        org.easymock.EasyMock.replay(condition);
+        Condition condition = (Condition) java.lang.reflect.Proxy.newProxyInstance(
+                Condition.class.getClassLoader(), new Class<?>[]{Condition.class},
+                (proxy, method, arguments) -> {
+                    throw new AssertionError("Unready appender touched condition: " + method.getName());
+                });
         AssertionError failure = org.junit.Assert.assertThrows(AssertionError.class,
                 () -> signalReadyAppender(entered, lock, condition, new AtomicBoolean(false)));
         assertEquals("unready appender rejected before signal",
                 "Worker did not enter appender creation", failure.getMessage());
         assertFalse("entry rejection does not retain the lock", lock.isLocked());
-        org.easymock.EasyMock.verify(condition);
     }
 
     //! Wait for actual worker entry and lock release before signalling; a sleep can lose
