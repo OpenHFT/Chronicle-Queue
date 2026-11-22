@@ -3,10 +3,7 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
-import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -22,28 +19,24 @@ public class LastIndexAppendedTest extends QueueTestCommon {
 
     @Test
     public void testLastIndexAppendedAcrossRestarts() {
-        String path = OS.getTarget() + "/" + getClass().getSimpleName() + "-" + Time.uniqueId();
+        File path = getTmpDir();
 
-        try {
-            for (int i = 0; i < 5; i++) {
-                try (ChronicleQueue queue = single(path)
-                        .testBlockSize()
-                        .rollCycle(TEST_DAILY)
-                        .build();
-                     ExcerptAppender appender = queue.createAppender()) {
+        for (int i = 0; i < 5; i++) {
+            try (ChronicleQueue queue = single(path)
+                    .testBlockSize()
+                    .rollCycle(TEST_DAILY)
+                    .build();
+                 ExcerptAppender appender = queue.createAppender()) {
 
-                    try (DocumentContext documentContext = appender.writingDocument()) {
-                        int index = (int) documentContext.index();
-                        assertEquals(i, index);
+                try (DocumentContext documentContext = appender.writingDocument()) {
+                    int index = (int) documentContext.index();
+                    assertEquals(i, index);
 
-                        documentContext.wire().write().text("hello world");
-                    }
-
-                    assertEquals(i, (int) appender.lastIndexAppended());
+                    documentContext.wire().write().text("hello world");
                 }
+
+                assertEquals(i, (int) appender.lastIndexAppended());
             }
-        } finally {
-            IOTools.deleteDirWithFiles(path, 2);
         }
     }
 
@@ -67,9 +60,9 @@ public class LastIndexAppendedTest extends QueueTestCommon {
         try (ChronicleQueue tailer_queue = single(path)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
-                .build()) {
-            ExcerptTailer tailer = tailer_queue.createTailer();
-            tailer = tailer.toStart();
+                .build();
+             ExcerptTailer tailer = tailer_queue.createTailer()) {
+            tailer.toStart();
             long t_index;
             t_index = doRead(tailer, 5);
             assertEquals(a_index, t_index);
@@ -97,8 +90,6 @@ public class LastIndexAppendedTest extends QueueTestCommon {
             tailer.toStart();
             t_index = doRead(tailer, 10);
             assertEquals(a_index, t_index);
-        } finally {
-            IOTools.deleteDirWithFiles(path, 2);
         }
     }
 

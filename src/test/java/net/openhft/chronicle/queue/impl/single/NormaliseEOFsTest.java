@@ -136,6 +136,10 @@ public class NormaliseEOFsTest extends QueueTestCommon {
     }
 
     private SingleChronicleQueue createQueue(TimeProvider setTimeProvider) {
-        return SingleChronicleQueueBuilder.binary(QUEUE_PATH).timeProvider(setTimeProvider).rollCycle(TestRollCycles.TEST_SECONDLY).build();
+        return SingleChronicleQueueBuilder.binary(QUEUE_PATH)
+                .testBlockSize()
+                .timeProvider(setTimeProvider)
+                .rollCycle(TestRollCycles.TEST_SECONDLY)
+                .build();
     }
 }

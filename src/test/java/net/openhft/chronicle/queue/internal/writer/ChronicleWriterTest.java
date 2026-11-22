@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.wire.SelfDescribingMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -23,13 +24,17 @@ public class ChronicleWriterTest extends QueueTestCommon {
     private final String cw1;
     private final String cw2;
     private final String cw3;
-    private final File dir;
+    private File dir;
 
     public ChronicleWriterTest() throws FileNotFoundException {
         cw1 = IOTools.urlFor(this.getClass().getClassLoader(), "chronicle-writer1.yaml").getPath();
         cw2 = IOTools.urlFor(this.getClass().getClassLoader(), "chronicle-writer2.yaml").getPath();
         cw3 = IOTools.urlFor(this.getClass().getClassLoader(), "chronicle-writer3.yaml").getPath();
-        dir = IOTools.createTempFile(this.getClass().getSimpleName());
+    }
+
+    @Before
+    public void createDirectory() {
+        dir = getTmpDir();
     }
 
     @Test(timeout = 5000)
@@ -52,8 +57,6 @@ public class ChronicleWriterTest extends QueueTestCommon {
                     "  name: Percy\n" +
                     "}\n" +
                     "]", sb.toString());
-        } finally {
-            IOTools.deleteDirWithFiles(dir);
         }
     }
 
@@ -72,8 +75,6 @@ public class ChronicleWriterTest extends QueueTestCommon {
                     "  name: Percy\n" +
                     "}\n" +
                     "]", sb.toString());
-        } finally {
-            IOTools.deleteDirWithFiles(dir);
         }
     }
 
@@ -92,8 +93,6 @@ public class ChronicleWriterTest extends QueueTestCommon {
                     "  name: Percy\n" +
                     "}\n" +
                     "]", sb.toString());
-        } finally {
-            IOTools.deleteDirWithFiles(dir);
         }
     }
 

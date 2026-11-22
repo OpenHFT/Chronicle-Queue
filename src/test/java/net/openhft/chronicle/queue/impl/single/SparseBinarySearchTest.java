@@ -73,12 +73,18 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         //! but each roll contains only a few small records. Request small
         //! mappings so Windows does not allocate a default 80 MiB roll file.
         //! Retain the supplied secondly/daily cycle and its indexing semantics.
+        //! Budget and workload regressions: SparseBinarySearchTest#testBinarySearchWithManyGaps
+        //! and SparseBinarySearchTest#testBinarySearchWithManyGapsAndManyRollCycles. Both reject default budgets.
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(rollCycle)
                 .testBlockSize()
                 .timeProvider(stp)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {
+
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
 
             Set<Integer> entriesWithValues = new HashSet<>();
             Random random = new Random();
