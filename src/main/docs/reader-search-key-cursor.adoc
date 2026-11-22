@@ -1,0 +1,5 @@
+= Preserve search keys while scanning queue matches
+:sectnums:
+:lang: en-GB
+
+ChronicleReader restores the search key's read position after each comparison while locating duplicate matches or the first following entry. Comparators may consume the key, just as they may during BinarySearch.search. The key position is also restored if a comparison throws.
