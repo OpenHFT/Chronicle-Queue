@@ -70,13 +70,14 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
         String maxFilename = INITIAL_MAX_FILENAME;
         if (fileNamesList != null) {
             for (String fileName : fileNamesList) {
-                if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
-                    if (minFilename.compareTo(fileName) > 0)
-                        minFilename = fileName;
+                if (!fileName.endsWith(SingleChronicleQueue.SUFFIX)
+                        || !new File(queueDir, fileName).isFile())
+                    continue;
+                if (minFilename.compareTo(fileName) > 0)
+                    minFilename = fileName;
 
-                    if (maxFilename.compareTo(fileName) < 0)
-                        maxFilename = fileName;
-                }
+                if (maxFilename.compareTo(fileName) < 0)
+                    maxFilename = fileName;
             }
         }
 
