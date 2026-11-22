@@ -3,6 +3,8 @@
  */
 package net.openhft.chronicle.queue.impl.table;
 
+import net.openhft.chronicle.bytes.domestic.ReentrantFileLock;
+
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -183,6 +185,10 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                                        @NotNull final Supplier<T> target,
                                        final boolean shared,
                                        final long timeoutMillis) {
+        // Closing an extra channel can release this process's existing file lock on Unix.
+        if (!shared && ReentrantFileLock.isHeldByCurrentThread(file))
+            return code.apply(target.get());
+
         final String type = shared ? "shared" : "exclusive";
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
@@ -210,7 +216,9 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
     private static FileLock tryLock(FileChannel channel, boolean shared, File file,
                                     int count, long startNanos) {
         try {
-            return channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared);
+            return shared
+                    ? channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, true)
+                    : ReentrantFileLock.tryLock(file, channel);
         } catch (IOException | OverlappingFileLockException unavailable) {
             if (count > 9 && Jvm.isDebugEnabled(SingleTableStore.class)) {
                 final String type = shared ? "shared" : "exclusive";
