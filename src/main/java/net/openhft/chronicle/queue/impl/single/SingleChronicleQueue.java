@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -73,6 +74,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String INDEX_LOCK_FORMAT = "index.%s.lock";
     public static final String INDEX_VERSION_FORMAT = "index.%s.version";
 
+    private static final String NAMED_TAILER_INDEX_PREFIX = "index.";
+    private static final String INDEX_LOCK_SUFFIX = ".lock";
+    private static final String INDEX_VERSION_SUFFIX = ".version";
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
 
@@ -189,7 +193,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             RamBackedQueueWarning.warn(path.toPath(), blockSize, readOnly);
             appenderListener = builder.appenderListener();
 
-            if (metaStore.readOnly()) {
+            if (metaStore instanceof ReadonlyTableStore) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
             } else {
                 this.directoryListing = readOnly
@@ -762,7 +766,91 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
-        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
+        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(NAMED_TAILER_INDEX_PREFIX + id, 0L));
+    }
+
+    /**
+     * Returns detached committed named-tailer positions in raw name order without creating keys.
+     * Structural registration is locked during the scan; independently updated index values are
+     * not an atomic multi-tailer snapshot. Zero denotes a never-read or parked tailer.
+     * Replicated lock/version bookkeeping is excluded; distinguishable legacy ids are retained.
+     *
+     * @return a detached name-to-index map, empty when there is no metadata table
+     */
+    public NavigableMap<String, Long> namedTailerIndexes() {
+        throwExceptionIfClosed();
+        if (!metaStore.readOnly())
+            return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
+        if (!(metaStore instanceof SingleTableStore))
+            return new TreeMap<>();
+        File metadataFile = new File(path, QUEUE_METADATA_FILE);
+        return SingleTableStore.doWithSharedLock(metadataFile,
+                SingleChronicleQueue::scanNamedTailerIndexes, () -> metaStore);
+    }
+
+    private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
+        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
+            final String k = key.toString();
+            if (k.startsWith(NAMED_TAILER_INDEX_PREFIX))
+                acc.put(k.substring(NAMED_TAILER_INDEX_PREFIX.length()), value.int64());
+        });
+
+        return selectNamedTailerIndexes(metadataIndexes);
+    }
+
+    static NavigableMap<String, Long> selectNamedTailerIndexes(Map<String, Long> metadataIndexes) {
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        metadataIndexes.forEach((namedTailer, index) -> {
+            if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
+                return;
+            result.put(namedTailer, index);
+            if (hasMetadataShapedSuffix(namedTailer))
+                Jvm.warn().on(SingleChronicleQueue.class,
+                        "Named tailer id '" + namedTailer + "' uses a metadata-shaped suffix "
+                                + "'.lock' or '.version'. It remains in this snapshot for safe retention; "
+                                + "consider migrating its committed position to an unambiguous id.");
+        });
+        return result;
+    }
+
+    private static boolean isInternalNamedTailerMetadata(Map<String, Long> metadataIndexes,
+                                                          String candidate) {
+        final String suffix;
+        if (candidate.endsWith(INDEX_LOCK_SUFFIX))
+            suffix = INDEX_LOCK_SUFFIX;
+        else if (candidate.endsWith(INDEX_VERSION_SUFFIX))
+            suffix = INDEX_VERSION_SUFFIX;
+        else
+            return false;
+
+        final String owner = candidate.substring(0, candidate.length() - suffix.length());
+        if (!owner.startsWith(REPLICATED_NAMED_TAILER_PREFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, owner))
+            return false;
+
+        // Older releases allowed a replicated tailer whose primary id collided with this record.
+        // Its own lock and version records make that legacy registration distinguishable.
+        return !containsKeyIgnoreCase(metadataIndexes, candidate + INDEX_LOCK_SUFFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, candidate + INDEX_VERSION_SUFFIX);
+    }
+
+    private static boolean containsKeyIgnoreCase(Map<String, Long> metadataIndexes, String candidate) {
+        for (String persistedKey : metadataIndexes.keySet()) {
+            if (persistedKey.equalsIgnoreCase(candidate))
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean hasMetadataShapedSuffix(String value) {
+        return endsWithIgnoreCase(value, INDEX_LOCK_SUFFIX) || endsWithIgnoreCase(value, INDEX_VERSION_SUFFIX);
+    }
+
+    private static boolean endsWithIgnoreCase(String value, String suffix) {
+        return value != null
+                && value.length() >= suffix.length()
+                && value.regionMatches(true, value.length() - suffix.length(), suffix, 0, suffix.length());
     }
 
     /**
