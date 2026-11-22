@@ -35,3 +35,26 @@ The default index spacing varies depending on the xref:roll-cycle.adoc[roll cycl
 |===
 
 TIP: For more information about queue indexing, see xref:queue-operations:indexing.adoc[Indexing].
+
+== Warming indexing code
+
+Call the utility before latency-sensitive work:
+
+[source,java]
+----
+net.openhft.chronicle.queue.util.ToolsUtil.warmup();
+----
+
+The first caller performs 64,000 verified writes and reads on a private temporary queue with index spacing 4, index count 4096 and a 4 MiB block size.
+This exercises indexed and non-indexed appends, index-array transitions and indexed seeks.
+A lazy static initializer runs the work once per defining classloader; repeated calls do no further work and concurrent callers wait until cleanup finishes.
+Ordinary use of other `ToolsUtil` methods does not trigger it.
+
+Configure a writable `java.io.tmpdir` with suitable scratch storage before calling; the utility closes and deletes its own queue and never touches an application queue.
+Ordinary initialization or cleanup failure is reported as `IllegalStateException` on each call without retrying.
+Work is finite, but filesystem operations have no hard elapsed-time bound.
+
+This exercises shared code and encourages compilation; it cannot guarantee a JIT tier, zero allocation or page residency for application queues.
+Index cursors belong to individual threads and stores and may be reclaimed after GC; a new roll also creates a new store.
+Warm and measure each application's threads and stores separately, including after GC and rolls where relevant.
+The utility does not call `System.gc()`, change global logging handlers or alter affinity.
