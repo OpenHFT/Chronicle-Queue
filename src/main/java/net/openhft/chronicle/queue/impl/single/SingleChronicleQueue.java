@@ -184,6 +184,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 builder.readOnly(metaStore.readOnly());
             }
             readOnly = builder.readOnly();
+            RamBackedQueueWarning.warn(path.toPath(), blockSize, readOnly);
             appenderListener = builder.appenderListener();
 
             if (metaStore.readOnly()) {
