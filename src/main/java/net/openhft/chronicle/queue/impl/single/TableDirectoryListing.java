@@ -92,21 +92,38 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     /**
      * Acquires the necessary LongValues (maxCycle, minCycle, modCount) from the table store.
      */
+    //! Metadata keys become visible one at a time to the read-only 500 ms retry loop.
+    //! Assigning fields during acquisition overwrites partial BinaryLongReference bindings
+    //! on retry and leaks them. Own locals until all three acquisitions succeed; a failed
+    //! acquisition must close partial bindings even when it throws a checked exception
+    //! or another Throwable. A finally guard preserves the original failure unchanged.
+    //! TableDirectoryListingTest#closesPartialBindingsBeforeRetryingMissingLowestCycle and
+    //! TableDirectoryListingTest#closesPartialBindingsBeforeRetryingMissingModCount reject
+    //! the original acquisition and distinguish a repair that closes only the max binding.
+    //! TableDirectoryListingTest#closesPartialBindingsWhenLowestCycleThrowsCheckedException,
+    //! TableDirectoryListingTest#closesPartialBindingsWhenModCountThrowsCheckedException and
+    //! TableDirectoryListingTest#closesPartialBindingsWhenModCountThrowsThrowable reject
+    //! cleanup limited to RuntimeException and Error.
     protected void initLongValues() {
-        // Acquire all values before assigning any, to avoid leak if acquire fails
         LongValue max = null;
         LongValue min = null;
+        LongValue count;
+        boolean failed = true;
         try {
             max = tableStore.acquireValueFor(HIGHEST_CREATED_CYCLE);
             min = tableStore.acquireValueFor(LOWEST_CREATED_CYCLE);
-            final LongValue mod = tableStore.acquireValueFor(MOD_COUNT);
-            maxCycleValue = max;
-            minCycleValue = min;
-            modCount = mod;
-        } catch (RuntimeException e) {
-            Closeable.closeQuietly(max, min);
-            throw e;
+            count = tableStore.acquireValueFor(MOD_COUNT);
+            failed = false;
+        } finally {
+            if (failed) {
+                // A read-only listing can retry while metadata is being published.
+                // Release partial bindings before that retry can replace them.
+                Closeable.closeQuietly(min, max);
+            }
         }
+        maxCycleValue = max;
+        minCycleValue = min;
+        modCount = count;
     }
 
     /**

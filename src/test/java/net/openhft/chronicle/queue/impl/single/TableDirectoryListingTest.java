@@ -126,46 +126,85 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     }
 
     @Test
-    public void preservesExceptionWhenFirstAcquisitionFails() {
-        assertPartialBindingsClosedOnFailure(0);
+    public void preservesCheckedExceptionWhenFirstAcquisitionFails() {
+        assertPartialBindingsClosedOnFailure(0, new IOException("Highest-cycle acquisition failed"));
     }
 
     @Test
-    public void closesPartialBindingsWhenLowestCycleThrowsException() {
-        assertPartialBindingsClosedOnFailure(1);
+    public void closesPartialBindingsWhenLowestCycleThrowsCheckedException() {
+        assertPartialBindingsClosedOnFailure(1, new IOException("Lowest-cycle acquisition failed"));
     }
 
     @Test
-    public void closesPartialBindingsWhenModCountThrowsException() {
-        assertPartialBindingsClosedOnFailure(2);
+    public void closesPartialBindingsWhenModCountThrowsCheckedException() {
+        assertPartialBindingsClosedOnFailure(2, new IOException("Mod-count acquisition failed"));
     }
 
-    private void assertPartialBindingsClosedOnFailure(int failedKey) {
+    @Test
+    public void closesPartialBindingsWhenModCountThrowsThrowable() {
+        assertPartialBindingsClosedOnFailure(2, new Throwable("Mod-count acquisition failed"));
+    }
+
+    private void assertPartialBindingsClosedOnFailure(int failedKey, Throwable failure) {
         String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
-        TableStore<Metadata.NoMeta> failingStore = createStrictMock(TableStore.class);
         List<LongValue> partialBindings = new ArrayList<>();
-        try (TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(failingStore, SystemTimeProvider.INSTANCE)) {
-            for (int i = 0; i < failedKey; i++) {
-                LongValue value = tablestoreReadOnly.acquireValueFor(keys[i]);
-                partialBindings.add(value);
-                expect(failingStore.acquireValueFor(keys[i])).andReturn(value);
-            }
-            IllegalStateException failure = new IllegalStateException("Acquisition failed for key " + keys[failedKey]);
-            expect(failingStore.acquireValueFor(keys[failedKey])).andAnswer(() -> {
-                throw failure;
-            });
-            replay(failingStore);
+        AcquisitionFailureStore failingStore = new AcquisitionFailureStore(keys, partialBindings, failure);
+        TableDirectoryListingReadOnly readOnly =
+                new TableDirectoryListingReadOnly(failingStore, SystemTimeProvider.INSTANCE);
+        try {
+            for (int i = 0; i < failedKey; i++)
+                partialBindings.add(tablestoreReadOnly.acquireValueFor(keys[i]));
 
             assertSame("Cleanup must preserve the original failure", failure,
                     assertThrows(Throwable.class, readOnly::initLongValues));
             for (LongValue value : partialBindings)
                 assertTrue("Failed acquisition must release every returned binding", value.isClosed());
-            verify(failingStore);
+            assertEquals("acquisitions stop at the failing key", failedKey + 1, failingStore.calls);
         } finally {
+            readOnly.close();
             partialBindings.forEach(Closeable::closeQuietly);
         }
     }
 
+    // A concrete test store preserves checked throwables without a JDK proxy wrapping
+    // them or a bytecode-generated subclass depending on reflective module access.
+    private static final class AcquisitionFailureStore implements TableStore<Metadata.NoMeta> {
+        private final String[] keys;
+        private final List<LongValue> bindings;
+        private final Throwable failure;
+        private int calls;
+
+        private AcquisitionFailureStore(String[] keys, List<LongValue> bindings, Throwable failure) {
+            this.keys = keys;
+            this.bindings = bindings;
+            this.failure = failure;
+        }
+
+        @Override
+        public LongValue acquireValueFor(CharSequence key, long defaultValue) {
+            int index = calls++;
+            assertEquals("binding acquisition order", keys[index], key.toString());
+            if (index == bindings.size())
+                throw net.openhft.chronicle.core.Jvm.rethrow(failure);
+            return bindings.get(index);
+        }
+
+        @Override public File file() { throw new UnsupportedOperationException(); }
+        @Override public net.openhft.chronicle.bytes.MappedBytes bytes() { throw new UnsupportedOperationException(); }
+        @Override public String dump(net.openhft.chronicle.wire.WireType type) { throw new UnsupportedOperationException(); }
+        @Override public Metadata.NoMeta metadata() { throw new UnsupportedOperationException(); }
+        @Override public <A> void forEachKey(A value, net.openhft.chronicle.queue.impl.table.TableStoreIterator<A> iterator) {
+            throw new UnsupportedOperationException();
+        }
+        @Override public <R> R doWithExclusiveLock(java.util.function.Function<TableStore<Metadata.NoMeta>, ? extends R> action) {
+            throw new UnsupportedOperationException();
+        }
+        @Override public void writeMarshallable(net.openhft.chronicle.wire.WireOut wire) { throw new UnsupportedOperationException(); }
+        @Override public void close() { throw new UnsupportedOperationException(); }
+        @Override public boolean isClosed() { return false; }
+    }
+
+    @SuppressWarnings("unchecked")
     private void assertPartialBindingsClosedBeforeRetry(int missingKey) {
         String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
         TableStore<Metadata.NoMeta> incompleteStore = createStrictMock(TableStore.class);
@@ -173,7 +212,8 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         List<LongValue> successfulBindings = new ArrayList<>();
         listing.onFileCreated(tempFile, 7);
 
-        TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(incompleteStore, SystemTimeProvider.INSTANCE);
+        TableDirectoryListingReadOnly readOnly =
+                new TableDirectoryListingReadOnly(incompleteStore, SystemTimeProvider.INSTANCE);
         try {
             // Use real mapped bindings; the store only controls when a key becomes visible.
             for (int i = 0; i < missingKey; i++) {
