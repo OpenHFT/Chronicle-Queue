@@ -8,10 +8,38 @@ import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.StandardOpenOption;
 
 import static org.junit.Assert.*;
 
 public class ClosedMetadataBindingTest extends QueueTestCommon {
+    @Test
+    public void readOnlyLookupDoesNotAcquireAnExclusiveFileLock() throws Exception {
+        File path = getTmpDir();
+        String key = "test.readonly.value";
+        try (SingleChronicleQueue writer = SingleChronicleQueueBuilder.binary(path).testBlockSize().build()) {
+            writer.tableStorePut(key, 37);
+        }
+        // The public builder disables read-only queues on Windows. This fixture exercises
+        // only the mapped metadata reader, which supports read-only mappings on every OS.
+        SingleChronicleQueueBuilder builder = new SingleChronicleQueueBuilder() {
+            @Override
+            public boolean readOnly() {
+                return true;
+            }
+        };
+        try (SingleChronicleQueue reader = builder.path(path).build();
+             FileChannel channel = FileChannel.open(new File(path, SingleChronicleQueue.QUEUE_METADATA_FILE).toPath(),
+                     StandardOpenOption.WRITE);
+             FileLock lock = channel.lock()) {
+            assertTrue(lock.isValid());
+            assertEquals(37, reader.tableStoreGet(key));
+            assertThrows(IllegalStateException.class, () -> reader.tableStoreGet("absent"));
+        }
+    }
+
     @Test
     public void closedCachedBindingIsReacquiredWithoutReplacingPersistedValue() {
         File path = getTmpDir();

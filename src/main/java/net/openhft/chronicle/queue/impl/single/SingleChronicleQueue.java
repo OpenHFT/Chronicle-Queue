@@ -1406,8 +1406,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         throw new ClosedIllegalStateException("Queue is closing: " + path);
                     longValue = metaStoreMap.get(keyBytes);
                     if (longValue == null || longValue.isClosed()) {
-                        // Other queue instances can append to this metadata file concurrently.
-                        longValue = metaStore.doWithExclusiveLock(table -> table.acquireValueFor(key, defaultValue));
+                        // Readers bind complete records without opening the metadata file for writing.
+                        // Writers also serialise structural updates across queue instances.
+                        longValue = readOnly
+                                ? metaStore.acquireValueFor(key, defaultValue)
+                                : metaStore.doWithExclusiveLock(table -> table.acquireValueFor(key, defaultValue));
                         int length = key.length();
                         HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
                         key2.write(0, keyBytes, 0, length);
