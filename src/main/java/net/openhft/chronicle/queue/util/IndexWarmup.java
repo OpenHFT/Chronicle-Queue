@@ -4,6 +4,7 @@
 package net.openhft.chronicle.queue.util;
 
 import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.Jvm;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -31,6 +32,7 @@ final class IndexWarmup {
         try {
             directory = Files.createTempDirectory(Paths.get(System.getProperty("java.io.tmpdir")),
                     "chronicle-queue-index-warmup-");
+            Jvm.debug().on(IndexWarmup.class, "Warming Queue indexing in " + directory);
             // Fixed time prevents a wall-clock roll during warm-up. Four index arrays are exercised.
             exerciseIndex(directory);
         } catch (IOException | RuntimeException e) {
