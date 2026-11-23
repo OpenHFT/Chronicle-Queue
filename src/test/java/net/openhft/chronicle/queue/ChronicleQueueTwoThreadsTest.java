@@ -17,13 +17,16 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.rollcycles.SparseRollCycles.SMALL_DAILY;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 @RequiredForClient
@@ -140,32 +143,22 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
                 if (runs != counter.get())
                     Jvm.pause(Jvm.isDebug() ? 10000 : 100);
             }
-        }
-        finally {
-            stopAndJoin(tailerThread, () -> running.set(false));
+        } finally {
+            stopAndJoin(tailerThread, running);
             assertFalse("appender thread did not stop", appenderThread.isAlive());
-            assertFalse("tailer thread did not stop", tailerThread.isAlive());
         }
 
         rethrowWorkerFailure(workerFailure);
         assertEquals(runs, counter.get());
     }
 
-    private static void stopAndJoin(Thread worker, Runnable requestStop) throws InterruptedException {
-        //! FIX-292: request shutdown once before waiting for the worker to close its queue.
-        //! Repeating it in each join slice interrupts resource release and records a
-        //! warning. Keep the existing one-second bound and require actual thread exit;
-        //! ChronicleQueueTwoThreadsTest#cleanupIsNotInterruptedTwice and
-        //! ChronicleQueueTwoThreadsTest#stalledCleanupStillFails cover both outcomes.
-        requestStop.run();
+    private static void stopAndJoin(Thread worker, AtomicBoolean running) throws InterruptedException {
+        // An interrupt during queue closure can disrupt resource release.
+        running.set(false);
         worker.join(1000);
         assertFalse("Worker did not stop: " + worker.getName(), worker.isAlive());
     }
 
-    //! FIX-292: uncaught writer/reader failures otherwise disappear on background
-    //! threads and can look like successful cleanup. Preserve them for JUnit;
-    //! ChronicleQueueTwoThreadsTest#workerFailureIsReported checks this shared
-    //! capture path and the original cause propagated by rethrowWorkerFailure.
     private static void captureWorkerFailure(Thread worker, AtomicReference<Throwable> failure) {
         worker.setUncaughtExceptionHandler((thread, cause) -> failure.compareAndSet(null, cause));
     }
@@ -176,79 +169,46 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     }
 
     @Test
-    public void cleanupIsNotInterruptedTwice() throws Exception {
-        CountDownLatch reading = new CountDownLatch(1);
-        CountDownLatch cleanup = new CountDownLatch(1);
-        CountDownLatch release = new CountDownLatch(1);
-        CountDownLatch secondInterrupt = new CountDownLatch(1);
-        AtomicReference<Throwable> controllerFailure = new AtomicReference<>();
+    public void cleanupFinishesWithoutAnInterrupt() throws InterruptedException {
+        AtomicBoolean running = new AtomicBoolean(true);
+        AtomicBoolean interruptRequested = new AtomicBoolean();
         Thread worker = new Thread(() -> {
-            reading.countDown();
-            try {
-                new CountDownLatch(1).await();
-            } catch (InterruptedException stopping) {
-                cleanup.countDown();
-                try {
-                    release.await();
-                } catch (InterruptedException interruptedCleanup) {
-                    secondInterrupt.countDown();
-                }
+            while (running.get())
+                Thread.yield();
+        }, "owned-cleanup-control") {
+            @Override
+            public void interrupt() {
+                interruptRequested.set(true);
+                super.interrupt();
             }
-        }, "owned-cleanup-control");
-        Thread controller = new Thread(() -> {
-            try {
-                assertTrue(cleanup.await(5, TimeUnit.SECONDS));
-                secondInterrupt.await(150, TimeUnit.MILLISECONDS);
-            } catch (Throwable e) {
-                controllerFailure.set(e);
-            } finally {
-                release.countDown();
-            }
-        }, "owned-cleanup-controller");
+        };
         worker.start();
-        controller.start();
         try {
-            assertTrue(reading.await(5, TimeUnit.SECONDS));
-            stopAndJoin(worker, worker::interrupt);
-            assertEquals("Cleanup received another stop interrupt", 1, secondInterrupt.getCount());
+            stopAndJoin(worker, running);
+            assertFalse("Stopping the tailer must not interrupt queue cleanup", interruptRequested.get());
         } finally {
-            release.countDown();
-            worker.interrupt();
+            running.set(false);
             worker.join(1000);
-            controller.join(1000);
             assertFalse(worker.isAlive());
-            assertFalse(controller.isAlive());
-            assertNull(controllerFailure.get());
         }
     }
 
     @Test
-    public void stalledCleanupStillFails() throws Exception {
-        CountDownLatch started = new CountDownLatch(1);
+    public void stalledCleanupStillFails() throws InterruptedException {
+        AtomicBoolean running = new AtomicBoolean(true);
         CountDownLatch release = new CountDownLatch(1);
         Thread worker = new Thread(() -> {
-            started.countDown();
-            boolean interrupted = false;
-            while (release.getCount() != 0) {
-                try {
-                    release.await();
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                }
-            }
-            if (interrupted)
+            try {
+                release.await();
+            } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            }
         }, "owned-stalled-cleanup");
         worker.start();
         try {
-            assertTrue(started.await(5, TimeUnit.SECONDS));
-            try {
-                stopAndJoin(worker, worker::interrupt);
-                fail("Stalled cleanup was accepted");
-            } catch (AssertionError expected) {
-                assertEquals("Worker did not stop: owned-stalled-cleanup", expected.getMessage());
-                assertTrue(worker.isAlive());
-            }
+            AssertionError failure = assertThrows(AssertionError.class, () -> stopAndJoin(worker, running));
+            assertEquals("Worker did not stop: owned-stalled-cleanup", failure.getMessage());
+            assertTrue(worker.isAlive());
         } finally {
             release.countDown();
             worker.join(1000);
@@ -257,7 +217,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     }
 
     @Test
-    public void workerFailureIsReported() throws Exception {
+    public void workerFailureIsReported() throws InterruptedException {
         RuntimeException original = new RuntimeException("controlled worker failure");
         AtomicReference<Throwable> failure = new AtomicReference<>();
         Thread worker = new Thread(() -> { throw original; }, "owned-failed-worker");
@@ -265,13 +225,7 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         worker.start();
         worker.join(1000);
         assertFalse(worker.isAlive());
-        AssertionError reported = null;
-        try {
-            rethrowWorkerFailure(failure);
-        } catch (AssertionError expected) {
-            reported = expected;
-        }
-        assertNotNull("Worker failure was lost", reported);
+        AssertionError reported = assertThrows(AssertionError.class, () -> rethrowWorkerFailure(failure));
         assertSame(original, reported.getCause());
     }
 
