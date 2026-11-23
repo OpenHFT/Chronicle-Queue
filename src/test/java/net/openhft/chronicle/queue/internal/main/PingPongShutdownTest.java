@@ -43,6 +43,10 @@ public class PingPongShutdownTest extends QueueTestCommon {
     }
 
     private void runChild(int duration) throws Exception {
+        runChild(duration, true);
+    }
+
+    private void runChild(int duration, boolean backgroundReleaserThread) throws Exception {
         File dir = getTmpDir();
         Files.createDirectories(dir.toPath());
         Path log = Files.createTempFile("ping-pong-probe-", ".log");
@@ -53,7 +57,9 @@ public class PingPongShutdownTest extends QueueTestCommon {
             if (arg.startsWith("--add-opens") || arg.startsWith("--add-exports")
                     || (arg.startsWith("-javaagent:") && arg.contains("org.jacoco.agent")))
                 command.add(arg);
-        Collections.addAll(command, "-ea", "-cp", System.getProperty("java.class.path"), Child.class.getName(), Integer.toString(duration), dir.getAbsolutePath());
+        Collections.addAll(command, "-Xms64m", "-Xmx512m",
+                "-Dbackground.releaser.thread=" + backgroundReleaserThread,
+                "-ea", "-cp", System.getProperty("java.class.path"), Child.class.getName(), Integer.toString(duration), dir.getAbsolutePath());
         Process child = new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start();
         try {
             boolean finished = child.waitFor(25, TimeUnit.SECONDS);
@@ -82,6 +88,12 @@ public class PingPongShutdownTest extends QueueTestCommon {
     @Test
     public void ordinaryRunStopsReaderBeforeDeletingFiles() throws Exception {
         runChild(1);
+    }
+
+    @Test
+    public void ordinaryRunDrainsDeferredReleasesBeforeDeletingFiles() throws Exception {
+        // Without a releaser thread, cleanup must explicitly finish queued unmapping.
+        runChild(1, false);
     }
 
     @Test
