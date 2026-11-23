@@ -16,6 +16,8 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public class QueueTestCommonResourceTest {
+    private static final String UNRELATED_WARNING = "unrelated resource contract warning";
+
     @Test
     public void boundariesAreOptInAndPreserveFailures() throws Throwable {
         QueueTestCommon fixture = new QueueTestCommon();
@@ -81,14 +83,14 @@ public class QueueTestCommonResourceTest {
         Result result = JUnitCore.runClasses(WarningFixture.class);
         assertEquals("one fixture executes", 1, result.getRunCount());
         assertEquals("unrelated warning still fails", 1, result.getFailureCount());
-        assertTrue(result.getFailures().toString(), result.getFailures().get(0).getTrace()
-                .contains("unrelated resource contract warning"));
+        assertEquals("1 exceptions were detected: " + UNRELATED_WARNING, result.getFailures().get(0).getMessage());
     }
 
     public static class WarningFixture extends QueueTestCommon {
         @Test
         public void recordsWarning() {
-            Jvm.warn().on(getClass(), "unrelated resource contract warning");
+            Jvm.warn().on(getClass(), UNRELATED_WARNING);
+            assertTrue("The fixture must record the warning before teardown", exceptionTracker.hasException(UNRELATED_WARNING));
         }
     }
 
