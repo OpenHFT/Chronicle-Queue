@@ -174,6 +174,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 3 data");
                 }
 
+                awaitBackgroundRelease();
                 assertEquals("" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
