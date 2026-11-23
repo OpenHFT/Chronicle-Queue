@@ -814,7 +814,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test
-    public void ordinaryAppenderRollsForwardAfterHistoricalIndexedRecovery() throws IOException {
+    public void ordinaryAppendersRemainUsableAfterRejectedExactWrite() throws IOException {
         final AtomicLong clock = new AtomicLong(System.currentTimeMillis());
         clock.addAndGet(-clock.get() % ONE_DAY);
         final Bytes<?> result = Bytes.elasticHeapByteBuffer();
@@ -831,27 +831,13 @@ public class StoreAppenderTest extends QueueTestCommon {
             final long recoveredIndex = appender.lastIndexAppended() + 1;
             sealCurrentCycle(appender);
 
-            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + sealedCycle
-                    + ", index=0x" + Long.toHexString(recoveredIndex));
-            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
-            assertEquals("exact-index recovery belongs to the sealed cycle",
-                    sealedCycle, appender.cycle());
-            assertFalse("the recovered cycle stays open for the rest of the backfill",
-                    hasEOF(queue, sealedCycle));
+            assertThrows(IllegalStateException.class,
+                    () -> appender.writeBytes(recoveredIndex, Bytes.from("late")));
+            assertTrue(hasEOF(queue, sealedCycle));
             clock.addAndGet(ONE_DAY);
-            appender.normaliseEOFs();
-
             appender.writeBytes(Bytes.from("following ordinary entry"));
-            assertEquals("ordinary append must roll past completion's restored EOF",
-                    sealedCycle + 1, appender.cycle());
+            assertEquals(sealedCycle + 1, appender.cycle());
             final long firstIndexInNewCycle = appender.lastIndexAppended();
-
-            final long laterRecoveredIndex = recoveredIndex + 1;
-            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=" + sealedCycle
-                    + ", index=0x" + Long.toHexString(laterRecoveredIndex));
-            ((InternalAppender) appender).writeBytes(laterRecoveredIndex, Bytes.from("later recovered"));
-            assertFalse(hasEOF(queue, sealedCycle));
-            appender.normaliseEOFs();
 
             secondAppender.writeBytes(Bytes.from("second appender entry"));
             assertEquals("the appender created before the roll must join the latest cycle",
@@ -861,8 +847,6 @@ public class StoreAppenderTest extends QueueTestCommon {
 
             try (ExcerptTailer tailer = queue.createTailer()) {
                 assertNextBytes(tailer, result, "initial");
-                assertNextBytes(tailer, result, "recovered");
-                assertNextBytes(tailer, result, "later recovered");
                 assertNextBytes(tailer, result, "following ordinary entry");
                 assertNextBytes(tailer, result, "second appender entry");
             }
@@ -1338,8 +1322,8 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .testBlockSize()
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=0, index=0x"
-                    + Long.toHexString(recoveredIndex));
+            // Model an existing open historical roll for the normalisation test.
+            removeEndOfData(queue, 0);
             ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("backfilled"));
             assertFalse(hasEOF(queue, 0));
 
@@ -1612,8 +1596,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             final long recoveredIndex = appender.lastIndexAppended() + 1;
             time.set(TEST_DAILY.lengthInMillis());
             appender.writeBytes(Bytes.from("cycle-one"));
-            expectException("queue=" + queue.fileAbsolutePath() + ", cycle=0, index=0x"
-                    + Long.toHexString(recoveredIndex));
+            // Model an existing open historical roll for the normalisation test.
+            removeEndOfData(queue, 0);
             ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered-cycle-zero"));
             assertEquals("test precondition: recovery must retain the historical mapping", 0, appender.cycle());
             assertFalse("test precondition: recovered history remains open", hasEOF(queue, 0));
@@ -1658,7 +1642,7 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test(timeout = 20_000)
-    public void restartRetriesIncompleteHistoricalRecoveryAndNormalisesEof()
+    public void restartPreservesIncompleteHistoricalRecord()
             throws IOException, InterruptedException {
         QueueSystemProperties.CHECK_INDEX = false;
         final File directory = queueDirectory.newFolder();
@@ -1679,23 +1663,14 @@ public class StoreAppenderTest extends QueueTestCommon {
                 .testBlockSize()
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-            expectException("Exact-index recovery replaced incomplete header");
-            ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("recovered-after-restart"));
-
-            assertFalse("the successful historical retry must stay open until completion",
-                    hasEOF(queue, 0));
-            appender.normaliseEOFs();
-            assertTrue("completion must restore every historical EOF",
-                    hasEOF(queue, 0));
-
-            assertEquals(3, queue.entryCount());
-            final Bytes<?> result = Bytes.elasticHeapByteBuffer();
-            try (ExcerptTailer tailer = queue.createTailer()) {
-                assertNextBytes(tailer, result, "first");
-                assertNextBytes(tailer, result, "recovered-after-restart");
-                assertNextBytes(tailer, result, "current-cycle");
-                assertFalse(tailer.readBytes(result.clear()));
-            }
+            final long position = queue.lastIndex();
+            final long cursor = queue.tableStoreGet("normalisedEOFsTo");
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(missingIndex, Bytes.from("retry")));
+            assertTrue(failure.getMessage().contains("incomplete header"));
+            assertEquals(position, queue.lastIndex());
+            assertEquals(cursor, queue.tableStoreGet("normalisedEOFsTo"));
+            assertFalse(hasEOF(queue, 0));
         }
     }
 
@@ -1862,7 +1837,7 @@ public class StoreAppenderTest extends QueueTestCommon {
                     () -> ((InternalAppender) appender).writeBytes(
                             lastSupportedIndex, Bytes.from("must remain sealed")));
 
-            assertTrue(failure.getMessage().contains("Cannot reopen end-of-data in the final UInt31 cycle"));
+            assertTrue(failure.getMessage().contains("Exact-index write rejected at sealed roll"));
             assertEquals(writePositionBefore, appender.store.writePosition());
             assertEquals(cursorBefore, cursor.getVolatileValue());
             assertEquals(headerNumberBefore, appender.wire().headerNumber());
@@ -1902,25 +1877,6 @@ public class StoreAppenderTest extends QueueTestCommon {
         try (SingleChronicleQueueStore store = queue.storeForCycle(cycle, queue.epoch(), false, null)) {
             assertNotNull(store);
             return store.writePosition();
-        }
-    }
-
-    @Test
-    public void exactRecoveryFailsIfTheEofMarkerChangesBeforeCas() {
-        final Bytes<?> bytes = Bytes.allocateElasticDirect();
-        try {
-            bytes.writeInt(0, Wires.NOT_INITIALIZED);
-
-            final IllegalStateException changed = org.junit.Assert.assertThrows(
-                    IllegalStateException.class,
-                    () -> StoreAppender.replaceEndOfDataMarkerForRecovery(bytes, 0));
-
-            assertEquals("End-of-data changed while starting exact-index recovery at 0",
-                    changed.getMessage());
-            assertEquals("failed CAS must not change the word", Wires.NOT_INITIALIZED,
-                    bytes.readVolatileInt(0));
-        } finally {
-            bytes.releaseLast();
         }
     }
 
@@ -1972,6 +1928,31 @@ public class StoreAppenderTest extends QueueTestCommon {
                 assertTrue("moveToIndex " + i, tailer.moveToIndex(firstIndex + i));
                 assertTrue(tailer.readBytes(result.clear()));
                 assertEquals(expected[i], result.toString());
+            }
+        }
+    }
+
+    @Test
+    public void sealedReadyRecordIsNotPublishedByAnExactRetry() throws IOException {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(() -> 0).rollCycle(TEST_DAILY).testBlockSize().build();
+             ExcerptAppender excerpt = queue.createAppender()) {
+            StoreAppender appender = (StoreAppender) excerpt;
+            appender.writeBytes(Bytes.from("published"));
+            final long index = appender.lastIndexAppended() + 1;
+            final long publishedPosition = appender.store.writePosition();
+            final long position = commitRecordWithoutPublishing(queue, appender.cycle(), Bytes.from("ready"));
+            try (MappedBytes bytes = appender.store.bytes()) {
+                long end = position + SPB_HEADER_SIZE + lengthOf(bytes.readVolatileInt(position));
+                long seal = end + BytesUtil.padOffset(end);
+                assertTrue(bytes.compareAndSwapInt(seal, NOT_INITIALIZED, END_OF_DATA));
+                assertThrows(ExactWriteBoundaryException.class,
+                        () -> ((InternalAppender) appender).writeBytes(index, Bytes.from("ready")));
+                assertThrows(ExactWriteBoundaryException.class,
+                        () -> ((InternalAppender) appender).writeBytes(index + 2, Bytes.from("gap")));
+                assertEquals(END_OF_DATA, bytes.readVolatileInt(seal));
+                assertEquals(publishedPosition, appender.store.writePosition());
+                assertEquals(index - 1, appender.lastIndexAppended());
             }
         }
     }
@@ -2381,7 +2362,7 @@ public class StoreAppenderTest extends QueueTestCommon {
                 position += BytesUtil.padOffset(position);
                 final int header = bytes.readVolatileInt(position);
                 if (header == END_OF_DATA) {
-                    StoreAppender.replaceEndOfDataMarkerForRecovery(bytes, position);
+                    assertTrue(bytes.compareAndSwapInt(position, END_OF_DATA, NOT_INITIALIZED));
                     final int length = Math.toIntExact(partialPayload.readRemaining());
                     bytes.write(position + SPB_HEADER_SIZE, partialPayload,
                             partialPayload.readPosition(), length);

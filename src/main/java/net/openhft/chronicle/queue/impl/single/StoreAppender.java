@@ -756,7 +756,7 @@ class StoreAppender extends AbstractCloseable
             Jvm.debug().on(StoreAppender.class, "Normalising from cycle " + eofCycle);
         }
 
-        //! restartRetriesIncompleteHistoricalRecoveryAndNormalisesEof and
+        //! restartPreservesIncompleteHistoricalRecord and
         //! historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion require each survivor below the cap to
         //! be sealed before advancing the cursor. eofRestorationFailureIsNotReportedAsSuccess,
         //! generationDisappearingAfterEnumerationDoesNotAdvanceCursor and
@@ -996,7 +996,7 @@ class StoreAppender extends AbstractCloseable
      * @return the position of the written header
      */
     private long writeHeader(final long safeLength) {
-        //! canBackfillPreviousCycleAfterEOF and exactWriteReplacesAnIncompleteRequestedEntryWithAWarning require
+        //! exactWritePreservesHistoricalSeal and exactWritePreservesIncompleteHeader require
         //! exact recovery to inspect the next physical header before Wire opens or overwrites it. Ordinary writes
         //! still call this combined helper; splitting positioning from enterHeader changes no ordinary semantics.
         positionForNextHeader();
@@ -1005,7 +1005,7 @@ class StoreAppender extends AbstractCloseable
 
     /**
      * Positions at the next physical header without opening it. Exact recovery must inspect that
-     * header before deciding whether it may replace EOF or an incomplete record.
+     * header so it can reject EOF or an incomplete record before opening the slot.
      */
     private void positionForNextHeader() {
         //! exactBackfillFindsEofAfterSecondaryIndexMetadata,
@@ -1030,10 +1030,7 @@ class StoreAppender extends AbstractCloseable
     }
 
     /**
-     * Inspects the requested index, skipping metadata because it does not consume an index.
-     * Opens the requested slot for exact recovery. EOF is deliberately left open so a CQE backfill
-     * can append the rest of that cycle without reopening and warning for every entry; the caller
-     * must invoke {@link #normaliseEOFs()} before publishing backfill completion.
+     * Positions the wire at an unused exact-index slot, skipping ready metadata without changing it.
      */
     private void prepareExactIndexRecovery(final long recoveryIndex) {
         assert writeLock.locked();
@@ -1054,35 +1051,10 @@ class StoreAppender extends AbstractCloseable
                 bytes.writePosition(recoveryPosition);
                 return;
             }
-            if (header == END_OF_DATA) {
-                //! exactEofRecoveryAtMaximumCycleIsRejectedBeforeMutation fails if exact recovery opens the final
-                //! UInt31 roll. There is no successor which can make that roll historical, so completion's active
-                //! cycle exclusion cannot safely reseal it. The read-only preflight normally rejects first; this
-                //! check remains as fail-closed protection against a non-cooperating change after that inspection.
-                if (recoveryCycle == Integer.MAX_VALUE)
-                    throw maximumCycleRecoveryFailure(recoveryIndex);
-                //! canBackfillPreviousCycleAfterEOF requires only the observed EOF word to be reopened, with the
-                //! touched cycle recorded before mutation so completion can reseal it after a later failure.
-                recordBackfillNormalisation(recoveryCycle);
-                bytes.writePosition(recoveryPosition);
-                replaceEndOfDataMarkerForRecovery(bytes, recoveryPosition);
-                warnExactIndexRecovery("reopened end-of-data", recoveryIndex,
-                        recoveryPosition, header);
-                return;
-            }
-            if ((header & NOT_COMPLETE) != 0) {
-                //! exactWriteReplacesAnIncompleteRequestedEntryAfterQueueRestart requires the exact-next incomplete
-                //! header to be cleared in place and warned once; it is neither a published duplicate nor corruption.
-                recordBackfillNormalisation(recoveryCycle);
-                bytes.writePosition(recoveryPosition);
-                warnExactIndexRecovery("replaced incomplete header", recoveryIndex,
-                        recoveryPosition, header);
-                // Clear the failed header here so Wire.enterHeader does not emit a second warning.
-                bytes.writeVolatileInt(recoveryPosition, NOT_INITIALIZED);
-                return;
-            }
+            // Recheck the physical word before handing the slot to Wire.
+            rejectSealedOrIncompleteHeader(header, recoveryIndex);
             if (isReadyMetaData(header)) {
-                //! exactBackfillCanAddASecondaryIndexBeforeResealing and
+                //! exactWritePreservesSecondaryIndexAtSeal and
                 //! exactBackfillFindsEofAfterTrailingUserMetadata require ready metadata to consume physical bytes
                 //! without consuming the requested Queue index.
                 recoveryPosition += SPB_HEADER_SIZE + lengthOf(header);
@@ -1105,34 +1077,12 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private IllegalStateException maximumCycleRecoveryFailure(final long recoveryIndex) {
-        return new IllegalStateException("Cannot reopen end-of-data in the final UInt31 cycle for exact-index "
-                + "recovery: queue=" + queue.fileAbsolutePath()
-                + ", index=0x" + Long.toHexString(recoveryIndex));
-    }
-
-    private void warnExactIndexRecovery(final String action, final long recoveryIndex,
-                                        final long recoveryPosition, final int header) {
-        final int recoveryCycle = queue.rollCycle().toCycle(recoveryIndex);
-        Jvm.warn().on(getClass(), "Exact-index recovery " + action + ": queue="
-                + queue.fileAbsolutePath()
-                + ", cycle=" + recoveryCycle
-                + ", index=0x" + Long.toHexString(recoveryIndex)
-                + ", position=" + recoveryPosition
-                + ", header=0x" + Integer.toHexString(header));
-    }
-
-    /**
-     * Performs the single atomic mutation that opens a sealed roll for exact-index recovery.
-     * Package visibility permits the failed-CAS invariant to be tested without reflection.
-     */
-    static void replaceEndOfDataMarkerForRecovery(Bytes<?> bytes, long recoveryPosition) {
-        //! StoreAppenderTest#exactRecoveryFailsIfTheEofMarkerChangesBeforeCas directly discriminates the expected-word
-        //! compare-and-swap. An unconditional write could reopen a header changed after inspection and overwrite a
-        //! concurrent or corrupt terminal state instead of failing closed.
-        if (!bytes.compareAndSwapInt(recoveryPosition, END_OF_DATA, NOT_INITIALIZED))
-            throw new IllegalStateException("End-of-data changed while starting exact-index recovery at "
-                    + recoveryPosition);
+    private void rejectSealedOrIncompleteHeader(int header, long index) {
+        if ((header & NOT_COMPLETE) != 0) {
+            String boundary = header == END_OF_DATA ? "sealed roll" : "incomplete header";
+            throw new ExactWriteBoundaryException("Exact-index write rejected at " + boundary
+                    + ": queue=" + queue.fileAbsolutePath() + ", index=0x" + Long.toHexString(index));
+        }
     }
 
     private void advanceOrdinaryAppendCycle() {
@@ -1379,16 +1329,11 @@ class StoreAppender extends AbstractCloseable
         //! rejectedExactGapIntoExistingLaterRollDoesNotSealTheCurrentRoll require the physical next-index comparison
         //! beside the rejection itself and before roll selection. Deferring it could create the target or seal and
         //! move the source appender even though the requested sequence leaves a gap.
+        //! sealedReadyRecordIsNotPublishedByAnExactRetry checks that the boundary takes precedence even for a gap. Peers must
+        //! distinguish this boundary from an ordinary out-of-order frame. No routing or publication has occurred.
+        rejectSealedOrIncompleteHeader(exactIndexState.terminalHeader, index);
         if (index > nextIndexInTarget)
             throw new IllegalIndexException(index, nextIndexInTarget - 1);
-
-        //! exactEofRecoveryAtMaximumCycleIsRejectedBeforeMutation requires the terminal EOF decision to be made
-        //! through the read-only preflight. Reaching prepareExactIndexRecovery() first could move this appender and
-        //! lower the shared completion cursor even though the final UInt31 roll can never become historical.
-        if (cycle == Integer.MAX_VALUE
-                && index == nextIndexInTarget
-                && exactIndexState.terminalHeader == END_OF_DATA)
-            throw maximumCycleRecoveryFailure(index);
 
         if (wire == null)
             setWireIfNull(cycle);
@@ -1749,10 +1694,8 @@ class StoreAppender extends AbstractCloseable
         try {
             int safeLength = (int) queue.overlapSize();
             assert count == 0 : "count=" + count;
-            //! canBackfillPreviousCycleAfterEOF and exactBackfillFindsEofInEmptySealedCycle require exact recovery to
-            //! handle the intended physical EOF before this call. Passing false keeps Q2's ordinary successor-cycle
-            //! retry out of the exact path; enabling it here would report success at an index the caller did not
-            //! request and canBackfillPreviousCycleAfterEOF would no longer remain in the recovered cycle.
+            //! exactWritePreservesHistoricalSeal requires an exact write to keep its index even when the selected roll is sealed.
+            //! Only ordinary appends may retry in the next cycle.
             openContext(metadata, safeLength, false);
 
             try {
