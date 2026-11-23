@@ -31,6 +31,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.DateTimeException;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -76,6 +78,10 @@ class StoreAppender extends AbstractCloseable
     private Wire wireForIndex;
     private long positionOfHeader = 0;
     private long lastIndex = Long.MIN_VALUE;
+    private SingleChronicleQueueStore lastExactStore;
+    private Object lastExactFileKey;
+    private long lastExactIndex;
+    private long lastExactPosition;
     @Nullable
     private Pretoucher pretoucher = null;
     private MicroToucher microtoucher = null;
@@ -1531,8 +1537,9 @@ class StoreAppender extends AbstractCloseable
         //! appender's current roll, to classify published and physical state through a read-only view first. Deferring
         //! this until after resetPosition() and crash-record adoption makes a rejected gap or old duplicate publish
         //! unrelated ready data.
-        final ExactIndexState exactIndexState = exactIndexStateWithoutMutation(
-                cycle, sequenceNumber, bytes);
+        final ExactIndexState exactIndexState = canWriteNextOpenIndex(cycle, index)
+                ? new ExactIndexState(true, lastExactPosition, sequenceNumber - 1, sequenceNumber - 1, NOT_INITIALIZED)
+                : exactIndexStateWithoutMutation(cycle, sequenceNumber, bytes);
         //! exactWriteDoesNotRecreateDeletedPublishedMaximum and
         //! exactWriteRejectsAbsentCycleWithinPublishedRange require absence to remain distinct from an existing
         //! empty store. The published maximum is authoritative, and an absent interior generation is ambiguous
@@ -1607,6 +1614,12 @@ class StoreAppender extends AbstractCloseable
         prepareExactIndexRecovery(index);
 
         writeBytesInternal(bytes, false);
+        if (lastExactStore != store) {
+            lastExactStore = store;
+            lastExactFileKey = fileKey(store.file());
+        }
+        lastExactIndex = index;
+        lastExactPosition = store.writePosition();
         //assert !QueueSystemProperties.CHECK_INDEX || checkWritePositionHeaderNumber();
 
         headerNumber = wire.headerNumber();
@@ -1676,6 +1689,37 @@ class StoreAppender extends AbstractCloseable
             return lastIndex;
         } catch (StreamCorruptedException e) {
             throw new AssertionError(e);
+        }
+    }
+
+    //! The long replication stress test exercises hundreds of thousands of consecutive exact writes. Reopening the
+    //! store and mapping a new Wire for each one exhausted its 60-second deadline. Reuse an exact write's known
+    //! published position only while its generation, index, header and physical next slot still agree.
+    //! consecutiveOrdinaryExactWritesRejectReplacedFile and consecutiveOrdinaryExactWritesCannotCrossANewSeal
+    //! cover filesystem replacement and another writer sealing the next slot after this appender's last success.
+    private boolean canWriteNextOpenIndex(int cycle, long index) {
+        if (store == null || store != lastExactStore || this.cycle != cycle || index != lastExactIndex + 1
+                || wire.headerNumber() != lastExactIndex || store.writePosition() != lastExactPosition || lastExactFileKey == null)
+            return false;
+        Object currentKey = fileKey(store.file());
+        if (currentKey == null)
+            return false;
+        if (!lastExactFileKey.equals(currentKey))
+            throw new IllegalStateException("Exact write lost its roll generation: " + store.file());
+        Bytes<?> view = wire.bytes();
+        int previousHeader = view.readVolatileInt(lastExactPosition);
+        if (!isReadyData(previousHeader))
+            return false;
+        long end = lastExactPosition + SPB_HEADER_SIZE + lengthOf(previousHeader);
+        end += BytesUtil.padOffset(end);
+        return view.readVolatileInt(end) == NOT_INITIALIZED;
+    }
+
+    private static Object fileKey(File file) {
+        try {
+            return Files.readAttributes(file.toPath(), BasicFileAttributes.class).fileKey();
+        } catch (IOException e) {
+            return null;
         }
     }
 

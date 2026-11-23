@@ -801,8 +801,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void exactHistoricalRecoveryDoesNotChangeOrdinaryContext() {
-        // Pins exact-index recovery as listener-free and unable to move the ordinary context backwards.
-        ignoreException("Exact-index recovery reopened end-of-data");
+        // Replay the same prefix a connected sink sends, including the listener's context record.
         AtomicInteger callbacks = new AtomicInteger();
 
         try (SingleChronicleQueue queue = builder(getTmpDir())
@@ -823,7 +822,24 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             Bytes<?> recovered = binaryPayload("recovered");
             try {
                 long recoveryIndex = queue.rollCycle().toIndex(historicalCycle, 2);
-                appender.writeBytes(recoveryIndex, recovered);
+                assertThrows(ExactWriteBoundaryException.class, () -> appender.writeBytes(recoveryIndex, recovered));
+                String previous = System.getProperty(RecentRollBackfill.PROPERTY);
+                System.setProperty(RecentRollBackfill.PROPERTY, "true");
+                try (ExcerptTailer tailer = queue.createTailer()) {
+                    RecentRollBackfill replay = appender.recentRollBackfill();
+                    for (int i = 0; i < 2; i++) {
+                        try (DocumentContext dc = tailer.readingDocument()) {
+                            assertTrue(dc.isPresent());
+                            replay.write(dc.index(), dc.wire().bytes());
+                        }
+                    }
+                    replay.write(recoveryIndex, recovered);
+                } finally {
+                    if (previous == null)
+                        System.clearProperty(RecentRollBackfill.PROPERTY);
+                    else
+                        System.setProperty(RecentRollBackfill.PROPERTY, previous);
+                }
             } finally {
                 recovered.releaseLast();
             }

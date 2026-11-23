@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -16,11 +17,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_DAILY;
 import static net.openhft.chronicle.wire.Wires.*;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeNotNull;
 
 public class RecentRollBackfillTest extends QueueTestCommon {
     private final SetTimeProvider time = new SetTimeProvider(0);
@@ -145,6 +151,43 @@ public class RecentRollBackfillTest extends QueueTestCommon {
             peer.write(2, Bytes.from("three"));
             assertRecord(t, 2, "three");
             assertThrows(ExactWriteBoundaryException.class, () -> app.writeBytes(3, Bytes.from("four")));
+        }
+    }
+
+    @Test
+    public void consecutiveOrdinaryExactWritesCannotCrossANewSeal() {
+        try (SingleChronicleQueue q = open(getTmpDir()); ExcerptAppender a = q.createAppender(); ExcerptAppender b = q.createAppender()) {
+            InternalAppender exact = (InternalAppender) a;
+            exact.writeBytes(0, Bytes.from("first"));
+            exact.writeBytes(1, Bytes.from("second"));
+            time.advanceMillis(TimeUnit.DAYS.toMillis(1));
+            b.writeText("later");
+            assertThrows(ExactWriteBoundaryException.class, () -> exact.writeBytes(2, Bytes.from("late")));
+        }
+    }
+
+    @Test
+    public void consecutiveOrdinaryExactWritesRejectReplacedFile() throws Exception {
+        assumeFalse("Windows prevents replacement of a live mapped file", OS.isWindows());
+        File dir = getTmpDir();
+        File peer = getTmpDir();
+        try (SingleChronicleQueue q = open(peer); ExcerptAppender a = q.createAppender()) {
+            a.writeBytes(Bytes.from("replacement"));
+        }
+        try (SingleChronicleQueue q = open(dir); ExcerptAppender a = q.createAppender()) {
+            InternalAppender exact = (InternalAppender) a;
+            exact.writeBytes(0, Bytes.from("first"));
+            try (SingleChronicleQueueStore store = q.storeForCycle(0, q.epoch(), false, null)) {
+                File roll = store.file();
+                assumeNotNull(Files.readAttributes(roll.toPath(), BasicFileAttributes.class).fileKey());
+                Files.move(new File(peer, roll.getName()).toPath(), roll.toPath(), StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+            assertThrows(IllegalStateException.class, () -> exact.writeBytes(1, Bytes.from("late")));
+        }
+        try (SingleChronicleQueue q = open(dir); ExcerptTailer t = q.createTailer()) {
+            assertRecord(t, 0, "replacement");
+            assertFalse(t.moveToIndex(1));
         }
     }
 
