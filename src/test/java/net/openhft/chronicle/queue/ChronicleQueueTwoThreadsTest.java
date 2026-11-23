@@ -148,20 +148,13 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
     }
 
     private static void stopAndJoin(Thread worker) throws InterruptedException {
-        //! FIX-292: the reader consumes the stop interrupt before closing its queue.
-        //! Repeating it in each join slice interrupts resource release and records a
-        //! warning. Keep the existing one-second bound and require actual thread exit;
-        //! ChronicleQueueTwoThreadsTest#cleanupIsNotInterruptedTwice and
-        //! ChronicleQueueTwoThreadsTest#stalledCleanupStillFails cover both outcomes.
+        // Interrupt once so a second interrupt cannot disrupt queue cleanup while we wait for the thread to exit.
         worker.interrupt();
         worker.join(1000);
         assertFalse("Worker did not stop: " + worker.getName(), worker.isAlive());
     }
 
-    //! FIX-292: uncaught writer/reader failures otherwise disappear on background
-    //! threads and can look like successful cleanup. Preserve them for JUnit;
-    //! ChronicleQueueTwoThreadsTest#workerFailureIsReported checks this shared
-    //! capture path and the original cause propagated by rethrowWorkerFailure.
+    // Report uncaught worker exceptions on the JUnit thread.
     private static void captureWorkerFailure(Thread worker, AtomicReference<Throwable> failure) {
         worker.setUncaughtExceptionHandler((thread, cause) -> failure.compareAndSet(null, cause));
     }
