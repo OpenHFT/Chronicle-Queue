@@ -144,8 +144,8 @@ class StoreAppender extends AbstractCloseable
                             break;
                         }
                     }
-                    if (wire != null)
-                        resetPosition();
+                    //! The inspected store is released immediately. Resetting it from the physical tail here can
+                    //! mistake a ready, unacknowledged recovery frame for a published sequence after restart.
                     scannedCycle = cycle;
 
                     // Don't hold the back-scan's store open; the first write re-acquires it
@@ -206,7 +206,8 @@ class StoreAppender extends AbstractCloseable
      * Checks the append lock to determine if appending is allowed. This version
      * assumes that the process holding the lock is not the current process.
      */
-    private void checkAppendLock() {
+    //! Reverse replay takes the same append-role and closed-appender checks as public exact writes.
+    void checkAppendLock() {
         checkAppendLock(false);
     }
 
@@ -442,7 +443,12 @@ class StoreAppender extends AbstractCloseable
 
         wire.parent(this);
         wire.pauser(queue.pauserSupplier.get());
-        resetPosition();
+        //! replayAfterSealMovedAndBeforePublicationRequiresMatchingBytes reopens after a crash between the
+        //! seal CAS and publication. Inspection must pair the published position with its own sequence.
+        if (createStrategy == WireStoreSupplier.CreateStrategy.READ_ONLY)
+            resetPosition(store.lastPublishedSequenceNumber(wire));
+        else
+            resetPosition();
         queue.onRoll(cycle);
     }
 
@@ -1261,6 +1267,15 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
+    //! RecentRollBackfillTest checks that enabling reverse replay does not grant ordinary writers permission to cross EOF.
+    @Override
+    public RecentRollBackfill recentRollBackfill() {
+        throwExceptionIfClosed();
+        if (!Jvm.getBoolean(RecentRollBackfill.PROPERTY))
+            throw new IllegalStateException("Recent roll backfill requires " + RecentRollBackfill.PROPERTY);
+        return new RecentRollBackfill(queue, this);
+    }
+
     void ensureEndOfData(final String failureMessage) {
         //! eofRestorationFailureIsNotReportedAsSuccess fails if a false writeEOF result is accepted without proving
         //! that another writer installed EOF. Completion must either observe that seal or propagate failure.
@@ -1602,12 +1617,13 @@ class StoreAppender extends AbstractCloseable
         }
     }
 
-    private static final class WireExcerptContext implements ExcerptContext {
+    //! Share the index reader with the sealed-roll replay so both paths use the same store and padding format.
+    static final class WireExcerptContext implements ExcerptContext {
         @NotNull
         private final Wire wire;
         private final long timeoutMS;
 
-        private WireExcerptContext(@NotNull final Wire wire, final long timeoutMS) {
+        WireExcerptContext(@NotNull final Wire wire, final long timeoutMS) {
             this.wire = wire;
             this.timeoutMS = timeoutMS;
         }
