@@ -15,39 +15,12 @@ import net.openhft.chronicle.queue.ExcerptAppender;
  */
 public interface InternalAppender extends ExcerptAppender {
 
-    //! exactWriteReplacesAnIncompleteRequestedEntryAfterQueueRestart, canBackfillPreviousCycleAfterEOF and
-    //! historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion require the internal API contract to expose
-    //! retry, physical recovery and completion responsibilities. Without them a replication caller could treat EOF
-    //! as immutable or acknowledge a backfill before resealing it; the implementation decisions are justified beside
-    //! their respective branches rather than by this interface-level documentation note.
-    //! InternalAppenderWriteBytesTest#publishedDuplicatePayloadsAreComparedWithoutMutation and
-    //! StoreAppenderTest#readyCrashDuplicatesCompareMatchingAndDifferentPayloads require this contract to state that
-    //! duplicate comparison is diagnostic and never rejects or overwrites either a published or ready crash record.
-    //! exactWriteDoesNotRecreateDeletedPublishedMaximum and exactWriteRejectsAbsentCycleWithinPublishedRange require
-    //! the same contract to distinguish a creatable new sparse roll from missing retained publication state.
+    //! exactWritePreservesHistoricalSeal and exactWritePreservesIncompleteHeaderAfterQueueRestart exercise both
+    //! boundaries. Replication traffic and retries cannot authorise overwriting the observed header.
     /**
-     * Append an excerpt at the specified index, if the index is a valid next index for the queue.
-     * This internal replication path can replace an end-of-data marker when restoring an exact
-     * missing index. Replacing the marker is logged as a warning; the cycle remains open for the
-     * rest of the backfill and is resealed by {@link #normaliseEOFs()} at completion.
-     * <p>
-     * For queues that support this path, {@code StoreAppender} establishes padding when it
-     * constructs the Wire. Exact-index recovery has no unpadded mode.
-     * <p>
-     * Queue serialises concurrent backfill appenders with its write lock. A published index is
-     * authoritative and treated as already applied; a gap is rejected. A duplicate is compared
-     * with the existing payload, including a ready crash record not yet published: equal content is
-     * reported at debug level (silent when disabled), while different
-     * content is warned with both payloads as hex and the supplied duplicate is ignored.
-     * An absent roll may be created only outside the retained published bounds. An absent
-     * highest roll or interior roll within those bounds is rejected because Queue cannot
-     * distinguish unsupported deletion from a never-created sparse generation.
-     * If an attempt leaves the requested header incomplete, a later exact-index call can replace it,
-     * including from a new Queue instance after restart. That retry does not infer whether the failed
-     * attempt opened an end-of-data marker, so restoring any missing marker is a separate completion step.
-     * The caller must retry after failure, call {@link #normaliseEOFs()} before publishing recovery
-     * completion, and exclude archive/delete maintenance throughout that interval. EOF is a hard
-     * seal for ordinary writes, not proof that exact recovery can never reopen the roll.
+     * Append at the exact next index in an open roll. A published duplicate is compared without changing the queue.
+     * An append which encounters EOF or an incomplete record fails before changing either the roll or its indexes.
+     * The same rules apply after restart. A missing highest or interior roll is rejected because its history is unknown.
      * <p>
      * If the index is:
      * <dl>
@@ -61,15 +34,23 @@ public interface InternalAppender extends ExcerptAppender {
      *
      *     <dt>A ready record beyond the write-position publication boundary</dt>
      *     <dd>The requested ready record is compared using the same diagnostic policy and adopted
-     *     successfully without overwriting it. Publication stops at that requested record.</dd>
+     *     without overwriting it if the roll has an open tail. Publication stops at that requested record.</dd>
      * </dl>
      *
      * @param index the exact queue index to append at
      * @param bytes the contents of the excerpt to write
-     * @throws IllegalIndexException if {@code index} is greater than the next valid queue index
+     * @throws IllegalIndexException if the roll is open and {@code index} exceeds its next valid index
      * @throws IllegalArgumentException if the sequence is outside the roll cycle's declared capacity
      * @throws IllegalStateException if the target roll is absent within the retained published bounds
+     * @throws ExactWriteBoundaryException if the write encounters EOF or an incomplete terminal header
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
+
+    //! The ordinary indexed writer always preserves EOF. Only a reverse replication connection can hold
+    //! the per-peer prefix verification state exercised by RecentRollBackfillTest.
+    /** Open a new, independently verified sink-to-source replay. */
+    default RecentRollBackfill recentRollBackfill() {
+        throw new UnsupportedOperationException("Recent roll backfill is unavailable on this appender");
+    }
 
 }
