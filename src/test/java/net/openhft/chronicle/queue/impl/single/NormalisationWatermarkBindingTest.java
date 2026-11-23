@@ -20,7 +20,6 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -160,13 +159,12 @@ public class NormalisationWatermarkBindingTest extends QueueTestCommon {
                 });
                 try {
                     assertTrue("appender was ready", ready.await(5, TimeUnit.SECONDS));
-                    task.get(200, TimeUnit.MILLISECONDS);
-                    fail("first watermark binding completed while another instance held the structural lock");
-                } catch (TimeoutException expected) {
-                    // The worker can finish once this callback releases the structural lock.
-                } catch (InterruptedException | ExecutionException e) {
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new AssertionError(e);
                 }
+                assertThrows("first watermark binding must wait for the structural lock",
+                        TimeoutException.class, () -> task.get(200, TimeUnit.MILLISECONDS));
                 return task;
             });
             pending.get(5, TimeUnit.SECONDS);
