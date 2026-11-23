@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.internal.main;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.Time;
@@ -87,6 +88,8 @@ public final class InternalPingPongMain {
         }
         System.out.println("read delay: " + readDelay.toMicrosFormat());
         System.out.println("read delay2: " + readDelay2.toMicrosFormat());
+        // Closing Queue can defer unmapping; Windows cannot delete mapped roll files.
+        BackgroundResourceReleaser.releasePendingResources();
         IOTools.deleteDirWithFiles(path, 2);
     }
 
