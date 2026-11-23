@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.scoped.ScopedResource;
+import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -39,6 +40,15 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     @AfterClass
     public static void afterClass() {
         IOTools.deleteDirWithFiles(BASE_PATH, 2);
+    }
+
+    @Test
+    public void rejectsExchangerReadsForEveryWriteMode() {
+        for (BufferMode writeMode : BufferMode.values()) {
+            SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH)
+                    .writeBufferMode(writeMode).readBufferMode(BufferMode.AsynchronousExchanger);
+            assertThrows(IllegalArgumentException.class, builder::build);
+        }
     }
 
     @Test

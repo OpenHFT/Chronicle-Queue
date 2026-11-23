@@ -24,5 +24,16 @@ public enum BufferMode {
      * Buffer mode used for asynchronous processing.
      * This mode is specific to Chronicle Ring, an enterprise product.
      */
-    Asynchronous
+    Asynchronous,
+
+    /**
+     * Asynchronous writes through a process-local, two-region exchanger ring.
+     * Use with {@link #None} for reads and the default in-memory buffer store.
+     */
+    AsynchronousExchanger;
+
+    /** Returns whether writes in this mode are drained to the queue asynchronously. */
+    public boolean isAsynchronous() {
+        return this == Asynchronous || this == AsynchronousExchanger;
+    }
 }

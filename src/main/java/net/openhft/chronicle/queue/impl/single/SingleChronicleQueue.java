@@ -154,7 +154,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             storeFileListener = builder.storeFileListener();
             storeSupplier = new StoreSupplier();
             pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
-            isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
+            isBuffered = builder.writeBufferMode().isAsynchronous();
             path = builder.path();
             if (!builder.readOnly())
                 //noinspection ResultOfMethodCallIgnored
