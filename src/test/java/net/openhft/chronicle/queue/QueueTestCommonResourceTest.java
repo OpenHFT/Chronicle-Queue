@@ -7,6 +7,8 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import org.junit.Test;
 import org.junit.runner.Description;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Result;
 import org.junit.runners.model.Statement;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -14,6 +16,8 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public class QueueTestCommonResourceTest {
+    private static final String UNRELATED_WARNING = "unrelated resource contract warning";
+
     @Test
     public void boundariesAreOptInAndPreserveFailures() throws Throwable {
         QueueTestCommon fixture = new QueueTestCommon();
@@ -52,14 +56,13 @@ public class QueueTestCommonResourceTest {
     }
 
     @Test
-    public void sharedDiskDropIsContextAndUnrelatedWarningsStillFail() throws Exception {
+    public void sharedDiskDropIsDiagnosticContext() throws Exception {
         QueueTestCommon fixture = new QueueTestCommon() {
             int reads;
             @Override long diskFreeSpace() { return (++reads == 1 ? 10L : 7L) << 30; }
         };
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
         PrintStream original = System.out;
-        fixture.assumeFinishedNormally();
         fixture.recordExceptions();
         try (PrintStream outputStream = new PrintStream(captured)) {
             System.setOut(outputStream);
@@ -69,13 +72,25 @@ public class QueueTestCommonResourceTest {
             assertTrue("shared drop is visible", output.contains("Shared filesystem free space decreased by 3.0 GiB"));
             assertTrue("does not attribute usage", output.contains("this is not per-test disk usage"));
             fixture.exceptionTracker.checkExceptions();
-            fixture.recordExceptions();
-            Jvm.warn().on(getClass(), "unrelated resource contract warning");
-            AssertionError failure = org.junit.Assert.assertThrows(AssertionError.class, fixture::afterChecks);
-            assertTrue("unrelated warning still fails", failure.toString().contains("unrelated resource contract warning"));
         } finally {
             System.setOut(original);
             Jvm.resetExceptionHandlers();
+        }
+    }
+
+    @Test
+    public void unrelatedWarningsStillFailThroughJUnitLifecycle() {
+        Result result = JUnitCore.runClasses(WarningFixture.class);
+        assertEquals("one fixture executes", 1, result.getRunCount());
+        assertEquals("unrelated warning still fails", 1, result.getFailureCount());
+        assertEquals("1 exceptions were detected: " + UNRELATED_WARNING, result.getFailures().get(0).getMessage());
+    }
+
+    public static class WarningFixture extends QueueTestCommon {
+        @Test
+        public void recordsWarning() {
+            Jvm.warn().on(getClass(), UNRELATED_WARNING);
+            assertTrue("The fixture must record the warning before teardown", exceptionTracker.hasException(UNRELATED_WARNING));
         }
     }
 
