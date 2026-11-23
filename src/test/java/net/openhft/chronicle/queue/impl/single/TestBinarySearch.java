@@ -77,12 +77,7 @@ public class TestBinarySearch extends QueueTestCommon {
 
         boolean writtenEmptyCycles = false;
 
-        //! These tiny messages span about 30 rolls in the largest cases.
-        //! Default mappings reserve 80 MiB per roll on Windows; small blocks
-        //! exercise the same search and empty-cycle cases without that disk
-        //! allocation. Keep the message counts and one-second roll period.
-        //! Regression: TestBinarySearch#testBinarySearch asserts the small mapping budget
-        //! before its unchanged 42 message-count/empty-cycle parameter combinations.
+        // Use small blocks to limit disk usage across the many sparsely populated rolls.
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(TestRollCycles.TEST_SECONDLY)
                 .testBlockSize()
@@ -132,15 +127,7 @@ public class TestBinarySearch extends QueueTestCommon {
                 for (int j = 0; j < numberOfMessagesToVerify; j++) {
                     int indexToVerify = (int) retrievalStrategy.retrieveIndex(j, numberOfMessages);
                     Wire key = toWire(indexToVerify);
-                    //! Each search owns its key bytes even if search or the assertion fails.
-                    //! Control: all testBinarySearch parameter combinations, including missing keys below.
-                    //! The existing parameter cases above check results, not heap-key lifetime. Lifetime regressions are
-                    //! TestBinarySearchResourceTest#releasesKeysAfterSuccessfulSearch,
-                    //! TestBinarySearchResourceTest#releasesKeyAfterMissingSearch,
-                    //! TestBinarySearchResourceTest#releasesKeyAfterSearchFailure,
-                    //! TestBinarySearchResourceTest#releasesKeyAfterAssertionFailure,
-                    //! TestBinarySearchResourceTest#releasesMissingKeyAfterSearchFailure and
-                    //! TestBinarySearchResourceTest#releasesMissingKeyAfterAssertionFailure. Each observes refCount zero.
+                    // Release the search key even if the search or its assertion fails.
                     try {
                         long index = BinarySearch.search(binarySearchTailer, key, comparator);
                         long expectedIndex = keyToIndex.get(indexToVerify);

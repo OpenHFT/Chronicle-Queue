@@ -322,19 +322,7 @@ public class ChronicleHistoryReaderTest extends QueueTestCommon {
         }
     }
 
-    //! History stores can still have deferred mapping releases after queue.close(). Drain them
-    //! before deletion, and make a failed deletion visible. Register paths with QueueTestCommon
-    //! as well so its final cleanup still owns them if an earlier cleanup step fails.
-    //! Controls: testWithQueueHistoryRecordHistoryInitial[MethodIds], testPredictable,
-    //! testPredictableStartIndex and testPredictableMeasurementWindow.
-    //! The existing history controls now assert deletion before fallback teardown; their exact anchors are
-    //! ChronicleHistoryReaderTest#testWithQueueHistoryRecordHistoryInitial,
-    //! ChronicleHistoryReaderTest#testWithQueueHistoryRecordHistoryInitialMethodIds,
-    //! ChronicleHistoryReaderTest#testPredictable, ChronicleHistoryReaderTest#testPredictableStartIndex
-    //! and ChronicleHistoryReaderTest#testPredictableMeasurementWindow.
-    //! ChronicleHistoryReaderTest#historyDeletionDrainsPendingReleases controls pending releases;
-    //! ChronicleHistoryReaderTest#historyDeletionFailureIsVisibleAndOwnedPathsRemainTracked
-    //! checks failed deletion and fallback ownership without deleting an unrelated path.
+    // Queue closure can defer unmapping. Drain releases before deleting the history stores.
     private void deleteHistoryStores(File... paths) {
         BackgroundResourceReleaser.releasePendingResources();
         for (File path : paths) {

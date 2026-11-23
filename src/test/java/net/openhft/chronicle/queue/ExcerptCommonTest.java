@@ -15,13 +15,7 @@ import static org.junit.Assert.assertNull;
  */
 public class ExcerptCommonTest extends QueueTestCommon {
 
-    //! Each test owns a tracked directory; the old static path left metadata behind after the suite.
-    //! Use the ordinary test block budget. Controls: testSourceId, testQueue, testCurrentFile, testSync.
-    //! The four value controls above do not assert ownership. Ownership and budget are checked by
-    //! ExcerptCommonTest#ownsAndDeletesFixtureAfterSuccess;
-    //! ExcerptCommonTest#ownsAndDeletesFixtureAfterAssertionFailure and
-    //! ExcerptCommonTest#ownsAndDeletesFixtureAfterConstructionFailure check failure exits.
-    //! An untracked factory path fails these assertions before any test-side rescue cleanup.
+    // Track the directory so teardown removes the queue metadata even if construction fails.
     private ChronicleQueue newQueue() {
         return ChronicleQueue.singleBuilder(getTmpDir()).testBlockSize().build();
     }

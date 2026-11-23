@@ -69,12 +69,7 @@ public class SparseBinarySearchTest extends QueueTestCommon {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(0);
 
-        //! Sparse search needs the existing messages, gaps and roll boundaries,
-        //! but each roll contains only a few small records. Request small
-        //! mappings so Windows does not allocate a default 80 MiB roll file.
-        //! Retain the supplied secondly/daily cycle and its indexing semantics.
-        //! Budget and workload regressions: SparseBinarySearchTest#testBinarySearchWithManyGaps
-        //! and SparseBinarySearchTest#testBinarySearchWithManyGapsAndManyRollCycles. Both reject default budgets.
+        // Each roll holds few records. Small blocks keep the Windows fixture small across roll cycles.
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(rollCycle)
                 .testBlockSize()
