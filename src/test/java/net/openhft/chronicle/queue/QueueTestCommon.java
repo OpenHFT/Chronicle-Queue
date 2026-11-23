@@ -210,6 +210,7 @@ public class QueueTestCommon {
     /** @deprecated Compatibility bridge; JUnit determines whether verification runs. */
     @Deprecated
     public void assumeFinishedNormally() {
+        // Existing callers may still invoke this hook. The JUnit lifecycle now determines the outcome.
     }
 
     @Before

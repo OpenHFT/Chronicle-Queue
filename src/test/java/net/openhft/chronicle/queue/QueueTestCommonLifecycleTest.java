@@ -288,17 +288,19 @@ class QueueTestCommonLifecycleTest {
         }
     }
 
-    public static class JupiterTestCase extends Fixture {
-        @BeforeEach public void setup() { setupCase(); }
-        @AfterEach public void after() { afterCase(); }
-        @Test public void body() {
+    static class JupiterTestCase extends Fixture {
+        @BeforeEach void setup() { setupCase(); }
+        @AfterEach void after() { afterCase(); }
+        @Test void body() {
             bodyCase();
             org.junit.jupiter.api.Assumptions.assumeFalse(state.scenario == Scenario.ABORT || state.scenario == Scenario.ABORT_AND_LEAK);
         }
     }
 
     public static class CollectedFailureTestCase extends Fixture {
-        @org.junit.Test public void body() { errorCollector.addError(state.primary); }
+        @org.junit.Test public void body() {
+            assertDoesNotThrow(() -> errorCollector.addError(state.primary), "The collector must defer the failure");
+        }
     }
 
     public static class ExpectedExceptionTestCase extends Fixture {
@@ -311,7 +313,10 @@ class QueueTestCommonLifecycleTest {
 
     public static class TimeoutTestCase extends Fixture {
         @org.junit.Test(timeout = 100)
-        public void body() throws InterruptedException { new CountDownLatch(1).await(); }
+        public void body() {
+            CountDownLatch blocked = new CountDownLatch(1);
+            assertThrows(InterruptedException.class, () -> blocked.await(5, TimeUnit.SECONDS));
+        }
     }
 
     public static class NestedTestCase extends Fixture {

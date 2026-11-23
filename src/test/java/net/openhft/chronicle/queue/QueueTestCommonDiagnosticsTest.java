@@ -172,6 +172,7 @@ public class QueueTestCommonDiagnosticsTest {
         @Test
         public void abortedTest() {
             warn(COMPILER_FAILURE);
+            assertTrue("The warning must be recorded before the fixture aborts", exceptionTracker.hasException(FALLBACK));
             org.junit.Assume.assumeTrue("deliberate abort", false);
         }
 
