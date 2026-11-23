@@ -11,10 +11,10 @@ The length of the cycle is determined by the `rollCycle` parameter passed to the
 
 Example configuration of `rollCycle`:
 
-* `LegacyRollCycles.DAILY` events stored in the queue will be grouped into 24-hour periods
-* `LegacyRollCycles.HOURLY` every hour, a new queue file will be created for written events
+* `RollCycles.FAST_DAILY` events stored in the queue will be grouped into 24-hour periods
+* `RollCycles.FAST_HOURLY` every hour, a new queue file will be created for written events
 
-NOTE: `DAILY`, `HOURLY` and `MINUTELY` are defined in `net.openhft.chronicle.queue.rollcycles.LegacyRollCycles`; the `RollCycles` enum holds `FIVE_MINUTELY` to `FAST_DAILY` and `WEEKLY`.
+NOTE: Use `net.openhft.chronicle.queue.RollCycles` for the standard roll cycles. `RollCycles.FAST_DAILY` is the default; use `RollCycles.FAST_HOURLY` for hourly rolling.
 
 As new files are created (the queue is rolled) to accommodate events being written to the queue, a persisted data-structure (`metadata.cq4t`) is updated with the lowest and highest
 _cycle_ numbers present in the directory.
@@ -33,18 +33,34 @@ However, after a certain timeout, the tailers will act as if there is an EOF mar
 == Roll Cycle Configuration
 
 The interval for rolling is configured using the queue's attribute `rollCycle`.
-As an example, the queue can be configured to roll its file (i.e. create a new file) every day by providing the `LegacyRollCycles.DAILY`:
+As an example, the queue can be configured to roll its file (i.e. create a new file) every day by providing the `RollCycles.FAST_DAILY`:
 
 [source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
-    .rollCycle(LegacyRollCycles.DAILY)
+    .rollCycle(RollCycles.FAST_DAILY)
     .build();
 ----
 
 All available roll-cycles can be shown under <<available_roll_cycles>>.
 
 NOTE: The default roll-cycle is `RollCycles.FAST_DAILY`.
+
+=== Specialist roll-cycle imports
+
+The specialist constants `LARGE_HOURLY`, `LARGE_DAILY`, `XLARGE_DAILY` and `HUGE_DAILY` in <<available_roll_cycles>> belong to `LargeRollCycles`:
+
+[source,java]
+----
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.rollcycles.LargeRollCycles;
+
+RollCycle rollCycle = LargeRollCycles.LARGE_DAILY;
+----
+
+Pass this value to `.rollCycle(rollCycle)` when creating a new queue, choosing capacity and expected file size to suit the application.
+
+WARNING: These examples configure new queues. When reopening existing data, retain its persisted roll-cycle configuration, including `LegacyRollCycles` where applicable. Switching an example to `FAST_DAILY` or `FAST_HOURLY` does not migrate existing data.
 
 === Overriding the roll cycle
 
@@ -66,27 +82,27 @@ Rolling occurs whenever a new time frame of the selected kind is started, meanin
 
 This behavior can be changed using Chronicle Queue’s attribute `epoch()`.
 Epoch refers to a milliseconds offset to the set time frame.
-In other words, if you set the epoch to be `epoch(1)` and use `LegacyRollCycles.DAILY` the queue will roll at 1 millisecond past midnight UTC time.
+In other words, if you set the epoch to be `epoch(1)` and use `RollCycles.FAST_DAILY` the queue will roll at 1 millisecond past midnight UTC time.
 Putting it together:
 
 [source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
-    .rollCycle(LegacyRollCycles.DAILY)
+    .rollCycle(RollCycles.FAST_DAILY)
     .epoch(1)
     .build();
 ----
 
 IMPORTANT: We do not recommend changing the epoch on systems which already has `.cq4` files created, which are using a different epoch setting.
 
-For daily roll-cycles where the `RollCycle` is one of: `SMALL_DAILY`, `DAILY`, `LARGE_DAILY`, `XLARGE_DAILY`, `HUGE_DAILY` a more convenient way to control the exact roll time is with `rollTime()`
+For daily roll-cycles such as `RollCycles.FAST_DAILY`, a more convenient way to control the exact roll time is with `rollTime()`.
 
 For example, to roll daily at 21:15 UTC:
 
 [source,java]
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("rollCycleTest")
-    .rollCycle(LegacyRollCycles.DAILY)
+    .rollCycle(RollCycles.FAST_DAILY)
     .rollTime(LocalTime.of(21, 15), ZoneOffset.UTC)
     .build();
 ----
@@ -157,13 +173,7 @@ This allows specifying a time and periodicity of queue rollovers which takes acc
 
 [IMPORTANT]
 ====
-Time zone roll cycles is an *Enterprise feature* and only applies to daily rollovers, i.e. when the roll cycle is one of:
-
-* `SMALL_DAILY`
-* `DAILY`
-* `LARGE_DAILY`
-* `XLARGE_DAILY`
-* `HUGE_DAILY`
+Time zone roll cycles are an *Enterprise feature* and only apply to daily rollovers, such as `RollCycles.FAST_DAILY`.
 
 ====
 
@@ -181,7 +191,7 @@ Below is an example of a queue that performs daily rolls at 5 PM, London time:
 ----
 SingleChronicleQueue queue = ChronicleQueue.singleBuilder("/timezone")
     .rollTime(LocalTime.of(17, 0), ZoneId.of("Europe/London"))
-    .rollCycle(LegacyRollCycles.DAILY)
+    .rollCycle(RollCycles.FAST_DAILY)
     .build();
 ----
 
