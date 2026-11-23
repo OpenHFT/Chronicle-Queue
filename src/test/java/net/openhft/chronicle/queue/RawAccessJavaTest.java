@@ -21,103 +21,107 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
-// For use with C++ RawAccessJava. Called from C++
+import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
+
+/** Explicit C++ interoperability entry points; see docs/cpp-interop.adoc. */
 public class RawAccessJavaTest extends QueueTestCommon {
+    static final int COUNT = 10;
+    static final int PAYLOAD_LENGTH = 40;
 
-    final long QUEUE_HEADER_SIZE = 4;
-    final long RAW_SIZE_PREFIX = 4;
-
-    final long COUNT = 10;
-
-    boolean assert_from_cpp() {
-        String env = System.getProperty("chronicle.test.env");
-        return (env != null && env.equals("from-cpp"));
+    @Test
+    public void Tailer() throws IOException {
+        assumeTrue("External C++ fixture requires -Pcpp-interop", interopEnabled());
+        readFixture(new File(fixtureRoot(), "cpp-to-java"), COUNT);
     }
 
     @Test
-    public void Tailer() {
-        if (!assert_from_cpp())
-            return;
+    public void Appender() throws IOException {
+        assumeTrue("External C++ consumer requires -Pcpp-interop", interopEnabled());
+        writeFixture(new File(fixtureRoot(), "java-to-cpp"), COUNT);
+    }
 
-        String tmp = "/dev/shm/RawAccessCtoJ";
-        System.out.println(tmp); // so C++ knows this ran rather than skipped
+    private static boolean interopEnabled() {
+        return "from-cpp".equals(System.getProperty("chronicle.test.env"));
+    }
 
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
+    private static File fixtureRoot() throws IOException {
+        String path = System.getProperty("chronicle.cpp.fixture.dir");
+        assertNotNull("Set -Dchronicle.cpp.fixture.dir to a fresh per-run fixture directory", path);
+        File root = new File(path);
+        assertTrue("Fixture directory must already exist: " + root, root.isDirectory());
+        String revision = System.getProperty("chronicle.cpp.revision");
+        assertTrue("Pin -Dchronicle.cpp.revision to the 40-character C++ Git commit",
+                revision != null && revision.matches("[0-9a-fA-F]{40}"));
+        File marker = new File(root, "cpp-revision.txt");
+        assertTrue("C++ producer must record its Git commit in " + marker, marker.isFile());
+        assertEquals("Fixture was produced by a different C++ revision", revision,
+                new String(Files.readAllBytes(marker.toPath()), StandardCharsets.US_ASCII).trim());
+        return root;
+    }
 
-            ExcerptTailer tailer = cq.createTailer();
+    static void readFixture(File directory, int count) {
+        assertTrue("Missing C++ fixture directory: " + directory + "; run the pinned producer first", directory.isDirectory());
+        File[] cycles = directory.listFiles((dir, name) -> name.endsWith(".cq4"));
+        assertTrue("Missing C++ queue data in " + directory + "; run the pinned producer first",
+                cycles != null && cycles.length > 0);
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory).readOnly(true).build();
+             ExcerptTailer tailer = queue.createTailer()) {
+            for (int i = 0; i < count; i++) {
+                try (DocumentContext document = tailer.readingDocument()) {
+                    assertTrue("Incomplete C++ fixture: missing record " + (i + 1) + " of " + count
+                            + " in " + directory, document.isPresent());
+                    Bytes<?> bytes = document.wire().bytes();
+                    assertEquals("Unexpected raw payload length; do not add an inner length prefix",
+                            PAYLOAD_LENGTH, bytes.readRemaining());
+                    assertEquals((byte) 0xab, bytes.readByte());
+                    assertEquals((short) 12, bytes.readShort());
+                    assertEquals(123, bytes.readInt());
+                    assertEquals(123456789L, bytes.readLong());
+                    assertEquals(1.234f, bytes.readFloat(), 1.0e-7);
+                    assertEquals(123.456, bytes.readDouble(), 1.0e-7);
+                    assertEquals('a', bytes.readChar());
+                    StringBuilder text = new StringBuilder();
+                    bytes.read8bit(text);
+                    assertEquals("Hello World", text.toString());
+                    assertEquals("Trailing bytes in raw document", 0, bytes.readRemaining());
+                }
+            }
+            try (DocumentContext extra = tailer.readingDocument()) {
+                assertFalse("C++ fixture contains more than " + count + " records in " + directory,
+                        extra.isPresent());
+            }
+        }
+    }
 
-            for (int i = 0; i < COUNT; ++i) {
-                try (DocumentContext dc = tailer.readingDocument()) {
-
-                    Bytes<?> bytes = dc.wire().bytes();
-
-                    bytes.readSkip(-QUEUE_HEADER_SIZE);
-                    int header = bytes.readInt();
-
-                    // document length, inc 4-byte length
-                    int length = Wires.lengthOf(header);
-
-//                    // actual length of data
-//                    int data_length = bytes.readInt();
-
-                    assertEquals(bytes.readByte(), (byte) 0xab);
-                    assertEquals(bytes.readShort(), (short) 12);
-                    assertEquals(bytes.readInt(), 123);
-                    assertEquals(bytes.readLong(), 123456789L);
-                    assertEquals(bytes.readFloat(), 1.234f, 1.0e-7);
-                    assertEquals(bytes.readDouble(), 123.456, 1.0e-7);
-                    assertEquals(bytes.readChar(), 'a');
-
-                    StringBuilder sb = new StringBuilder();
-                    bytes.read8bit(sb);
-                    assertEquals(sb.toString(), "Hello World");
+    static void writeFixture(File directory, int count) {
+        assertFalse("Output already exists; choose a fresh per-run fixture directory: " + directory,
+                directory.exists());
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(directory).build();
+             ExcerptAppender appender = queue.acquireAppender()) {
+            for (int i = 0; i < count; i++) {
+                try (DocumentContext document = appender.writingDocument()) {
+                    writePayload(document.wire().bytes());
                 }
             }
         }
     }
 
-    @Test
-    public void Appender() {
-        if (!assert_from_cpp())
-            return;
-
-        String tmp = "/dev/shm/RawAccessJtoC";
-        System.out.println(tmp); // so C++ knows this ran rather than skipped
-
-        try (ChronicleQueue cq = SingleChronicleQueueBuilder.binary(tmp).build()) {
-
-            ExcerptAppender appender = cq.acquireAppender();
-
-            for (int i = 0; i < COUNT; ++i) {
-                try (DocumentContext dc = appender.writingDocument()) {
-
-                    Bytes<?> bytes = dc.wire().bytes();
-
-//                    // will contain the size of the blob
-//                    long start = bytes.writePosition();
-//                    bytes.writeSkip(RAW_SIZE_PREFIX);
-
-                    {
-                        bytes.writeByte((byte) 0xab);
-                        bytes.writeShort((short) 12);
-                        bytes.writeInt(123);
-                        bytes.writeLong(123456789L);
-                        bytes.writeFloat(1.234f);
-                        bytes.writeDouble(123.456);
-                        bytes.writeChar('a');
-                        bytes.write8bit("Hello World");
-                    }
-
-//                    
-//                    long end = bytes.writePosition();
-//                    bytes.writeInt(start, (int) (end - start - RAW_SIZE_PREFIX));
-                }
-            }
-        }
+    static void writePayload(Bytes<?> bytes) {
+        bytes.writeByte((byte) 0xab);
+        bytes.writeShort((short) 12);
+        bytes.writeInt(123);
+        bytes.writeLong(123456789L);
+        bytes.writeFloat(1.234f);
+        bytes.writeDouble(123.456);
+        bytes.writeChar('a');
+        bytes.write8bit("Hello World");
     }
 }

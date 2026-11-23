@@ -1,0 +1,57 @@
+= Raw C++ / Java interoperability fixture
+
+Ordinary Java tests do not require external C++ files.
+`RawAccessJavaTest` reports its two external entry points as skipped unless the
+`cpp-interop` profile is explicitly enabled. The profile uses a Surefire system property,
+so inherited JVM and coverage arguments remain intact.
+
+== Per-run inputs
+
+Create a fresh directory for each run and share its absolute path with the C++ launcher.
+Do not reuse the historical `/dev/shm/RawAccessCtoJ` or `/dev/shm/RawAccessJtoC` paths.
+The directory contains:
+
+* `cpp-to-java/`: an existing queue written by the pinned C++ producer.
+* `cpp-revision.txt`: the producer's exact 40-character Git commit, followed by a newline.
+* `java-to-cpp/`: created by the Java appender; it must not already exist.
+
+Pin `chronicle.cpp.revision` to the same C++ commit for both producer and consumer.
+The Java launcher checks the revision marker before opening either fixture.
+The C++ implementation is distributed separately; this repository does not supply it or
+claim a verified C++ revision. Record the chosen producer/consumer commit and Java commit
+with each interoperability result. A Java-only loopback does not qualify that pair.
+
+[source,shell]
+----
+mvn -Pcpp-interop -Dtest=RawAccessJavaTest \
+  -Dchronicle.cpp.fixture.dir=/absolute/path/to/fresh-run \
+  -Dchronicle.cpp.revision=YOUR_40_CHARACTER_CPP_COMMIT test
+----
+
+Run the pinned C++ producer first and the matching C++ consumer after this command.
+Use the same queue roll-cycle settings in both implementations.
+The Java reader requires exactly ten data documents and rejects missing, incomplete,
+overlong or differently framed fixtures with an explicit assertion.
+
+== Record contract
+
+Each data document has Chronicle Queue's four-byte document header and a 40-byte raw
+payload. There is no additional four-byte blob-length prefix inside that payload.
+For the little-endian fixture, every payload contains these values in order:
+
+|===
+|Width |Value
+|1 byte |`0xab`
+|2 bytes |signed short `12`
+|4 bytes |signed int `123`
+|8 bytes |signed long `123456789`
+|4 bytes |IEEE-754 float `1.234`
+|8 bytes |IEEE-754 double `123.456`
+|1 byte |stop-bit encoded character `a` (97)
+|12 bytes |8-bit string: stop-bit length `11`, then `Hello World`
+|===
+
+The C++ consumer must verify all ten Java-produced records, their complete payloads,
+and end-of-queue. The Java reader applies the same checks to the C++ queue.
+`RawAccessJavaFixtureTest` exercises these harness checks using Java-generated queues;
+it is deliberately separate from the external interoperability entry points.
