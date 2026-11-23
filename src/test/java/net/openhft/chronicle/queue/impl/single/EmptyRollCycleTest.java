@@ -101,9 +101,12 @@ public class EmptyRollCycleTest extends QueueTestCommon {
 
         final Path emptyRollCycle = dataDirectory.resolve(EMPTY_ROLL_CYCLE_NAME);
         final Process start = JavaProcessBuilder.create(LockingProcess.class)
+                // This helper owns one file lock; it does not need the parent test heap.
+                .withJvmArguments("-Xms32m", "-Xmx256m")
                 .withProgramArguments(emptyRollCycle.toString())
                 .start();
-        try {
+        try (TestProcessCleanup owned = new TestProcessCleanup(start, 5, TimeUnit.SECONDS)) {
+            assertTrue("Lock-holder must be running", owned.process().isAlive());
             waitForFileToBeLocked(emptyRollCycle);
 
             try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(dataDirectory)
@@ -118,9 +121,6 @@ public class EmptyRollCycleTest extends QueueTestCommon {
                 }
                 assertEquals(false, tailer.readingDocument().isPresent());
             }
-        } finally {
-            start.destroy();
-            assertTrue(start.waitFor(5, TimeUnit.SECONDS));
         }
     }
 
