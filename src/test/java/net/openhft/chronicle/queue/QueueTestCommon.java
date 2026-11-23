@@ -178,12 +178,7 @@ public class QueueTestCommon {
     public void checkSpaceUsed() {
         long spaceLeft = diskFreeSpace();
         if (freeSpace - spaceLeft > 2L << 30) {
-            //! Free space belongs to the filesystem shared by all test forks and other
-            //! processes. A decrease during this test cannot identify which owner wrote
-            //! the data, so keep the 2 GiB observation as context rather than a failure.
-            //! Agent/build capacity checks must enforce headroom; fixture limits require
-            //! explicitly owned paths. Use stdout because an error/warning handler can
-            //! turn this diagnostic back into a test failure through ExceptionTracker.
+            // Free space is shared across test forks. Write the change to stdout so it cannot fail the warning check.
             System.out.println("Shared filesystem free space decreased by "
                     + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB during "
                     + getClass().getName() + "." + testName.getMethodName()
@@ -198,6 +193,7 @@ public class QueueTestCommon {
     /** @deprecated Compatibility bridge; JUnit determines whether verification runs. */
     @Deprecated
     public void assumeFinishedNormally() {
+        // Existing callers may still invoke this hook. The JUnit lifecycle now determines the outcome.
     }
 
     @Before
