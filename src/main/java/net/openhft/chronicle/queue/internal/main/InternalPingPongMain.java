@@ -131,6 +131,9 @@ public final class InternalPingPongMain {
         return false;
     }
 
+    // Restore interruption after joining: restoring it in the catch would make subsequent
+    // joins fail immediately. Waiting for termination keeps storage alive until the reader releases it.
+    @SuppressWarnings("java:S2142")
     static void stopReader(Thread reader) {
         running.set(false);
         boolean interrupted = false;

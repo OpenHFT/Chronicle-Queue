@@ -3,6 +3,7 @@
  */
 package net.openhft.chronicle.queue.internal.main;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
@@ -22,7 +23,7 @@ public class PingPongShutdownTest extends QueueTestCommon {
             InternalPingPongMain.pingPong(64);
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
             while (hasReader() && System.nanoTime() < deadline)
-                Thread.sleep(10);
+                Jvm.pause(10);
             if (hasReader())
                 throw new AssertionError("Ping-pong reader remains alive after shutdown");
             File[] files = new File(args[1]).listFiles();
