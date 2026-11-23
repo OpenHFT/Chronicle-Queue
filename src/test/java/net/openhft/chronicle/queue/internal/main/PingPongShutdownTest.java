@@ -3,7 +3,7 @@
  */
 package net.openhft.chronicle.queue.internal.main;
 
-import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import org.junit.Test;
 
@@ -17,40 +17,22 @@ import static org.junit.Assert.*;
 
 public class PingPongShutdownTest extends QueueTestCommon {
     public static class Child {
-        public static void main(String[] args) throws Exception {
+        public static void main(String[] args) {
             InternalPingPongMain.runtime = Integer.parseInt(args[0]);
             InternalPingPongMain.basePath = args[1];
             InternalPingPongMain.pingPong(64);
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-            while (hasReader() && System.nanoTime() < deadline)
-                Jvm.pause(10);
-            if (hasReader())
-                throw new AssertionError("Ping-pong reader remains alive after shutdown");
-            File[] files = new File(args[1]).listFiles();
-            if (files != null && files.length != 0)
-                throw new AssertionError("Queue files remain after shutdown");
-        }
-
-        private static boolean hasReader() {
-            for (Map.Entry<Thread, StackTraceElement[]> e : Thread.getAllStackTraces().entrySet()) {
-                if (e.getKey() == Thread.currentThread())
-                    continue;
-                for (StackTraceElement frame : e.getValue())
-                    if (frame.getClassName().equals(InternalPingPongMain.class.getName()))
-                        return true;
+            for (StackTraceElement[] stack : Thread.getAllStackTraces().values()) {
+                for (StackTraceElement frame : stack)
+                    assertNotEquals("Reader still running", InternalPingPongMain.class.getName(), frame.getClassName());
             }
-            return false;
+            assertArrayEquals("Queue files remain after shutdown", new String[0], new File(args[1]).list());
         }
-    }
-
-    private void runChild(int duration) throws Exception {
-        runChild(duration, true);
     }
 
     private void runChild(int duration, boolean backgroundReleaserThread) throws Exception {
-        File dir = getTmpDir();
-        Files.createDirectories(dir.toPath());
-        Path log = Files.createTempFile("ping-pong-probe-", ".log");
+        Path dir = getTmpDir().toPath();
+        Path queue = Files.createDirectories(dir.resolve("queue"));
+        Path log = dir.resolve("child.log");
         List<String> command = new ArrayList<>();
         command.add(new File(System.getProperty("java.home"), "bin/java").getPath());
         for (String arg : java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments())
@@ -60,35 +42,31 @@ public class PingPongShutdownTest extends QueueTestCommon {
                 command.add(arg);
         Collections.addAll(command, "-Xms64m", "-Xmx512m",
                 "-Dbackground.releaser.thread=" + backgroundReleaserThread,
-                "-ea", "-cp", System.getProperty("java.class.path"), Child.class.getName(), Integer.toString(duration), dir.getAbsolutePath());
+                "-ea", "-cp", System.getProperty("java.class.path"), Child.class.getName(), Integer.toString(duration), queue.toString());
         Process child = new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start();
+        boolean finished;
         try {
-            boolean finished = child.waitFor(25, TimeUnit.SECONDS);
-            if (!finished) {
-                child.destroyForcibly();
-                child.waitFor(5, TimeUnit.SECONDS);
-            }
-            String output = new String(Files.readAllBytes(log), StandardCharsets.UTF_8);
-            assertTrue(output, finished);
-            assertEquals(output, 0, child.exitValue());
+            finished = child.waitFor(25, TimeUnit.SECONDS);
         } finally {
-            child.destroyForcibly();
-            child.waitFor(5, TimeUnit.SECONDS);
-            child.getInputStream().close();
-            child.getErrorStream().close();
-            child.getOutputStream().close();
-            Files.deleteIfExists(log);
+            if (child.isAlive()) {
+                child.destroyForcibly();
+                assertTrue("Ping-pong child survived termination", child.waitFor(5, TimeUnit.SECONDS));
+            }
+            Closeable.closeQuietly(child.getInputStream(), child.getErrorStream(), child.getOutputStream());
         }
+        String output = new String(Files.readAllBytes(log), StandardCharsets.UTF_8);
+        assertTrue("Ping-pong child timed out\n" + output, finished);
+        assertEquals(output, 0, child.exitValue());
     }
 
     @Test
     public void zeroDurationStopsIdleReader() throws Exception {
-        runChild(0);
+        runChild(0, true);
     }
 
     @Test
     public void ordinaryRunStopsReaderBeforeDeletingFiles() throws Exception {
-        runChild(1);
+        runChild(1, true);
     }
 
     @Test
