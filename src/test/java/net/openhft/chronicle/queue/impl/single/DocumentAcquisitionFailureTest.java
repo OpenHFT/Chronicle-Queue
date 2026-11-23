@@ -7,6 +7,7 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.domestic.InternalWire;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -36,7 +37,7 @@ public class DocumentAcquisitionFailureTest extends QueueTestCommon {
             wireField.setAccessible(true);
             countField.setAccessible(true);
             Wire original = (Wire) wireField.get(appender);
-            Wire intercepted = (Wire) Proxy.newProxyInstance(Wire.class.getClassLoader(), new Class<?>[]{Wire.class},
+            Wire intercepted = (Wire) Proxy.newProxyInstance(Wire.class.getClassLoader(), new Class<?>[]{Wire.class, InternalWire.class},
                     (proxy, method, args) -> {
                         if (method.getName().equals("enterHeader"))
                             throw injected;
