@@ -3,7 +3,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.*;
@@ -23,7 +23,6 @@ import java.util.stream.Stream;
 import static java.util.stream.IntStream.range;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_SECONDLY;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 
 public final class TailerIndexingQueueTest extends QueueTestCommon {
     private final File path = getTmpDir();
@@ -49,7 +48,6 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
 
     @Test
     public void tailerShouldBeAbleToMoveBackwardFromEndOfCycle() throws IOException {
-        assumeFalse(OS.isWindows());
         try (final ChronicleQueue queue = createQueue(path, clock::get);
              final ExcerptAppender appender = queue.createAppender()) {
             // generate some cycle files
@@ -61,6 +59,9 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
             });
         }
 
+        // Closing a queue can enqueue unmapping; Windows cannot delete a live mapping.
+        BackgroundResourceReleaser.releasePendingResources();
+
         // remove all but the first file
         try (Stream<Path> list = Files.list(this.path.toPath());
              Stream<Path> list2 = Files.list(this.path.toPath())) {
@@ -71,8 +72,8 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
             list2.filter(p -> !p.equals(firstFile))
                     .forEach(TailerIndexingQueueTest::deleteFile);
 
-            try (final ChronicleQueue queue = createQueue(path, SystemTimeProvider.INSTANCE)) {
-                final ExcerptTailer tailer = queue.createTailer().toEnd();
+            try (final ChronicleQueue queue = createQueue(path, SystemTimeProvider.INSTANCE);
+                 final ExcerptTailer tailer = queue.createTailer().toEnd()) {
                 // move to END_OF_CYCLE
                 try (final DocumentContext readCtx = tailer.readingDocument()) {
                     assertFalse(readCtx.isPresent());
@@ -82,7 +83,9 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
                 tailer.direction(TailerDirection.BACKWARD);
 
                 tailer.toEnd();
-                assertTrue(tailer.readingDocument().isPresent());
+                try (DocumentContext readCtx = tailer.readingDocument()) {
+                    assertTrue(readCtx.isPresent());
+                }
             }
         }
     }
