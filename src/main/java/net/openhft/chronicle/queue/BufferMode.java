@@ -30,6 +30,8 @@ public enum BufferMode {
      * Asynchronous writes through a process-local, two-region exchanger ring.
      * Use with {@link #None} for reads and the default in-memory buffer store.
      */
+    // Preserve the public enum naming used by existing buffer modes and configuration.
+    @SuppressWarnings("java:S115")
     AsynchronousExchanger;
 
     /** Returns whether writes in this mode are drained to the queue asynchronously. */
