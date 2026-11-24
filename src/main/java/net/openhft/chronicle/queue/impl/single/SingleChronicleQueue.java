@@ -764,7 +764,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
-        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor(NAMED_TAILER_INDEX_PREFIX + id, 0L));
+        return this.metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor(NAMED_TAILER_INDEX_PREFIX + id, 0L));
     }
 
     /**
