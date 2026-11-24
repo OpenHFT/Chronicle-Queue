@@ -83,6 +83,7 @@ public final class TailerIndexingQueueTest extends QueueTestCommon {
                 tailer.direction(TailerDirection.BACKWARD);
 
                 tailer.toEnd();
+                // Closing the context completes the read even when we only check for presence.
                 try (DocumentContext readCtx = tailer.readingDocument()) {
                     assertTrue(readCtx.isPresent());
                 }
