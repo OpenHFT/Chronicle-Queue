@@ -74,37 +74,7 @@ public final class InternalPingPongMain {
     }
 
     private static void runPingPong(ChronicleQueue queue, int size, Histogram readDelay, Histogram readDelay2) {
-        Thread reader = new Thread(() -> {
-            try (ExcerptTailer tailer = queue.createTailer()) {
-                while (running.get()) {
-                    //noinspection StatementWithEmptyBody
-                    while (running.get() && readCount.get() == writeCount.get()) ;
-
-                    long wakeTime = System.nanoTime();
-                    while (true) {
-                        if (!running.get())
-                            return;
-                        try (DocumentContext dc = tailer.readingDocument(true)) {
-                            if (!dc.isPresent())
-                                continue;
-                        }
-                        break;
-                    }
-                    final long delay = wakeTime - writeTime.get();
-                    final long time = System.nanoTime() - wakeTime;
-                    readDelay2.sample(time);
-                    readDelay.sample(delay);
-                    if (time + delay > 20_000)
-                        System.out.println("td " + delay + " + " + time);
-                    if (readCount.get() == 100000) {
-                        System.out.println("reset");
-                        readDelay.reset();
-                        readDelay2.reset();
-                    }
-                    readCount.incrementAndGet();
-                }
-            }
-        });
+        Thread reader = new Thread(() -> readPingPong(queue, readDelay, readDelay2));
         reader.setDaemon(true);
         reader.start();
         try (ExcerptAppender appender = queue.createAppender()) {
@@ -125,6 +95,41 @@ public final class InternalPingPongMain {
         } finally {
             stopReader(reader);
         }
+    }
+
+    private static void readPingPong(ChronicleQueue queue, Histogram readDelay, Histogram readDelay2) {
+        try (ExcerptTailer tailer = queue.createTailer()) {
+            while (running.get()) {
+                //noinspection StatementWithEmptyBody
+                while (running.get() && readCount.get() == writeCount.get()) ;
+
+                long wakeTime = System.nanoTime();
+                if (!readNextDocument(tailer))
+                    return;
+                final long delay = wakeTime - writeTime.get();
+                final long time = System.nanoTime() - wakeTime;
+                readDelay2.sample(time);
+                readDelay.sample(delay);
+                if (time + delay > 20_000)
+                    System.out.println("td " + delay + " + " + time);
+                if (readCount.get() == 100000) {
+                    System.out.println("reset");
+                    readDelay.reset();
+                    readDelay2.reset();
+                }
+                readCount.incrementAndGet();
+            }
+        }
+    }
+
+    private static boolean readNextDocument(ExcerptTailer tailer) {
+        while (running.get()) {
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                if (dc.isPresent())
+                    return true;
+            }
+        }
+        return false;
     }
 
     // Restore the interrupt after joining so that a retry can wait for the reader.
