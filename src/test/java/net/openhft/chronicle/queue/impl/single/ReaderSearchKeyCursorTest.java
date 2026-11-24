@@ -27,7 +27,9 @@ public class ReaderSearchKeyCursorTest extends QueueTestCommon {
             this.key = key;
         }
 
-        public void accept(net.openhft.chronicle.queue.reader.Reader reader) {}
+        public void accept(net.openhft.chronicle.queue.reader.Reader reader) {
+            // This comparator already owns its search key and needs no reader configuration.
+        }
 
         public Wire wireKey() {
             return key;
