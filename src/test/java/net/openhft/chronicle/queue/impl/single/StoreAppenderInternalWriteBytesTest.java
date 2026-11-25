@@ -5,8 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -18,8 +17,11 @@ import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +30,7 @@ import static java.lang.String.format;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST4_SECONDLY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
@@ -35,6 +38,8 @@ import static org.junit.Assume.assumeTrue;
 public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
     private static final int MESSAGES_TO_WRITE = 200;
+    private static final int REOPEN_INTERVAL = 17;
+    private final SetTimeProvider timeProvider = new SetTimeProvider(Instant.ofEpochMilli(1_600_000_000_000L));
 
     @Before
     public void check64bit() {
@@ -58,14 +63,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     }
 
     private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
-        final Path sourceDir = IOTools.createTempDirectory("sourceQueue");
-        final Path destinationDir = IOTools.createTempDirectory("destinationQueue");
-        /**
-         final Path sourceDir = Paths.get("/dev/shm/sourceQueue");
-         final Path destinationDir = Paths.get("/dev/shm/destinationQueue");
-         IOTools.deleteDirWithFiles(sourceDir.toFile());
-         IOTools.deleteDirWithFiles(destinationDir.toFile());
-         */
+        final Path sourceDir = getTmpDir().toPath();
+        final Path destinationDir = getTmpDir().toPath();
 
         populateSourceQueue(sourceDir);
 
@@ -73,8 +72,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         assertQueueContentsAreTheSame(sourceDir, destinationDir);
 
-        IOTools.deleteDirWithFiles(sourceDir.toFile());
-        IOTools.deleteDirWithFiles(destinationDir.toFile());
     }
 
     private void copySourceToDestination(int numCopiers, boolean concurrent, Path sourceDir, Path destinationDir) throws InterruptedException {
@@ -92,13 +89,14 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                 }
             });
         } finally {
-            es.shutdown();
-            assert es.awaitTermination(30, TimeUnit.SECONDS) : "Copier threads didn't stop";
+            es.shutdownNow();
+            if (!es.awaitTermination(30, TimeUnit.SECONDS))
+                fail("Copier threads did not stop before fixture cleanup");
         }
     }
 
     private void assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
-        try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
+        try (final ChronicleQueue sourceQueue = createQueue(sourceDir);
              final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
 //            System.out.println(destinationQueue.dump());
             /*
@@ -114,6 +112,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                  final ExcerptTailer destinationTailer = destinationQueue.createTailer()) {
                 Bytes<?> sourceBuffer = Bytes.allocateElasticOnHeap(1024);
                 Bytes<?> destinationBuffer = Bytes.allocateElasticOnHeap(1024);
+                Set<Integer> cycles = new HashSet<>();
                 for (int i = 0; i < MESSAGES_TO_WRITE; i++) {
                     sourceBuffer.clear();
                     destinationBuffer.clear();
@@ -121,10 +120,15 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     long destinationIndex = destinationTailer.index();
                     assert sourceTailer.readBytes(sourceBuffer) : "Source queue is shorter than expected";
                     assert destinationTailer.readBytes(destinationBuffer) : "Destination queue is shorter than expected";
+                    assertEquals(sourceTailer.lastReadIndex(), destinationTailer.lastReadIndex());
+                    cycles.add(TEST4_SECONDLY.toCycle(sourceTailer.lastReadIndex()));
                     final String s = destinationBuffer.toString();
                     assertEquals(format("Mismatch at index %s/%s was %s", Long.toHexString(sourceIndex), Long.toHexString(destinationIndex), s),
                             sourceBuffer.toString(), s.replaceAll(" - .*", ""));
                 }
+                assertEquals("Exercise three distinct roll files", 3, cycles.size());
+                assertFalse("No extra source record", sourceTailer.readBytes(sourceBuffer.clear()));
+                assertFalse("Repeated copies must not append extra records", destinationTailer.readBytes(destinationBuffer.clear()));
             }
         }
     }
@@ -144,15 +148,17 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         @Override
         public void run() {
 //            LOGGER.info("Starting copier...");
-            try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
-                 final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
+            try (final ChronicleQueue sourceQueue = createQueue(sourceDir);
+                 final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
                      final ExcerptTailer destinationTailer = destinationQueue.createTailer();
                      final ExcerptAppender destinationAppender = destinationQueue.createAppender()) {
                     Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
                     Bytes<?> prev = Bytes.allocateElasticOnHeap(1024);
                     long index;
-                    while (true) {
+                    int lastReopenedCycle = Integer.MIN_VALUE;
+                    int copied = 0;
+                    while (!Thread.currentThread().isInterrupted()) {
                         buffer.clear();
                         index = sourceTailer.index();
                         if (!sourceTailer.readBytes(buffer)) {
@@ -173,13 +179,17 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                                 assertEquals(Long.toHexString(index), Long.toHexString(dtIndex));
                         }
                         prev.clear().append(buffer);
-//                        if (false && index %17 == 0) {
-                        try (final ChronicleQueue dq = createQueue(destinationDir, null);
-                             final ExcerptAppender da = dq.createAppender()) {
-                            assumeNotNull(dq);
-                            assumeNotNull(da);
+                        int cycle = TEST4_SECONDLY.toCycle(index);
+                        copied++;
+                        // Cover reopen-at-roll and periodic reopen without 1,000 mapping lifecycles.
+                        if (cycle != lastReopenedCycle || copied % REOPEN_INTERVAL == 0) {
+                            try (final ChronicleQueue dq = createQueue(destinationDir);
+                                 final ExcerptAppender da = dq.createAppender()) {
+                                assumeNotNull(dq);
+                                assumeNotNull(da);
+                            }
+                            lastReopenedCycle = cycle;
                         }
-                        //                      }
                     }
                 }
             }
@@ -194,7 +204,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
             Bytes<?> buffer = Bytes.allocateElasticOnHeap(1024);
             for (int i = 0; i < MESSAGES_TO_WRITE; i++) {
                 if (i == MESSAGES_TO_WRITE / 3 || i == 2 * MESSAGES_TO_WRITE / 3) {
-                    Jvm.pause(1000);
+                    timeProvider.advanceMillis(TEST4_SECONDLY.lengthInMillis());
                 }
                 buffer.clear();
                 buffer.write(messageForIndex(i));
@@ -208,12 +218,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
         return format("Message %d", index).getBytes(StandardCharsets.UTF_8);
     }
 
-    private SingleChronicleQueue createQueue(Path queueDir) {
-        return createQueue(queueDir, null);
-    }
-
     @NotNull
-    private SingleChronicleQueue createQueue(Path queueDir, TimeProvider timeProvider) {
+    private SingleChronicleQueue createQueue(Path queueDir) {
         return SingleChronicleQueueBuilder
                 .binary(queueDir)
                 .rollCycle(TEST4_SECONDLY)
