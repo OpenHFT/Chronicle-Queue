@@ -325,12 +325,19 @@ public class QueueTestCommon {
         // as a failure: exception tracking has already finished by this point.
         net.openhft.chronicle.core.io.BackgroundResourceReleaser.releasePendingResources();
         List<File> remaining = new ArrayList<>();
+        List<AssertionError> failures = new ArrayList<>();
         tmpDirs.forEach(file -> {
-            if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
+            try {
+                TestDirectoryCleanup.delete(file.toPath());
+            } catch (AssertionError failure) {
                 remaining.add(file);
+                failures.add(failure);
             }
         });
-        if (!remaining.isEmpty())
-            throw new AssertionError("Could not delete owned test directories: " + remaining);
+        if (!remaining.isEmpty()) {
+            AssertionError failure = new AssertionError("Could not delete owned test directories: " + remaining);
+            failures.forEach(failure::addSuppressed);
+            throw failure;
+        }
     }
 }
