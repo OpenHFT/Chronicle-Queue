@@ -321,11 +321,23 @@ public class QueueTestCommon {
     }
 
     protected void tearDown() {
-        // should be able to remove tmp dirs
+        // File deletion follows deferred unmapping. Report every remaining owned path
+        // as a failure: exception tracking has already finished by this point.
+        net.openhft.chronicle.core.io.BackgroundResourceReleaser.releasePendingResources();
+        List<File> remaining = new ArrayList<>();
+        List<AssertionError> failures = new ArrayList<>();
         tmpDirs.forEach(file -> {
-            if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
-                Jvm.error().on(getClass(), "Could not delete tmp dir " + file);
+            try {
+                TestDirectoryCleanup.delete(file.toPath());
+            } catch (AssertionError failure) {
+                remaining.add(file);
+                failures.add(failure);
             }
         });
+        if (!remaining.isEmpty()) {
+            AssertionError failure = new AssertionError("Could not delete owned test directories: " + remaining);
+            failures.forEach(failure::addSuppressed);
+            throw failure;
+        }
     }
 }

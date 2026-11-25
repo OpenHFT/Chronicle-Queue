@@ -23,3 +23,17 @@ failure, rather than bypassing Surefire's event stream through `inheritIO()`.
 Small lock and deferred-release children use a 32 MiB initial and 256 MiB maximum heap.
 Controls cover delayed exit, repeated interruption, a surviving process,
 late ownership registration, captured output and fixture teardown after failure.
+
+== Mapped-file fixtures
+
+Small fixtures use `testBlockSize()` and own directories through
+`QueueTestCommon.getTmpDir()`. Close tailers, appenders and queues before
+draining deferred releases and checking deletion. Search keys are released
+on successful and failed searches, including the missing-key assertion.
+Input-sized text mappings keep the existing four-times margin and 256 KiB floor.
+
+`TEST_SECONDLY` retains its one-second roll period, 2,048 index entries and spacing 4.
+Its capacity and initial mapping geometry are checked without writing millions
+of messages; physical allocation and Windows sharing remain platform checks.
+Controls cover owned/unrelated paths, construction/assertion/close failures,
+deferred-release ordering, original-failure preservation and normal readback.

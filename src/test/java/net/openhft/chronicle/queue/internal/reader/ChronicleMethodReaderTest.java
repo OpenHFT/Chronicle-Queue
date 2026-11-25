@@ -195,7 +195,10 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
-        basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
+        // Validation can fail before opening a queue. The base fixture ignores an optional
+        // Windows read-only warning; this path must not require it to occur.
+        new ChronicleReader().withBasePath(Paths.get("/does/not/exist"))
+                .withMessageSink(capturedOutput::add).execute();
     }
 
     @Test

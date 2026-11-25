@@ -5,10 +5,10 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -50,7 +50,7 @@ public class RollingCycleTest extends QueueTestCommon {
         long start = 19059 * 86_400_000L;
         stp.currentTimeMillis(start);
 
-        String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
+        String basePath = getTmpDir().getAbsolutePath();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
@@ -284,11 +284,11 @@ public class RollingCycleTest extends QueueTestCommon {
                 expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
             assertEquals(expected, dump);
 
-            try {
-                IOTools.deleteDirWithFiles(basePath, 2);
-            } catch (IORuntimeException e) {
-                e.printStackTrace();
-            }
+        } finally {
+            // Drain deferred unmapping before deleting the first cycle on Windows.
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFilesOrThrow(basePath);
+            assertFalse("owned rolling directory remains", new java.io.File(basePath).exists());
         }
     }
 

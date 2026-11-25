@@ -8,8 +8,8 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -44,8 +44,6 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
 
 public class RollEOFTest extends QueueTestCommon {
-
-    private static final ReferenceOwner test = ReferenceOwner.temporary("test");
 
     @Nullable
     private static SingleChronicleQueueStore loadStore(@NotNull Wire wire) {
@@ -116,7 +114,7 @@ public class RollEOFTest extends QueueTestCommon {
             createQueueAndWriteData(timeProvider, path);
             assertEquals(2, getNumberOfQueueFiles(path));
 
-            Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
+            Optional<Path> firstQueueFile = getFirstQueueFile(path);
 
             assertTrue(firstQueueFile.isPresent());
 
@@ -153,7 +151,7 @@ public class RollEOFTest extends QueueTestCommon {
             createQueueAndWriteData(timeProvider, path);
             assertEquals(2, getNumberOfQueueFiles(path));
 
-            Optional<Path> firstQueueFile = Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX)).sorted().findFirst();
+            Optional<Path> firstQueueFile = getFirstQueueFile(path);
 
             assertTrue(firstQueueFile.isPresent());
 
@@ -174,9 +172,7 @@ public class RollEOFTest extends QueueTestCommon {
         long blockSize = OS.SAFE_PAGE_SIZE;
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
-        final MappedBytes mappedBytes = MappedBytes.mappedBytes(path.toFile(), chunkSize, overlapSize, PageUtil.getPageSize(path.toString()), false);
-        mappedBytes.reserve(test);
-        try {
+        try (MappedBytes mappedBytes = MappedBytes.mappedBytes(path.toFile(), chunkSize, overlapSize, PageUtil.getPageSize(path.toString()), false)) {
             final Wire wire = WireType.BINARY_LIGHT.apply(mappedBytes);
             final Bytes<?> bytes = wire.bytes();
             bytes.readLimitToCapacity();
@@ -190,17 +186,47 @@ public class RollEOFTest extends QueueTestCommon {
                 bytes.writePosition(eofOffset);
                 bytes.writeInt(0);
             }
-        } finally {
-            mappedBytes.release(test);
         }
     }
 
     private long getNumberOfQueueFiles(final File path) throws IOException {
-        return getQueueFilesStream(path).count();
+        try (Stream<Path> files = getQueueFilesStream(path)) {
+            return files.count();
+        }
+    }
+
+    private Optional<Path> getFirstQueueFile(final File path) throws IOException {
+        try (Stream<Path> files = getQueueFilesStream(path)) {
+            return files.sorted().findFirst();
+        }
     }
 
     private Stream<Path> getQueueFilesStream(final File path) throws IOException {
-        return Files.list(path.toPath()).filter(p -> p.toString().endsWith(SingleChronicleQueue.SUFFIX));
+        return Files.list(path.toPath()).filter(p -> p.toString().endsWith(SUFFIX));
+    }
+
+    @Test
+    public void releasesInspectionResourcesBeforeDeletingQueueFiles() throws IOException {
+        File path = getTmpDir();
+        createQueueAndWriteData(new SetTimeProvider(), path);
+        assertEquals(1, getNumberOfQueueFiles(path));
+        Optional<Path> firstQueueFile = getFirstQueueFile(path);
+        assertTrue(firstQueueFile.isPresent());
+        removeEOF(firstQueueFile.get());
+        BackgroundResourceReleaser.releasePendingResources();
+
+        // Delete before the base fixture can collect leaked mappings or directory streams.
+        Path[] files;
+        try (Stream<Path> directory = Files.list(path.toPath())) {
+            files = directory.toArray(Path[]::new);
+        }
+        for (Path file : files)
+            Files.delete(file);
+        Files.delete(path.toPath());
+        assertFalse(path.exists());
+        // An open Windows directory stream can leave deletion pending and block reuse.
+        Files.createDirectory(path.toPath());
+        Files.delete(path.toPath());
     }
 
     private void createQueueAndWriteData(TimeProvider timeProvider, File path) {
