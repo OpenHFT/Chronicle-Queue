@@ -1,0 +1,10 @@
+= Qualifying producer PR dependencies
+:sectnums:
+
+Use `mvn verify -Dchronicle.pr.dependencies=<qualified-snapshot-version>` to select a coordinated, separately published BOM and producer set. Without that property, normal dependency selection is unchanged.
+
+The snapshot set must already exist in the configured snapshot repository. Obtain its version and provenance manifest from producer qualification. Do not publish aggregate artifacts over ordinary development snapshots.
+
+For a single TeamCity run, supply `system.chronicle.pr.dependencies`. If the test starts additional Maven processes, propagate the same property through that run's existing `env.MAVEN_OPTS`, preserving its other options. No saved TeamCity configuration change is required.
+
+Verify resolved artifact versions and checksums against the qualification manifest. A passing local build with source-built dependencies does not establish delivery to a standalone CI consumer.
