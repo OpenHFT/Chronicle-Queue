@@ -446,6 +446,25 @@
             </build>
         </profile>
         <profile>
+            <id>pr-dependencies</id>
+            <activation>
+                <property>
+                    <name>chronicle.pr.dependencies</name>
+                </property>
+            </activation>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>net.openhft</groupId>
+                        <artifactId>chronicle-bom</artifactId>
+                        <version>${chronicle.pr.dependencies}</version>
+                        <type>pom</type>
+                        <scope>import</scope>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+        </profile>
+        <profile>
             <id>sonar</id>
             <build>
                 <plugins>
