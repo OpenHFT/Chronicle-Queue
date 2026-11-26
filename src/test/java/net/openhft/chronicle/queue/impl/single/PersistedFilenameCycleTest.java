@@ -40,8 +40,10 @@ public class PersistedFilenameCycleTest extends QueueTestCommon {
     @Test
     public void rejectsNonRollSuffixAndMalformedName() {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).testBlockSize().build()) {
-            assertThrows(IllegalArgumentException.class, () -> queue.cycleForFile(new File("metadata.cq4t")));
-            assertThrows(RuntimeException.class, () -> queue.cycleForFile(new File("not-a-cycle.cq4")));
+            File metadata = new File("metadata.cq4t");
+            File malformed = new File("not-a-cycle.cq4");
+            assertThrows(IllegalArgumentException.class, () -> queue.cycleForFile(metadata));
+            assertThrows(RuntimeException.class, () -> queue.cycleForFile(malformed));
         }
     }
 }
