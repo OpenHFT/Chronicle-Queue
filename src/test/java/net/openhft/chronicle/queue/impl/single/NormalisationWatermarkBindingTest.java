@@ -160,11 +160,9 @@ public class NormalisationWatermarkBindingTest extends QueueTestCommon {
                 });
                 try {
                     assertTrue("appender was ready", ready.await(5, TimeUnit.SECONDS));
-                    task.get(200, TimeUnit.MILLISECONDS);
-                    fail("first watermark binding completed while another instance held the structural lock");
-                } catch (TimeoutException expected) {
-                    // The worker can finish once this callback releases the structural lock.
-                } catch (InterruptedException | ExecutionException e) {
+                    assertThrows("first watermark binding completed while another instance held the structural lock",
+                            TimeoutException.class, () -> task.get(200, TimeUnit.MILLISECONDS));
+                } catch (InterruptedException e) {
                     throw new AssertionError(e);
                 }
                 return task;
