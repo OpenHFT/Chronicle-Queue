@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 public class CachedMetadataBindingLockTest extends QueueTestCommon {
     @Test
-    public void nestedMetadataWriteKeepsOtherProcessesExcluded() throws Exception {
+    public void nestedMetadataWriteKeepsOtherProcessesExcluded() {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir()).testBlockSize().build()) {
             queue.metaStore().doWithExclusiveLock(table -> {
                 queue.tableStorePut("nested.writer", 17);

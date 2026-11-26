@@ -179,6 +179,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * @param <R>     Return type of the function.
      * @return The result of the function applied to the target.
      */
+    @SuppressWarnings("try") // Holding the acquired lock protects the callback until resource closure.
     private static <T, R> R doWithLock(@NotNull final File file,
                                        @NotNull final Function<T, ? extends R> code,
                                        @NotNull final Supplier<T> target,
@@ -193,22 +194,27 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
 
         final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
         final long startNanos = System.nanoTime();
-        try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-            for (int count = 1; ; count++) {
-                try (FileLock fileLock = tryLock(channel, shared, file, count, startNanos)) {
-                    if (fileLock != null) {
-                        return code.apply(target.get());
-                    }
-                }
-                final long remaining = timeoutNanos - (System.nanoTime() - startNanos);
-                if (remaining <= 0)
-                    break;
-                final long delay = Math.min(250L, (long) count * count);
-                Jvm.pause(Math.min(delay, TimeUnit.NANOSECONDS.toMillis(remaining)));
-            }
+        try (FileChannel channel = FileChannel.open(file.toPath(), readOrWrite);
+             FileLock lock = awaitLock(channel, shared, file, startNanos, timeoutNanos)) {
+            return code.apply(target.get());
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
         }
+    }
+
+    private static FileLock awaitLock(FileChannel channel, boolean shared, File file,
+                                      long startNanos, long timeoutNanos) {
+        for (int count = 1; ; count++) {
+            FileLock lock = tryLock(channel, shared, file, count, startNanos);
+            if (lock != null)
+                return lock;
+            long remaining = timeoutNanos - (System.nanoTime() - startNanos);
+            if (remaining <= 0)
+                break;
+            long delay = Math.min(250L, (long) count * count);
+            Jvm.pause(Math.min(delay, TimeUnit.NANOSECONDS.toMillis(remaining)));
+        }
+        String type = shared ? "shared" : "exclusive";
         throw new IllegalStateException("Unable to claim exclusive " + type + " lock on file " + file);
     }
 
