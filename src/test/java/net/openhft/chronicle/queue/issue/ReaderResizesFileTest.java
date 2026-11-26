@@ -153,7 +153,7 @@ public class ReaderResizesFileTest {
                 } finally {
                     heldStore.removeReferenceChangeListener(listener);
                 }
-                assertTrue(heldStore != appender.wire().bytes().bytesStore(), "Writer must cross a mapping boundary");
+                assertNotSame(heldStore, appender.wire().bytes().bytesStore(), "Writer must cross a mapping boundary");
                 assertTrue(cycle.length() > originalLength, "The test must actually grow the file");
                 MappedFile mapped = Jvm.getValue(heldStore, "mappedFile");
                 assertTrue(mapped.chunkCount() >= 2, "At least two chunks must be mapped");

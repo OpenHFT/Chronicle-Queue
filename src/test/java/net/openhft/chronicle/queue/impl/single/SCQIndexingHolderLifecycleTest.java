@@ -94,11 +94,11 @@ public class SCQIndexingHolderLifecycleTest {
         assertEquals("Every mapped-store owner must release on close", 0, store.refCount());
     }
 
-    private static void observeGc(SCQIndexing indexing) throws InterruptedException {
+    private static void observeGc(SCQIndexing indexing) {
         WeakReference<Object> control = unreachableControl();
         for (int i = 0; control.get() != null && i < 100; i++) {
             System.gc();
-            Thread.sleep(10);
+            Jvm.pause(10);
         }
         assertNull("GC control was not collected; the precondition was not established", control.get());
         // When this regression is run against the old source, prove its weak holders cleared.
@@ -144,6 +144,7 @@ public class SCQIndexingHolderLifecycleTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2093") // ExecutorService only implements AutoCloseable after Java 8.
     public void closingManyOwnersFromAnotherThreadReleasesTheirViews() throws Exception {
         ExecutorService owner = Executors.newSingleThreadExecutor();
         try {
