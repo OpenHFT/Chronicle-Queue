@@ -1396,6 +1396,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          * @throws IOException      in case of IO errors
          * @throws TimeoutException if acquiring the store times out
          */
+        // Failed native acquisition must release ownership even when it throws an Error.
+        @SuppressWarnings("java:S1181")
         @Override
         public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
             throwExceptionIfClosed();
@@ -1511,14 +1513,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             try {
                 if (mappedBytes.refCount() > 0 && ((Bytes<?>) mappedBytes).bytesStore() != null) {
                     long pos = ((Bytes<?>) mappedBytes).bytesStore().addressForRead(0);
-                    System.err.println("pos=" + Long.toHexString(pos));
+                    Jvm.warn().on(SingleChronicleQueue.class, "pos=" + Long.toHexString(pos));
                 }
                 if (!OS.isLinux())
                     return;
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
                     for (String line; (line = br.readLine()) != null; )
                         if (line.contains(".cq4"))
-                            System.err.println(line);
+                            Jvm.warn().on(SingleChronicleQueue.class, line);
                 }
             } catch (IOException | RuntimeException | InternalError diagnosticFailure) {
                 // Diagnostics must not hide the native failure or bypass acquisition cleanup.
