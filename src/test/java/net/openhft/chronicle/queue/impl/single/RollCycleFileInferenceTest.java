@@ -45,7 +45,7 @@ public class RollCycleFileInferenceTest {
     }
 
     @Test
-    public void legacyRollCycleRemainsResolvable() throws Exception {
+    public void legacyRollCycleRemainsResolvable() {
         assertSame(LegacyRollCycles.DAILY, RollCycles.valueOfEnum("DAILY"));
     }
 }
