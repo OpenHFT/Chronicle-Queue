@@ -27,6 +27,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -183,5 +184,42 @@ public class NormalisationWatermarkBindingTest extends QueueTestCommon {
             assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
         }
         assertTrue("queue owns the binding", cached.isClosed());
+    }
+
+    @Test
+    public void subclassCanWriteBeforeSuperPerformClose() {
+        File directory = getTmpDir();
+        try (SingleChronicleQueue seed = SingleChronicleQueueBuilder.binary(directory).build();
+             ExcerptAppender appender = seed.createAppender()) {
+            appender.writeText("first");
+        }
+
+        // A subclass may drain buffered messages before super.performClose().
+        // The reopened queue starts with an empty cache.
+        AtomicReference<ExcerptAppender> drainer = new AtomicReference<>();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(directory);
+        builder.preBuild();
+        SingleChronicleQueue queue = new SingleChronicleQueue(builder) {
+            @Override
+            protected void performClose() {
+                try (ExcerptAppender appender = drainer.get()) {
+                    appender.writeText("second");
+                } catch (RuntimeException e) {
+                    failure.set(e);
+                }
+                super.performClose();
+            }
+        };
+        queue.createAppenderCondition(builder.createAppenderConditionCreator().apply(queue));
+        drainer.set(queue.createAppender());
+        queue.close();
+
+        assertNull("a write before super.performClose() must succeed", failure.get());
+        try (SingleChronicleQueue reader = SingleChronicleQueueBuilder.binary(directory).build();
+             ExcerptTailer tailer = reader.createTailer()) {
+            assertEquals("first", tailer.readText());
+            assertEquals("second", tailer.readText());
+        }
     }
 }
