@@ -320,10 +320,11 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the highest last index that has been confirmed to be read by all remote hosts during replication.
-     * If replication is not enabled, returns -1.
+     * Returns the highest index that at least one remote host has acknowledged. With more than
+     * one remote host, other hosts can be behind this index. Returns -1 if no remote host has
+     * acknowledged an index, or if replication is not enabled.
      *
-     * @return the last acknowledged replicated index or -1 if not available
+     * @return the highest index that at least one remote host has acknowledged, or -1
      */
     @Override
     public long lastAcknowledgedIndexReplicated() {
@@ -331,9 +332,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Updates the last acknowledged index that has been replicated to all remote hosts.
+     * Records an index that a remote host has acknowledged. The stored value only increases, so a
+     * value lower than the current value is ignored.
      *
-     * @param newValue the new last acknowledged index value
+     * @param newValue an index that a remote host has acknowledged
      */
     @Override
     public void lastAcknowledgedIndexReplicated(long newValue) {

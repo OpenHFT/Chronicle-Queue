@@ -385,12 +385,13 @@ public interface ChronicleQueue extends Closeable {
     }
 
     /**
-     * Returns the last index that was replicated and acknowledged by all remote hosts. If no
-     * such index exists, returns -1.
+     * Returns the highest index that at least one remote host has acknowledged. With more than
+     * one remote host, other hosts can be behind this index. Returns -1 if no remote host has
+     * acknowledged an index.
      * <p>
      * This method is only applicable for replicating queues.
      *
-     * @return the last index that was replicated and acknowledged by all remote hosts
+     * @return the highest index that at least one remote host has acknowledged, or -1
      */
     default long lastAcknowledgedIndexReplicated() {
         return -1;
@@ -415,9 +416,10 @@ public interface ChronicleQueue extends Closeable {
     void lastIndexReplicated(long lastIndex);
 
     /**
-     * Sets the last index that has been sent to a remote host.
+     * Records an index that a remote host has acknowledged. The stored value only increases, so a
+     * value lower than the current value is ignored.
      *
-     * @param lastAcknowledgedIndexReplicated last acknowledged index that has been sent to the remote host(s).
+     * @param lastAcknowledgedIndexReplicated an index that a remote host has acknowledged
      * @see #lastAcknowledgedIndexReplicated()
      */
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
