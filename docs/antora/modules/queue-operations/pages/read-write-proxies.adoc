@@ -72,7 +72,7 @@ To read the messages, you can provide a reader which calls your implementation w
 [source,java]
 ----
 // a proxy which print each method called on it
-MessageListener processor = ObjectUtils.printAll(MessageListener.class)
+MessageListener processor = Mocker.logging(MessageListener.class, "", System.out);
 // a queue reader which turns messages into method calls.
 MethodReader reader1 = queue1.createTailer().methodReader(processor);
 

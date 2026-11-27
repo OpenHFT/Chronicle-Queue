@@ -17,7 +17,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.function.ToIntFunction;
 
-import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 
 /**
  * TableDirectoryListing manages the cycle metadata for a Chronicle Queue stored in a table.
@@ -99,9 +99,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
      * Acquires the necessary LongValues (maxCycle, minCycle, modCount) from the table store.
      */
     protected void initLongValues() {
-        //! DirectoryPublicationBoundaryTest#readOnlyRetryClosesEveryReturnedBinding fails if a retry overwrites a
-        //! binding returned before a later acquisition failed. Acquire transactionally; callers cannot release a
-        //! partially assigned field after it has been lost. Allocation failures before return belong to ValueIn.
+        // A retry must release partial bindings and replace the previous bindings only on success.
         LongValue maximum = null;
         LongValue minimum = null;
         LongValue modifications = null;
@@ -162,7 +160,7 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             //! Parse and validate every candidate before publishing either bound; lexical extrema can falsely report
             //! the present maximum as deleted. Malformed interior names now also fail this explicit refresh.
             int min = INITIAL_MIN_CYCLE;
-            int max = UNSET_CONTEXT;
+            int max = UNSET_CYCLE;
             for (String fileName : fileNamesList) {
                 if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
                     int cycle = requireCycle(fileNameToCycleFunction.applyAsInt(fileName), "physical cycle");
@@ -182,12 +180,12 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
             // survives is an inconsistent Queue, not permission to move ordinary writes backward.
             //! refreshRejectsMissingPublishedMaximum, refreshRejectsMissingLegacyPublication and
             //! publishedCycleZeroMissingItsFileFailsClosed fail if a scan may lower the mapped maximum while
-            //! metadata survives. The explicit UNSET_CONTEXT comparison keeps published cycle zero in this check.
+            //! metadata survives. The explicit UNSET_CYCLE comparison keeps published cycle zero in this check.
             //! TestDeleteQueueFile#deletingOldFilesChaosTest is retention integration evidence, now with live
             //! forward/backward workers and checked progress, not a discriminator for this guard. The old tests
             //! permitting live highest-roll deletion are deliberately replaced: SingleChronicleQueueTest's
             //! testToEndAfterOfflineQueueDeletion retains whole-Queue deletion only after all handles close.
-            if (observedMax != UNSET_CONTEXT && max < observedMax)
+            if (observedMax != UNSET_CYCLE && max < observedMax)
                 throw new IllegalStateException("Highest/current roll " + observedMax
                         + " disappeared while Queue metadata remains");
 
@@ -200,8 +198,8 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
                 continue;
             }
             //! freshListingReportsUnsetCycle also checks empty refresh's old-reader storage encoding. The semantic
-            //! UNSET_CONTEXT comparison above remains independent of that persisted representation.
-            final long storedMax = max == UNSET_CONTEXT ? LEGACY_UNSET_MAX_CYCLE : max;
+            //! UNSET_CYCLE comparison above remains independent of that persisted representation.
+            final long storedMax = max == UNSET_CYCLE ? LEGACY_UNSET_MAX_CYCLE : max;
             if (!maxCycleValue.compareAndSwapValue(observedStoredMax, storedMax)) {
                 Jvm.nanoPause();
                 continue;
@@ -337,16 +335,16 @@ class TableDirectoryListing extends AbstractCloseable implements DirectoryListin
     private static int decodeMaxCycle(final long storedCycle) {
         if (storedCycle == Long.MIN_VALUE
                 || storedCycle == LEGACY_UNSET_MAX_CYCLE
-                || storedCycle == UNSET_CONTEXT)
-            return UNSET_CONTEXT;
+                || storedCycle == UNSET_CYCLE)
+            return UNSET_CYCLE;
         return requireCycle(storedCycle, HIGHEST_CREATED_CYCLE);
     }
 
     private static int decodeMinCycle(final long storedCycle, final int maximumCycle) {
-        if (maximumCycle == UNSET_CONTEXT) {
-            if (storedCycle != Long.MIN_VALUE && storedCycle != UNSET_CONTEXT)
+        if (maximumCycle == UNSET_CYCLE) {
+            if (storedCycle != Long.MIN_VALUE && storedCycle != UNSET_CYCLE)
                 requireCycle(storedCycle, LOWEST_CREATED_CYCLE);
-            return UNSET_CONTEXT;
+            return UNSET_CYCLE;
         }
         return requireCycle(storedCycle, LOWEST_CREATED_CYCLE);
     }

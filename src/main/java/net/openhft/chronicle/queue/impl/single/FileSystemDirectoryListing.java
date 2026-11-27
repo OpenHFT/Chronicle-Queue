@@ -10,7 +10,7 @@ import java.io.File;
 import java.util.function.ToIntFunction;
 
 import static net.openhft.chronicle.queue.impl.single.TableDirectoryListing.*;
-import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 
 /**
  * The {@code FileSystemDirectoryListing} class is responsible for managing the listing of files
@@ -28,7 +28,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     private int minCreatedCycle = Integer.MAX_VALUE;
     //! fileSystemListingDistinguishesMaximumCycleFromUnset requires the same semantic sentinel as the mapped
     //! implementation so read-only fallback and table-backed queues expose one internal cycle domain.
-    private int maxCreatedCycle = UNSET_CONTEXT;
+    private int maxCreatedCycle = UNSET_CYCLE;
     private long lastRefreshTimeMS;
 
     /**
@@ -72,7 +72,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
         //! DirectoryPublicationBoundaryTest#fileSystemBoundsUseLogicalCycles requires the read-only fallback to
         //! agree with mapped refresh for extended-year names; '+' year prefixes are not chronological lexical keys.
         int min = INITIAL_MIN_CYCLE;
-        int max = UNSET_CONTEXT;
+        int max = UNSET_CYCLE;
         if (fileNamesList != null) {
             for (String fileName : fileNamesList) {
                 if (fileName.endsWith(SingleChronicleQueue.SUFFIX)) {
@@ -106,7 +106,7 @@ final class FileSystemDirectoryListing extends SimpleCloseable implements Direct
     public int getMinCreatedCycle() {
         //! fileSystemListingDistinguishesMaximumCycleFromUnset requires maximum, not Integer.MAX_VALUE minimum, to
         //! distinguish an empty listing from a listing whose only valid UInt31 cycle is Integer.MAX_VALUE.
-        return maxCreatedCycle == UNSET_CONTEXT ? UNSET_CONTEXT : minCreatedCycle;
+        return maxCreatedCycle == UNSET_CYCLE ? UNSET_CYCLE : minCreatedCycle;
     }
 
     /**
