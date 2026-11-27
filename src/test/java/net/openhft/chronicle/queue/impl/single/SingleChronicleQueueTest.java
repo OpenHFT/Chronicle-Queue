@@ -448,7 +448,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             while ((actual = tailer.readText()) == null && System.nanoTime() < deadline)
                 Jvm.pause(1);
             assertEquals("recovered", actual);
-            // An asynchronous writer can retain its own lock after publishing the message.
+            // A buffered reader can see the message before the drainer reaches the persistent append lock.
+            while (appendLockValue.getVolatileValue() == deadPid && System.nanoTime() < deadline)
+                Jvm.pause(1);
             assertNotEquals("the exited owner must be replaced", deadPid, appendLockValue.getVolatileValue());
         }
     }
