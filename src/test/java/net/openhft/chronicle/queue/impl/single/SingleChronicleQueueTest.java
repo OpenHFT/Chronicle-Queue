@@ -448,7 +448,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
             while ((actual = tailer.readText()) == null && System.nanoTime() < deadline)
                 Jvm.pause(1);
             assertEquals("recovered", actual);
-            assertEquals(AbstractTSQueueLock.UNLOCKED, appendLockValue.getVolatileValue());
+            // An asynchronous writer can retain its own lock after publishing the message.
+            assertNotEquals("the exited owner must be replaced", deadPid, appendLockValue.getVolatileValue());
         }
     }
 
