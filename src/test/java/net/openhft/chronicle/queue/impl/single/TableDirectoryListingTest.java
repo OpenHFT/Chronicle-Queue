@@ -12,7 +12,6 @@ import net.openhft.chronicle.queue.impl.TableStore;
 import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
-import net.openhft.chronicle.wire.MarshallableOut;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,6 +23,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 public class TableDirectoryListingTest extends QueueTestCommon {
@@ -331,13 +334,13 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
     @Test
     public void freshListingReportsUnsetCycle() {
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMinCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listing.getMaxCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listing.getMinCreatedCycle());
         assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
         assertEquals(Integer.MAX_VALUE, persistedCycle("listing.lowestCycle"));
 
         listing.refresh(true);
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listing.getMaxCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listing.getMaxCreatedCycle());
         assertEquals(Integer.MIN_VALUE, persistedCycle("listing.highestCycle"));
     }
 
@@ -345,8 +348,8 @@ public class TableDirectoryListingTest extends QueueTestCommon {
     public void readOnlyListingDecodesLegacyUnsetCycle() {
         setPersistedCycle("listing.highestCycle", Integer.MIN_VALUE);
 
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMaxCreatedCycle());
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMinCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listingReadOnly.getMinCreatedCycle());
     }
 
     @Test
@@ -356,7 +359,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         }
         setPersistedCycle("listing.highestCycle", Long.MIN_VALUE);
 
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listingReadOnly.getMaxCreatedCycle());
     }
 
     @Test
@@ -365,8 +368,8 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         setPersistedCycle("listing.lowestCycle", 0);
         reopenReadOnlyListing();
 
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMaxCreatedCycle());
-        assertEquals(MarshallableOut.UNSET_CONTEXT, listingReadOnly.getMinCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listingReadOnly.getMaxCreatedCycle());
+        assertEquals(DirectoryListing.UNSET_CYCLE, listingReadOnly.getMinCreatedCycle());
 
         setPersistedCycle("listing.highestCycle", 0);
         assertEquals(0, listingReadOnly.getMaxCreatedCycle());
@@ -428,7 +431,7 @@ public class TableDirectoryListingTest extends QueueTestCommon {
 
     @Test
     public void onRollRejectsCyclesOutsideUInt31() {
-        assertThrows(IllegalStateException.class, () -> listing.onRoll(MarshallableOut.UNSET_CONTEXT));
+        assertThrows(IllegalStateException.class, () -> listing.onRoll(DirectoryListing.UNSET_CYCLE));
     }
 
     @Test
@@ -439,14 +442,14 @@ public class TableDirectoryListingTest extends QueueTestCommon {
                 SystemTimeProvider.INSTANCE);
         try {
             fileSystemListing.refresh(true);
-            assertEquals(MarshallableOut.UNSET_CONTEXT, fileSystemListing.getMaxCreatedCycle());
-            assertEquals(MarshallableOut.UNSET_CONTEXT, fileSystemListing.getMinCreatedCycle());
+            assertEquals(DirectoryListing.UNSET_CYCLE, fileSystemListing.getMaxCreatedCycle());
+            assertEquals(DirectoryListing.UNSET_CYCLE, fileSystemListing.getMinCreatedCycle());
 
             fileSystemListing.onRoll(Integer.MAX_VALUE);
             assertEquals(Integer.MAX_VALUE, fileSystemListing.getMaxCreatedCycle());
             assertEquals(Integer.MAX_VALUE, fileSystemListing.getMinCreatedCycle());
             assertThrows(IllegalStateException.class,
-                    () -> fileSystemListing.onRoll(MarshallableOut.UNSET_CONTEXT));
+                    () -> fileSystemListing.onRoll(DirectoryListing.UNSET_CYCLE));
         } finally {
             fileSystemListing.close();
         }
@@ -506,5 +509,103 @@ public class TableDirectoryListingTest extends QueueTestCommon {
         final IllegalStateException failure = assertThrows(IllegalStateException.class, read::run);
         assertTrue(failure.getMessage().contains(fieldName));
         assertTrue(failure.getMessage().contains(Long.toString(cycle)));
+    }
+
+    @Test
+    public void closesPartialBindingsBeforeRetryingMissingLowestCycle() {
+        assertPartialBindingsClosedBeforeRetry(1);
+    }
+
+    @Test
+    public void closesPartialBindingsBeforeRetryingMissingModCount() {
+        assertPartialBindingsClosedBeforeRetry(2);
+    }
+
+    @Test
+    public void preservesExceptionWhenFirstAcquisitionFails() {
+        assertPartialBindingsClosedOnFailure(0);
+    }
+
+    @Test
+    public void closesPartialBindingsWhenLowestCycleThrowsException() {
+        assertPartialBindingsClosedOnFailure(1);
+    }
+
+    @Test
+    public void closesPartialBindingsWhenModCountThrowsException() {
+        assertPartialBindingsClosedOnFailure(2);
+    }
+
+    private void assertPartialBindingsClosedOnFailure(int failedKey) {
+        String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
+        TableStore<Metadata.NoMeta> failingStore = createStrictMock(TableStore.class);
+        List<LongValue> partialBindings = new ArrayList<>();
+        try (TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(failingStore, SystemTimeProvider.INSTANCE)) {
+            for (int i = 0; i < failedKey; i++) {
+                LongValue value = tablestoreReadOnly.acquireValueFor(keys[i]);
+                partialBindings.add(value);
+                expect(failingStore.acquireValueFor(keys[i])).andReturn(value);
+            }
+            IllegalStateException failure = new IllegalStateException("Acquisition failed for key " + keys[failedKey]);
+            expect(failingStore.acquireValueFor(keys[failedKey])).andAnswer(() -> {
+                throw failure;
+            });
+            replay(failingStore);
+
+            assertSame("Cleanup must preserve the original failure", failure,
+                    assertThrows(Throwable.class, readOnly::initLongValues));
+            for (LongValue value : partialBindings)
+                assertTrue("Failed acquisition must release every returned binding", value.isClosed());
+            verify(failingStore);
+        } finally {
+            partialBindings.forEach(Closeable::closeQuietly);
+        }
+    }
+
+    private void assertPartialBindingsClosedBeforeRetry(int missingKey) {
+        String[] keys = {"listing.highestCycle", "listing.lowestCycle", "listing.modCount"};
+        TableStore<Metadata.NoMeta> incompleteStore = createStrictMock(TableStore.class);
+        List<LongValue> partialBindings = new ArrayList<>();
+        List<LongValue> successfulBindings = new ArrayList<>();
+        listing.onFileCreated(tempFile, 7);
+
+        TableDirectoryListingReadOnly readOnly = new TableDirectoryListingReadOnly(incompleteStore, SystemTimeProvider.INSTANCE);
+        try {
+            // Use real mapped bindings; the store only controls when a key becomes visible.
+            for (int i = 0; i < missingKey; i++) {
+                LongValue value = tablestoreReadOnly.acquireValueFor(keys[i]);
+                partialBindings.add(value);
+                expect(incompleteStore.acquireValueFor(keys[i])).andReturn(value);
+            }
+            expect(incompleteStore.acquireValueFor(keys[missingKey]))
+                    .andThrow(new IllegalStateException("Metadata key not yet published"));
+            for (String key : keys) {
+                LongValue value = tablestoreReadOnly.acquireValueFor(key);
+                successfulBindings.add(value);
+                expect(incompleteStore.acquireValueFor(key)).andAnswer(() -> {
+                    for (LongValue partial : partialBindings)
+                        assertTrue("Failed attempt must release bindings before retry", partial.isClosed());
+                    return value;
+                });
+            }
+            replay(incompleteStore);
+
+            readOnly.init();
+
+            assertEquals(7, readOnly.getMinCreatedCycle());
+            assertEquals(7, readOnly.getMaxCreatedCycle());
+            assertEquals(listing.modCount(), readOnly.modCount());
+            for (LongValue value : successfulBindings)
+                assertFalse("Successful bindings belong to the open listing", value.isClosed());
+            verify(incompleteStore);
+            readOnly.close();
+            for (LongValue value : successfulBindings)
+                assertTrue("Closing the listing releases successful bindings", value.isClosed());
+        } finally {
+            readOnly.close();
+            // A failed control must not leak the real references it deliberately tracks.
+            partialBindings.forEach(Closeable::closeQuietly);
+            successfulBindings.forEach(Closeable::closeQuietly);
+        }
     }
 }

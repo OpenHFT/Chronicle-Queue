@@ -537,7 +537,7 @@ For instance, using the following code snippet will result in the queue files be
 
 [source,java]
 ----
-ChronicleQueue.singleBuilder(queuePath).rollCycle(RollCycles.HOURLY).build()
+ChronicleQueue.singleBuilder(queuePath).rollCycle(RollCycles.FAST_HOURLY).build()
 ----
 
 Once a queue's roll-cycle has been set, it cannot be changed at a later date.

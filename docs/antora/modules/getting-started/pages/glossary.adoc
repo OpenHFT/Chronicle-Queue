@@ -43,8 +43,9 @@ If you have a topic called `mytopic`, the layout could look like this:
 
 ----
 - mytopic/
-    - 20160710.cq4
-    - 20160711.cq4
-    - 20160712.cq4
-    - 20160713.cq4
+    - metadata.cq4t
+    - 20160710F.cq4
+    - 20160711F.cq4
+    - 20160712F.cq4
+    - 20160713F.cq4
 ----
