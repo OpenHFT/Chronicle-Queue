@@ -1573,18 +1573,6 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return metaStore;
     }
 
-    /**
-     * Decodes a roll filename using this queue's persisted roll cycle and epoch.
-     * This describes a filename; it does not establish that the file exists or is safe to remove.
-     *
-     * @param file a file with the Queue roll suffix
-     * @return the cycle encoded by its filename
-     */
-    public int cycleForFile(@NotNull File file) {
-        if (!file.getName().endsWith(SUFFIX))
-            throw new IllegalArgumentException("Not a Queue roll file: " + file);
-        return fileNameToCycleFunction().applyAsInt(file.getName());
-    }
 
     /**
      * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the

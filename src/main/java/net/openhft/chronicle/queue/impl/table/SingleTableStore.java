@@ -245,10 +245,6 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         return mappedFile.file();
     }
 
-    @Override
-    public boolean readOnly() {
-        return mappedBytes.isBackingFileReadOnly();
-    }
 
     @Override
     public String dump(WireType wireType) {
