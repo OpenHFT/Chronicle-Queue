@@ -1456,7 +1456,14 @@ class StoreAppender extends AbstractCloseable
                                                            final long requestedSequence,
                                                            @NotNull final BytesStore<?, ?> suppliedBytes) {
         final RollCycle rollCycle = queue.rollCycle();
-        try (SingleChronicleQueueStore target = queue.storeForCycle(cycle, queue.epoch(), false, null)) {
+        //! steadyExactAppendsReuseTheOwnedCycleStore fails with one acquisition per replicated message.
+        //! Borrow the appender's already-owned store for its current cycle, retaining a separate bytes/wire view
+        //! below so preflight cannot move the appender or publish metadata. Reopening the same store for every
+        //! frame needlessly allocates indexing owners and mapped views on a long-lived replication thread.
+        final SingleChronicleQueueStore target = store != null && store.cycle() == cycle && !store.isClosed()
+                ? store : queue.storeForCycle(cycle, queue.epoch(), false, null);
+        final boolean borrowed = target == store;
+        try {
             if (target == null)
                 return ExactIndexState.absent();
             requirePaddedExactStore(target, cycle);
@@ -1513,6 +1520,11 @@ class StoreAppender extends AbstractCloseable
                     position += SPB_HEADER_SIZE + lengthOf(header);
                 }
             }
+        } finally {
+            //! Historical probes still own their temporary store. Closing a borrowed current store would invalidate
+            //! the live appender; the same regression reads every replicated record after the preflight loop.
+            if (!borrowed && target != null)
+                target.close();
         }
     }
 

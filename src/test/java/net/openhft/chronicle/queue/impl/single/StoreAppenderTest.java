@@ -299,6 +299,46 @@ public class StoreAppenderTest extends QueueTestCommon {
     }
 
     @Test(timeout = 10_000)
+    public void steadyExactAppendsReuseTheOwnedCycleStore() throws IOException {
+        AtomicInteger acquisitions = new AtomicInteger();
+        StoreFileListener listener = new StoreFileListener() {
+            @Override
+            public void onAcquired(int cycle, File file) {
+                acquisitions.incrementAndGet();
+            }
+
+            @Override
+            public void onReleased(int cycle, File file) {
+                // Count acquisitions while the appender owns its live cycle.
+            }
+        };
+        Bytes<?> payload = Bytes.from("message");
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queueDirectory.newFolder())
+                .timeProvider(() -> 0).testBlockSize().storeFileListener(listener).build();
+             ExcerptAppender appender = queue.createAppender()) {
+            appender.writeBytes(payload);
+            BackgroundResourceReleaser.releasePendingResources();
+            acquisitions.set(0);
+            long firstIndex = appender.lastIndexAppended();
+            for (int i = 1; i <= 100; i++)
+                ((InternalAppender) appender).writeBytes(firstIndex + i, payload);
+            BackgroundResourceReleaser.releasePendingResources();
+            assertEquals("preflight must not reopen the owned cycle for every replicated message", 0, acquisitions.get());
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                for (int i = 0; i <= 100; i++) {
+                    try (DocumentContext dc = tailer.readingDocument()) {
+                        assertTrue("replicated record " + i, dc.isPresent());
+                        assertEquals(firstIndex + i, dc.index());
+                        assertEquals("message", dc.wire().bytes().toString());
+                    }
+                }
+            }
+        } finally {
+            payload.releaseLast();
+        }
+    }
+
+    @Test(timeout = 10_000)
     public void steadyStateAppenderAndTailerReusePublishedCycleStore() throws IOException {
         final int messageCount = 100;
         final AtomicInteger acquisitions = new AtomicInteger();
