@@ -52,6 +52,7 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
 import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
@@ -345,8 +346,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Refreshes the directory listing, ensuring it is up-to-date.
-     * Throws an exception if the queue has been closed.
+     * {@inheritDoc}
      */
     @Override
     public void refreshDirectoryListing() {
@@ -460,6 +460,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 if (commonStore != null)
                     sb.append(commonStore.dump(wireType));
             }
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires termination before incrementing the
+            //! highest UInt31 cycle, because int overflow would otherwise restart this loop at Integer.MIN_VALUE.
+            if (i == max)
+                break;
         }
         return sb.toString();
     }
@@ -1127,8 +1131,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long firstIndex() {
-        int cycle = firstCycle();
-        if (cycle == Integer.MAX_VALUE)
+        //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires internal emptiness to use UNSET_CYCLE
+        //! rather than the public firstCycle() sentinel, because Integer.MAX_VALUE is itself a valid UInt31 cycle.
+        final int cycle = firstPublishedCycle();
+        if (cycle == UNSET_CYCLE)
             return Long.MAX_VALUE;
 
         return rollCycle().toIndex(cycle, 0);
@@ -1205,6 +1211,13 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public int firstCycle() {
+        final int firstCycle = firstPublishedCycle();
+        //! SingleCQFormatTest#testEmptyDirectory preserves the established public empty-Queue sentinel while the
+        //! internal representation uses UNSET_CYCLE and can distinguish a real Integer.MAX_VALUE cycle.
+        return firstCycle == UNSET_CYCLE ? Integer.MAX_VALUE : firstCycle;
+    }
+
+    int firstPublishedCycle() {
         setFirstAndLastCycle();
         return directoryListing.getMinCreatedCycle();
     }
@@ -1227,14 +1240,33 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the last cycle available in the queue by setting the first and last cycle
-     * and then retrieving the maximum created cycle from the directory listing.
+     * Refreshes the directory listing when necessary and returns the highest cycle published by the queue. Closed
+     * historical rolls may be removed, but the published maximum cannot move backwards while Queue metadata remains.
      *
-     * @return the last cycle in the queue
+     * @return the highest published cycle, or {@code Integer.MIN_VALUE} if no cycles have been published
+     * @throws IllegalStateException if a writable directory refresh finds that the published maximum is missing
+     *                               while Queue metadata remains
      */
     @Override
     public int lastCycle() {
         setFirstAndLastCycle();
+        final int lastCycle = directoryListing.getMaxCreatedCycle();
+        //! SingleCQFormatTest#testEmptyDirectory preserves the established public lastCycle() sentinel even though
+        //! internal consumers and contextCount() use Wire's canonical UNSET_CYCLE value.
+        return lastCycle == UNSET_CYCLE ? Integer.MIN_VALUE : lastCycle;
+    }
+
+    /**
+     * Returns the latest cycle published by a cooperating writer without the periodic filesystem
+     * refresh performed by {@link #lastCycle()}. This distinction keeps the append hot path from
+     * scanning the queue directory.
+     *
+     * @return the latest UInt31 cycle, or {@link MarshallableOut#UNSET_CYCLE} if none is published
+     */
+    int lastPublishedCycle() {
+        //! ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing and
+        //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fail if
+        //! this delegates to lastCycle(): both require the mapped maximum without a directory refresh.
         return directoryListing.getMaxCreatedCycle();
     }
 

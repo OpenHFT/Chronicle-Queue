@@ -30,6 +30,7 @@ import java.text.ParseException;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 import static net.openhft.chronicle.wire.Wires.isEndOfFile;
 
@@ -938,12 +939,14 @@ class StoreTailer extends AbstractCloseable
      * @return The current tailer instance.
      */
     private ExcerptTailer doToStart() {
-        return doToStart(queue.firstCycle());
+        return doToStart(queue.firstPublishedCycle());
     }
 
     private ExcerptTailer doToStart(final int firstCycle) {
         assert direction != BACKWARD;
-        if (firstCycle == Integer.MAX_VALUE) {
+        //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires the semantic first-cycle value here: the
+        //! public Integer.MAX_VALUE empty sentinel collides with the highest valid UInt31 cycle.
+        if (firstCycle == UNSET_CYCLE) {
             resetToEmptyQueue();
             return this;
         }

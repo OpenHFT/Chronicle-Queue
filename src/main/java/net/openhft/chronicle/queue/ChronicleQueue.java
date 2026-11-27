@@ -432,14 +432,20 @@ public interface ChronicleQueue extends Closeable {
         throw new UnsupportedOperationException();
     }
 
+    //! TableDirectoryListingTest#refreshRejectsMissingPublishedMaximum demonstrates why refresh may incorporate
+    //! removal of closed historical rolls but must reject removal of the published current roll.
     /**
-     * Refreshes this ChronicleQueue's view of the directory used for storing files.
+     * Refreshes this ChronicleQueue's cached view of its roll files.
      * <p>
-     * Invoke this method if you delete file from a chronicle-queue directory
+     * Invoke this method after deleting closed historical {@code .cq4} roll files. The highest published roll
+     * (normally the current roll) must remain while Queue metadata remains; deleting it is unsupported. A writable
+     * Queue detects that inconsistency when it refreshes, opens, or transitions to the missing roll, rather than
+     * performing a filesystem lookup for every append to an already-open mapped roll.
      * <p>
-     * The problem solved by this is that we cache the structure of the queue directory in order to reduce
-     * file system adds latency. Calling this method, after deleting .cq4 files, will update the internal
-     * caches accordingly,
+     * To replace a Queue, close every instance and delete the complete Queue directory, including its metadata,
+     * before creating the replacement.
+     *
+     * @throws IllegalStateException if the highest published roll is missing while Queue metadata remains
      */
     void refreshDirectoryListing();
 
