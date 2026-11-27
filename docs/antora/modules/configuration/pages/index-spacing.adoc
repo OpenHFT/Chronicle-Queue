@@ -38,7 +38,8 @@ TIP: For more information about queue indexing, see xref:queue-operations:indexi
 
 == Warming indexing code
 
-Call the utility before latency-sensitive work:
+Call the utility during startup, before opening the application queue or starting timed work.
+If a benchmark runs a publisher and a consumer in separate JVMs, call it in each launcher before that process reports readiness.
 
 [source,java]
 ----
@@ -57,4 +58,6 @@ Work is finite, but filesystem operations have no hard elapsed-time bound.
 This exercises shared code and encourages compilation; it cannot guarantee a JIT tier, zero allocation or page residency for application queues.
 Index cursors belong to individual threads and stores and may be reclaimed after GC; a new roll also creates a new store.
 Warm and measure each application's threads and stores separately, including after GC and rolls where relevant.
+For bursty workloads, measure the first message after a representative idle period separately from the steady-state distribution.
+An idle consumer or asynchronous drainer can still be asleep when the first message arrives.
 The utility does not call `System.gc()`, change global logging handlers or alter affinity.
