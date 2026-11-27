@@ -594,13 +594,16 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         linearScanByPositionCount++;
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
-        long i;
-
-        // Optimized path if the `toPosition` is the last written position.
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequenceAt(lastAddress);
-
-        i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
+        if (lastAddress > startAddress && (toPosition == lastAddress || toPosition == Long.MAX_VALUE)) {
+            long lastIndex = sequence.getSequenceAt(lastAddress, startAddress, indexOfNext);
+            if (lastIndex >= 0) {
+                startAddress = lastAddress;
+                indexOfNext = lastIndex;
+            }
+        }
+        bytes.readPositionUnlimited(startAddress);
+        long i = indexOfNext - 1;
 
         // Scan through the entries until the target position is found or exceeded.
         while (bytes.readPosition() <= toPosition) {
@@ -649,29 +652,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         return throwPositionNotAtStartOfMessage(toPosition, bytes);
-    }
-
-    /**
-     * Calculates the initial index value to start scanning from, based on whether
-     * the target position is the last written position or a known earlier position.
-     *
-     * @param toPosition   The target position in the wire.
-     * @param indexOfNext  The index of the next known entry.
-     * @param startAddress The starting address for the scan.
-     * @param bytes        The bytes object associated with the wire.
-     * @param lastAddress  The address of the last written entry.
-     * @param lastIndex    The index of the last written entry.
-     * @return The starting index for the scan.
-     */
-    private long calculateInitialValue(long toPosition, long indexOfNext, long startAddress, Bytes<?> bytes, long lastAddress, long lastIndex) {
-        if (lastAddress > 0 && toPosition == lastAddress
-                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
-            bytes.readPositionUnlimited(toPosition);
-            return lastIndex - 1;
-        } else {
-            bytes.readPositionUnlimited(startAddress);
-            return indexOfNext - 1;
-        }
     }
 
     /**
