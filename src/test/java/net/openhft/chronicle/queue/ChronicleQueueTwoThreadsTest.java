@@ -6,7 +6,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
@@ -17,6 +16,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -77,6 +77,8 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         AtomicLong counter = new AtomicLong();
         AtomicReference<Throwable> workerFailure = new AtomicReference<>();
         AtomicBoolean running = new AtomicBoolean(true);
+        CountDownLatch readerReady = new CountDownLatch(1);
+        CountDownLatch readerComplete = new CountDownLatch(1);
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
             Bytes<?> bytes = tailerHeapBytes
@@ -85,11 +87,13 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
             try (ChronicleQueue rqueue = buildQueue(name, bufferMode)) {
 
                 ExcerptTailer tailer = rqueue.createTailer();
+                readerReady.countDown();
 
                 while (running.get()) {
                     bytes.clear();
                     if (tailer.readBytes(bytes)) {
-                        counter.incrementAndGet();
+                        if (counter.incrementAndGet() == runs)
+                            readerComplete.countDown();
                     }
                 }
             } finally {
@@ -132,17 +136,21 @@ public class ChronicleQueueTwoThreadsTest extends QueueTestCommon {
         captureWorkerFailure(appenderThread, workerFailure);
 
         tailerThread.start();
-        Jvm.pause(100);
-
-        appenderThread.start();
         try {
-            appenderThread.join(1000);
+            // Mapping/opening on Windows can exceed a fixed startup sleep under concurrent test load.
+            boolean ready = readerReady.await(10, TimeUnit.SECONDS);
+            rethrowWorkerFailure(workerFailure);
+            assertTrue("tailer did not become ready", ready);
 
-            // Pause to allow tailer to catch up (if needed)
-            for (int i = 0; i < 10; i++) {
-                if (runs != counter.get())
-                    Jvm.pause(Jvm.isDebug() ? 10000 : 100);
-            }
+            appenderThread.start();
+            appenderThread.join(10_000);
+            rethrowWorkerFailure(workerFailure);
+            assertFalse("appender thread did not finish writing", appenderThread.isAlive());
+
+            // Wait for the required work, rather than stopping a reader whose catch-up window expired.
+            boolean complete = readerComplete.await(10, TimeUnit.SECONDS);
+            rethrowWorkerFailure(workerFailure);
+            assertTrue("tailer did not consume all " + runs + " messages; read " + counter.get(), complete);
         } finally {
             stopAndJoin(tailerThread, running);
             assertFalse("appender thread did not stop", appenderThread.isAlive());
