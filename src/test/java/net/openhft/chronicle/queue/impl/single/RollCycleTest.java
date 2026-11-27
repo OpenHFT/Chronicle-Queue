@@ -58,9 +58,6 @@ public class RollCycleTest extends QueueTestCommon {
             try {
                 observer.await();
 
-            try {
-                observer.await();
-
                 // two days pass
                 timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
                 appender.writeText("0");
