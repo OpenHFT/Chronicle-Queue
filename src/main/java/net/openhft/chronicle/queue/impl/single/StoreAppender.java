@@ -76,6 +76,11 @@ class StoreAppender extends AbstractCloseable
     private Wire wire;
     @Nullable
     private Wire wireForIndex;
+    //! steadyExactAppendsReuseTheOwnedCycleStore also counts mapped-view reservations. Reference tracing
+    //! retains released owners on the shared mapped file, so a view per frame exhausts a 512 MiB heap.
+    //! Keep one private cursor for the owned cycle; never reuse the live writer or indexing cursor.
+    private MappedBytes exactIndexPreflightBytes;
+
     private long positionOfHeader = 0;
     private long lastIndex = Long.MIN_VALUE;
     @Nullable
@@ -203,6 +208,13 @@ class StoreAppender extends AbstractCloseable
         return false;
     }
 
+    private void releaseExactIndexPreflightBytes() {
+        if (exactIndexPreflightBytes != null) {
+            exactIndexPreflightBytes.releaseLast();
+            exactIndexPreflightBytes = null;
+        }
+    }
+
     /**
      * Releases the resources associated with the given wire, if any.
      *
@@ -284,6 +296,8 @@ class StoreAppender extends AbstractCloseable
      */
     @Override
     protected void performClose() {
+        //! The exact-append allocation regression's reference checks require this private view to close too.
+        releaseExactIndexPreflightBytes();
         releaseBytesFor(wireForIndex);
         releaseBytesFor(wire);
         releaseBytesFor(bufferWire);
@@ -500,6 +514,8 @@ class StoreAppender extends AbstractCloseable
      * Only the mapped-file reservation and open FD are dropped; nothing on disk changes.
      */
     private void releaseParkedStore() {
+        //! Parking must release every cursor, including the private exact-append view, before dropping the store.
+        releaseExactIndexPreflightBytes();
         if (store == null)
             return;
 
@@ -520,6 +536,8 @@ class StoreAppender extends AbstractCloseable
      * @param queue The ChronicleQueue instance to reset wires for.
      */
     private void resetWires(@NotNull final ChronicleQueue queue) {
+        //! Existing historical exact-write/roll regressions require preflight to follow the replacement store.
+        releaseExactIndexPreflightBytes();
         WireType wireType = queue.wireType();
         {
             Wire oldw = this.wire;
@@ -1725,7 +1743,12 @@ class StoreAppender extends AbstractCloseable
             if (target == null)
                 return ExactIndexState.absent();
             requirePaddedExactStore(target, cycle);
-            try (MappedBytes bytes = target.bytes()) {
+            if (borrowed && exactIndexPreflightBytes == null)
+                exactIndexPreflightBytes = target.bytes();
+            final MappedBytes bytes = borrowed ? exactIndexPreflightBytes : target.bytes();
+            try {
+                //! Restore only this private cursor; no appender position or durable header is changed.
+                bytes.clear();
                 final long publishedPosition = target.writePosition();
                 final Wire preflightWire = queue.wireType().apply(bytes);
                 preflightWire.usePadding(target.dataVersion() > 0);
@@ -1777,6 +1800,10 @@ class StoreAppender extends AbstractCloseable
                     }
                     position += SPB_HEADER_SIZE + lengthOf(header);
                 }
+            } finally {
+                //! Historical probes own a temporary view; current-cycle views live until roll, park or close.
+                if (!borrowed)
+                    bytes.releaseLast();
             }
         } finally {
             //! Historical probes still own their temporary store. Closing a borrowed current store would invalidate
