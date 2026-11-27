@@ -10,8 +10,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.nio.file.Files;
 
-import static net.openhft.chronicle.queue.impl.single.TableDirectoryListing.UNSET_MAX_CYCLE;
-import static net.openhft.chronicle.queue.impl.single.TableDirectoryListing.UNSET_MIN_CYCLE;
 import static org.junit.Assert.assertEquals;
 
 public class FileSystemDirectoryListingTest {
@@ -31,13 +29,22 @@ public class FileSystemDirectoryListingTest {
         Files.createDirectory(new File(directory.getRoot(), name).toPath());
     }
 
+    private void assertEmpty(FileSystemDirectoryListing actual) {
+        File missing = new File(directory.getRoot(), "absent-reference-directory");
+        try (FileSystemDirectoryListing empty = new FileSystemDirectoryListing(missing,
+                name -> { throw new AssertionError(name); }, () -> 1234)) {
+            empty.refresh(true);
+            assertEquals(empty.getMinCreatedCycle(), actual.getMinCreatedCycle());
+            assertEquals(empty.getMaxCreatedCycle(), actual.getMaxCreatedCycle());
+        }
+    }
+
     @Test
     public void directoryAloneDoesNotCreateCycle() throws Exception {
         subdirectory("001.cq4");
         try (FileSystemDirectoryListing listing = listing()) {
             listing.refresh(true);
-            assertEquals(UNSET_MIN_CYCLE, listing.getMinCreatedCycle());
-            assertEquals(UNSET_MAX_CYCLE, listing.getMaxCreatedCycle());
+            assertEmpty(listing);
         }
     }
 
@@ -82,8 +89,7 @@ public class FileSystemDirectoryListingTest {
             assertEquals(2, listing.getMaxCreatedCycle());
             Files.delete(new File(directory.getRoot(), "002.cq4").toPath());
             listing.refresh(true);
-            assertEquals(UNSET_MIN_CYCLE, listing.getMinCreatedCycle());
-            assertEquals(UNSET_MAX_CYCLE, listing.getMaxCreatedCycle());
+            assertEmpty(listing);
         }
     }
 
@@ -93,8 +99,7 @@ public class FileSystemDirectoryListingTest {
         try (FileSystemDirectoryListing listing = new FileSystemDirectoryListing(missing,
                 name -> { throw new AssertionError(name); }, () -> 1234)) {
             listing.refresh(true);
-            assertEquals(UNSET_MIN_CYCLE, listing.getMinCreatedCycle());
-            assertEquals(UNSET_MAX_CYCLE, listing.getMaxCreatedCycle());
+            assertEmpty(listing);
             assertEquals(1234, listing.lastRefreshTimeMS());
         }
     }
