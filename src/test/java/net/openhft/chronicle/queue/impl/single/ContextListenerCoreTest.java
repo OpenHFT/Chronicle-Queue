@@ -801,8 +801,7 @@ public class ContextListenerCoreTest extends QueueTestCommon {
 
     @Test
     public void exactHistoricalRecoveryDoesNotChangeOrdinaryContext() {
-        // Pins exact-index recovery as listener-free and unable to move the ordinary context backwards.
-        ignoreException("Exact-index recovery reopened end-of-data");
+        // A rejected historical write must leave the ordinary listener on the current roll.
         AtomicInteger callbacks = new AtomicInteger();
 
         try (SingleChronicleQueue queue = builder(getTmpDir())
@@ -823,7 +822,8 @@ public class ContextListenerCoreTest extends QueueTestCommon {
             Bytes<?> recovered = binaryPayload("recovered");
             try {
                 long recoveryIndex = queue.rollCycle().toIndex(historicalCycle, 2);
-                appender.writeBytes(recoveryIndex, recovered);
+                assertThrows(ExactWriteBoundaryException.class,
+                        () -> appender.writeBytes(recoveryIndex, recovered));
             } finally {
                 recovered.releaseLast();
             }
