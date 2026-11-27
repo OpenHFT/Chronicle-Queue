@@ -389,7 +389,11 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
         throwExceptionIfClosedInSetter();
-        if (ec.wireForIndex() != null)
+        //! A positioned appender already has an index view. Asking its public accessor here bypasses
+        //! the internal path used by #1746 and rejects writes through a context listener's supplied writer.
+        //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter fails in that combination;
+        //! WrappedSequenceLookupTest still covers the separate unpositioned-tailer fallback below.
+        if (ec instanceof StoreAppender || ec.wireForIndex() != null)
             return indexing.lastSequenceNumber(ec);
 
         // An unpositioned tailer has no wire of its own for reading the committed suffix.
