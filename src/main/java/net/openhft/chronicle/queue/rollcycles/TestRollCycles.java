@@ -13,9 +13,16 @@ import net.openhft.chronicle.queue.RollCycle;
  */
 public enum TestRollCycles implements RollCycle {
     /**
-     * 0xffffffff entries - Only good for testing
+     * 0x1000000 entries - Only good for testing
      */
-    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, MAX_INDEX_COUNT, 4),
+    //! A 32,768-entry index forces a 1 MiB block even when a test requests
+    //! small mappings. With 2,048 entries, the index permits the 64 KiB
+    //! Windows block minimum, reducing the initial small-block roll-file
+    //! extent from 1.25 MiB to 128 KiB. Spacing 4 still supports 16,777,216
+    //! messages in each one-second cycle: FIX/Queue does not write at that
+    //! rate in these test workloads. Tests that hold their clock fixed must
+    //! still respect this per-cycle capacity; the roll period is unchanged.
+    TEST_SECONDLY(/*---*/"yyyyMMdd-HHmmss'T'", 1000, 2_048, 4),
     /**
      * 0x1000 entries - Only good for testing
      */

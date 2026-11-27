@@ -33,7 +33,7 @@ import java.nio.BufferOverflowException;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.WARN_SLOW_APPENDER_MS;
-import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 import static net.openhft.chronicle.wire.Wires.*;
 
 /**
@@ -110,7 +110,7 @@ class StoreAppender extends AbstractCloseable
             writeLock.lock();
             try {
                 // Process cycles and handle EOF markers
-                if (firstCycle != UNSET_CONTEXT) {
+                if (firstCycle != UNSET_CYCLE) {
                     // Backing down until EOF-ed cycle is encountered
                     for (int eofCycle = lastExistingCycle; eofCycle >= firstCycle; eofCycle--) {
                         setCycle2(eofCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);
@@ -662,7 +662,7 @@ class StoreAppender extends AbstractCloseable
         if (first == Integer.MAX_VALUE)
             return;
 
-        final LongValue normalisedEOFsTo = queue.tableStoreAcquire(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
+        final LongValue normalisedEOFsTo = queue.tableStoreAcquireWithExclusiveLock(NORMALISED_EOFS_TO_TABLESTORE_KEY, first);
         int eofCycle = Math.max(first, (int) normalisedEOFsTo.getVolatileValue());
         if (Jvm.isDebugEnabled(StoreAppender.class)) {
             Jvm.debug().on(StoreAppender.class, "Normalising from cycle " + eofCycle);
@@ -708,7 +708,7 @@ class StoreAppender extends AbstractCloseable
         //! high-water mark from a genuinely new Queue. The shared maximum therefore remains the ordinary-write floor
         //! while metadata exists; only a newer target may be created.
         final int publishedCycle = queue.lastPublishedCycle();
-        final boolean hasPublishedCycle = publishedCycle != UNSET_CONTEXT;
+        final boolean hasPublishedCycle = publishedCycle != UNSET_CYCLE;
         // Supported retention keeps the published maximum; taking it with time prevents clock
         // rollback while still allowing a writer to advance normally.
         final int targetCycle = hasPublishedCycle ? Math.max(queue.cycle(), publishedCycle) : queue.cycle();
@@ -1139,7 +1139,7 @@ class StoreAppender extends AbstractCloseable
         int lastPublishedCycle = queue.lastPublishedCycle();
 
         // If we're behind the target cycle, roll forward to the last existing cycle first
-        if (lastPublishedCycle != UNSET_CONTEXT
+        if (lastPublishedCycle != UNSET_CYCLE
                 && lastPublishedCycle < cycle
                 && lastPublishedCycle != this.cycle) {
             setCycle2(lastPublishedCycle, WireStoreSupplier.CreateStrategy.READ_ONLY);

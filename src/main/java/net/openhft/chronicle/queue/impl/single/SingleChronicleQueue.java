@@ -12,6 +12,7 @@ import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
 import net.openhft.chronicle.core.threads.EventLoop;
@@ -49,7 +50,7 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
-import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
 import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
@@ -87,9 +88,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     final File path;
     final String fileAbsolutePath;
-    // Uses this.closers as a lock. concurrent read, locking for write.
+    // Cache misses and close synchronize on the map; cache hits are lock-free.
     @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
+    // Guarded by metaStoreMap. Set when performClose() closes the cache, not when close() starts,
+    // so that a subclass can still write before it calls super.performClose().
+    private boolean metaStoreMapClosed;
     private final StoreSupplier storeSupplier;
     private final long epoch;
     private final boolean isBuffered;
@@ -964,9 +968,12 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     protected void performClose() {
-        synchronized (closers) {
+        synchronized (metaStoreMap) {
+            metaStoreMapClosed = true;
             metaStoreMap.values().forEach(Closeable::closeQuietly);
             metaStoreMap.clear();
+        }
+        synchronized (closers) {
             closers.forEach(Closeable::closeQuietly);
             closers.clear();
 
@@ -1038,10 +1045,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long firstIndex() {
-        //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires internal emptiness to use UNSET_CONTEXT
+        //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires internal emptiness to use UNSET_CYCLE
         //! rather than the public firstCycle() sentinel, because Integer.MAX_VALUE is itself a valid UInt31 cycle.
         final int cycle = firstPublishedCycle();
-        if (cycle == UNSET_CONTEXT)
+        if (cycle == UNSET_CYCLE)
             return Long.MAX_VALUE;
 
         return rollCycle().toIndex(cycle, 0);
@@ -1120,8 +1127,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public int firstCycle() {
         final int firstCycle = firstPublishedCycle();
         //! SingleCQFormatTest#testEmptyDirectory preserves the established public empty-Queue sentinel while the
-        //! internal representation uses UNSET_CONTEXT and can distinguish a real Integer.MAX_VALUE cycle.
-        return firstCycle == UNSET_CONTEXT ? Integer.MAX_VALUE : firstCycle;
+        //! internal representation uses UNSET_CYCLE and can distinguish a real Integer.MAX_VALUE cycle.
+        return firstCycle == UNSET_CYCLE ? Integer.MAX_VALUE : firstCycle;
     }
 
     int firstPublishedCycle() {
@@ -1151,8 +1158,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         setFirstAndLastCycle();
         final int lastCycle = directoryListing.getMaxCreatedCycle();
         //! SingleCQFormatTest#testEmptyDirectory preserves the established public lastCycle() sentinel even though
-        //! internal consumers and contextCount() use Wire's canonical UNSET_CONTEXT value.
-        return lastCycle == UNSET_CONTEXT ? Integer.MIN_VALUE : lastCycle;
+        //! internal consumers and contextCount() use Wire's canonical UNSET_CYCLE value.
+        return lastCycle == UNSET_CYCLE ? Integer.MIN_VALUE : lastCycle;
     }
 
     /**
@@ -1160,7 +1167,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * refresh performed by {@link #lastCycle()}. This distinction keeps the append hot path from
      * scanning the queue directory.
      *
-     * @return the latest UInt31 cycle, or {@link MarshallableOut#UNSET_CONTEXT} if none is published
+     * @return the latest UInt31 cycle, or {@link MarshallableOut#UNSET_CYCLE} if none is published
      */
     int lastPublishedCycle() {
         //! ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing and
@@ -1327,7 +1334,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
             if (longValue == null) {
-                synchronized (closers) {
+                synchronized (metaStoreMap) {
+                    if (metaStoreMapClosed)
+                        throw new ClosedIllegalStateException("Queue is closing: " + path);
                     longValue = metaStoreMap.get(keyBytes);
                     if (longValue == null) {
                         longValue = metaStore.acquireValueFor(key, defaultValue);
@@ -1341,6 +1350,19 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             }
             return longValue;
         }
+    }
+
+    LongValue tableStoreAcquireWithExclusiveLock(CharSequence key, long defaultValue) {
+        try (ScopedResource<Bytes<Void>> bytes = acquireBytesScoped()) {
+            LongValue value = metaStoreMap.get(asBytes(key, bytes.get()));
+            if (value != null)
+                return value;
+        }
+
+        // Named tailers in other JVMs use the same file lock. A cache miss waits for that lock
+        // outside the cache monitor and fails if the metadata lock timeout expires.
+        // Once locked, tableStoreAcquire rechecks the cache before binding or creating the entry.
+        return metaStore.doWithExclusiveLock(table -> tableStoreAcquire(key, defaultValue));
     }
 
     /**

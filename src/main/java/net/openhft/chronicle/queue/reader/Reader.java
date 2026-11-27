@@ -46,7 +46,8 @@ public interface Reader {
 
     /**
      * Adds an inclusion regex for filtering messages.
-     * <p>Messages that match the inclusion regex will be processed.
+     * <p>When this method is called repeatedly, a message is processed only if
+     * every inclusion regex matches it.
      *
      * @param regex The inclusion regex.
      * @return The current instance of {@link Reader}
@@ -55,7 +56,8 @@ public interface Reader {
 
     /**
      * Adds an exclusion regex for filtering messages.
-     * <p>Messages that match the exclusion regex will be filtered out.
+     * <p>When this method is called repeatedly, a message is filtered out if
+     * any exclusion regex matches it.
      *
      * @param regex The exclusion regex.
      * @return The current instance of {@link Reader}
