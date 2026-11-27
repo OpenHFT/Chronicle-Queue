@@ -1756,8 +1756,9 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
+    // Ring overrides this public test-jar entry point, including its checked-exception contract.
     @Test
-    public void testToEndAfterOfflineQueueDeletion() {
+    public void testToEndOnDeletedQueueFiles() throws IOException {
         if (OS.isWindows()) {
             System.err.println("#460 Cannot test delete after close on windows");
             return;
@@ -1770,7 +1771,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
 
         assertTrue("offline deletion must remove the complete Queue directory", IOTools.deleteDirWithFiles(dir));
-        assertTrue("test precondition: recreate the directory for a genuinely new Queue", dir.mkdirs());
+        Files.createDirectory(dir.toPath());
 
         try (ChronicleQueue q2 = builder(dir, wireType).build();
              ExcerptAppender q2Appender = q2.createAppender()) {
