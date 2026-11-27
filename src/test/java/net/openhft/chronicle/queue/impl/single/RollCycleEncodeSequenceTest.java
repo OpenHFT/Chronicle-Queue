@@ -62,6 +62,20 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     }
 
     @Test
+    public void writerAdvancingByFourGiBInvalidatesTheCapturedPosition() {
+        long captured = 128;
+        longValue.setOrderedValue(captured);
+        rollCycleEncodeSequence.setSequence(1, captured);
+        assertEquals(1, rollCycleEncodeSequence.getSequenceAt(captured));
+
+        long advanced = captured + (1L << 32);
+        longValue.setOrderedValue(advanced);
+        rollCycleEncodeSequence.setSequence(2, advanced);
+        assertEquals(2, rollCycleEncodeSequence.getSequence(captured));
+        assertEquals(Sequence.NOT_FOUND_RETRY, rollCycleEncodeSequence.getSequenceAt(captured));
+    }
+
+    @Test
     public void setGet() {
         int sequenceInitial = 0xb;
         int position = 0x40284;
