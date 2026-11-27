@@ -52,19 +52,23 @@ public class NamedTailerInspectionTest extends QueueTestCommon {
     }
 
     @Test
-    public void copiedMetadataCanBeScannedWithoutGrowingTheFile() throws Exception {
+    public void copiedQueueMetadataCanBeScannedWithoutGrowingTheFile() throws Exception {
         File original = getTmpDir();
+        File publishedRoll;
         try (SingleChronicleQueue queue = builder(original).build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("consumer")) {
             appender.writeText("record");
             assertEquals("record", tailer.readText());
+            publishedRoll = appender.currentFile();
         }
         BackgroundResourceReleaser.releasePendingResources();
         File directory = getTmpDir();
         Files.createDirectories(directory.toPath());
         File copy = new File(directory, SingleChronicleQueue.QUEUE_METADATA_FILE);
         Files.copy(new File(original, SingleChronicleQueue.QUEUE_METADATA_FILE).toPath(), copy.toPath());
+        // A writable Queue snapshot must retain the roll published by its metadata.
+        Files.copy(publishedRoll.toPath(), new File(directory, publishedRoll.getName()).toPath());
         try (SingleChronicleQueue queue = builder(directory).build()) {
             long size = Files.size(copy.toPath());
             assertTrue(queue.namedTailerIndexes().containsKey("consumer"));
