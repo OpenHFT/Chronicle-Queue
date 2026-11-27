@@ -251,8 +251,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     private void testCleanupDir0() {
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue =
-                     builder(tmpDir, wireType)
-                             .build();
+                     builder(tmpDir, wireType).build();
              final ExcerptAppender appender = queue.createAppender()) {
 
             try (DocumentContext dc = appender.writingDocument()) {
@@ -262,6 +261,8 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         // explicitly call so as to clean and release everything
         afterChecks();
         recordExceptions();
+        // Retry only deletion on Windows, where released mappings can briefly remain locked.
+        // A persistent deletion failure or any unrelated error must still fail the test.
         if (OS.isWindows())
             IOTools.deleteDirWithFilesOrWait(5_000, tmpDir);
         else
