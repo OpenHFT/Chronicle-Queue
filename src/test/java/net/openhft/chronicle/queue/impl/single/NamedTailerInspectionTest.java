@@ -10,6 +10,9 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.QueueTestCommon;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.TableStore;
+import net.openhft.chronicle.queue.impl.table.Metadata;
+import net.openhft.chronicle.queue.impl.table.SingleTableBuilder;
 import org.junit.Test;
 
 import java.io.File;
@@ -74,6 +77,34 @@ public class NamedTailerInspectionTest extends QueueTestCommon {
             assertTrue(queue.namedTailerIndexes().containsKey("consumer"));
             assertEquals(size, Files.size(copy.toPath()));
         }
+    }
+
+    @Test
+    public void metadataTableCanBeScannedWithoutRollFiles() throws Exception {
+        File original = getTmpDir();
+        long index;
+        try (SingleChronicleQueue queue = builder(original).build();
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer("consumer")) {
+            appender.writeText("record");
+            assertEquals("record", tailer.readText());
+            index = tailer.index();
+        }
+        BackgroundResourceReleaser.releasePendingResources();
+        File directory = getTmpDir();
+        Files.createDirectories(directory.toPath());
+        File copy = new File(directory, SingleChronicleQueue.QUEUE_METADATA_FILE);
+        Files.copy(new File(original, SingleChronicleQueue.QUEUE_METADATA_FILE).toPath(), copy.toPath());
+        byte[] before = Files.readAllBytes(copy.toPath());
+        try (TableStore<?> table =
+                     SingleTableBuilder.binary(copy,
+                             Metadata.NoMeta.INSTANCE).readOnly(!OS.isWindows()).build()) {
+            assertEquals(Long.valueOf(index), SingleChronicleQueue.scanNamedTailerIndexes(table).get("consumer"));
+            assertFalse(table.isClosed());
+        }
+        BackgroundResourceReleaser.releasePendingResources();
+        assertArrayEquals(before, Files.readAllBytes(copy.toPath()));
+        assertEquals(1, directory.listFiles().length);
     }
 
     @Test

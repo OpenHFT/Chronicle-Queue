@@ -796,7 +796,15 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 SingleChronicleQueue::scanNamedTailerIndexes, () -> metaStore);
     }
 
-    private static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<SCQMeta> tableStore) {
+    /**
+     * Reads detached named-tailer positions from an already opened metadata table, without opening roll files.
+     * The caller must hold the table's structural lock or exclusively own a stable copy. The scan does not
+     * create keys, change the table's cursor state or close the caller-owned table.
+     *
+     * @param tableStore the metadata table to inspect
+     * @return committed positions with replication bookkeeping excluded
+     */
+    public static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<?> tableStore) {
         final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
         tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
             final String k = key.toString();
