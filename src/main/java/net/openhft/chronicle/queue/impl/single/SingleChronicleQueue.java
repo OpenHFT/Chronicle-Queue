@@ -193,7 +193,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             readOnly = builder.readOnly();
             appenderListener = builder.appenderListener();
 
-            //! ReadonlyNamedTailerIndexesTest#readOnlyQueueWithMetadataUsesPersistedDirectoryListing
+            //! ReadonlyNamedTailerIndexesTest#readOnlyRequestWithMetadataUsesPersistedDirectoryListing
             //! distinguishes a missing metadata table from a read-only mapped table; only the former
             //! needs filesystem discovery, avoiding a directory scan on every read-only tail poll.
             if (metaStore instanceof ReadonlyTableStore) {
