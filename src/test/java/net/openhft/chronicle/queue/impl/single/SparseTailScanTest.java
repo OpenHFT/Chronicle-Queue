@@ -36,6 +36,18 @@ class SparseTailScanTest extends IndexingTestCommon {
         indexing.writePosition.setValue(published);
         indexing.sequence.setSequence(62, published);
 
+        assertTailLookup(63, 3); // Published record, committed suffix, unwritten header.
+    }
+
+    @Test
+    void writerCanIdentifyTheTailMoreThanOnePositionPeriodFromTheIndex() throws StreamCorruptedException {
+        appender.writeBytes(bytes -> bytes.writeSkip(1 << 16));
+        for (int i = 1; i < 256; i++)
+            appender.writeText("data");
+        assertTailLookup(255, 2); // Final record and unwritten header.
+    }
+
+    private void assertTailLookup(long sequence, int headers) throws StreamCorruptedException {
         class CountingWire extends BinaryWire {
             int headers;
 
@@ -55,11 +67,11 @@ class SparseTailScanTest extends IndexingTestCommon {
         ExcerptContext reader = createMock(ExcerptContext.class);
         expect(reader.wireForIndex()).andStubReturn(wire);
         replay(reader);
-        assertEquals(63, appender.store.sequenceForPosition(reader, Long.MAX_VALUE, true));
-        assertEquals(3, counter.headers, "published record, committed suffix, unwritten header");
+        assertEquals(sequence, appender.store.sequenceForPosition(reader, Long.MAX_VALUE, true));
+        assertEquals(headers, counter.headers);
 
         counter.headers = 0;
-        assertEquals(63, appender.store.lastSequenceNumber(reader));
-        assertEquals(3, counter.headers, "published record, committed suffix, unwritten header");
+        assertEquals(sequence, appender.store.lastSequenceNumber(reader));
+        assertEquals(headers, counter.headers);
     }
 }
