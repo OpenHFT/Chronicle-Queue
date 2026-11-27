@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -27,6 +28,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -416,22 +419,41 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         }
     }
 
-    // A dead maintenance owner must not leave all future appenders blocked on its append lock.
-    @Test
-    public void deadAppendLockOwnerDoesNotStrandWriters() {
-        File tmpDir = getTmpDir();
-        try (SingleChronicleQueue queue = builder(tmpDir, wireType).build()) {
-            LongValue appendLockValue = queue.metaStore().acquireValueFor(TableStoreWriteLock.APPEND_LOCK_KEY);
-            try {
-                appendLockValue.setValue(Integer.MAX_VALUE);
-
-                queue.createAppender().writeText("recovered");
-
-                assertEquals(AbstractTSQueueLock.UNLOCKED, appendLockValue.getVolatileValue());
-                assertEquals("recovered", queue.createTailer().readText());
-            } finally {
-                appendLockValue.close();
+    // Exercise recovery from a real exited process, including subclasses that buffer writes asynchronously.
+    @Test(timeout = 20_000)
+    public void deadAppendLockOwnerDoesNotStrandWriters() throws InterruptedException, IOException {
+        Process owner = JavaProcessBuilder.create(ExitedAppendLockOwner.class).start();
+        final long deadPid;
+        try {
+            assertTrue("lock owner exits", owner.waitFor(10, TimeUnit.SECONDS));
+            assertEquals(JavaProcessBuilder.getProcessStdErr(owner), 0, owner.exitValue());
+            try (BufferedReader output = new BufferedReader(new InputStreamReader(owner.getInputStream(), ISO_8859_1))) {
+                deadPid = Long.parseLong(output.readLine());
             }
+        } finally {
+            if (owner.isAlive()) {
+                owner.destroyForcibly();
+                assertTrue("lock owner is reaped", owner.waitFor(5, TimeUnit.SECONDS));
+            }
+        }
+        try (SingleChronicleQueue queue = builder(getTmpDir(), wireType).build();
+             LongValue appendLockValue = queue.metaStore().acquireValueFor(TableStoreWriteLock.APPEND_LOCK_KEY);
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            appendLockValue.setValue(deadPid);
+            appender.writeText("recovered");
+            String actual;
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while ((actual = tailer.readText()) == null && System.nanoTime() < deadline)
+                Jvm.pause(1);
+            assertEquals("recovered", actual);
+            assertEquals(AbstractTSQueueLock.UNLOCKED, appendLockValue.getVolatileValue());
+        }
+    }
+
+    public static final class ExitedAppendLockOwner {
+        public static void main(String[] args) {
+            System.out.println(Jvm.getProcessId());
         }
     }
 
