@@ -43,9 +43,10 @@ You can retrieve the last index written by the appender by calling `lastIndexApp
 long index = appender.lastIndexAppended();
 ----
 
-It should again be noted that Chronicle Queue appenders are thread-local, meaning only one appender can exist per thread.
-The first call to `createAppender()` creates the appender, and subsequent calls by the same thread reuses and returns the same instance.
-However, in a multi-threaded environment there may be more than one appender.
+It should again be noted that `createAppender()` returns a new appender on every call, and that the caller owns its lifecycle.
+Appenders are not thread-safe, so use one per thread.
+(`SingleChronicleQueue.acquireAppender()` returns a thread-local appender instead.)
+In a multi-threaded environment there may therefore be more than one appender.
 In such case `lastIndexAppended()` returns the last index written by the specific appender; not the last index written by _any_ appender.
 If you wish to find the index of the last record written to the queue, simply call:
 
@@ -108,7 +109,7 @@ To count the number of messages between two indexes you can use:
 
 [source,java]
 ----
-queue.countExcerpts(long fromIndex, long toIndex);
+((RollingChronicleQueue) queue).countExcerpts(fromIndex, toIndex);
 ----
 
 NOTE: Avoid calling this method on latency sensitive code.

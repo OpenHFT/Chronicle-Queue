@@ -81,7 +81,7 @@ or, you can get the underlying memory address and access the native memory.
 [source,java]
 ----
 assertTrue(tailer.readBytes(b -> {
-    long address = b.address(b.readPosition());
+    long address = b.addressForRead(b.readPosition());
     Unsafe unsafe = UnsafeMemory.UNSAFE;
     int code = unsafe.getByte(address);
     address++;
@@ -107,6 +107,64 @@ However, in general you only need one main tailer for a topic, with possibly, so
 As Chronicle Queue doesn't partition its topics, you get total ordering of all messages within that topic.
 Across topics, there is no guarantee of ordering; if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
 
+== Waiting for new excerpts
+
+`readDocument(...)` and `readingDocument()` do not wait for a new excerpt to arrive.
+An empty read returns `false` (or a context whose `isPresent()` is `false`); this is not a guarantee that reading or mapping a file has bounded latency.
+That means "nothing yet", not "the writer has finished": decide completion from your own end record or count.
+
+The reading thread chooses how to wait. Import `net.openhft.chronicle.threads.Pauser`; the examples assume an open tailer and a `ReadMarshallable` handler. Reset the pauser after each excerpt and pause after each empty read:
+
+[source,java]
+----
+Pauser pauser = Pauser.busy();
+while (running) {
+    if (tailer.readDocument(handler))
+        pauser.reset();
+    else
+        pauser.pause();
+}
+----
+
+|===
+| Pauser | Waiting strategy | Typical use
+
+| `Pauser.busy()` | Spins (`Jvm.nanoPause()`); never sleeps | Latency-critical reader on its own core; uses that whole core
+| `Pauser.yielding()` | Spins briefly, then `Thread.yield()` | Low latency when cores are spare
+| `Pauser.balanced()` | Spins, yields, then parks with backoff | General services
+| `Pauser.millis(1, 10)` | Parks 1 ms, backing off to 10 ms | Background readers
+| `Pauser.sleepy()` | Yields briefly, then parks with backoff | Lowest CPU use
+|===
+
+Some pauser factories select a less CPU-intensive strategy when the JVM reports few processors.
+Check `pauser.isBusy()`, or log the pauser's class, when the choice matters; affinity, container limits and JVM configuration can affect processor counts.
+
+Parking trades CPU usage for wake-up latency; the requested duration is not a precise wake-up time.
+Measure on the deployment host before choosing a strategy.
+
+Stop a spinning reader with a flag visible to the reading thread (for example a `volatile boolean running`).
+In tests, use a deadline and reset the pauser after successful reads. The following uses `java.util.concurrent.TimeUnit`.
+The timeout bounds the polling loop's willingness to wait; it cannot interrupt a blocked handler, file operation or scheduler delay.
+
+[source,java]
+----
+Pauser pauser = Pauser.millis(1, 10);
+long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+int received = 0;
+while (received < expected) {
+    if (System.nanoTime() - deadline >= 0) {
+        throw new AssertionError("received " + received + " of " + expected
+                + ", tailer at index " + Long.toHexString(tailer.index()));
+    }
+    if (tailer.readDocument(handler)) {
+        received++;
+        pauser.reset();
+    } else {
+        pauser.pause();
+    }
+}
+----
+
 == Tailers and File Handlers Clean Up
 
 Chronicle Queue tailers may create file handlers, the file handlers are cleaned up whenever the associated chronicle queue's `close()` method is invoked or whenever the Jvm runs a Garbage Collection.
@@ -114,7 +172,7 @@ If you are writing your code not have GC pauses and you explicitly want to clean
 
 [source,java]
 ----
-((StoreTailer)tailer).releaseResources()
+tailer.close()
 ----
 
 === Using `ExcerptTailer.toEnd()`
@@ -200,14 +258,9 @@ Chronicle Queue stores its data in binary format, with a file extension of `cq4`
 
 [source,text]
 ----
-\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
-ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
-���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-���������������������������������������������������������������������������������������������
-�����������������������������������������������������������������
+¡��@π�header∂�SCQStoreÇ™���ÕwritePositioné�����ç��������������������������������»indexing∂�SC
+QSIndexingÇL��� indexCount•��ÃindexSpacing•��Àindex2Indexèß»�������…lastIndexé����ß�������� d
+ataFormat°����
 ----
 
 This can often be a bit difficult to read, so it is better to dump the `cq4` files as text.
@@ -262,29 +315,34 @@ This will dump the `19700101-02.cq4` file out as text, as shown below:
 
 [source,yaml]
 ----
-!!meta-data #binary
+--- !!meta-data #binary
 header: !SCQStore {
-  wireType: !WireType BINARY,
-  writePosition: 0,
-  roll: !SCQSRoll {
-    length: !int 3600000,
-    format: yyyyMMdd-HH,
-    epoch: !int 3600000
-  },
+  writePosition: [
+    0,
+    0
+  ],
   indexing: !SCQSIndexing {
     indexCount: !short 4096,
-    indexSpacing: 4,
-    index2Index: 0,
+    indexSpacing: !short 256,
+    index2Index: 200,
     lastIndex: 0
   },
-  lastAcknowledgedIndexReplicated: -1,
-  recovery: !TimedStoreRecovery {
-    timeStamp: 0
-  }
+  dataFormat: 1
 }
 
+# position: 200, header: -1
+--- !!meta-data #binary
+index2index: [
+  # length: 4096, used: 1
+  33008 # truncated trailing zeros
+]
+# position: 33008, header: -1
+--- !!meta-data #binary
+index: [
+  # length: 4096, used:  # truncated trailing zeros
+]
 ...
-# 4198044 bytes remaining
+# 83820268 bytes remaining
 ----
 
 NOTE: The example above does not show any user data, because no user data was written to this example file.
@@ -309,19 +367,28 @@ TIP: See xref:command-line:command_line_tools.adoc#_chroniclereadermain[] for th
 Below is the command line interface used to configure `ChronicleReaderMain`:
 
 ----
-usage: ChronicleReaderMain
- -d <directory>       Directory containing chronicle queue files
- -e <exclude-regex>   Do not display records containing this regular
-                      expression
- -f                   Tail behaviour - wait for new records to arrive
- -h                   Print this help and exit
- -i <include-regex>   Display records containing this regular expression
- -l                   Squash each output message into a single line
- -m <max-history>     Show this many records from the end of the data set
- -n <from-index>      Start reading from this index (e.g. 0x123ABE)
- -r <interface>       Use when reading from a queue generated using a MethodWriter
- -s                   Display index
- -w <wire-type>       Control output i.e. JSON
+usage: ChronicleReaderMain [-a <binary-arg>] [-b <binary-search>] [-cbl <content-based-limiter>] [-cblArg <content-based-limiter-argument>] -d <directory> [-e <exclude-regex>] [-f]
+       [-g] [-h] [-i <include-regex>] [-k] [-l] [-m <max-history>] [-n <from-index>] [-named <named>] [-r <as-method-reader>] [-s] [-w <wire-type>] [-x <max-results>] [-z]
+ -a <binary-arg>                            Argument to pass to binary search class
+ -b <binary-search>                         Use this class as a comparator to binary search
+ -cbl <content-based-limiter>               Specify a content-based limiter
+ -cblArg <content-based-limiter-argument>   Specify an argument for use by the content-based limiter
+ -d <directory>                             Directory containing chronicle queue files
+ -e <exclude-regex>                         Do not display records containing this regular expression
+ -f                                         Tail behaviour - wait for new records to arrive
+ -g                                         Show message history (when using method reader)
+ -h                                         Print this help and exit
+ -i <include-regex>                         Display records containing this regular expression
+ -k                                         Read the queue in reverse
+ -l                                         Squash each output message into a single line
+ -m <max-history>                           Show this many records from the end of the data set
+ -n <from-index>                            Start reading from this index (e.g. 0x123ABE)
+ -named <named>                             Named tailer ID
+ -r <as-method-reader>                      Use when reading from a queue generated using a MethodWriter
+ -s                                         Display index
+ -w <wire-type>                             Control output i.e. JSON
+ -x <max-results>                           Limit the number of results to output
+ -z                                         Print timestamps using the local timezone
 ----
 
 Just as with `DumpQueue` you need the classes in the example above present on the class path.

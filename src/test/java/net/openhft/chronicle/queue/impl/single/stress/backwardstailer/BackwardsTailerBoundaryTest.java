@@ -99,6 +99,12 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
                                              RollCycle rollCycle) {
         return SingleChronicleQueueBuilder
                 .builder()
+                //! Each TEST4_DAILY roll contains only 640 short messages. Small mappings
+                //! avoid reserving the default-sized extent for each of the five rolls,
+                //! particularly on Windows where extending these files consumes disk space.
+                //! Keep the index geometry, all 3,200 writes and every boundary check;
+                //! the builder still grows mappings as the unchanged workload needs them.
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .path(path)
                 .rollCycle(rollCycle)

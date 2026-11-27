@@ -17,6 +17,9 @@ import java.io.File;
  */
 public interface DirectoryListing extends Closeable {
 
+    /** No cycle has been published. Valid cycle numbers are nonnegative. */
+    int UNSET_CYCLE = -1;
+
     /**
      * Initializes the directory listing. This method is intended for any setup required after
      * the implementation is instantiated. The default implementation does nothing.
@@ -52,7 +55,7 @@ public interface DirectoryListing extends Closeable {
     /**
      * Returns the minimum cycle number created so far.
      *
-     * @return the minimum UInt31 cycle, or {@link net.openhft.chronicle.wire.MarshallableOut#UNSET_CONTEXT}
+     * @return the minimum UInt31 cycle, or {@link #UNSET_CYCLE}
      *         if no cycle has been published
      */
     int getMinCreatedCycle();
@@ -60,7 +63,7 @@ public interface DirectoryListing extends Closeable {
     /**
      * Returns the maximum cycle number created so far.
      *
-     * @return the maximum UInt31 cycle, or {@link net.openhft.chronicle.wire.MarshallableOut#UNSET_CONTEXT}
+     * @return the maximum UInt31 cycle, or {@link #UNSET_CYCLE}
      *         if no cycle has been published
      */
     int getMaxCreatedCycle();
