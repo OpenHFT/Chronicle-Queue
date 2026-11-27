@@ -97,6 +97,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     // Cache misses and close synchronize on the map; cache hits are lock-free.
     @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
+    // Guarded by metaStoreMap. Set when performClose() closes the cache, not when close() starts,
+    // so that a subclass can still write before it calls super.performClose().
+    private boolean metaStoreMapClosed;
     private final StoreSupplier storeSupplier;
     private final long epoch;
     private final boolean isBuffered;
@@ -1069,6 +1072,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     protected void performClose() {
         synchronized (metaStoreMap) {
+            metaStoreMapClosed = true;
             metaStoreMap.values().forEach(Closeable::closeQuietly);
             metaStoreMap.clear();
         }
@@ -1470,7 +1474,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             LongValue longValue = metaStoreMap.get(keyBytes);
             if (longValue == null || longValue.isClosed()) {
                 synchronized (metaStoreMap) {
-                    if (isClosing())
+                    if (metaStoreMapClosed)
                         throw new ClosedIllegalStateException("Queue is closing: " + path);
                     longValue = metaStoreMap.get(keyBytes);
                     if (longValue == null || longValue.isClosed()) {
