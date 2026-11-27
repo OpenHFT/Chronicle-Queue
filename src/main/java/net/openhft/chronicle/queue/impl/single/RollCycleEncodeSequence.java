@@ -3,10 +3,14 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
 import net.openhft.chronicle.wire.Sequence;
+
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class encodes and manages the sequence in a Chronicle Queue based on roll cycles.
@@ -17,8 +21,9 @@ class RollCycleEncodeSequence implements Sequence {
     private final int cycleShift;
     private final long sequenceMask;
     private final long positionMask;
-    private volatile long writerPosition;
-    private volatile long writerSequence;
+    private volatile TailPosition localTail;
+    private MappedFile mappedFile;
+    private AtomicReference<TailPosition> queueTail;
 
     /**
      * Constructs an instance of RollCycleEncodeSequence.
@@ -35,6 +40,41 @@ class RollCycleEncodeSequence implements Sequence {
                 (TwoLongValue) writePositionAndSequence : null;
     }
 
+    // A queue can reacquire the same mapping through several stores. A replacement
+    // file at the same path must establish its own position and sequence.
+    static final class TailPosition extends WeakReference<MappedFile> {
+        final long position;
+        final long sequence;
+
+        TailPosition(MappedFile file, long position, long sequence) {
+            super(file);
+            this.position = position;
+            this.sequence = sequence;
+        }
+    }
+
+    void shareTailPosition(MappedFile file, AtomicReference<TailPosition> queueTail) {
+        this.mappedFile = file;
+        this.queueTail = queueTail;
+    }
+
+    void rememberPosition(long position, long sequence) {
+        if (position <= positionMask)
+            return;
+        TailPosition previous = tailPosition();
+        if (previous != null && previous.get() == mappedFile && position - previous.position <= positionMask)
+            return;
+        TailPosition next = new TailPosition(mappedFile, position, sequence);
+        if (queueTail == null)
+            localTail = next;
+        else
+            queueTail.compareAndSet(previous, next);
+    }
+
+    private TailPosition tailPosition() {
+        return queueTail == null ? localTail : queueTail.get();
+    }
+
     /**
      * Sets the sequence value and position in the underlying TwoLongValue.
      *
@@ -47,11 +87,7 @@ class RollCycleEncodeSequence implements Sequence {
             return;
         long value = toLongValue(position, sequence);
         writePositionAndSequence.setOrderedValue2(value);
-        if (position > positionMask && position - writerPosition > positionMask) {
-            // Queue writers hold the write lock. Publish the sequence before its full position.
-            writerSequence = sequence;
-            writerPosition = position;
-        }
+        rememberPosition(position, sequence);
     }
 
     /**
@@ -118,11 +154,11 @@ class RollCycleEncodeSequence implements Sequence {
         if (position < indexedPosition)
             return Sequence.NOT_FOUND;
         if (position - indexedPosition > positionMask) {
-            long written = writerPosition;
-            if (position < written || position - written > positionMask)
+            TailPosition tail = tailPosition();
+            if (tail == null || tail.get() != mappedFile ||
+                    position < tail.position || position - tail.position > positionMask)
                 return Sequence.NOT_FOUND;
-            // Reading a later writer sequence only tightens this lower bound.
-            indexedSequence = Math.max(indexedSequence, writerSequence);
+            indexedSequence = Math.max(indexedSequence, tail.sequence);
         }
         long sequence = getSequence(position);
         if (sequence >= 0 && sequence < indexedSequence)

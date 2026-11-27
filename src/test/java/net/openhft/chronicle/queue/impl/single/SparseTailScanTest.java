@@ -12,10 +12,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.StreamCorruptedException;
 
+import static net.openhft.chronicle.wire.Sequence.NOT_FOUND;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SparseTailScanTest extends IndexingTestCommon {
@@ -45,6 +47,30 @@ class SparseTailScanTest extends IndexingTestCommon {
         for (int i = 1; i < 256; i++)
             appender.writeText("data");
         assertTailLookup(255, 2); // Final record and unwritten header.
+    }
+
+    @Test
+    void reacquiredStoresShareProgressOnlyWithinTheirOwnMapping() throws StreamCorruptedException {
+        appender.writeBytes(bytes -> bytes.writeSkip(1 << 16));
+        appender.writeText("last");
+        long position = appender.store.writePosition();
+        try (SingleChronicleQueue reader = SingleChronicleQueueBuilder.binary(queue.file())
+                .testBlockSize().rollCycle(rollCycle()).timeProvider(timeProvider).build();
+             SingleChronicleQueueStore cold = reader.storeForCycle(0, 0, false, null)) {
+            assertEquals(NOT_FOUND, cold.indexing.sequence.getSequenceAt(position));
+
+            try (StoreTailer readerTailer = (StoreTailer) reader.createTailer()) {
+                assertEquals(2, readerTailer.excerptsInCycle(0));
+                appender.writeText("next");
+                position = appender.store.writePosition();
+                assertEquals(3, readerTailer.excerptsInCycle(0));
+            }
+
+            try (SingleChronicleQueueStore reacquired = reader.storeForCycle(0, 0, false, null)) {
+                assertNotSame(cold, reacquired);
+                assertEquals(2, reacquired.indexing.sequence.getSequenceAt(position));
+            }
+        }
     }
 
     private void assertTailLookup(long sequence, int headers) throws StreamCorruptedException {
