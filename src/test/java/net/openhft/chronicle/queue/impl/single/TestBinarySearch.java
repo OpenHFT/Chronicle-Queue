@@ -18,6 +18,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -39,6 +40,7 @@ public class TestBinarySearch extends QueueTestCommon {
         this.numberOfMessagesToVerify = numberOfMessagesToVerify;
         this.retrievalStrategy = numberOfMessages == numberOfMessagesToVerify ? RetrievalStrategy.LINEAR : RetrievalStrategy.RANDOM;
         this.emptyCyclesStrategy = emptyCyclesStrategy;
+        globalTimeout = Timeout.seconds(180);
     }
 
     @Parameterized.Parameters(name = "items: {0} verify: {1} emptyCycles: {2}")
@@ -75,8 +77,13 @@ public class TestBinarySearch extends QueueTestCommon {
 
         boolean writtenEmptyCycles = false;
 
+        //! These tiny messages span about 30 rolls in the largest cases.
+        //! Default mappings reserve 80 MiB per roll on Windows; small blocks
+        //! exercise the same search and empty-cycle cases without that disk
+        //! allocation. Keep the message counts and one-second roll period.
         try (SingleChronicleQueue queue = ChronicleQueue.singleBuilder(getTmpDir())
                 .rollCycle(TestRollCycles.TEST_SECONDLY)
+                .testBlockSize()
                 .timeProvider(stp)
                 .build();
              final ExcerptAppender appender = queue.createAppender()) {

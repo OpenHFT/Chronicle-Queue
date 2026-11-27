@@ -7,13 +7,13 @@ author: Julia Gustafsson
 
 This chapter describes how Chronicle Queue is configured.
 Settings are preferably made when instantiating the queue using `ChronicleQueue.singleBuilder`.
-For example, this builder sets the roll cycle to `RollCycle.HOURLY`:
+For example, this builder sets the roll cycle to `RollCycles.FAST_HOURLY`:
 
 [source,java]
 ----
 String basePath = OS.getTarget() + "/getting-started";
 ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath)
-    .rollCycle(RollCycle.HOURLY)
+    .rollCycle(RollCycles.FAST_HOURLY)
     .build();
 }
 ----
@@ -28,18 +28,18 @@ Please availability for Chronicle Queue OSS in column _Available in Chronicle Qu
 |===
 | Type | Field name | Description | Default | Available in Chronicle Queue OSS
 
-| `RollCycle` | xref:roll-cycle.adoc[`rollCycle`] | The rolling interval, meaning how often messages are appended to a new queue | `DAILY` | Yes
-| `Long` | xref:roll-cycle.adoc#epoch[`epoch`] | The offset from the roll cycle in microseconds | 0 | Yes
-| `WireType` | xref:wire-type.adoc[`wireType`] |  | `BINARY_LIGHT` | OSS excludes `DELTA_BINARY`
+| `RollCycle` | xref:roll-cycle.adoc[`rollCycle`] | The rolling interval, meaning how often messages are appended to a new queue | `FAST_DAILY` | Yes
+| `Long` | xref:roll-cycle.adoc#epoch[`epoch`] | The offset from the roll cycle in milliseconds | 0 | Yes
+| `WireType` | xref:wire-type.adoc[`wireType`] |  | `BINARY_LIGHT` | Yes
 | `Integer` | xref:index-count.adoc[`indexCount`] | The size of each index array  | The default index count associated with the selected roll cycle | Yes
 | `Integer`| xref:index-spacing.adoc[`indexSpacing`] | The space between excerpts that are explicitly indexed | The default index spacing associated with the selected roll cycle | Yes
 | `Long` | xref:block-size.adoc[`blockSize`] | The size of a memory mapping chunk. Do not change this unless necessary |  | Yes
 | `BufferMode` | xref:buffer-modes.adoc[`writeBufferMode`] | | `None` | Only the default value `None`
-| `BufferMode` | xref:buffer-modes.adoc[`readBufferMode`] | | `BufferMode` | Only the default value `None`
+| `BufferMode` | xref:buffer-modes.adoc[`readBufferMode`] | | `None` | Only the default value `None`
 | `boolean` | [`doubleBuffer`] | Enables double-buffered writes on contention | `false` | Yes
 | `TimeProvider` | [`timeProvider`] | The time provider used to evaluate the rolling timings | `SystemTimeProvider.INSTANCE` | Yes
-| `int` | [`maxTailers`] | The number of tailers to preallocate when using Async Mode. Only set this when using `readBufferMode=Asynchronous` | 1 | Enterprise only
-| `long` | link:[`bufferCapacity`] | Sets the Async Mode buffer capacity in bytes | `false` | Enterprise only
+| `int` | [`maxTailers`] | The number of tailers to preallocate when using Async Mode. Only set this when using `readBufferMode=Asynchronous` | 0 | Enterprise only
+| `long` | link:[`bufferCapacity`] | Sets the Async Mode buffer capacity in bytes | 2 MiB, capped at `blockSize`/4 | Enterprise only
 | `boolean` | link:[`enableRingBufferMonitoring`] | Enables Async Mode's monitoring capability | `false` | Enterprise only
 | `boolean` | link:[`ringBufferReaderCanDrain`] | Enables Async Mode's reader processes to invoke the queue drainer. By default, only only writer processes are allowed to invoke the drainer. | `false` | Enterprise only
 | `boolean` | link:[`ringBufferForceCreateReader`] | Controls whether to force creating a reader (to recover from crash). | `false` | Enterprise only

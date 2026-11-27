@@ -138,8 +138,8 @@ public interface ChronicleQueue extends Closeable {
      * Sharing a Tailer across threads is unsafe and will inevitably lead to errors and unspecified behaviour.
      * </b>
      * <p>
-     * The tailor is created at the start, so unless you are using named tailors,
-     * this method is the same as calling `net.openhft.chronicle.queue.ChronicleQueue#createTailer(java.lang.String).toStart()`
+     * The tailer is created at the start, so unless you are using named tailers,
+     * this method is the same as calling {@link #createTailer(String)}{@code .toStart()}
      *
      * @return a new ExcerptTailer to read sequentially.
      * @see #createTailer(String)

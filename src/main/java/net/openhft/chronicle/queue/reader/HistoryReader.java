@@ -132,11 +132,14 @@ public interface HistoryReader {
     }
 
     /**
-     * Creates and returns a new history reader that will use
-     * the provided {@code queueSupplier } to provide the queue.
+     * Intended to create a new history reader that will use
+     * the provided {@code queueSupplier} to provide the queue.
+     * <p>
+     * This method is not implemented yet and always throws {@link UnsupportedOperationException}.
      *
-     * @return a new history reader that will use
-     *         the provided {@code queueSupplier } to provide the queue.
+     * @param queueSupplier supplies the queue to be read from
+     * @return a new {@code HistoryReader} that will read from the supplied queue.
+     * @throws UnsupportedOperationException always, as this method is not implemented
      */
     static HistoryReader create(@NotNull final Supplier<? extends ChronicleQueue> queueSupplier) {
         throw new UnsupportedOperationException("TODO");
