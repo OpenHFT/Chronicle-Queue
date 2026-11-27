@@ -143,8 +143,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         @Override
         public void run() {
-            try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
-                 final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
+            try (final ChronicleQueue sourceQueue = createQueue(sourceDir);
+                 final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
                      final ExcerptTailer destinationTailer = destinationQueue.createTailer();
                      final ExcerptAppender destinationAppender = destinationQueue.createAppender()) {
@@ -178,7 +178,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                         copied++;
                         // Cover reopen-at-roll and periodic reopen without 1,000 mapping lifecycles.
                         if (cycle != lastReopenedCycle || copied % REOPEN_INTERVAL == 0) {
-                            try (final ChronicleQueue dq = createQueue(destinationDir, null);
+                            try (final ChronicleQueue dq = createQueue(destinationDir);
                                  final ExcerptAppender da = dq.createAppender()) {
                                 assumeNotNull(dq);
                                 assumeNotNull(da);
