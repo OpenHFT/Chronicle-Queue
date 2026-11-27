@@ -45,6 +45,8 @@ import java.util.function.Supplier;
  */
 public class SingleTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     public static final String SUFFIX = ".cq4t";
+    private static final String SHARED_LOCK_TYPE = "shared";
+    private static final String EXCLUSIVE_LOCK_TYPE = "exclusive";
     private static final int EXCLUSIVE_LOCK_SIZE = 1;
     /**
      * We need to be able to acquire an "exclusive" lock while fine-grained long-running locks are being held.
@@ -190,7 +192,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
         if (!shared && ReentrantFileLock.isHeldByCurrentThread(file))
             return code.apply(target.get());
 
-        final String type = shared ? "shared" : "exclusive";
+        final String type = shared ? SHARED_LOCK_TYPE : EXCLUSIVE_LOCK_TYPE;
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
         final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
@@ -215,7 +217,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
             long delay = Math.min(250L, (long) count * count);
             Jvm.pause(Math.min(delay, TimeUnit.NANOSECONDS.toMillis(remaining)));
         }
-        String type = shared ? "shared" : "exclusive";
+        String type = shared ? SHARED_LOCK_TYPE : EXCLUSIVE_LOCK_TYPE;
         throw new IllegalStateException("Unable to claim exclusive " + type + " lock on file " + file);
     }
 
@@ -227,7 +229,7 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
                     : ReentrantFileLock.tryLock(file, channel);
         } catch (IOException | OverlappingFileLockException unavailable) {
             if (count > 9 && Jvm.isDebugEnabled(SingleTableStore.class)) {
-                final String type = shared ? "shared" : "exclusive";
+                final String type = shared ? SHARED_LOCK_TYPE : EXCLUSIVE_LOCK_TYPE;
                 final long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
                 final String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file="
                         + file.getAbsolutePath() + ", count=" + count + ", elapsed=" + elapsedMs + " ms";

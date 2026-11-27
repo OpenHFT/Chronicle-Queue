@@ -1641,14 +1641,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             try {
                 if (mappedBytes.refCount() > 0 && ((Bytes<?>) mappedBytes).bytesStore() != null) {
                     long pos = ((Bytes<?>) mappedBytes).bytesStore().addressForRead(0);
-                    Jvm.warn().on(SingleChronicleQueue.class, "pos=" + Long.toHexString(pos));
+                    Jvm.warn().on(SingleChronicleQueue.class, "Mapping diagnostic: pos=" + Long.toHexString(pos));
                 }
                 if (!OS.isLinux())
                     return;
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
                     for (String line; (line = br.readLine()) != null; )
                         if (line.contains(".cq4"))
-                            Jvm.warn().on(SingleChronicleQueue.class, line);
+                            Jvm.warn().on(SingleChronicleQueue.class, "Mapping diagnostic: " + line);
                 }
             } catch (IOException | RuntimeException | InternalError diagnosticFailure) {
                 // Diagnostics must not hide the native failure or bypass acquisition cleanup.

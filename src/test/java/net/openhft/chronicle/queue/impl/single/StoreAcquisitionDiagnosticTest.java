@@ -30,6 +30,8 @@ public class StoreAcquisitionDiagnosticTest extends QueueTestCommon {
     }
 
     private void factoryInternalError(boolean closesBytes) throws Exception {
+        // The injected native failure deliberately emits mapping details when available.
+        ignoreException("Mapping diagnostic: ");
         AtomicReference<Bytes<?>> captured = new AtomicReference<>();
         InternalError expected = new InternalError("injected native store failure");
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
