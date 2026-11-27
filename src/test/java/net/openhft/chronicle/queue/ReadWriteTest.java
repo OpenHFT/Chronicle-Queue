@@ -133,9 +133,6 @@ public class ReadWriteTest extends QueueTestCommon {
             }
         }).start();
 
-        // the below can happen if the race mitigation code in TableDirectoryListingReadOnly.init is exercised
-        // as a LongValue gets created before it can be assigned to a reference and be available to be closed
-        ignoreException("Discarded without closing");
         try (ChronicleQueue out = SingleChronicleQueueBuilder
                 .binary(chroniclePath)
                 .testBlockSize()

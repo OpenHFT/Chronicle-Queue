@@ -749,6 +749,28 @@ Tests would be required to confirm correct behaviour in your specific environmen
 NOTE: The above explanation assumes C{pp} Queue on Linux.
 Java Queue has similar functional requirements which should ultimately use similar native calls to C` via the JVM, but this would need to be confirmed in your environment.
 
+== Diagnosing method-writer compilation fallbacks in tests
+
+When Wire records `Failed to compile generated method writer - falling back to proxy method writer`,
+tests extending `QueueTestCommon` print additional context to standard error when teardown starts.
+The diagnostic includes the test class and method, Java version, `wire.generator.v2` and
+`disableProxyCodegen` properties, and the original throwable with its cause and stack trace.
+An unset property is shown as `null`; this does not describe its effective default.
+Extra output is limited to the first distinct matching warning and its recorded occurrence count.
+The original warnings remain subject to the existing exception checks, and diagnostics also run
+for failed tests and tests which set `finishedNormally` to false.
+
+Rerun the affected test on the same JDK and retain its log and Surefire reports. For example,
+if `MessageHistoryTest` was affected, run from the repository root:
+
+[source,shell]
+----
+mvn -Dtest=MessageHistoryTest -DfailIfNoTests=true -Dsurefire.failIfNoSpecifiedTests=true test -l method-writer-fallback.log
+----
+
+Confirm that `target/surefire-reports` records the intended test execution. A successful rerun
+without a fallback warning does not reproduce the original compilation failure.
+
 '''
 
 <<../README.adoc#,Back to ReadMe>>

@@ -286,6 +286,7 @@ public class RollCycleTest extends QueueTestCommon {
                 observer.stopAndJoin(thread);
             }
 
+            assertFalse("observer did not stop", thread.isAlive());
             assertEquals(1 + cyclesToWrite, observer.documentsRead);
         }
         finishedNormally = true;

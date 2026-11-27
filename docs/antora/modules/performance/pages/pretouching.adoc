@@ -16,8 +16,9 @@ Pre-touching involves accessing pages of files/memory that are likely accessed i
 
 There are two ways to perform pre-touching, outlined below:
 
-Triggering pre-touches manually ::
+Triggering pre-touches manually ★ ::
 Perform pre-touching once for the current appender using `ExcerptAppender.pretouch()`
+_(Enterprise feature: the pre-toucher moved to Chronicle Queue Enterprise, and `pretouch()` is not usable without it on the class path.)_
 Automatically pre-touching using Chronicle's preloader ★ ::
 The preloader automatically pre-touches segments at a given time interval _(Enterprise feature)_.
 
