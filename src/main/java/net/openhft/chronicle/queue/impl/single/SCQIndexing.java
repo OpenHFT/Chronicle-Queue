@@ -604,15 +604,17 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
         bytes.readPositionUnlimited(startAddress);
         long i = indexOfNext - 1;
+        long lastDataPosition = 0;
 
         // Scan through the entries until the target position is found or exceeded.
         while (bytes.readPosition() <= toPosition) {
             WireIn.HeaderType headerType = wire.readDataHeader(true);
-            if (headerType == WireIn.HeaderType.EOF) {
-                if (toPosition == Long.MAX_VALUE)
-                    return i;
-                throw new EOFException();
+            if (toPosition == Long.MAX_VALUE && (headerType == WireIn.HeaderType.EOF || headerType == WireIn.HeaderType.NONE)) {
+                sequence.rememberPosition(lastDataPosition, i);
+                return i;
             }
+            if (headerType == WireIn.HeaderType.EOF)
+                throw new EOFException();
 
             if (!inclusive && toPosition == bytes.readPosition())
                 return i;
@@ -620,10 +622,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             switch (headerType) {
                 case NONE:
                     // Case where no data header is found
-                    if (toPosition == Long.MAX_VALUE) {
-                        return i;
-                    }
-
                     int header = bytes.readVolatileInt(bytes.readPosition());
                     throwIndexNotWritten(toPosition, startAddress, bytes, header);
                     break;
@@ -631,7 +629,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                     // Skip metadata
                     break;
                 case DATA:
-                    // Increment the index for each valid data entry
+                    lastDataPosition = bytes.readPosition();
                     ++i;
                     break;
                 case EOF:
@@ -703,9 +701,12 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     long sequenceForPosition(@NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive) throws StreamCorruptedException {
+        return sequenceForPosition(ec.wireForIndex(), position, inclusive);
+    }
+
+    private long sequenceForPosition(Wire wire, long position, boolean inclusive) throws StreamCorruptedException {
         long indexOfNext = 0;
         long lastKnownAddress = 0;
-        @NotNull Wire wire = ec.wireForIndex();
         try {
             final LongArrayValues index2indexArr = getIndex2index(wire);
             int used2 = getUsedAsInt(index2indexArr);
@@ -1005,8 +1006,15 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 long sequence = sequence1.getSequenceAt(endAddress);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
-                if (sequence == Sequence.NOT_FOUND)
-                    return -1;
+                if (sequence == Sequence.NOT_FOUND) {
+                    try {
+                        long last = sequenceForPosition(wire, Long.MAX_VALUE, true);
+                        return last < 0 ? -1 : last + 1;
+                    } catch (StreamCorruptedException e) {
+                        // Let the tailer use its existing recovery path.
+                        return -1;
+                    }
+                }
 
                 Bytes<?> bytes = wire.bytes();
                 if (wire.usePadding())

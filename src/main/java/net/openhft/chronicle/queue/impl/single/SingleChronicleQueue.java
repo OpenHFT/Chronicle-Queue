@@ -1391,6 +1391,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         // A cached tree structure to store cycle-related data.
         private final AtomicReference<CachedCycleTree> cachedTree = new AtomicReference<>();
 
+        private final AtomicReference<RollCycleEncodeSequence.TailPosition> queueTail = new AtomicReference<>();
+
         // A cache for managing MappedFile and MappedBytes, used to map files into memory.
         private final ReferenceCountedCache<File, MappedFile, MappedBytes, IOException> mappedFileCache;
 
@@ -1512,6 +1514,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                     }
                     throw e;
                 }
+                wireStore.indexing.sequence.shareTailPosition(mappedBytes.mappedFile(), queueTail);
                 return wireStore;
 
             } catch (@NotNull TimeoutException | IOException e) {
