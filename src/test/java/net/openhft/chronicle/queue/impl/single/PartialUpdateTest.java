@@ -4,6 +4,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.bytes.PageUtil;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.values.LongValue;
@@ -16,6 +18,7 @@ import org.junit.runners.Parameterized;
 import java.io.StreamCorruptedException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -84,6 +87,26 @@ public class PartialUpdateTest extends QueueTestCommon {
     @AfterClass
     public static void restoreCheckIndexAssertions() {
         QueueSystemProperties.CHECK_INDEX = originalCheckIndexValue;
+    }
+
+    @Test
+    public void fixturePreservesCompletedCycleSizeAndContents() {
+        File[] files = queuePath.toFile().listFiles((dir, name) -> name.endsWith(".cq4"));
+        assertNotNull(files);
+        assertEquals(2, files.length);
+        java.util.Arrays.sort(files);
+        // One test-sized mapping plus its overlap; a wrong-cycle index scan used to
+        // grow this completed file to 796,590,080 bytes before returning zero.
+        long originalLength = 3L * Math.max(OS.SAFE_PAGE_SIZE,
+                PageUtil.getPageSize(queuePath.toAbsolutePath().toString()));
+        assertTrue("Fixture grew completed cycle to " + files[0].length(), files[0].length() <= originalLength);
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath)
+                .readOnly(true).timeProvider(setTimeProvider).rollCycle(RollCycles.FAST_HOURLY).build();
+             ExcerptTailer tailer = queue.createTailer()) {
+            for (String expected : new String[]{"One", "Two", "Three", "Four", "Five", "Six"})
+                assertEquals(expected, tailer.readText());
+            assertNull(tailer.readText());
+        }
     }
 
     @Test
@@ -212,7 +235,7 @@ public class PartialUpdateTest extends QueueTestCommon {
 
     private static void printLastWritePositionAndSequence(String description, StoreTailer context, SingleChronicleQueueStore store) {
         try {
-            context.toStart();
+            assertTrue(context.moveToCycle(store.cycle()));
             long writePosition = store.writePosition();
             long lastSequenceNumber = store.lastSequenceNumber(context);
             Jvm.startup().on(PartialUpdateTest.class, format("Last wp/seq = %x/%d (%s)", writePosition, lastSequenceNumber, description));

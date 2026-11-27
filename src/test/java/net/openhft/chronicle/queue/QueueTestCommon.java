@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
@@ -87,6 +88,17 @@ public class QueueTestCommon {
         }
     };
 
+    /** Fail if Core's bounded drain timed out while a release was still executing. */
+    protected static void awaitBackgroundRelease() {
+        BackgroundResourceReleaser.releasePendingResources();
+        try {
+            AtomicLong pending = (AtomicLong) Jvm.getField(BackgroundResourceReleaser.class, "COUNTER").get(null);
+            org.junit.Assert.assertEquals("Background cleanup did not finish", 0L, pending.get());
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
     //! Opt-in boundaries correlate per-process native/mapped samples with the active test.
     //! Used/committed heap are observations, not per-test ownership or a resource limit.
     //! Write directly so exception recording does not hide this diagnostic or turn it into a failure.
@@ -99,6 +111,7 @@ public class QueueTestCommon {
                 + " heapUsed=" + (runtime.totalMemory() - runtime.freeMemory())
                 + " heapCommitted=" + runtime.totalMemory() + " heapMax=" + runtime.maxMemory()
                 + " target=" + OS.getTarget());
+
     }
 
     private static AtomicLong counter = new AtomicLong();

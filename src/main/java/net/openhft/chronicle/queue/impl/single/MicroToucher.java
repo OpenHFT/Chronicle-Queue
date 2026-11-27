@@ -40,7 +40,9 @@ public class MicroToucher {
      */
     public boolean execute() {
         final Wire bufferWire = appender.wire();
-        if (bufferWire == null)
+        // A parked appender has no useful read-ahead work in an older cycle.
+        // Rollover can race this hint; the retained page is the safety margin.
+        if (bufferWire == null || appender.cycle() < appender.queue().lastCycle())
             return false;
 
         final long lastPosition = appender.lastPosition;
