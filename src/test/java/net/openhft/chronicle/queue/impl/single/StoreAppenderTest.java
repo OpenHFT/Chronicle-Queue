@@ -319,11 +319,22 @@ public class StoreAppenderTest extends QueueTestCommon {
             appender.writeBytes(payload);
             BackgroundResourceReleaser.releasePendingResources();
             acquisitions.set(0);
+            AtomicInteger mappedViews = new AtomicInteger();
+            ((MappedBytes) ((StoreAppender) appender).wire().bytes()).mappedFile().addReferenceChangeListener(
+                    new net.openhft.chronicle.core.io.ReferenceChangeListener() {
+                        @Override
+                        public void onReferenceAdded(net.openhft.chronicle.core.io.ReferenceCounted counted,
+                                                     net.openhft.chronicle.core.io.ReferenceOwner owner) {
+                            if (owner instanceof MappedBytes)
+                                mappedViews.incrementAndGet();
+                        }
+                    });
             long firstIndex = appender.lastIndexAppended();
             for (int i = 1; i <= 100; i++)
                 ((InternalAppender) appender).writeBytes(firstIndex + i, payload);
             BackgroundResourceReleaser.releasePendingResources();
             assertEquals("preflight must not reopen the owned cycle for every replicated message", 0, acquisitions.get());
+            assertEquals("preflight uses one private mapped view for the owned cycle", 1, mappedViews.get());
             try (ExcerptTailer tailer = queue.createTailer()) {
                 for (int i = 0; i <= 100; i++) {
                     try (DocumentContext dc = tailer.readingDocument()) {
