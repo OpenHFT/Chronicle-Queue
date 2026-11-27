@@ -61,6 +61,8 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
      * @throws UnsupportedOperationException when this store does not support passive lookup
      */
     default LongValue getValueFor(CharSequence key) {
+        //! A default preserves specialised implementations; maintenance must fail explicitly
+        //! rather than creating a missing key merely to inspect it.
         throw new UnsupportedOperationException("Passive lookup is not supported");
     }
 
