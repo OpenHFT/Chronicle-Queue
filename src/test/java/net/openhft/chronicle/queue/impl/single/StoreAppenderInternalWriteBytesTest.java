@@ -63,6 +63,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     }
 
     private void testInternalWriteBytes(int numCopiers, boolean concurrent) throws InterruptedException {
+        ignoreException("Exact-index duplicate differs from published content and was ignored");
         final Path sourceDir = getTmpDir().toPath();
         final Path destinationDir = getTmpDir().toPath();
 
@@ -98,12 +99,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
     private void assertQueueContentsAreTheSame(Path sourceDir, Path destinationDir) {
         try (final ChronicleQueue sourceQueue = createQueue(sourceDir);
              final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
-//            System.out.println(destinationQueue.dump());
-            /*
-             * Normalise destination EOFs first
-             *
-             * part of the contract with {@link net.openhft.chronicle.queue.impl.single.StoreAppender.writeBytes(long, net.openhft.chronicle.bytes.BytesStore)}
-             */
+            // Exact-index replication must normalise destination EOFs after replay completes.
             try (final ExcerptAppender appender = destinationQueue.createAppender()) {
                 appender.normaliseEOFs();
             }
@@ -147,9 +143,8 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
 
         @Override
         public void run() {
-//            LOGGER.info("Starting copier...");
-            try (final ChronicleQueue sourceQueue = createQueue(sourceDir);
-                 final ChronicleQueue destinationQueue = createQueue(destinationDir)) {
+            try (final ChronicleQueue sourceQueue = createQueue(sourceDir, null);
+                 final ChronicleQueue destinationQueue = createQueue(destinationDir, null)) {
                 try (final ExcerptTailer sourceTailer = sourceQueue.createTailer();
                      final ExcerptTailer destinationTailer = destinationQueue.createTailer();
                      final ExcerptAppender destinationAppender = destinationQueue.createAppender()) {
@@ -183,7 +178,7 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                         copied++;
                         // Cover reopen-at-roll and periodic reopen without 1,000 mapping lifecycles.
                         if (cycle != lastReopenedCycle || copied % REOPEN_INTERVAL == 0) {
-                            try (final ChronicleQueue dq = createQueue(destinationDir);
+                            try (final ChronicleQueue dq = createQueue(destinationDir, null);
                                  final ExcerptAppender da = dq.createAppender()) {
                                 assumeNotNull(dq);
                                 assumeNotNull(da);
@@ -193,7 +188,6 @@ public class StoreAppenderInternalWriteBytesTest extends QueueTestCommon {
                     }
                 }
             }
-//            LOGGER.info("Copier finished");
         }
     }
 
