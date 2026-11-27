@@ -420,7 +420,7 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
     }
 
     // Exercise recovery from a real exited process, including subclasses that buffer writes asynchronously.
-    @Test(timeout = 20_000)
+    @Test(timeout = 30_000)
     public void deadAppendLockOwnerDoesNotStrandWriters() throws InterruptedException, IOException {
         Process owner = JavaProcessBuilder.create(ExitedAppendLockOwner.class).start();
         final long deadPid;
@@ -441,7 +441,21 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer()) {
             appendLockValue.setValue(deadPid);
-            appender.writeText("recovered");
+            long appendDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            for (;;) {
+                try {
+                    appender.writeText("recovered");
+                    break;
+                } catch (IllegalStateException failure) {
+                    // A timed-out Windows process query is deliberately conservative. Retry only rejection
+                    // by this unchanged lock; absent recovery still fails at the bounded deadline.
+                    if (appendLockValue.getVolatileValue() != deadPid
+                            || !String.valueOf(failure.getMessage()).startsWith("locked: unable to append")
+                            || System.nanoTime() >= appendDeadline)
+                        throw failure;
+                    Jvm.pause(1);
+                }
+            }
             String actual;
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
             while ((actual = tailer.readText()) == null && System.nanoTime() < deadline)
