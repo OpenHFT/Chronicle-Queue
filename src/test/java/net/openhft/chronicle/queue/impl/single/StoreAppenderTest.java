@@ -331,6 +331,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             assertEquals(1, queue.lastPublishedCycle());
         }
 
+        // This deletion control must await the background unmap before testing missing-roll recovery on Windows.
+        BackgroundResourceReleaser.releasePendingResources();
         assertTrue("test precondition: highest roll must be removed after every handle is closed",
                 highestRoll.delete());
         time.set(0);
