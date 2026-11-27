@@ -3,6 +3,8 @@
  */
 package net.openhft.chronicle.queue.impl.table;
 
+import net.openhft.chronicle.bytes.domestic.ReentrantFileLock;
+
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -42,6 +44,8 @@ import java.util.function.Supplier;
  */
 public class SingleTableStore<T extends Metadata> extends AbstractCloseable implements TableStore<T> {
     public static final String SUFFIX = ".cq4t";
+    private static final String SHARED_LOCK_TYPE = "shared";
+    private static final String EXCLUSIVE_LOCK_TYPE = "exclusive";
     private static final int EXCLUSIVE_LOCK_SIZE = 1;
     /**
      * We need to be able to acquire an "exclusive" lock while fine-grained long-running locks are being held.
@@ -177,42 +181,54 @@ public class SingleTableStore<T extends Metadata> extends AbstractCloseable impl
      * @param <R>     Return type of the function.
      * @return The result of the function applied to the target.
      */
+    @SuppressWarnings("try") // Holding the acquired lock protects the callback until resource closure.
     private static <T, R> R doWithLock(@NotNull final File file,
                                        @NotNull final Function<T, ? extends R> code,
                                        @NotNull final Supplier<T> target,
                                        final boolean shared,
                                        final long timeoutMillis) {
-        final String type = shared ? "shared" : "exclusive";
+        // Closing an extra channel can release this process's existing file lock on Unix.
+        if (!shared && ReentrantFileLock.isHeldByCurrentThread(file))
+            return code.apply(target.get());
+
+        final String type = shared ? SHARED_LOCK_TYPE : EXCLUSIVE_LOCK_TYPE;
         final StandardOpenOption readOrWrite = shared ? StandardOpenOption.READ : StandardOpenOption.WRITE;
 
         final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
         final long startNanos = System.nanoTime();
-        try (final FileChannel channel = FileChannel.open(file.toPath(), readOrWrite)) {
-            for (int count = 1; ; count++) {
-                try (FileLock fileLock = tryLock(channel, shared, file, count, startNanos)) {
-                    if (fileLock != null) {
-                        return code.apply(target.get());
-                    }
-                }
-                final long remaining = timeoutNanos - (System.nanoTime() - startNanos);
-                if (remaining <= 0)
-                    break;
-                final long delay = Math.min(250L, (long) count * count);
-                Jvm.pause(Math.min(delay, TimeUnit.NANOSECONDS.toMillis(remaining)));
-            }
+        try (FileChannel channel = FileChannel.open(file.toPath(), readOrWrite);
+             FileLock lock = awaitLock(channel, shared, file, startNanos, timeoutNanos)) {
+            return code.apply(target.get());
         } catch (IOException e) {
             throw new IllegalStateException("Couldn't perform operation with " + type + " file lock", e);
         }
+    }
+
+    private static FileLock awaitLock(FileChannel channel, boolean shared, File file,
+                                      long startNanos, long timeoutNanos) {
+        for (int count = 1; ; count++) {
+            FileLock lock = tryLock(channel, shared, file, count, startNanos);
+            if (lock != null)
+                return lock;
+            long remaining = timeoutNanos - (System.nanoTime() - startNanos);
+            if (remaining <= 0)
+                break;
+            long delay = Math.min(250L, (long) count * count);
+            Jvm.pause(Math.min(delay, TimeUnit.NANOSECONDS.toMillis(remaining)));
+        }
+        String type = shared ? SHARED_LOCK_TYPE : EXCLUSIVE_LOCK_TYPE;
         throw new IllegalStateException("Unable to claim exclusive " + type + " lock on file " + file);
     }
 
     private static FileLock tryLock(FileChannel channel, boolean shared, File file,
                                     int count, long startNanos) {
         try {
-            return channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, shared);
+            return shared
+                    ? channel.tryLock(EXCLUSIVE_LOCK_START, EXCLUSIVE_LOCK_SIZE, true)
+                    : ReentrantFileLock.tryLock(file, channel);
         } catch (IOException | OverlappingFileLockException unavailable) {
             if (count > 9 && Jvm.isDebugEnabled(SingleTableStore.class)) {
-                final String type = shared ? "shared" : "exclusive";
+                final String type = shared ? SHARED_LOCK_TYPE : EXCLUSIVE_LOCK_TYPE;
                 final long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
                 final String message = "Failed to acquire " + type + " lock on the table store file. Retrying, file="
                         + file.getAbsolutePath() + ", count=" + count + ", elapsed=" + elapsedMs + " ms";

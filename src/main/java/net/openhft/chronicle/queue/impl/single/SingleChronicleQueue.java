@@ -1297,13 +1297,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null) {
+            if (longValue == null || longValue.isClosed()) {
                 synchronized (metaStoreMap) {
                     if (isClosing())
                         throw new ClosedIllegalStateException("Queue is closing: " + path);
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null) {
-                        longValue = metaStore.acquireValueFor(key, defaultValue);
+                    if (longValue == null || longValue.isClosed()) {
+                        // Readers bind complete records without opening the metadata file for writing.
+                        // Writers also serialise structural updates across queue instances.
+                        longValue = readOnly
+                                ? metaStore.acquireValueFor(key, defaultValue)
+                                : metaStore.doWithExclusiveLock(table -> table.acquireValueFor(key, defaultValue));
                         int length = key.length();
                         HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
                         key2.write(0, keyBytes, 0, length);
@@ -1319,7 +1323,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     LongValue tableStoreAcquireWithExclusiveLock(CharSequence key, long defaultValue) {
         try (ScopedResource<Bytes<Void>> bytes = acquireBytesScoped()) {
             LongValue value = metaStoreMap.get(asBytes(key, bytes.get()));
-            if (value != null)
+            if (value != null && !value.isClosed())
                 return value;
         }
 
