@@ -45,9 +45,9 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
         assertFalse(Files.exists(metadata));
     }
 
-    // Persisted metadata uses TableDirectoryListingReadOnly, avoiding a filesystem scan per poll.
+    // Persisted metadata avoids a filesystem scan per poll, including Windows' supported read-write fallback.
     @Test
-    public void readOnlyQueueWithMetadataUsesPersistedDirectoryListing() throws Exception {
+    public void readOnlyRequestWithMetadataUsesPersistedDirectoryListing() throws Exception {
         File directory = getTmpDir();
         try (ChronicleQueue queue = ChronicleQueue.singleBuilder(directory).build()) {
             queue.createAppender().writeText("one");
@@ -56,10 +56,11 @@ public class ReadonlyNamedTailerIndexesTest extends QueueTestCommon {
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.single(directory)
                 .readOnly(true)
                 .build()) {
-            assertTrue(queue.metaStore().readOnly());
+            assertEquals(!OS.isWindows(), queue.metaStore().readOnly());
             Field listing = SingleChronicleQueue.class.getDeclaredField("directoryListing");
             listing.setAccessible(true);
-            assertTrue(listing.get(queue) instanceof TableDirectoryListingReadOnly);
+            assertEquals(OS.isWindows() ? TableDirectoryListing.class : TableDirectoryListingReadOnly.class,
+                    listing.get(queue).getClass());
             try (ExcerptTailer tailer = queue.createTailer()) {
                 assertEquals("one", tailer.readText());
             }
