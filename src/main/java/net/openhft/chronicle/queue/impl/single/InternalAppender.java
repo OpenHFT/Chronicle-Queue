@@ -46,4 +46,11 @@ public interface InternalAppender extends ExcerptAppender {
      */
     void writeBytes(long index, BytesStore<?, ?> bytes);
 
+    //! The ordinary indexed writer always preserves EOF. Only a reverse replication connection can hold
+    //! the per-peer prefix verification state exercised by RecentRollBackfillTest.
+    /** Open a new, independently verified sink-to-source replay. */
+    default RecentRollBackfill recentRollBackfill() {
+        throw new UnsupportedOperationException("Recent roll backfill is unavailable on this appender");
+    }
+
 }
