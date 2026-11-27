@@ -197,11 +197,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 throw new IllegalArgumentException("Invalid file type: " + file.getName());
             }
 
+            File parent = file.getParentFile();
+            // A bare filename has no parent component and refers to the current directory.
+            File directory = parent == null ? new File(".") : parent;
             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                     "Queues should be configured with the queue directory, not a specific filename. Actual file used: "
-                            + file.getParentFile());
+                            + directory);
 
-            result.path(file.getParentFile());
+            result.path(directory);
         } else {
             result.path(file);
         }
