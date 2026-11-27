@@ -92,6 +92,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             time.set(2L * TEST_DAILY.lengthInMillis());
             appender.writeBytes(Bytes.from("cycle-2"));
 
+            // Windows can delete the roll only after its background unmapping has finished.
+            BackgroundResourceReleaser.releasePendingResources();
             assertTrue("test precondition: oldest historical roll must be removable", oldestRoll.delete());
             queue.refreshDirectoryListing();
             time.set(0);
@@ -133,6 +135,8 @@ public class StoreAppenderTest extends QueueTestCommon {
                 publishedFile = advancingWriter.currentFile();
             }
 
+            // Windows can delete the roll only after its background unmapping has finished.
+            BackgroundResourceReleaser.releasePendingResources();
             assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
             final long stalledWritePositionBefore = ((StoreAppender) stalledWriter).store.writePosition();
             final Bytes<?> stalledBytes = ((StoreAppender) stalledWriter).wire().bytes();
@@ -176,6 +180,8 @@ public class StoreAppenderTest extends QueueTestCommon {
             }
 
             assertEquals(1, stalledQueue.lastPublishedCycle());
+            // Windows can delete the roll only after its background unmapping has finished.
+            BackgroundResourceReleaser.releasePendingResources();
             assertTrue("test precondition: published maximum must be removed", publishedFile.delete());
 
             // A first ordinary write follows the same existing-only rule as an already-live
