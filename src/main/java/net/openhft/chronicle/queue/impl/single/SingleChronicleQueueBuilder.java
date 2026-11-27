@@ -194,11 +194,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 throw new IllegalArgumentException("Invalid file type: " + file.getName());
             }
 
+            File parent = file.getParentFile();
+            // A bare filename has no parent component and refers to the current directory.
+            File directory = parent == null ? new File(".") : parent;
             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                     "Queues should be configured with the queue directory, not a specific filename. Actual file used: "
-                            + file.getParentFile());
+                            + directory);
 
-            result.path(file.getParentFile());
+            result.path(directory);
         } else {
             result.path(file);
         }
@@ -614,7 +617,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             // the code is slightly brutal and crude but should work for most cases. It will NOT work if files were created with
             // the following cycles: LARGE_HOURLY_SPARSE LARGE_HOURLY_XSPARSE LARGE_DAILY XLARGE_DAILY HUGE_DAILY HUGE_DAILY_XSPARSE
             // for such cases user MUST use correct roll cycle when creating the queue
-            String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+            String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX)
+                    && new File(d, name).isFile());
             if (list != null && list.length > 0) {
                 // Try to match the roll cycle by parsing the filename against known roll cycles
                 String filename = list[0];
