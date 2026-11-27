@@ -26,7 +26,6 @@ public class CreateAtIndexTest extends QueueTestCommon {
     @Test
     public void
     testWriteBytesWithIndex() {
-        ignoreException("Exact-index recovery reopened end-of-data");
         final Bytes<?> HELLO_WORLD = Bytes.from("hello world");
         File tmp = getTmpDir();
         try (ChronicleQueue queue = single(tmp).testBlockSize().rollCycle(TEST_DAILY).build();

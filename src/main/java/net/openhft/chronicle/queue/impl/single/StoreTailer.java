@@ -30,7 +30,7 @@ import java.text.ParseException;
 import static net.openhft.chronicle.queue.TailerDirection.*;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.*;
-import static net.openhft.chronicle.wire.MarshallableOut.UNSET_CONTEXT;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 import static net.openhft.chronicle.wire.NoDocumentContext.INSTANCE;
 import static net.openhft.chronicle.wire.Wires.isEndOfFile;
 
@@ -943,7 +943,7 @@ class StoreTailer extends AbstractCloseable
         //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires the semantic first-cycle value here: the
         //! public Integer.MAX_VALUE empty sentinel collides with the highest valid UInt31 cycle.
         final int firstCycle = queue.firstPublishedCycle();
-        if (firstCycle == UNSET_CONTEXT) {
+        if (firstCycle == UNSET_CYCLE) {
             state = UNINITIALISED;
             return this;
         }

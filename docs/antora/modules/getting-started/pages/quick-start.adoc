@@ -65,7 +65,7 @@ Now that the installation is complete it is time to create a first queue and try
 === Creating a New Queue [[creating_a_new_queue]]
 
 A new Chronicle Queue is obtained from a builder by passing the field `singleBuilder` the path where the queue is to be stored.
-The example below creates an `IndexedChronicle` which creates two `RandomAccessFiles`; one for indexes, and one for data having names relatively:
+The example below creates a `SingleChronicleQueue`, which stores data and index together in one memory-mapped `.cq4` file per roll cycle, alongside a `metadata.cq4t` file:
 
 [source,java]
 ----
@@ -73,11 +73,13 @@ The example below creates an `IndexedChronicle` which creates two `RandomAccessF
     ChronicleQueue queue = ChronicleQueue.singleBuilder(basePath).build()
 ----
 
-The queue files will reside in the directory `getting-started` and files are named with the current date on the following format:
+The queue files will reside in the directory `getting-started`.
+With the default `FAST_DAILY` roll cycle, files are named with the current date followed by the cycle-type letter:
 
 [source,shell script]
 ----
-${java.io.tmpdir}/getting-started/{today}.cq4
+getting-started/{today}F.cq4
+getting-started/metadata.cq4t
 ----
 
 === Writing to a Queue [[writing_to_a_queue]]

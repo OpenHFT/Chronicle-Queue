@@ -7,12 +7,16 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.RequiredForClient;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.File;
+import java.util.Arrays;
 
 import static org.junit.Assume.assumeTrue;
 
@@ -148,10 +152,19 @@ public class WriteReadTextTest extends QueueTestCommon {
 
         String myPath = OS.getTarget() + "/writeReadText-" + Time.uniqueId();
 
-        try (ChronicleQueue theQueue = SingleChronicleQueueBuilder
-                .single(myPath)
-                .blockSize(Maths.nextPower2(EXTREMELY_LARGE.length() * 4, 256 << 10))
-                // .testBlockSize() not suitable as large message sizes.
+        //! Size each invocation for its actual largest input, preserving the existing
+        //! four-times margin and 256 KiB floor. Small inputs need no huge-message mapping
+        //! on Windows; the 21 MB case retains its capacity and all ten round trips.
+        int largestInput = Arrays.stream(problematic).mapToInt(String::length).max().orElse(0);
+
+        //! Register this fixture's directory before opening the queue, so it is cleaned
+        //! even if construction, an assertion or resource closure fails. Reverse resource
+        //! order closes the queue first; try-with-resources preserves the original failure
+        //! and suppresses a later deletion failure instead of replacing useful evidence.
+        try (TestDirectory directory = new TestDirectory(myPath);
+             ChronicleQueue theQueue = SingleChronicleQueueBuilder
+                .single(directory.path)
+                .blockSize(Maths.nextPower2(largestInput * 4, 256 << 10))
                 .build();
              ExcerptAppender appender = theQueue.createAppender()) {
 
@@ -187,6 +200,24 @@ public class WriteReadTextTest extends QueueTestCommon {
                 }
             }
         }
-        IOTools.deleteDirWithFiles(myPath);
+    }
+
+    private static final class TestDirectory implements AutoCloseable {
+        private final File path;
+
+        private TestDirectory(String path) {
+            this.path = new File(path);
+        }
+
+        @Override
+        public void close() {
+            //! The queue close hands each MappedFile to the background releaser.
+            //! Wait for that work, so no mapped file blocks the delete on Windows.
+            BackgroundResourceReleaser.releasePendingResources();
+            //! A false deletion result is a cleanup failure too. Limit deletion to the
+            //! unique path created by this invocation, leaving other tests' files alone.
+            if (path.exists() && !IOTools.deleteDirWithFiles(path))
+                throw new AssertionError("Could not delete test directory " + path);
+        }
     }
 }

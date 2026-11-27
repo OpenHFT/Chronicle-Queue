@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.annotation.RequiredForClient;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,8 +22,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 @RequiredForClient
@@ -31,11 +31,13 @@ public class RollCyclesTest extends QueueTestCommon {
     private static final long SOME_EPOCH_OFFSET = 17L * 37L;
     private static List<Instant> incrementalTimes;
 
+    private final String cycleName;
     private final RollCycle cycle;
     private final AtomicLong clock = new AtomicLong();
     private final TimeProvider timeProvider = clock::get;
 
     public RollCyclesTest(final String cycleName, final RollCycle cycle) {
+        this.cycleName = cycleName;
         this.cycle = cycle;
     }
 
@@ -92,6 +94,18 @@ public class RollCyclesTest extends QueueTestCommon {
             long index = cycle.toIndex(currentCycle, 0);
             assertEquals(currentCycle, cycle.toCycle(index));
         }
+    }
+
+    @Test
+    public void valueOfEnumTest() {
+        if (cycle instanceof TestRollCycles) {
+            expectException("TestRollCycles should not be used in production code");
+        }
+        assertEquals(cycle, RollCycles.valueOfEnum(cycleName));
+
+        assertThrows("No RollCycle enum constant with name: 'null' found in RollCycles.all()", IllegalArgumentException.class, () -> RollCycles.valueOfEnum(null));
+        assertThrows("No RollCycle enum constant with name: '' found in RollCycles.all()", IllegalArgumentException.class, () -> RollCycles.valueOfEnum(""));
+        assertThrows("No RollCycle enum constant with name: '" + cycleName + "_extra' found in RollCycles.all()", IllegalArgumentException.class, () -> RollCycles.valueOfEnum(cycleName + "_extra"));
     }
 
     private void assertCycleRollTimes(final long epochOffset, final TimeProvider timeProvider) {

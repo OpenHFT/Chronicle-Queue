@@ -71,7 +71,7 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void exactWriteReplacesAnIncompleteRequestedEntryWithAWarning() {
+    public void exactWritePreservesIncompleteHeader() {
         try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .timeProvider(() -> 0)
                 .rollCycle(TEST4_DAILY)
@@ -81,16 +81,17 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             final long requestedIndex = appender.lastIndexAppended() + 1;
             putNextHeader(q, appender.cycle(), NOT_COMPLETE);
 
-            expectException("Exact-index recovery replaced incomplete header");
-            ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("recovered"));
-
-            assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
-            assertNoDataAfter(q, requestedIndex);
+            final String before = cycleDump(q, q.rollCycle().toCycle(requestedIndex));
+            IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("retry")));
+            Assert.assertTrue(failure.getMessage().contains("incomplete header"));
+            assertEquals(before, cycleDump(q, q.rollCycle().toCycle(requestedIndex)));
+            assertEquals(requestedIndex - 1, q.lastIndex());
         }
     }
 
     @Test
-    public void exactWriteReplacesAnIncompleteRequestedEntryAfterQueueRestart() {
+    public void exactWritePreservesIncompleteHeaderAfterQueueRestart() {
         final File directory = getTmpDir();
         final long requestedIndex;
 
@@ -111,11 +112,12 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
              ExcerptAppender appender = q.createAppender()) {
             Assert.assertEquals("CQE must replay the incomplete index after restart",
                     requestedIndex, q.lastIndex() + 1);
-            expectException("Exact-index recovery replaced incomplete header");
-            ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("recovered"));
-
-            assertBytesAtIndex(q, requestedIndex, Bytes.from("recovered"));
-            assertNoDataAfter(q, requestedIndex);
+            final String before = cycleDump(q, q.rollCycle().toCycle(requestedIndex));
+            IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(requestedIndex, Bytes.from("retry")));
+            Assert.assertTrue(failure.getMessage().contains("incomplete header"));
+            assertEquals(before, cycleDump(q, q.rollCycle().toCycle(requestedIndex)));
+            assertEquals(requestedIndex - 1, q.lastIndex());
         }
     }
 
@@ -355,57 +357,40 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
     }
 
     @Test
-    public void canBackfillPreviousCycleAfterEOF() {
-        @NotNull Bytes<byte[]> test = Bytes.from("hello world");
-        @NotNull Bytes<byte[]> test1 = Bytes.from("hello world again cycle1");
-        @NotNull Bytes<byte[]> test1b = Bytes.from("second recovered entry cycle1");
-        @NotNull Bytes<byte[]> test2 = Bytes.from("hello world cycle2");
-        Bytes<?> result = Bytes.elasticHeapByteBuffer();
-        SetTimeProvider timeProvider = new SetTimeProvider();
-        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir()).timeProvider(timeProvider).rollCycle(TEST_HOURLY).build();
-             ExcerptTailer tailer = q.createTailer()) {
-            final int firstCycle;
-            try (ExcerptAppender appender = q.createAppender()) {
-                appender.writeBytes(test);
-                long nextIndexInFirstCycle = appender.lastIndexAppended() + 1;
-                firstCycle = q.rollCycle().toCycle(nextIndexInFirstCycle);
+    public void exactWritePreservesHistoricalSeal() {
+        final SetTimeProvider time = new SetTimeProvider(0);
+        try (SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .timeProvider(time).rollCycle(TEST_HOURLY).build();
+             ExcerptAppender appender = q.createAppender()) {
+            appender.writeBytes(Bytes.from("first"));
+            final long published = appender.lastIndexAppended();
+            final int firstCycle = appender.cycle();
+            time.advanceMillis(TimeUnit.MINUTES.toMillis(65));
+            appender.writeText("second");
+            final int current = appender.cycle();
+            final String sealed = cycleDump(q, firstCycle);
+            Assert.assertTrue(hasEOF(q, firstCycle));
+            final long cursor = q.tableStoreGet("normalisedEOFsTo");
 
-                timeProvider.advanceMillis(TimeUnit.SECONDS.toMillis(65 * 60));
-                appender.writeBytes(test2);
-
-                assertNextBytes(tailer, result, test);
-                assertNextBytes(tailer, result, test2);
-                Assert.assertFalse(tailer.readBytes(result.clear()));
-
-                Assert.assertTrue(hasEOF(q, firstCycle));
-                expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + firstCycle
-                        + ", index=0x" + Long.toHexString(nextIndexInFirstCycle));
-                ((InternalAppender) appender).writeBytes(nextIndexInFirstCycle, test1);
-                Assert.assertFalse("indexed recovery must leave the roll open for the remaining backfill",
-                        hasEOF(q, firstCycle));
-
-                final long secondRecoveryIndex = nextIndexInFirstCycle + 1;
-                ((InternalAppender) appender).writeBytes(secondRecoveryIndex, test1b);
-                Assert.assertFalse("later entries must reuse the open recovery slot without another EOF warning",
-                        hasEOF(q, firstCycle));
-                appender.normaliseEOFs();
-            }
-            Assert.assertTrue("completion must reseal once after all backfill entries", hasEOF(q, firstCycle));
-            Assert.assertFalse("a live tailer that crossed the roll must not rewind implicitly",
-                    tailer.readBytes(result.clear()));
-
-            try (ExcerptTailer restartedTailer = q.createTailer()) {
-                assertNextBytes(restartedTailer, result, test);
-                assertNextBytes(restartedTailer, result, test1);
-                assertNextBytes(restartedTailer, result, test1b);
-                assertNextBytes(restartedTailer, result, test2);
-                Assert.assertFalse(restartedTailer.readBytes(result.clear()));
+            ((InternalAppender) appender).writeBytes(published, Bytes.from("first"));
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(published + 1, Bytes.from("late")));
+            Assert.assertTrue(failure.getMessage().contains("sealed roll"));
+            assertEquals(sealed, cycleDump(q, firstCycle));
+            assertEquals(current, appender.cycle());
+            assertEquals(cursor, q.tableStoreGet("normalisedEOFsTo"));
+            appender.writeText("third");
+            try (ExcerptTailer tailer = q.createTailer()) {
+                assertNextBytes(tailer, Bytes.elasticHeapByteBuffer(), Bytes.from("first"));
+                assertEquals("second", tailer.readText());
+                assertEquals("third", tailer.readText());
+                Assert.assertNull(tailer.readText());
             }
         }
     }
 
     @Test
-    public void exactBackfillCanAddASecondaryIndexBeforeResealing() {
+    public void exactWritePreservesSecondaryIndexAtSeal() {
         SetTimeProvider timeProvider = new SetTimeProvider();
         final int entriesInFirstSecondaryIndex = TEST4_DAILY.defaultIndexCount()
                 * TEST4_DAILY.defaultIndexSpacing();
@@ -427,18 +412,10 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             appender.writeText("next-cycle");
             Assert.assertTrue(hasEOF(q, recoveredCycle));
 
-            expectException("queue=" + q.fileAbsolutePath() + ", cycle=" + recoveredCycle
-                    + ", index=0x" + Long.toHexString(recoveredIndex));
-            ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("recovered"));
-
-            final String openCycleDump = cycleDump(q, recoveredCycle);
-            Assert.assertTrue("backfill must add the second secondary index while the roll is open",
-                    openCycleDump.contains("index2index: [\n  # length: 32, used: 2\n"));
-            Assert.assertFalse("the recovered cycle stays open until completion",
-                    openCycleDump.contains(" EOF"));
-
-            appender.normaliseEOFs();
-            Assert.assertTrue("completion must reseal the recovered cycle", hasEOF(q, recoveredCycle));
+            final String before = cycleDump(q, recoveredCycle);
+            assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(recoveredIndex, Bytes.from("late")));
+            assertEquals(before, cycleDump(q, recoveredCycle));
         }
     }
 
@@ -490,27 +467,14 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
             final int filesBeforeRecovery = queueFiles(q).length;
             Assert.assertTrue(hasEOF(q, recoveredCycle));
 
-            Throwable failure = null;
-            try {
-                // Other focused tests assert the warning. Here the structural assertions must remain
-                // discriminating even when recovery fails before it reaches the warning site.
-                ignoreException("Exact-index recovery reopened end-of-data");
-                ((InternalAppender) appender).writeBytes(recoveredIndex, recovered);
-            } catch (Throwable t) {
-                failure = t;
-            }
-
-            Assert.assertEquals("exact recovery must not create another roll",
-                    filesBeforeRecovery, queueFiles(q).length);
+            final String before = cycleDump(q, recoveredCycle);
+            final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                    () -> ((InternalAppender) appender).writeBytes(recoveredIndex, recovered));
+            Assert.assertTrue(failure.getMessage().contains("sealed roll"));
+            assertEquals(before, cycleDump(q, recoveredCycle));
+            assertEquals(filesBeforeRecovery, queueFiles(q).length);
             assertBytesAtIndex(q, laterIndex, later);
             assertNoDataAfter(q, laterIndex);
-            if (failure != null)
-                throw new AssertionError("exact recovery should succeed in its requested cycle", failure);
-            assertBytesAtIndex(q, recoveredIndex, recovered);
-            Assert.assertFalse("the recovered cycle must remain open until completion",
-                    hasEOF(q, recoveredCycle));
-            appender.normaliseEOFs();
-            Assert.assertTrue("completion must reseal the recovered cycle", hasEOF(q, recoveredCycle));
         }
     }
 
