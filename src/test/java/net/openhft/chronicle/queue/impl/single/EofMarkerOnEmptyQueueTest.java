@@ -4,7 +4,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -15,7 +14,6 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,7 +40,6 @@ public final class EofMarkerOnEmptyQueueTest extends QueueTestCommon {
 
     @Test
     public void shouldRecoverFromEmptyQueueOnRoll() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        Assume.assumeFalse(OS.isWindows());
         System.setProperty("queue.force.unlock.mode", "ALWAYS");
         expectException("Couldn't acquire write lock");
         expectException("Forced unlock for the lock");

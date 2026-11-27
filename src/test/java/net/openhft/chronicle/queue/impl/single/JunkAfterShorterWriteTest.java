@@ -17,7 +17,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
 
 /**
  * Successor / regression test for https://github.com/OpenHFT/Chronicle-Queue/issues/1099
@@ -36,10 +35,6 @@ public class JunkAfterShorterWriteTest extends QueueTestCommon {
 
     @Test
     public void junkFollowingAShorterWriteIsNotReadAsAHeader() throws Exception {
-        // This is a qualification hold, not an established Windows runtime defect.
-        // Remove it only after the mapping inspection and cleanup execute on Windows.
-        assumeFalse("Windows mapping and cleanup qualification is pending in PR #1735", OS.isWindows());
-
         try (final SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .rollCycle(RollCycles.FAST_DAILY)
                 .timeProvider(new SetTimeProvider())
