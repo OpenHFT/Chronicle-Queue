@@ -48,7 +48,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     private final MappedFile mappedFile;
     private final int dataVersion;
     @NotNull
-    private final transient Sequence sequence;
+    private final transient RollCycleEncodeSequence sequence;
 
     private int cycle;
 
@@ -389,7 +389,29 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
         throwExceptionIfClosedInSetter();
-        return indexing.lastSequenceNumber(ec);
+        //! A positioned appender already has an index view. Asking its public accessor here bypasses
+        //! the internal path used by #1746 and rejects writes through a context listener's supplied writer.
+        //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter fails in that combination;
+        //! WrappedSequenceLookupTest still covers the separate unpositioned-tailer fallback below.
+        if (ec instanceof StoreAppender || ec.wireForIndex() != null)
+            return indexing.lastSequenceNumber(ec);
+
+        // An unpositioned tailer has no wire of its own for reading the committed suffix.
+        long position = writePosition();
+        if (position == 0)
+            return -1;
+        long tracked = sequence.getSequenceAt(position);
+        if (tracked < 0) {
+            position = 0;
+            tracked = 0;
+        }
+        try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
+            Wire wire = WireType.BINARY.apply(bytes);
+            wire.usePadding(dataVersion > 0);
+            return indexing.linearScanByPosition(wire, Long.MAX_VALUE, tracked, position, true);
+        } catch (EOFException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**

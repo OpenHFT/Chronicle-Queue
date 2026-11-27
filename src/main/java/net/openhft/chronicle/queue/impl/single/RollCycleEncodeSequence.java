@@ -96,6 +96,19 @@ class RollCycleEncodeSequence implements Sequence {
     }
 
     /**
+     * The tracker holds only the low position bits. Also check that the writer
+     * did not advance between the caller reading the full position and us reading the tracker.
+     */
+    long getSequenceAt(long position) {
+        if (position > (-1L >>> cycleShift))
+            return Sequence.NOT_FOUND;
+        long sequence = getSequence(position);
+        if (sequence >= 0 && writePositionAndSequence.getVolatileValue() != position)
+            return Sequence.NOT_FOUND_RETRY;
+        return sequence;
+    }
+
+    /**
      * Combines the cycle and sequence number into a single long value.
      *
      * @param cycle The cycle number.

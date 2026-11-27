@@ -68,7 +68,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
 
     LongValue writePosition;
-    Sequence sequence;
+    RollCycleEncodeSequence sequence;
     // visible for testing
     int linearScanCount;
     int linearScanByPositionCount;
@@ -498,7 +498,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         // optimized if the `toIndex` is the last sequence
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        long lastIndex = this.sequence.getSequenceAt(lastAddress);
         if (toIndex == lastIndex) {
             assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
             knownAddress = lastAddress;
@@ -598,7 +598,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         // Optimized path if the `toPosition` is the last written position.
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        long lastIndex = this.sequence.getSequenceAt(lastAddress);
 
         i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
 
@@ -962,14 +962,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             throws StreamCorruptedException {
         throwExceptionIfClosed();
 
-        Sequence sequence1 = this.sequence;
+        RollCycleEncodeSequence sequence1 = this.sequence;
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
                 long address = writePosition.getVolatileValue(0);
                 if (address == 0)
                     return -1;
-                long sequence = sequence1.getSequence(address);
+                long sequence = sequence1.getSequenceAt(address);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
@@ -1015,14 +1015,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @return The last sequence number, or {@code -1} if it cannot be determined.
      */
     public long moveToEnd(final Wire wire) {
-        Sequence sequence1 = this.sequence;
+        RollCycleEncodeSequence sequence1 = this.sequence;
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
                 long endAddress = writePosition.getVolatileValue(0);
                 if (endAddress == 0)
                     return -1;
-                long sequence = sequence1.getSequence(endAddress);
+                long sequence = sequence1.getSequenceAt(endAddress);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
