@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.scoped.ScopedResource;
+import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -39,6 +40,54 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     @AfterClass
     public static void afterClass() {
         IOTools.deleteDirWithFiles(BASE_PATH, 2);
+    }
+
+    @Test
+    public void asynchronousModesIncludeBothBufferImplementations() {
+        assertFalse(BufferMode.None.isAsynchronous());
+        assertFalse(BufferMode.Copy.isAsynchronous());
+        assertTrue(BufferMode.Asynchronous.isAsynchronous());
+        assertTrue(BufferMode.AsynchronousExchanger.isAsynchronous());
+    }
+
+    @Test
+    public void exchangerWritesRejectBufferedReads() {
+        for (BufferMode readMode : new BufferMode[]{BufferMode.Copy, BufferMode.Asynchronous}) {
+            SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(getTmpDir())
+                    .writeBufferMode(BufferMode.AsynchronousExchanger).readBufferMode(readMode);
+            assertThrows(IllegalArgumentException.class, builder::build);
+        }
+    }
+
+    @Test
+    public void exchangerWritesRejectCustomCodingBeforeCreatingCodecs() {
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .writeBufferMode(BufferMode.AsynchronousExchanger)
+                .codingSuppliers(() -> {
+                    throw new AssertionError("Encoder must not be created for an invalid configuration");
+                }, () -> {
+                    throw new AssertionError("Decoder must not be created for an invalid configuration");
+                });
+        assertThrows(IllegalArgumentException.class, builder::build);
+    }
+
+    @Test
+    public void exchangerWritesRequireEnterpriseSupport() {
+        assumeFalse(SingleChronicleQueueBuilder.areEnterpriseFeaturesAvailable());
+        SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .writeBufferMode(BufferMode.AsynchronousExchanger);
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertEquals("AsynchronousExchanger requires Chronicle Queue Enterprise and Chronicle Ring",
+                failure.getMessage());
+    }
+
+    @Test
+    public void rejectsExchangerReadsForEveryWriteMode() {
+        for (BufferMode writeMode : BufferMode.values()) {
+            SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(BASE_PATH)
+                    .writeBufferMode(writeMode).readBufferMode(BufferMode.AsynchronousExchanger);
+            assertThrows(IllegalArgumentException.class, builder::build);
+        }
     }
 
     @Test

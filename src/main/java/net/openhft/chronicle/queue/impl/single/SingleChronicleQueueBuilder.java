@@ -33,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -370,6 +371,10 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
+        if (readBufferMode() == BufferMode.AsynchronousExchanger)
+            throw new IllegalArgumentException("AsynchronousExchanger is a write buffer mode; use None for reads");
+        if (writeBufferMode() == BufferMode.AsynchronousExchanger)
+            validateExchangerWrites();
         preBuild();
 
         SingleChronicleQueue chronicleQueue;
@@ -384,6 +389,24 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
         postBuild(chronicleQueue);
 
         return chronicleQueue;
+    }
+
+    private void validateExchangerWrites() {
+        if (readBufferMode() != BufferMode.None || asyncBufferCreator() != null || readOnly()
+                || key() != null || encodingSupplier() != null || decodingSupplier() != null)
+            throw new IllegalArgumentException("AsynchronousExchanger requires a writable queue, unbuffered reads "
+                    + "and the default in-memory store without encryption or coding");
+
+        // Older Enterprise implementations ignore an unknown write mode and return an ordinary appender.
+        if (ENTERPRISE_QUEUE_CONSTRUCTOR == null)
+            throw new IllegalStateException("AsynchronousExchanger requires Chronicle Queue Enterprise and Chronicle Ring");
+        try {
+            ENTERPRISE_QUEUE_CONSTRUCTOR.getDeclaringClass().getMethod("requireExchangerSupport").invoke(null);
+        } catch (InvocationTargetException e) {
+            throw Jvm.rethrow(e.getCause());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("The installed Chronicle Queue Enterprise does not support AsynchronousExchanger", e);
+        }
     }
 
     /**
@@ -1021,7 +1044,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * When writeBufferMode is set to {@code Asynchronous}, uses a ring buffer to buffer appends, excerpts are written to the
-     * Chronicle Queue using a background thread.
+     * Chronicle Queue using a background thread. {@link BufferMode#AsynchronousExchanger} selects the
+     * experimental two-region ring for writes and requires {@link BufferMode#None} for reads.
      * See also {@link #bufferCapacity()}
      * See also software.chronicle.enterprise.ring.EnterpriseRingBuffer
      *
