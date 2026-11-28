@@ -100,9 +100,17 @@ class RollCycleEncodeSequence implements Sequence {
      * did not advance between the caller reading the full position and us reading the tracker.
      */
     long getSequenceAt(long position) {
-        if (position > (-1L >>> cycleShift))
+        return getSequenceAt(position, 0, 0);
+    }
+
+    long getSequenceAt(long position, long indexedPosition, long indexedSequence) {
+        // A matching tracker must describe a record between the indexed record and
+        // the published position. Its low bits are unique within one position period.
+        if (position < indexedPosition || position - indexedPosition > (-1L >>> cycleShift))
             return Sequence.NOT_FOUND;
         long sequence = getSequence(position);
+        if (sequence >= 0 && sequence < indexedSequence)
+            return Sequence.NOT_FOUND;
         if (sequence >= 0 && writePositionAndSequence.getVolatileValue() != position)
             return Sequence.NOT_FOUND_RETRY;
         return sequence;

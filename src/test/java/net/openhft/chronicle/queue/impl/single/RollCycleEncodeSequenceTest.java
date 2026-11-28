@@ -76,6 +76,16 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     }
 
     @Test
+    public void trackerBeforeTheIndexedRecordCannotIdentifyTheTail() {
+        long stale = 128;
+        long tail = stale + (1L << 32);
+        longValue.setOrderedValue(tail);
+        rollCycleEncodeSequence.setSequence(1, stale);
+        assertEquals(1, rollCycleEncodeSequence.getSequence(tail));
+        assertEquals(Sequence.NOT_FOUND, rollCycleEncodeSequence.getSequenceAt(tail, tail - 32, 2));
+    }
+
+    @Test
     public void setGet() {
         int sequenceInitial = 0xb;
         int position = 0x40284;
