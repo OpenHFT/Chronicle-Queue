@@ -127,10 +127,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     @Nullable
     Wire wire();
 
+    //! historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion and eofRestorationFailureIsNotReportedAsSuccess
+    //! cover sealing historical rolls after accepted writes into an unsealed tail.
     /**
-     * Ensure all already-rolled cq4 files are correctly ended with EOF
-     * Used by replication sinks on startup to cover off any edge cases where the replicated EOF was not received/applied
-     * Can also be used on any appender, but this is not currently done automatically
+     * Ensure already-rolled cq4 files are correctly ended with EOF before reporting completion.
+     * This operation does not grant a caller permission to reopen a sealed roll.
      */
     default void normaliseEOFs() {
         // Intentionally no-op: optional hook for ensuring EOF markers on rolled files

@@ -265,7 +265,13 @@ public void removeOldQueueFiles() throws IOException {
 }
 ....
 
-Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are zero references to a given file before attempting to delete it.
+//! InternalAppenderWriteBytesTest#canBackfillPreviousCycleAfterEOF shows that Queue can reopen EOF while applying
+//! an exact-next historical entry. numberOfReferences() observes local handles only; maintenance exclusion
+//! is therefore an integration responsibility rather than evidence that Queue supplies online deletion safety.
+Use the `ChronicleQueue.numberOfReferences()` method to ensure that there are zero references to a given file before attempting to
+delete it. This is only a local file-handle check. If exact-index replication recovery is enabled, maintenance must also be excluded
+from its eligibility check through the archive/delete action until recovery retry and EOF normalisation have completed. An EOF marker
+and a zero reference count do not prove that the roll can never be reopened.
 
 == Configuration
 

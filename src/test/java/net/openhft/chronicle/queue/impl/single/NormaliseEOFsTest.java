@@ -17,11 +17,15 @@ import net.openhft.chronicle.queue.rollcycles.TestRollCycles;
 import net.openhft.chronicle.testframework.exception.ExceptionTracker;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -122,6 +126,37 @@ public class NormaliseEOFsTest extends QueueTestCommon {
                 assertTrue(normalisedAfter > normalisedBefore,
                         "normaliseEOFs on a never-written appender should have advanced the watermark past "
                                 + normalisedBefore + " but it stayed at " + normalisedAfter);
+            }
+        }
+    }
+
+    @Test
+    public void deletingOldestPublishedRollDoesNotBlockAReusedQueue() throws Exception {
+        Assume.assumeFalse(OS.isWindows());
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        try (final SingleChronicleQueue queue = createQueue(timeProvider)) {
+            try (final ExcerptAppender writer = queue.createAppender()) {
+                writer.writeText("cycle-0");
+                timeProvider.advanceMillis(1_001);
+                writer.writeText("cycle-1");
+                timeProvider.advanceMillis(1_001);
+                writer.writeText("cycle-2");
+            }
+
+            final File[] rolls = queue.file().listFiles(
+                    (directory, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+            assertTrue(rolls != null && rolls.length == 3);
+            Arrays.sort(rolls, Comparator.comparing(File::getName));
+
+            // Publish both cached boundaries before removing one behind this still-open Queue.
+            queue.firstCycle();
+            queue.lastCycle();
+            BackgroundResourceReleaser.releasePendingResources();
+            Files.delete(rolls[0].toPath());
+
+            try (final ExcerptAppender restarted = queue.createAppender()) {
+                restarted.normaliseEOFs();
+                restarted.writeText("after-boundary-deletion");
             }
         }
     }

@@ -18,6 +18,38 @@ import static org.junit.Assert.*;
 
 public class WriteBytesIndexTest extends QueueTestCommon {
     @Test
+    public void publishedDuplicateAfterTwoRecordsDoesNotMapLogicalCapacity() {
+        File path = getTmpDir();
+        Bytes<?> first = Bytes.from("first");
+        Bytes<?> second = Bytes.from("second");
+        Bytes<?> third = Bytes.from("third");
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .rollCycle(TEST4_SECONDLY).timeProvider(() -> 0).build()) {
+            long duplicateIndex;
+            try (ExcerptAppender writer = queue.createAppender()) {
+                writer.writeBytes(first);
+                writer.writeBytes(second);
+                duplicateIndex = writer.lastIndexAppended();
+            }
+            File[] cycleFiles = path.listFiles((dir, name) -> name.endsWith(".cq4"));
+            assertNotNull(cycleFiles);
+            assertEquals(1, cycleFiles.length);
+            long fileLength = cycleFiles[0].length();
+            try (ExcerptAppender replay = queue.createAppender()) {
+                ((InternalAppender) replay).writeBytes(duplicateIndex, second);
+                assertEquals("duplicate comparison must not extend the mapped file", fileLength, cycleFiles[0].length());
+                assertEquals(2, queue.entryCount());
+                replay.writeBytes(third);
+                assertEquals(3, queue.entryCount());
+            }
+        } finally {
+            first.releaseLast();
+            second.releaseLast();
+            third.releaseLast();
+        }
+    }
+
+    @Test
     public void writeMultipleAppenders() {
         File path = IOTools.createTempFile("writeMultipleAppenders");
         try (ChronicleQueue q0 = createQueue(path);
@@ -41,7 +73,6 @@ public class WriteBytesIndexTest extends QueueTestCommon {
                         ((InternalAppender) a0).writeBytes(index, bytes);
                     }
 
-                    // try a1
                     ((InternalAppender) a1).writeBytes(index, bytes);
                     assertTrue(t1.readBytes(bytes2.clear()));
                     if (!bytes.contentEquals(bytes2)) {
