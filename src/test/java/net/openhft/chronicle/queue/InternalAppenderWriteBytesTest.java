@@ -544,7 +544,10 @@ public class InternalAppenderWriteBytesTest extends QueueTestCommon {
 
     private String cycleDump(SingleChronicleQueue q, int cycle) {
         try (SingleChronicleQueueStore store = q.storeForCycle(cycle, 0, false, null)) {
-            return store.dump(WireType.BINARY_LIGHT);
+            //! Compare all records, index metadata and the EOF marker. Reopening a truncated historical mapping can change its unused
+            //! capacity, so the final diagnostic footer is not part of the sealed content protected by exactWritePreservesHistoricalSeal
+            //! and exactBackfillFindsEofAfterTrailingUserMetadata. Keep every preceding byte of the dump in these regression assertions.
+            return store.dump(WireType.BINARY_LIGHT).replaceFirst("(?m)^# [0-9]+ bytes remaining\\R?\\z", "");
         }
     }
 }
