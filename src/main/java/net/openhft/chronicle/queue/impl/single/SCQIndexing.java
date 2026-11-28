@@ -751,7 +751,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     long sequenceForPosition(@NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive) throws StreamCorruptedException {
-        return sequenceForPosition(ec.wireForIndex(), position, inclusive, true);
+        //! Sequence lookup is Queue-internal and must remain available while public mutable-Wire
+        //! access is rejected; ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
+        //! exercises this indexing work during listener-backed publication.
+        return sequenceForPosition(wireForIndex(ec), position, inclusive, true);
     }
 
     long sequenceForPositionWithoutSequenceShortcut(@NotNull Wire wire,
@@ -921,7 +924,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             return;
         }
 
-        Wire wire = ec.wireForIndex();
+        //! Index publication must use the private appender view so the callback guard protects only
+        //! callers, not Queue internals; ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
+        //! fails if publication re-enters StoreAppender#wireForIndex().
+        Wire wire = wireForIndex(ec);
         Bytes<?> bytes = wire.bytes();
         if (position > bytes.capacity())
             throw new IllegalArgumentException("pos: " + position);
@@ -1024,7 +1030,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                 if (sequence == Sequence.NOT_FOUND)
                     break;
                 try {
-                    Wire wireForIndex = ec.wireForIndex();
+                    //! ContextListenerCoreTest#notifiesEachAppenderWithItsOwnContextOncePerRoll and
+                    //! #sequentialResetsPreserveAutomaticClosesForAppenderListener fail if this fallback re-enters
+                    //! the guarded public accessor while another listener record uses the held Queue write lock.
+                    Wire wireForIndex = wireForIndex(ec);
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);
@@ -1033,6 +1042,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
+    }
+
+    private static Wire wireForIndex(@NotNull ExcerptContext context) {
+        //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter mutation-fails
+        //! if Queue's internal index publication re-enters the guarded public appender wire accessor.
+        return context instanceof StoreAppender
+                ? ((StoreAppender) context).wireForIndexInternal()
+                : context.wireForIndex();
     }
 
     /**

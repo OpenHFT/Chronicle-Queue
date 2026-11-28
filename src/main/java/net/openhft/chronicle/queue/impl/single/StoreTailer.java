@@ -1817,6 +1817,13 @@ class StoreTailer extends AbstractCloseable
             return StoreTailer.this.sourceId();
         }
 
+        @Override
+        public int contextCount() {
+            //! ContextListenerCoreTest#tailerDocumentsExposeTheirActualCycle distinguishes an
+            //! unavailable context from the cycle of the document currently exposed to the reader.
+            return isPresent() ? queue.rollCycle().toCycle(index()) : -1;
+        }
+
         /**
          * Closes the context, and if necessary, increments the index after reading a document.
          */
