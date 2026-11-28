@@ -3,13 +3,18 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.ReferenceOwner;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.core.values.TwoLongValue;
@@ -22,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.channels.FileChannel;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -48,7 +54,7 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
     private final MappedFile mappedFile;
     private final int dataVersion;
     @NotNull
-    private final transient Sequence sequence;
+    private final transient RollCycleEncodeSequence sequence;
 
     private int cycle;
 
@@ -389,7 +395,54 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      */
     public long lastSequenceNumber(@NotNull ExcerptContext ec) throws StreamCorruptedException {
         throwExceptionIfClosedInSetter();
-        return indexing.lastSequenceNumber(ec);
+        //! A positioned appender already has an index view. Asking its public accessor here bypasses
+        //! the internal path used by #1746 and rejects writes through a context listener's supplied writer.
+        //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter fails in that combination;
+        //! WrappedSequenceLookupTest still covers the separate unpositioned-tailer fallback below.
+        if (ec instanceof StoreAppender || ec.wireForIndex() != null)
+            return indexing.lastSequenceNumber(ec);
+
+        // An unpositioned tailer has no wire of its own for reading the committed suffix.
+        long position = writePosition();
+        if (position == 0)
+            return -1;
+        long tracked = sequence.getSequenceAt(position);
+        if (tracked < 0) {
+            position = 0;
+            tracked = 0;
+        }
+        try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile)) {
+            Wire wire = WireType.BINARY.apply(bytes);
+            wire.usePadding(dataVersion > 0);
+            return indexing.linearScanByPosition(wire, Long.MAX_VALUE, tracked, position, true);
+        } catch (EOFException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    long lastPublishedSequenceNumber(Wire wire) {
+        throwExceptionIfClosedInSetter();
+        final long publishedPosition = writePosition.getVolatileValue();
+        //! InternalAppenderWriteBytesTest#exactBackfillFindsEofInEmptySealedCycle requires zero to mean that no data
+        //! sequence has been published even when metadata and EOF follow the store header. Scanning position zero as
+        //! application data would invent a published boundary and reject the valid sequence-zero recovery as old.
+        if (publishedPosition == 0)
+            return -1;
+
+        //! StoreAppenderTest#sameCycleGapDoesNotPublishReadyCrashRecord,
+        //! #publishedDuplicateDoesNotAdoptLaterReadyCrashRecord,
+        //! #exactPreflightScansPublishedBoundaryWhenEncodedSequenceWasLost and
+        //! #exactPreflightRejectsStaleAliasingEncodedSequence require preflight to derive the sequence from the full
+        //! published position without repairing sparse indexes. RollCycleEncodeSequence retains only low position
+        //! bits, so a stale pre-crash pair can alias a later write position and falsely report an earlier sequence;
+        //! accepting that fast path rejects the true exact-next index as a gap. The sparse index bounds this
+        //! exact-only physical scan, while disabling its last-position shortcut makes it read-only and independent
+        //! of the lossy pair.
+        try {
+            return indexing.sequenceForPositionWithoutSequenceShortcut(wire, publishedPosition, true);
+        } catch (StreamCorruptedException e) {
+            throw Jvm.rethrow(e);
+        }
     }
 
     /**
@@ -518,6 +571,10 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
         // If unable to reserve bytes, create a new instance of MappedBytes and try again
         try (MappedBytes bytes = MappedBytes.mappedBytes(mappedFile.file(), mappedFile.chunkSize())) {
             Wire wire0 = WireType.valueOf(wire).apply(bytes);
+            //! StoreAppenderTest#writeEofReplacementUsesStorePadding forces this replacement-Wire
+            //! branch and requires it to inherit the store's physical padding mode. Exact-recovery
+            //! preflight tests reject legacy targets earlier and do not execute this fallback.
+            wire0.usePadding(dataVersion > 0);
             return writeEOFAndShrink(wire0, timeoutMS);
 
         } catch (Exception e) {
@@ -534,7 +591,56 @@ public class SingleChronicleQueueStore extends AbstractCloseable implements Wire
      * @return true if the EOF marker was written successfully, false otherwise
      */
     boolean writeEOFAndShrink(@NotNull Wire wire, long timeoutMS) {
-        return wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+        boolean written = wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+        // Only a fresh EOF publication establishes this wire's exact final length.
+        if (written && wire.bytes() instanceof MappedBytes)
+            truncateIfEOF(wire, ((MappedBytes) wire.bytes()).mappedFile());
+        return written;
+    }
+
+    // Best-effort cleanup must report even Errors without terminating the shared background releaser.
+    @SuppressWarnings("java:S1181")
+    static void truncateIfEOF(Wire wire, MappedFile file) {
+        final long end = wire.bytes().writePosition();
+        // BinaryWire: END_OF_DATA then C3 'E' 'O' 'F', just written by this thread.
+        // Use a plain long read: the marker need only be four-byte aligned.
+        final long last = end < 8 ? 0 : wire.bytes().readLong(end - 8);
+        if (end < 8 || last != 0x464f45c3c0000000L) {
+            Jvm.debug().on(SingleChronicleQueueStore.class, "Not truncating without complete EOF: " + file.file()
+                    + "; " + (end < 8 ? "fewer than 8 bytes (" + end + ")" : String.format("last8=0x%016x", last)));
+            return;
+        }
+        if (OS.isWindows()) {
+            Jvm.debug().on(SingleChronicleQueueStore.class, "Not truncating a live mapped file on Windows: " + file.file());
+            return;
+        }
+        // Retain the EOF page and one read-ahead page, including a racing micro-touch.
+        final long length = OS.pageAlign(end) + OS.pageSize();
+        final ReferenceOwner owner = ReferenceOwner.temporary("EOF truncation");
+        final Thread submitter = Thread.currentThread();
+        final java.util.concurrent.atomic.AtomicBoolean submitting = new java.util.concurrent.atomic.AtomicBoolean(true);
+        file.reserve(owner); // Keep the checked inode open; never reopen its pathname.
+        try {
+            BackgroundResourceReleaser.run(() -> {
+                try {
+                    // Core runs inline when full or stopped. Optional cleanup must not
+                    // turn submission from an appender into synchronous filesystem work.
+                    if (Thread.currentThread() == submitter && submitting.get()) {
+                        Jvm.debug().on(SingleChronicleQueueStore.class, "Skipping EOF truncation: background releaser unavailable for " + file.file());
+                        return;
+                    }
+                    FileChannel channel = file.raf().getChannel();
+                    if (channel.size() > length)
+                        channel.truncate(length);
+                } catch (Throwable e) {
+                    Jvm.warn().on(SingleChronicleQueueStore.class, "Unable to truncate " + file.file(), e);
+                } finally {
+                    file.release(owner);
+                }
+            });
+        } finally {
+            submitting.set(false);
+        }
     }
 
     /**

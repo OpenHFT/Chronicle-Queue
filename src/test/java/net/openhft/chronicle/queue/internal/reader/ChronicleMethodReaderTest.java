@@ -17,7 +17,6 @@ import net.openhft.chronicle.wire.VanillaMethodWriterBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -195,7 +194,10 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionIfInputDirectoryDoesNotExist() {
-        basicReader().withBasePath(Paths.get("/does/not/exist")).execute();
+        // Validation can fail before opening a queue. The base fixture ignores an optional
+        // Windows read-only warning; this path must not require it to occur.
+        new ChronicleReader().withBasePath(Paths.get("/does/not/exist"))
+                .withMessageSink(capturedOutput::add).execute();
     }
 
     @Test
@@ -211,10 +213,22 @@ public class ChronicleMethodReaderTest extends QueueTestCommon {
         capturedOutput.forEach(msg -> assertThat(msg, not(containsString("goodbye"))));
     }
 
-    @Ignore("https://github.com/OpenHFT/Chronicle-Queue/issues/1150")
     @Test
     public void shouldFilterByMultipleExclusionRegex() {
-        basicReaderMethodReader().withExclusionRegex(".*bye$").withExclusionRegex(".*ell.*").execute();
+        // The regex applies to the complete multiline DTO, not just its text field.
+        basicReaderMethodReader().withExclusionRegex("goodbye").execute();
+        assertEquals(12L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, containsString("hello")));
+        capturedOutput.clear();
+
+        basicReaderMethodReader().withExclusionRegex("hello").execute();
+        assertEquals(12L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
+        capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).
+                forEach(msg -> assertThat(msg, containsString("goodbye")));
+        capturedOutput.clear();
+
+        basicReaderMethodReader().withExclusionRegex("goodbye").withExclusionRegex("hello").execute();
 
         assertEquals(0L, capturedOutput.stream().filter(msg -> !msg.startsWith("0x")).count());
     }

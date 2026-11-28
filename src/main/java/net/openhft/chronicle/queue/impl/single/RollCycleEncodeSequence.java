@@ -16,6 +16,9 @@ class RollCycleEncodeSequence implements Sequence {
     private final TwoLongValue writePositionAndSequence;
     private final int cycleShift;
     private final long sequenceMask;
+    private final long positionMask;
+    private volatile long writerPosition;
+    private volatile long writerSequence;
 
     /**
      * Constructs an instance of RollCycleEncodeSequence.
@@ -27,6 +30,7 @@ class RollCycleEncodeSequence implements Sequence {
     RollCycleEncodeSequence(LongValue writePositionAndSequence, int indexCount, int indexSpacing) {
         this.cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
         this.sequenceMask = (1L << cycleShift) - 1;
+        this.positionMask = -1L >>> cycleShift;
         this.writePositionAndSequence = writePositionAndSequence instanceof TwoLongValue ?
                 (TwoLongValue) writePositionAndSequence : null;
     }
@@ -43,6 +47,11 @@ class RollCycleEncodeSequence implements Sequence {
             return;
         long value = toLongValue(position, sequence);
         writePositionAndSequence.setOrderedValue2(value);
+        if (position > positionMask && position - writerPosition > positionMask) {
+            // Queue writers hold the write lock. Publish the sequence before its full position.
+            writerSequence = sequence;
+            writerPosition = position;
+        }
     }
 
     /**
@@ -93,6 +102,34 @@ class RollCycleEncodeSequence implements Sequence {
             return toSequenceNumber(sequenceValue);
 
         return Sequence.NOT_FOUND_RETRY;
+    }
+
+    /**
+     * The tracker holds only the low position bits. Also check that the writer
+     * did not advance between the caller reading the full position and us reading the tracker.
+     */
+    long getSequenceAt(long position) {
+        return getSequenceAt(position, 0, 0);
+    }
+
+    long getSequenceAt(long position, long indexedPosition, long indexedSequence) {
+        // A matching tracker must describe a record between the indexed record and
+        // the published position. Its low bits are unique within one position period.
+        if (position < indexedPosition)
+            return Sequence.NOT_FOUND;
+        if (position - indexedPosition > positionMask) {
+            long written = writerPosition;
+            if (position < written || position - written > positionMask)
+                return Sequence.NOT_FOUND;
+            // Reading a later writer sequence only tightens this lower bound.
+            indexedSequence = Math.max(indexedSequence, writerSequence);
+        }
+        long sequence = getSequence(position);
+        if (sequence >= 0 && sequence < indexedSequence)
+            return Sequence.NOT_FOUND;
+        if (sequence >= 0 && writePositionAndSequence.getVolatileValue() != position)
+            return Sequence.NOT_FOUND_RETRY;
+        return sequence;
     }
 
     /**

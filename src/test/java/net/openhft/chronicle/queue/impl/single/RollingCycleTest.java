@@ -5,10 +5,10 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
-import net.openhft.chronicle.core.util.Time;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -50,7 +50,7 @@ public class RollingCycleTest extends QueueTestCommon {
         long start = 19059 * 86_400_000L;
         stp.currentTimeMillis(start);
 
-        String basePath = OS.getTarget() + "/testRollCycle" + Time.uniqueId();
+        String basePath = getTmpDir().getAbsolutePath();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(basePath));
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.single(basePath)
                 .blockSize(OS.SAFE_PAGE_SIZE)
@@ -83,7 +83,7 @@ public class RollingCycleTest extends QueueTestCommon {
                     "listing.lowestCycle: 19059\n" +
                     "# position: 232, header: 2\n" +
                     "--- !!data #binary\n" +
-                    "listing.modCount: 11\n" +
+                    "listing.modCount: 9\n" +
                     "# position: 264, header: 3\n" +
                     "--- !!data #binary\n" +
                     "chronicle.write.lock: -9223372036854775808\n" +
@@ -255,6 +255,7 @@ public class RollingCycleTest extends QueueTestCommon {
                     "...\n" +
                     "# 130524 bytes remaining\n";
 
+            awaitBackgroundRelease();
             long numRead = 0;
             final TestBytesMarshallable reusableData = new TestBytesMarshallable(0);
             final ExcerptTailer currentPosTailer = queue.createTailer(named ? "named" : null)
@@ -279,16 +280,13 @@ public class RollingCycleTest extends QueueTestCommon {
             // System.out.println("Wrote " + numWritten + " Read " + numRead);
 
             String dump = queue.dump();
-            // was it truncated
-            if (dump.contains("\n4 bytes remaining"))
-                expected = expected.replaceAll("\\n\\d+ bytes remaining", "\n4 bytes remaining");
             assertEquals(expected, dump);
 
-            try {
-                IOTools.deleteDirWithFiles(basePath, 2);
-            } catch (IORuntimeException e) {
-                e.printStackTrace();
-            }
+        } finally {
+            // Drain deferred unmapping before deleting the first cycle on Windows.
+            BackgroundResourceReleaser.releasePendingResources();
+            IOTools.deleteDirWithFilesOrThrow(basePath);
+            assertFalse("owned rolling directory remains", new java.io.File(basePath).exists());
         }
     }
 

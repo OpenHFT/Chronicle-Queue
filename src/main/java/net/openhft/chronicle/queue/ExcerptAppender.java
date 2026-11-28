@@ -77,6 +77,28 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
+     * {@inheritDoc}
+     * <p>
+     * For Queue, an output context is a roll cycle. Each appender's listener runs under the queue
+     * write lock before that appender's first data document in a cycle. Queue resolves the actual
+     * monotonic destination, including one permitted advance past EOF, before the callback. It is
+     * not called for metadata, explicit-index writes or append-locked queues. Callback failure
+     * poisons this appender's current listener lifecycle until a later roll; it is never retried in
+     * place. During a callback, appender entry through the same canonical Queue path is rejected in
+     * this JVM. A restarted appender can write context again in an existing cycle. Context listeners
+     * are not supported with double buffering, asynchronous output, encoding or encryption, and the
+     * caller retains ownership of the listener.
+     */
+    @NotNull
+    @Override
+    default <T> ExcerptAppender contextListener(@NotNull Class<T> writerType,
+                                                @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        //! The default keeps third-party ExcerptAppender implementations source-compatible while
+        //! StoreAppender supplies Queue's concrete listener lifecycle.
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * Creates and returns a new writer proxy for the given interface {@code tclass} and the given {@code additional }
      * interfaces.
      * <p>
@@ -127,10 +149,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     @Nullable
     Wire wire();
 
+    //! historicalWriteAfterReadyInterruptedRecordNormalisesAtCompletion and eofRestorationFailureIsNotReportedAsSuccess
+    //! cover sealing historical rolls after accepted writes into an unsealed tail.
     /**
-     * Ensure all already-rolled cq4 files are correctly ended with EOF
-     * Used by replication sinks on startup to cover off any edge cases where the replicated EOF was not received/applied
-     * Can also be used on any appender, but this is not currently done automatically
+     * Ensure already-rolled cq4 files are correctly ended with EOF before reporting completion.
+     * This operation does not grant a caller permission to reopen a sealed roll.
      */
     default void normaliseEOFs() {
         // Intentionally no-op: optional hook for ensuring EOF markers on rolled files

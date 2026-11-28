@@ -30,9 +30,8 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
     public void nonReplicatedNamedTailerShouldNotCreateVersionInMetdata() {
-        finishedNormally = false;
         File queuePath = getTmpDir();
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("named_1")) {
 
@@ -46,8 +45,6 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             LongValue longValue = queue.metaStore().acquireValueFor(String.format(SingleChronicleQueue.INDEX_VERSION_FORMAT, "named_1"));
             assertEquals(Long.MIN_VALUE, longValue.getValue());
             longValue.close();
-
-            finishedNormally = true;
         } finally {
             IOTools.deleteDirWithFiles(queuePath);
         }
@@ -59,10 +56,10 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
         // Copy the data from src/test/resources
         Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").toURI());
-        Path targetPath = Paths.get(OS.getTarget()).resolve(templatePath.getFileName());
+        Path targetPath = getTmpDir().toPath();
         copyFolder(templatePath, targetPath);
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(targetPath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(targetPath).testBlockSize().build();
              ExcerptTailer tailerOne = queue.createTailer("replicated:tailerOne");
              ExcerptTailer tailerTwo = queue.createTailer("replicated:tailerTwo");
              ExcerptTailer tailerThree = queue.createTailer("replicated:tailerThree")) {
@@ -79,9 +76,13 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
                 assertEquals(0, tailerThreeVersion.getValue());
             }
 
-        } finally {
-            IOTools.deleteDirWithFiles(targetPath.toString());
         }
+    }
+
+    @Test
+    public void backwardsCompatibilityFixtureCanBeCopiedTwice() throws IOException, URISyntaxException {
+        verifyBackwardsCompatibility_tailerPositionsAreRetained();
+        verifyBackwardsCompatibility_tailerPositionsAreRetained();
     }
 
     @Test
@@ -90,7 +91,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
         // Open for first time
         long index;
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
 
@@ -101,7 +102,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         }
 
         // Open for the second time ensure that the tailer position was retained
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
             assertEquals(index, tailer.index());
         } finally {
@@ -112,7 +113,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     @Test
     public void noVersionIncrements() {
         File queuePath = getTmpDir();
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
             assertNotNull(appender);
@@ -130,7 +131,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     @Test
     public void multipleVersionIncrements() {
         File queuePath = getTmpDir();
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("replicated:named_1")) {
 
@@ -152,7 +153,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     @Test
     public void namedTailerCanRewindToStart() {
         File queuePath = getTmpDir();
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer("replicated:rewind")) {
 
@@ -173,7 +174,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
     public void namedTailerCanMoveToStoredIndexAfterRestart() {
         File queuePath = getTmpDir();
         long[] indexes = new long[4];
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptAppender appender = queue.createAppender()) {
             for (int i = 0; i < indexes.length; i++) {
                 appender.writeText("payload-" + i);
@@ -181,7 +182,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             }
         }
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).testBlockSize().build();
              ExcerptTailer tailer = queue.createTailer("replicated:resumer")) {
             assertTrue("moveToIndex should succeed", tailer.moveToIndex(indexes[2]));
             assertEquals("payload-2", tailer.readText());

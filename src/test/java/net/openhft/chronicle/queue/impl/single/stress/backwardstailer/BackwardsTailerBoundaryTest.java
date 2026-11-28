@@ -57,6 +57,10 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
              ExcerptAppender appender = queue.createAppender();
              ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD)) {
 
+            org.junit.Assert.assertEquals("fixture mapping budget",
+                    Math.max(net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE,
+                            32L * queue.indexCount()), queue.blockSize());
+
             assertEquals("Backwards tailer should start at index 0 when no queue data", 0, tailer.index());
 
             long messagesPerCycle = (long) rollCycle.defaultIndexSpacing() * rollCycle.defaultIndexCount() * 5;
@@ -99,11 +103,7 @@ public class BackwardsTailerBoundaryTest extends QueueTestCommon {
                                              RollCycle rollCycle) {
         return SingleChronicleQueueBuilder
                 .builder()
-                //! Each TEST4_DAILY roll contains only 640 short messages. Small mappings
-                //! avoid reserving the default-sized extent for each of the five rolls,
-                //! particularly on Windows where extending these files consumes disk space.
-                //! Keep the index geometry, all 3,200 writes and every boundary check;
-                //! the builder still grows mappings as the unchanged workload needs them.
+                // Each roll holds only 640 short messages, so use small blocks for the five roll files.
                 .testBlockSize()
                 .timeProvider(timeProvider)
                 .path(path)

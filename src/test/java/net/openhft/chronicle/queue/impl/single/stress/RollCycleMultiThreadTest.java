@@ -27,7 +27,6 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
 
     @Test
     public void testRead1() throws ExecutionException, InterruptedException {
-        finishedNormally = false;
         File path = getTmpDir();
         SetTimeProvider timeProvider = new SetTimeProvider();
 
@@ -65,12 +64,10 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
             scheduledExecutorService.shutdown();
             scheduledExecutorService.awaitTermination(1, TimeUnit.SECONDS);
         }
-        finishedNormally = true;
     }
 
     @Test
     public void testRead2() throws ExecutionException, InterruptedException {
-        finishedNormally = false;
         File path = getTmpDir();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
         SetTimeProvider timeProvider = new SetTimeProvider();
@@ -177,6 +174,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                     dc.wire().write("say").text("Day 3 data");
                 }
 
+                awaitBackgroundRelease();
                 assertEquals("" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
@@ -194,7 +192,7 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
                                 "listing.lowestCycle: 0\n" +
                                 "# position: 232, header: 2\n" +
                                 "--- !!data #binary\n" +
-                                "listing.modCount: 8\n" +
+                                "listing.modCount: 7\n" +
                                 "# position: 264, header: 3\n" +
                                 "--- !!data #binary\n" +
                                 "chronicle.write.lock: -9223372036854775808\n" +
@@ -290,7 +288,6 @@ public class RollCycleMultiThreadTest extends QueueTestCommon {
             es.shutdown();
             es.awaitTermination(1, TimeUnit.SECONDS);
         }
-        finishedNormally = true;
     }
 
     private static class ParallelQueueObserver implements Callable<Integer> {

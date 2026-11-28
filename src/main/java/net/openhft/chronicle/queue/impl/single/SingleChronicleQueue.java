@@ -11,6 +11,7 @@ import net.openhft.chronicle.core.analytics.AnalyticsFacade;
 import net.openhft.chronicle.core.annotation.PackageLocal;
 import net.openhft.chronicle.core.announcer.Announcer;
 import net.openhft.chronicle.core.io.AbstractCloseable;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.ClosedIllegalStateException;
 import net.openhft.chronicle.core.scoped.ScopedResource;
@@ -26,6 +27,7 @@ import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdater;
 import net.openhft.chronicle.queue.impl.single.namedtailer.IndexUpdaterFactory;
 import net.openhft.chronicle.queue.impl.table.SingleTableStore;
+import net.openhft.chronicle.queue.impl.table.ReadonlyTableStore;
 import net.openhft.chronicle.queue.internal.AnalyticsHolder;
 import net.openhft.chronicle.threads.DiskSpaceMonitor;
 import net.openhft.chronicle.threads.TimingPauser;
@@ -36,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.*;
 import java.security.SecureRandom;
 import java.text.ParseException;
+import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,6 +53,7 @@ import static java.util.Collections.singletonMap;
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.impl.single.DirectoryListing.UNSET_CYCLE;
 import static net.openhft.chronicle.wire.Wires.SPB_HEADER_SIZE;
 import static net.openhft.chronicle.wire.Wires.acquireBytesScoped;
 
@@ -72,8 +76,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     public static final String INDEX_LOCK_FORMAT = "index.%s.lock";
     public static final String INDEX_VERSION_FORMAT = "index.%s.version";
 
+    private static final String NAMED_TAILER_INDEX_PREFIX = "index.";
+    private static final String INDEX_LOCK_SUFFIX = ".lock";
+    private static final String INDEX_VERSION_SUFFIX = ".version";
     private static final boolean SHOULD_CHECK_CYCLE = Jvm.getBoolean("chronicle.queue.checkrollcycle");
     static final int WARN_SLOW_APPENDER_MS = Jvm.getInteger("chronicle.queue.warnSlowAppenderMs", 100);
+    //! ContextListenerCoreTest#secondAppenderReentryFailsImmediatelyAndReleasesTheQueueLock,
+    //! #secondQueueInstanceOnSamePathFailsImmediatelyDuringCallback,
+    //! #symlinkAliasCannotBypassCallbackGuard and #otherThreadUsingSamePathFailsImmediatelyDuringCallback
+    //! require JVM-wide ownership keyed by canonical real path; a per-instance or thread-local guard
+    //! can wait on the callback's already-held cross-process write lock instead of rejecting the escape.
+    private static final Map<String, Thread> ACTIVE_CONTEXT_LISTENER_CALLBACKS = new ConcurrentHashMap<>();
 
     @NotNull
     protected final EventLoop eventLoop;
@@ -87,6 +100,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     final File path;
     final String fileAbsolutePath;
+    @Nullable
+    private volatile String contextListenerCallbackKey;
     // Cache misses and close synchronize on the map; cache hits are lock-free.
     @SuppressWarnings("rawtypes")
     private final Map<BytesStore, LongValue> metaStoreMap = new ConcurrentHashMap<>();
@@ -96,6 +111,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private final StoreSupplier storeSupplier;
     private final long epoch;
     private final boolean isBuffered;
+    //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode pins classification, while
+    //! #rejectsEncodedAndEncryptedBuilderModes exercises effective builder encryption and encoding.
+    private final boolean encodedOrEncrypted;
     @NotNull
     private final WireType wireType;
     private final long blockSize;
@@ -131,6 +149,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     private final RollCycle rollCycle;
     final AppenderListener appenderListener;
+    @NotNull
+    //! ContextListenerCoreTest#notifiesEachAppenderWithItsOwnContextOncePerRoll requires Queue-level
+    //! configuration to create independent lifecycle state for every appender.
+    private final ContextListenerState contextListenerState;
     protected int sourceId;
     private int cycleFileRenamed = -1;
     @NotNull
@@ -159,6 +181,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             storeSupplier = new StoreSupplier();
             pool = WireStorePool.withSupplier(storeSupplier, storeFileListener);
             isBuffered = BufferMode.Asynchronous == builder.writeBufferMode();
+            //! ContextListenerCoreTest#rejectsEncodedAndEncryptedBuilderModes requires retaining effective builder
+            //! encryption/encoding state because listener registration may occur only after Queue construction.
+            encodedOrEncrypted = builder.key() != null || builder.encodingSupplier() != null;
             path = builder.path();
             if (!builder.readOnly())
                 //noinspection ResultOfMethodCallIgnored
@@ -188,9 +213,14 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 builder.readOnly(metaStore.readOnly());
             }
             readOnly = builder.readOnly();
+            RamBackedQueueWarning.warn(path.toPath(), blockSize, readOnly);
             appenderListener = builder.appenderListener();
+            //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter and
+            //! #listenerRemainsCallerOwned require the Queue to retain configuration while each
+            //! appender receives its own state; the caller-owned listener itself is never closed.
+            contextListenerState = builder.contextListenerState();
 
-            if (metaStore.readOnly()) {
+            if (metaStore instanceof ReadonlyTableStore) {
                 this.directoryListing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time);
             } else {
                 this.directoryListing = readOnly
@@ -243,6 +273,26 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             close();
             throw Jvm.rethrow(t);
         }
+    }
+
+    void validateContextListenerCompatibility() {
+        validateContextListenerCompatibility(encodedOrEncrypted, isBuffered, doubleBuffer);
+    }
+
+    static void validateContextListenerCompatibility(boolean encodedOrEncrypted,
+                                                     boolean asynchronous,
+                                                     boolean doubleBuffered) {
+        //! ContextListenerCoreTest#rejectsEveryUnsupportedEffectiveQueueMode and #rejectsDoubleBuffering pin each
+        //! classification branch; the listener must target the same synchronous Wire as its triggering document.
+        if (encodedOrEncrypted)
+            throw new UnsupportedOperationException(
+                    "contextListener is not supported on encoded or encrypted Enterprise queues");
+        if (asynchronous)
+            throw new UnsupportedOperationException(
+                    "contextListener is not supported on asynchronous Enterprise write buffers");
+        if (doubleBuffered)
+            throw new UnsupportedOperationException(
+                    "contextListener is not supported with double buffering");
     }
 
     /**
@@ -342,8 +392,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Refreshes the directory listing, ensuring it is up-to-date.
-     * Throws an exception if the queue has been closed.
+     * {@inheritDoc}
      */
     @Override
     public void refreshDirectoryListing() {
@@ -457,6 +506,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 if (commonStore != null)
                     sb.append(commonStore.dump(wireType));
             }
+            //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires termination before incrementing the
+            //! highest UInt31 cycle, because int overflow would otherwise restart this loop at Integer.MIN_VALUE.
+            if (i == max)
+                break;
         }
         return sb.toString();
     }
@@ -633,6 +686,58 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return storeFileListener;
     }
 
+    @NotNull
+    ContextListenerState newContextListenerState(
+            StoreAppender appender, StoreAppender.StoreAppenderContext context) {
+        return contextListenerState.forAppender(appender, context);
+    }
+
+    void enterContextListenerCallback() {
+        final Thread currentThread = Thread.currentThread();
+        final String callbackKey = contextListenerCallbackKey();
+        //! secondQueueInstanceOnSamePathFailsImmediatelyDuringCallback mutation-times out if this
+        //! path-scoped guard is removed and a second Queue blocks on the non-reentrant write lock.
+        final Thread existing = ACTIVE_CONTEXT_LISTENER_CALLBACKS.putIfAbsent(
+                callbackKey, currentThread);
+        if (existing != null)
+            throw new IllegalStateException("A Queue context listener callback is already active for " +
+                    callbackKey + " on thread " + existing.getName());
+    }
+
+    void exitContextListenerCallback() {
+        ACTIVE_CONTEXT_LISTENER_CALLBACKS.remove(contextListenerCallbackKey(), Thread.currentThread());
+    }
+
+    void throwIfContextListenerCallbackActive() {
+        //! ContextListenerCoreTest#appenderWriteFromListenerFailsFast,
+        //! #capturedAppenderRollbackFromListenerFailsFast, #capturedAppenderNormalisationFromListenerFailsFast,
+        //! #capturedAppenderWireAccessFromListenerFailsFast and #capturedAppenderIndexWireAccessFromListenerFailsFast
+        //! require rejection before every public mutation or mutable-Wire escape performs a side effect.
+        if (ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(contextListenerCallbackKey()))
+            throw new IllegalStateException("Cannot enter a Queue appender from a context listener callback; " +
+                    "write through the supplied method writer instead");
+    }
+
+    private String contextListenerCallbackKey() {
+        String callbackKey = contextListenerCallbackKey;
+        if (callbackKey != null)
+            return callbackKey;
+        synchronized (this) {
+            callbackKey = contextListenerCallbackKey;
+            if (callbackKey == null) {
+                //! ContextListenerCoreTest#symlinkAliasCannotBypassCallbackGuard requires a canonical real-path
+                //! key. Resolve and cache it on first appender/callback use so ordinary Queue construction does not
+                //! acquire a new filesystem lookup or failure mode solely for the optional listener feature.
+                try {
+                    contextListenerCallbackKey = callbackKey = path.toPath().toRealPath().toString();
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Unable to resolve Queue callback path " + path, e);
+                }
+            }
+        }
+        return callbackKey;
+    }
+
     // used by enterprise CQ
     WireStoreSupplier storeSupplier() {
         return storeSupplier;
@@ -661,6 +766,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @NotNull
     ExcerptAppender acquireThreadLocalAppender(@NotNull SingleChronicleQueue queue) {
         queue.throwExceptionIfClosed();
+        //! ContextListenerCoreTest#acquireAppenderFromListenerFailsFast pre-populates the thread-local
+        //! cache and requires this shared path to reject before returning or constructing an appender.
+        queue.throwIfContextListenerCallbackActive();
         if (queue.readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
 
@@ -683,6 +791,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     public ExcerptAppender createAppender() {
         throwExceptionIfClosed();
+        //! ContextListenerCoreTest#appenderCreationFromListenerFailsFast mutation-times out if a
+        //! callback can create a second appender and wait on the outer write's non-reentrant lock.
+        throwIfContextListenerCallbackActive();
 
         if (readOnly)
             throw new IllegalStateException("Can't append to a read-only chronicle");
@@ -763,7 +874,105 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     @Override
     @NotNull
     public LongValue indexForId(@NotNull String id) {
-        return this.metaStore.doWithExclusiveLock((ts) -> ts.acquireValueFor("index." + id, 0L));
+        return this.metaStore.doWithExclusiveLock(ts -> ts.acquireValueFor(NAMED_TAILER_INDEX_PREFIX + id, 0L));
+    }
+
+    /**
+     * Returns detached committed named-tailer positions in raw name order without creating keys.
+     * Structural registration is locked during the scan; independently updated index values are
+     * not an atomic multi-tailer snapshot. Zero denotes a never-read or parked tailer.
+     * Replicated lock/version bookkeeping is excluded; distinguishable legacy ids are retained.
+     *
+     * @return a detached name-to-index map, empty when there is no metadata table
+     */
+    public NavigableMap<String, Long> namedTailerIndexes() {
+        //! The concurrent registration and shared-lock tests in SingleChronicleQueueNamedTailerMetadataTest
+        //! require this structural lock; ReadonlyNamedTailerIndexesTest covers a missing read-only table.
+        throwExceptionIfClosed();
+        if (!metaStore.readOnly())
+            return metaStore.doWithExclusiveLock(SingleChronicleQueue::scanNamedTailerIndexes);
+        if (!(metaStore instanceof SingleTableStore))
+            return new TreeMap<>();
+        File metadataFile = new File(path, QUEUE_METADATA_FILE);
+        return SingleTableStore.doWithSharedLock(metadataFile,
+                SingleChronicleQueue::scanNamedTailerIndexes, () -> metaStore);
+    }
+
+    /**
+     * Reads detached named-tailer positions from an already opened metadata table, without opening roll files.
+     * The caller must hold the table's structural lock or exclusively own a stable copy. The scan does not
+     * create keys, change the table's cursor state or close the caller-owned table.
+     *
+     * @param tableStore the metadata table to inspect
+     * @return committed positions with replication bookkeeping excluded
+     */
+    public static NavigableMap<String, Long> scanNamedTailerIndexes(TableStore<?> tableStore) {
+        //! namedTailerIndexesReturnsDetachedSnapshot and namedTailerIndexesReturnsCommittedTailerPositionsOnly
+        //! require detached committed positions, excluding Queue-owned lock/version bookkeeping.
+        final NavigableMap<String, Long> metadataIndexes = new TreeMap<>();
+        tableStore.forEachKey(metadataIndexes, (acc, key, value) -> {
+            final String k = key.toString();
+            if (k.startsWith(NAMED_TAILER_INDEX_PREFIX))
+                acc.put(k.substring(NAMED_TAILER_INDEX_PREFIX.length()), value.int64());
+        });
+
+        return selectNamedTailerIndexes(metadataIndexes);
+    }
+
+    static NavigableMap<String, Long> selectNamedTailerIndexes(Map<String, Long> metadataIndexes) {
+        final NavigableMap<String, Long> result = new TreeMap<>();
+        metadataIndexes.forEach((namedTailer, index) -> {
+            if (isInternalNamedTailerMetadata(metadataIndexes, namedTailer))
+                return;
+            //! namedTailerIndexesKeepCaseVariantIdsSeparate and namedTailerIndexesRetainsDistinguishableLegacyReservedIds
+            //! require raw case-distinct positions and distinguishable legacy registrations to retain their rolls.
+            result.put(namedTailer, index);
+            if (hasMetadataShapedSuffix(namedTailer))
+                Jvm.warn().on(SingleChronicleQueue.class,
+                        "Named tailer id '" + namedTailer + "' uses a metadata-shaped suffix "
+                                + "'.lock' or '.version'. It remains in this snapshot for safe retention; "
+                                + "consider migrating its committed position to an unambiguous id.");
+        });
+        return result;
+    }
+
+    private static boolean isInternalNamedTailerMetadata(Map<String, Long> metadataIndexes,
+                                                          String candidate) {
+        final String suffix;
+        if (candidate.endsWith(INDEX_LOCK_SUFFIX))
+            suffix = INDEX_LOCK_SUFFIX;
+        else if (candidate.endsWith(INDEX_VERSION_SUFFIX))
+            suffix = INDEX_VERSION_SUFFIX;
+        else
+            return false;
+
+        final String owner = candidate.substring(0, candidate.length() - suffix.length());
+        if (!owner.startsWith(REPLICATED_NAMED_TAILER_PREFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, owner))
+            return false;
+
+        // Older releases allowed a replicated tailer whose primary id collided with this record.
+        // Its own lock and version records make that legacy registration distinguishable.
+        return !containsKeyIgnoreCase(metadataIndexes, candidate + INDEX_LOCK_SUFFIX)
+                || !containsKeyIgnoreCase(metadataIndexes, candidate + INDEX_VERSION_SUFFIX);
+    }
+
+    private static boolean containsKeyIgnoreCase(Map<String, Long> metadataIndexes, String candidate) {
+        for (String persistedKey : metadataIndexes.keySet()) {
+            if (persistedKey.equalsIgnoreCase(candidate))
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean hasMetadataShapedSuffix(String value) {
+        return endsWithIgnoreCase(value, INDEX_LOCK_SUFFIX) || endsWithIgnoreCase(value, INDEX_VERSION_SUFFIX);
+    }
+
+    private static boolean endsWithIgnoreCase(String value, String suffix) {
+        return value != null
+                && value.length() >= suffix.length()
+                && value.regionMatches(true, value.length() - suffix.length(), suffix, 0, suffix.length());
     }
 
     /**
@@ -945,6 +1154,18 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         return pool.listCyclesBetween(lowerCycle, upperCycle);
     }
 
+    NavigableSet<Long> listFreshPhysicalCycles() {
+        //! StoreAppenderTest#cachedCycleTreeDoesNotHideMalformedPhysicalRoll and
+        //! #duplicateLogicalCycleFilenameFailsNormalisationWithoutMutation require constructor and completion scans
+        //! to bypass the directory-modification cache and validate every current .cq4 filename. A cached endpoint
+        //! match is not a physical snapshot because external maintenance does not update listing.modCount.
+        return storeSupplier.freshPhysicalCycles();
+    }
+
+    void evictCachedCycleMapping(int cycle) {
+        storeSupplier.evictCycleMapping(cycle);
+    }
+
     /**
      * Adds a {@link Closeable} listener that will be closed when this queue is closed.
      *
@@ -962,6 +1183,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      * Performs the closing operations for this queue. All resources are closed in a synchronized
      * block, and special care is taken to close the event loop and other important components.
      */
+    @Override
+    protected void assertCloseable() {
+        //! queueCloseFromListenerFailsBeforeTeardownAndReleasesTheLock prevents callback code from
+        //! closing stores and locks still owned by the outer application write.
+        final String callbackKey = contextListenerCallbackKey;
+        if (callbackKey != null && ACTIVE_CONTEXT_LISTENER_CALLBACKS.containsKey(callbackKey))
+            throw new IllegalStateException(
+                    "Cannot close a Queue from a context listener callback; return from the callback first");
+        super.assertCloseable();
+    }
+
     @Override
     protected void performClose() {
         synchronized (metaStoreMap) {
@@ -1041,8 +1273,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public long firstIndex() {
-        int cycle = firstCycle();
-        if (cycle == Integer.MAX_VALUE)
+        //! CycleOverflowTest#maximumUInt31CycleIsNotTreatedAsEmpty requires internal emptiness to use UNSET_CYCLE
+        //! rather than the public firstCycle() sentinel, because Integer.MAX_VALUE is itself a valid UInt31 cycle.
+        final int cycle = firstPublishedCycle();
+        if (cycle == UNSET_CYCLE)
             return Long.MAX_VALUE;
 
         return rollCycle().toIndex(cycle, 0);
@@ -1119,7 +1353,30 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Override
     public int firstCycle() {
+        final int firstCycle = firstPublishedCycle();
+        //! SingleCQFormatTest#testEmptyDirectory preserves the established public empty-Queue sentinel while the
+        //! internal representation uses UNSET_CYCLE and can distinguish a real Integer.MAX_VALUE cycle.
+        return firstCycle == UNSET_CYCLE ? Integer.MAX_VALUE : firstCycle;
+    }
+
+    int firstPublishedCycle() {
         setFirstAndLastCycle();
+        return directoryListing.getMinCreatedCycle();
+    }
+
+    /** Returns the first cycle from one directory snapshot without updating table-store metadata. */
+    int firstCycleInDirectory() {
+        try (FileSystemDirectoryListing listing = new FileSystemDirectoryListing(path, fileNameToCycleFunction(), time)) {
+            listing.refresh(true);
+            return listing.getMinCreatedCycle();
+        }
+    }
+
+    int firstPublishedCycleWithoutRefresh() {
+        //! StoreAppenderTest#corruptedEofNormalisationCursorFailsBeforeMutation requires completion to validate its
+        //! persisted cursor before a filesystem refresh can publish a new listing modification count. The mapped
+        //! minimum supplies only the cursor's safe default; physical bounds are still refreshed and validated after
+        //! the cursor has been accepted.
         return directoryListing.getMinCreatedCycle();
     }
 
@@ -1133,15 +1390,41 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Returns the last cycle available in the queue by setting the first and last cycle
-     * and then retrieving the maximum created cycle from the directory listing.
+     * Refreshes the directory listing when necessary and returns the highest cycle published by the queue. Closed
+     * historical rolls may be removed, but the published maximum cannot move backwards while Queue metadata remains.
      *
-     * @return the last cycle in the queue
+     * @return the highest published cycle, or {@code Integer.MIN_VALUE} if no cycles have been published
+     * @throws IllegalStateException if a writable directory refresh finds that the published maximum is missing
+     *                               while Queue metadata remains
      */
     @Override
     public int lastCycle() {
         setFirstAndLastCycle();
+        final int lastCycle = directoryListing.getMaxCreatedCycle();
+        //! SingleCQFormatTest#testEmptyDirectory preserves the established public lastCycle() sentinel even though
+        //! internal consumers and contextCount() use Wire's canonical UNSET_CYCLE value.
+        return lastCycle == UNSET_CYCLE ? Integer.MIN_VALUE : lastCycle;
+    }
+
+    /**
+     * Returns the latest cycle published by a cooperating writer without the periodic filesystem
+     * refresh performed by {@link #lastCycle()}. This distinction keeps the append hot path from
+     * scanning the queue directory.
+     *
+     * @return the latest UInt31 cycle, or {@link MarshallableOut#UNSET_CYCLE} if none is published
+     */
+    int lastPublishedCycle() {
+        //! ordinaryAppendUsesPublishedCycleWithoutRefreshingDirectoryListing and
+        //! stalledWriterSeesCyclePublishedByAnotherJvmWithoutRefreshingDirectoryListing fail if
+        //! this delegates to lastCycle(): both require the mapped maximum without a directory refresh.
         return directoryListing.getMaxCreatedCycle();
+    }
+
+    boolean cycleFileExists(final int cycle) {
+        //! stalledAppenderDoesNotRecreateDeletedPublishedMaximum and
+        //! unusedAppenderDoesNotCreateDeletedPublishedMaximum require a wire-null appender to
+        //! distinguish a missing published pathname before recovery scans stale directory bounds.
+        return dateCache.resourceFor(cycle).path.isFile();
     }
 
     /**
@@ -1253,6 +1536,24 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
+     * Parses the numeric cycle represented by a roll filename using this Queue's persisted roll
+     * geometry. Callers must not infer cycle order from lexical filename order.
+     *
+     * @param file a {@code .cq4} roll file
+     * @return the numeric cycle encoded by the filename
+     */
+    public int cycleForFile(@NotNull File file) {
+        //! SCQMetaRollMetadataTest#cycleForFileUsesTheQueueRollGeometry checks the configured filename format, while
+        //! #cycleForFileUsesPersistedNonZeroEpochAfterRestart requires the persisted epoch and period after reopening.
+        //! Reconstructing a default-epoch parser would give maintenance the wrong numeric deletion boundary even if
+        //! it recognises the filename; lexical ordering is not a substitute for the Queue's stored geometry.
+        final String name = file.getName();
+        if (!name.endsWith(SUFFIX))
+            throw new IllegalArgumentException("Not a Queue roll file: " + file);
+        return fileNameToCycleFunction().applyAsInt(name);
+    }
+
+    /**
      * Removes the specified {@link StoreTailer} from the close listeners.
      *
      * @param storeTailer the StoreTailer to remove
@@ -1270,6 +1571,95 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     public TableStore<SCQMeta> metaStore() {
         return metaStore;
+    }
+
+
+    /**
+     * Parks a named tailer for retention purposes by resetting its committed index to {@code 0} - the
+     * same value a freshly created, never-read tailer has - so retention by named-tailer position
+     * treats it as not pinning any roll. Use this to retire a dead or over-lagging reader when free
+     * disk matters more than its unread backlog: the registration remains (there is no clean way to
+     * delete a table-store entry), but it stops blocking removal. On restart the persisted index
+     * remains {@code 0}; a tailer whose stored index is {@code 0} resumes from {@code firstIndex()}
+     * at its next read - the oldest roll still present - exactly as a freshly created, never-read
+     * tailer does. Consequently rolls deleted below that surviving floor are never replayed to the
+     * parked consumer: parking declares its unread backlog, up to the oldest surviving roll at next
+     * read, discardable. The owning consumer must be stopped and its tailer closed before parking;
+     * an active owner can publish a later position and undo the maintenance decision.
+     * <p>
+     * Replicated named tailers (those whose id starts with the canonical lowercase
+     * {@link #REPLICATED_NAMED_TAILER_PREFIX}) are refused without change: their position is
+     * coordinated with sinks through version metadata, and a backward reset here would not bump
+     * that version, so parking one could desynchronise replication. A case variant of the prefix is
+     * invalid because table-store lookup is case-insensitive and could otherwise alias the
+     * canonical replicated tailer while bypassing its version lock. The result distinguishes the
+     * canonical safety refusal
+     * from an unknown name so operators can diagnose the outcome without duplicating Queue's
+     * metadata rules. Refusal is evaluated before metadata existence, so an unregistered id with a
+     * replicated-looking prefix also returns {@link NamedTailerParkResult#REFUSED_REPLICATED}. A
+     * {@code null} name or a reserved metadata suffix is a caller error rather than an operational
+     * outcome.
+     *
+     * @param name the named-tailer id to park
+     * @return the outcome of the parking attempt
+     * @throws NullPointerException     if {@code name} is {@code null}
+     * @throws IllegalArgumentException if {@code name} has a reserved metadata suffix or a
+     *                                  non-canonical case variant of the replicated prefix
+     */
+    public NamedTailerParkResult parkNamedTailer(String name) {
+        Objects.requireNonNull(name, "name");
+        //! parkNamedTailerRejectsReservedSuffixesWithoutMutatingMetadata,
+        //! #parkNamedTailerRejectsExistingMixedCaseSuffixWithoutMutation and
+        //! #maintenanceParkingRejectsMixedCaseReplicatedPrefix prevent case-insensitive aliases
+        //! from mutating Queue-owned lock, version, or replicated-tailer keys.
+        validateParkableNamedTailerId(name);
+        //! replicatedNamedTailersCannotBeParked keeps version-coordinated sink state unchanged;
+        //! resetting only its index would desynchronise replication.
+        if (name.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+            return NamedTailerParkResult.REFUSED_REPLICATED;
+        try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
+            Bytes<Void> bytes = bytesTl.get().clear().append("index.").append(name);
+            //! parkNamedTailerDoesNotCreateMissingTailer requires lookup-only semantics: parking
+            //! an unknown consumer must not create a persisted retention record.
+            LongValue longValue = tableStoreAcquireOrGet(bytes, 0, false);
+            if (longValue == null)
+                return NamedTailerParkResult.NOT_FOUND;
+            //! SingleChronicleQueueNamedTailerMetadataTest#parkNamedTailerResetsExistingNonReplicatedTailer,
+            //! #parkedNamedTailerRemainsParkedAfterQueueRestart,
+            //! ParkNamedTailerResumeBehaviourTest#parkedTailerResumesFromOldestSurvivingRollAfterRestart
+            //! and #parkedTailerReadsSameFirstEntryAsNeverReadTailer demonstrate why parking writes
+            //! the persisted never-read sentinel: it is visible after a clean restart and resumes
+            //! from the oldest roll that still exists, discarding older backlog.
+            longValue.setOrderedValue(0);
+            return NamedTailerParkResult.PARKED;
+        }
+    }
+
+    private static boolean isReservedNamedTailerId(String id) {
+        return hasMetadataShapedSuffix(id);
+    }
+
+    private static boolean startsWithIgnoreCase(String value, String prefix) {
+        return value != null
+                && value.length() >= prefix.length()
+                && value.regionMatches(true, 0, prefix, 0, prefix.length());
+    }
+
+    private static void validateParkableNamedTailerId(String id) {
+        if (isReservedNamedTailerId(id))
+            throw reservedNamedTailerIdException(id);
+        if (startsWithIgnoreCase(id, REPLICATED_NAMED_TAILER_PREFIX)
+                && !id.startsWith(REPLICATED_NAMED_TAILER_PREFIX))
+            throw new IllegalArgumentException("Invalid named tailer id '" + id + "': replicated tailer ids "
+                    + "must use the canonical lowercase prefix '" + REPLICATED_NAMED_TAILER_PREFIX + "'");
+    }
+
+    private static IllegalArgumentException reservedNamedTailerIdException(String id) {
+        return new IllegalArgumentException("Invalid named tailer id '" + id + "': the suffixes "
+                + "'.lock' and '.version' are reserved in any letter case. Tailer state is kept under the metadata "
+                + "keys 'index.<id>', 'index.<id>.lock' and 'index.<id>.version', so this id "
+                + "would collide with the metadata of the tailer named '"
+                + id.substring(0, id.lastIndexOf('.')) + "'");
     }
 
     /**
@@ -1298,16 +1688,44 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
      */
     @Nullable
     protected LongValue tableStoreAcquire(CharSequence key, long defaultValue) {
+        return tableStoreAcquireOrGet(key, defaultValue, true);
+    }
+
+    /**
+     * Acquires or reads a {@link LongValue} from the queue metadata table.
+     *
+     * @param key            the table-store key
+     * @param defaultValue   the default value to use when creating a missing key
+     * @param createIfAbsent whether a missing key should be created
+     * @return the existing or newly-created {@link LongValue}, or {@code null} when the key is missing
+     * and {@code createIfAbsent} is {@code false}
+     */
+    protected LongValue tableStoreAcquireOrGet(CharSequence key, long defaultValue, boolean createIfAbsent) {
         try (final ScopedResource<Bytes<Void>> bytesTl = acquireBytesScoped()) {
             BytesStore<?, ?> keyBytes = asBytes(key, bytesTl.get());
             LongValue longValue = metaStoreMap.get(keyBytes);
-            if (longValue == null) {
+            if (longValue == null || longValue.isClosed()) {
                 synchronized (metaStoreMap) {
                     if (metaStoreMapClosed)
                         throw new ClosedIllegalStateException("Queue is closing: " + path);
                     longValue = metaStoreMap.get(keyBytes);
-                    if (longValue == null) {
-                        longValue = metaStore.acquireValueFor(key, defaultValue);
+                    if (longValue == null || longValue.isClosed()) {
+                        // Readers bind complete records without opening the metadata file for writing.
+                        // Writers also serialise structural updates across queue instances.
+                        //! Combine #1745's lookup-only parking with #1819's structural locking:
+                        //! parkNamedTailerDoesNotCreateMissingTailer must not create a missing key,
+                        //! and concurrent named-tailer registration must still hold the metadata lock.
+                        if (createIfAbsent) {
+                            longValue = readOnly
+                                    ? metaStore.acquireValueFor(key, defaultValue)
+                                    : metaStore.doWithExclusiveLock(table -> table.acquireValueFor(key, defaultValue));
+                        } else {
+                            longValue = readOnly
+                                    ? metaStore.getValueFor(key)
+                                    : metaStore.doWithExclusiveLock(table -> table.getValueFor(key));
+                        }
+                        if (longValue == null)
+                            return null;
                         int length = key.length();
                         HeapBytesStore<byte[]> key2 = HeapBytesStore.wrap(new byte[length]);
                         key2.write(0, keyBytes, 0, length);
@@ -1323,7 +1741,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     LongValue tableStoreAcquireWithExclusiveLock(CharSequence key, long defaultValue) {
         try (ScopedResource<Bytes<Void>> bytes = acquireBytesScoped()) {
             LongValue value = metaStoreMap.get(asBytes(key, bytes.get()));
-            if (value != null)
+            if (value != null && !value.isClosed())
                 return value;
         }
 
@@ -1334,13 +1752,17 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     }
 
     /**
-     * Gets the value for the given key from the table store. If the key does not exist,
-     * returns Long.MIN_VALUE.
+     * Gets the value for the given key from the table store, creating the key with
+     * {@link Long#MIN_VALUE} when it is absent. This preserves the historical get-or-create
+     * behaviour used by external callers.
      *
      * @param key the key for the entry in the table store
      * @return the value associated with the key, or Long.MIN_VALUE if not found
      */
     public long tableStoreGet(CharSequence key) {
+        //! SingleTableStoreIntegrationTests#getMissingKeyWithoutDefault demonstrates that this
+        //! historical public getter remains get-or-create even though maintenance now has a
+        //! separate lookup-only path.
         LongValue longValue = tableStoreAcquire(key, Long.MIN_VALUE);
         if (longValue == null) return Long.MIN_VALUE;
         return longValue.getVolatileValue();
@@ -1368,16 +1790,21 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
     private static final class CachedCycleTree {
         private final long directoryModCount;
         private final NavigableMap<Long, File> cachedCycleTree;
+        private final NavigableSet<Long> cachedCycles;
 
         /**
          * Constructs a CachedCycleTree with the specified directory modification count and cached cycle tree.
          *
          * @param directoryModCount the modification count of the directory
          * @param cachedCycleTree   the cached map of cycles to files
+         * @param cachedCycles      the parsed Queue cycles represented by the files
          */
-        CachedCycleTree(final long directoryModCount, final NavigableMap<Long, File> cachedCycleTree) {
+        CachedCycleTree(final long directoryModCount,
+                        final NavigableMap<Long, File> cachedCycleTree,
+                        final NavigableSet<Long> cachedCycles) {
             this.directoryModCount = directoryModCount;
             this.cachedCycleTree = cachedCycleTree;
+            this.cachedCycles = cachedCycles;
         }
     }
 
@@ -1418,6 +1845,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          * @throws IOException      in case of IO errors
          * @throws TimeoutException if acquiring the store times out
          */
+        // Failed native acquisition must release ownership even when it throws an Error.
+        @SuppressWarnings("java:S1181")
         @Override
         public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
             throwExceptionIfClosed();
@@ -1426,6 +1855,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             @NotNull final RollingResourcesCache.Resource dateValue = that
                     .dateCache.resourceFor(cycle);
             MappedBytes mappedBytes = null;
+            SingleChronicleQueueStore wireStore = null;
+            boolean initialisingStore = false;
             try {
                 File path = dateValue.path;
 
@@ -1446,8 +1877,22 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 try {
                     mappedBytes = mappedFileCache.get(path);
                 } catch (FileNotFoundException e) {
+                    //! There is no deterministic hook inside the existence/open race: a supported writer holds the
+                    //! Queue lock, while external maintenance does not. If the path vanishes after the initial check,
+                    //! an existing-only acquisition must return absent instead of recreating it through createFile();
+                    //! otherwise completion could certify a different generation from the one it enumerated.
+                    if (createStrategy != CreateStrategy.CREATE)
+                        return null;
                     createFile(path);
                     mappedBytes = mappedFileCache.get(path);
+                }
+                //! There is likewise no deterministic hook between cache acquisition and this pathname recheck.
+                //! A POSIX unlink can leave mappedBytes usable, so strict completion must reject that stale mapping
+                //! before reading or writing EOF rather than report success for an inode no longer in the directory.
+                if (createStrategy == CreateStrategy.REINITIALIZE_EXISTING && !path.isFile()) {
+                    mappedBytes.close();
+                    mappedFileCache.remove(path);
+                    return null;
                 }
                 mappedBytes.singleThreadedCheckDisabled(true);
                 mappedBytes.chunkCount(chunkCount);
@@ -1462,10 +1907,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 wire.pauser(pauserSupplier.get());
                 wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
-                SingleChronicleQueueStore wireStore;
                 try {
                     if (!readOnly && createStrategy == CreateStrategy.CREATE && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
+                        initialisingStore = true;
                         wireStore = storeFactory.apply(that, wire);
 
                         createIndexThenUpdateHeader(wire, cycle, wireStore);
@@ -1479,6 +1924,9 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                             mappedFileCache.remove(path);
 
                             if (!readOnly && createStrategy != CreateStrategy.READ_ONLY && cycleFileRenamed != cycle) {
+                                // Windows cannot rename a mapped file. Closing the bytes/cache can queue
+                                // the unmapping, so finish pending releases before attempting recovery.
+                                BackgroundResourceReleaser.releasePendingResources();
                                 SingleChronicleQueueStore acquired = acquire(cycle, backupCycleFile(cycle, cycleFile));
 
                                 if (acquired == null)
@@ -1502,14 +1950,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         }
                     }
                 } catch (InternalError e) {
-                    long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
-                    String s = Long.toHexString(pos);
-                    System.err.println("pos=" + s);
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
-                        for (String line; (line = br.readLine()) != null; )
-                            if (line.contains(".cq4"))
-                                System.err.println(line);
-                    }
+                    printMappingDiagnostics(mappedBytes, e);
                     throw e;
                 }
                 return wireStore;
@@ -1517,6 +1958,39 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            } catch (RuntimeException | Error e) {
+                if (initialisingStore) {
+                    //! A returned store owns reservations that survive closing its provisional bytes alone.
+                    //! StoreAcquisitionFailureTest#indexFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+                    //! fails "Failed store closes before Queue.close" before fixture cleanup if this close is omitted.
+                    if (wireStore != null)
+                        Closeable.closeQuietly(wireStore);
+                    else
+                        //! A factory failure transfers no store, so the supplier must release its provisional bytes.
+                        //! StoreAcquisitionFailureTest#factoryFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+                        //! fails the zero-bytes-reservation assertion before fixture cleanup if this close is omitted.
+                        Closeable.closeQuietly(mappedBytes);
+                }
+                throw e;
+            }
+        }
+
+        private void printMappingDiagnostics(MappedBytes mappedBytes, InternalError failure) {
+            try {
+                if (mappedBytes.refCount() > 0 && ((Bytes<?>) mappedBytes).bytesStore() != null) {
+                    long pos = ((Bytes<?>) mappedBytes).bytesStore().addressForRead(0);
+                    Jvm.warn().on(SingleChronicleQueue.class, "Mapping diagnostic: pos=" + Long.toHexString(pos));
+                }
+                if (!OS.isLinux())
+                    return;
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
+                    for (String line; (line = br.readLine()) != null; )
+                        if (line.contains(".cq4"))
+                            Jvm.warn().on(SingleChronicleQueue.class, "Mapping diagnostic: " + line);
+                }
+            } catch (IOException | RuntimeException | InternalError diagnosticFailure) {
+                // Diagnostics must not hide the native failure or bypass acquisition cleanup.
+                failure.addSuppressed(diagnosticFailure);
             }
         }
 
@@ -1620,7 +2094,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          * @return a NavigableMap of cycle numbers and their corresponding files
          */
         @NotNull
-        private NavigableMap<Long, File> cycleTree(final boolean force) {
+        private CachedCycleTree cycleTreeSnapshot(final boolean force) {
 
             final File parentFile = path;
 
@@ -1634,13 +2108,37 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
 
                 final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
                 final NavigableMap<Long, File> tree = new TreeMap<>();
+                final NavigableSet<Long> cycles = new TreeSet<>();
 
                 final File[] files = parentFile.listFiles((File file) -> file.getPath().endsWith(SUFFIX));
-                if (files != null)
-                    for (File file : files)
-                        tree.put(dateCache.toLong(file), file);
+                if (files != null) {
+                    for (File file : files) {
+                        final String rollName = fileToText().apply(file);
+                        final int cycle = dateCache.parseCount(rollName);
+                        final String canonicalName = dateCache.resourceFor(cycle).text;
+                        //! StoreAppenderTest#duplicateLogicalCycleFilenameFailsNormalisationWithoutMutation requires
+                        //! every physical name to be the canonical inverse of its parsed Queue cycle. Checking only
+                        //! ordering-key uniqueness lets a coarse custom format map two different dates to one cycle,
+                        //! after which a TreeSet silently omits one file and completion publishes a false cursor.
+                        if (!rollName.equals(canonicalName))
+                            throw new DateTimeException("Non-canonical roll name " + rollName
+                                    + "; cycle " + cycle + " is " + canonicalName);
+                        // Exact canonical inversion makes distinct physical names mapping to one cycle impossible.
+                        cycles.add((long) cycle);
 
-                cachedValue = new CachedCycleTree(directoryModCount, tree);
+                        final long orderingKey = dateCache.toLong(file);
+                        //! Canonical roll names are one-to-one for supported formats, so no current test can reach
+                        //! this second duplicate-key guard after the cycle/name checks above. Retain it for a custom
+                        //! format whose distinct canonical names resolve to one ordering key: silently replacing a
+                        //! physical generation would make tailing and completion disagree about that position.
+                        final File previous = tree.put(orderingKey, file);
+                        if (previous != null)
+                            throw new IllegalStateException("Roll files resolve to the same ordering key "
+                                    + orderingKey + ": " + previous + " and " + file);
+                    }
+                }
+
+                cachedValue = new CachedCycleTree(directoryModCount, tree, cycles);
 
                 while (true) {
                     final CachedCycleTree existing = cachedTree.get();
@@ -1656,7 +2154,25 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 }
             }
 
-            return cachedValue.cachedCycleTree;
+            return cachedValue;
+        }
+
+        @NotNull
+        private NavigableMap<Long, File> cycleTree(final boolean force) {
+            return cycleTreeSnapshot(force).cachedCycleTree;
+        }
+
+        private NavigableSet<Long> freshPhysicalCycles() {
+            return new TreeSet<>(cycleTreeSnapshot(true).cachedCycles);
+        }
+
+        private void evictCycleMapping(int cycle) {
+            //! No deterministic cross-platform test can replace a roll pathname between the physical snapshot and
+            //! cache lookup. Evict before strict reacquisition so a recreated pathname cannot resolve to the former
+            //! inode's cached mapping; sealing that mapping would falsely certify a generation not present in the
+            //! snapshot. StoreAppenderTest#currentMappedGenerationDisappearingAfterEnumerationDoesNotAdvanceCursor
+            //! separately discriminates bypassing WireStorePool's same-cycle oldStore shortcut.
+            mappedFileCache.remove(dateCache.resourceFor(cycle).path);
         }
 
         /**
@@ -1738,12 +2254,23 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
         public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) {
             throwExceptionIfClosed();
 
-            final NavigableMap<Long, File> tree = cycleTree(false);
-            final Long lowerKey = toKey(lowerCycle, "lowerCycle");
-            final Long upperKey = toKey(upperCycle, "upperCycle");
-            assert lowerKey != null;
-            assert upperKey != null;
-            return tree.subMap(lowerKey, true, upperKey, true).navigableKeySet();
+            //! StoreAppenderTest#dailyNonZeroEpochEnumeratesCycleZero,
+            //! #hourlyNonZeroEpochEnumeratesCycleZero and #weeklyNonZeroEpochEnumeratesCycleZero require this public
+            //! supplier contract to return Queue cycle numbers. The tree keys are absolute time buckets used only
+            //! for ordering; filtering by those keys can also exclude a non-canonical alias before validation.
+            //! Return the validated logical-cycle subset instead.
+            final NavigableSet<Long> cycles = cycleTreeSnapshot(false).cachedCycles;
+            final NavigableSet<Long> selected = new TreeSet<>(
+                    cycles.subSet((long) lowerCycle, true, (long) upperCycle, true));
+            //! SingleChronicleQueueTest#testCountExceptsWithRubbishData covers initially absent endpoints, while
+            //! StoreAppenderTest#cachedCycleEnumerationRejectsDeletedBoundaries requires action-time pathname checks
+            //! even when modCount has not invalidated this cached set. Membership alone would return a deleted
+            //! physical boundary as a valid count range. These checks are outside the ordinary append hot path.
+            if (!selected.contains((long) lowerCycle) || !dateCache.resourceFor(lowerCycle).path.exists())
+                throw new IllegalStateException("file not found for lowerCycle=" + lowerCycle);
+            if (!selected.contains((long) upperCycle) || !dateCache.resourceFor(upperCycle).path.exists())
+                throw new IllegalStateException("file not found for upperCycle=" + upperCycle);
+            return selected;
         }
 
         /**
@@ -1760,18 +2287,5 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             return !store.isClosed() && cycle >= directoryListing.getMinCreatedCycle() && cycle <= directoryListing.getMaxCreatedCycle();
         }
 
-        /**
-         * Converts a cycle number to a key used in the cycle tree.
-         *
-         * @param cyle the cycle number
-         * @param m    the label to use in case of an error
-         * @return the key for the cycle tree
-         */
-        private Long toKey(int cyle, String m) {
-            final File file = dateCache.resourceFor(cyle).path;
-            if (!file.exists())
-                throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
-            return dateCache.toLong(file);
-        }
     }
 }

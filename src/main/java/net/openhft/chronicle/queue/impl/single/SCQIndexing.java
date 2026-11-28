@@ -14,7 +14,6 @@ import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.scoped.ScopedResource;
 import net.openhft.chronicle.core.threads.CleaningThreadLocal;
-import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
@@ -25,10 +24,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
 import java.io.UncheckedIOException;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.function.Function;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.core.io.Closeable.closeQuietly;
@@ -55,24 +52,19 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     private final LongValue index2Index;
     private final Supplier<LongArrayValues> longArraySupplier;
     @NotNull
-    private final ThreadLocal<WeakReference<LongArrayValuesHolder>> index2indexArray;
+    private final ThreadLocal<LongArrayValuesHolder> index2indexArray;
     @NotNull
-    private final ThreadLocal<WeakReference<LongArrayValuesHolder>> indexArray;
+    private final ThreadLocal<LongArrayValuesHolder> indexArray;
     @NotNull
     private final WriteMarshallable index2IndexTemplate;
     @NotNull
     private final WriteMarshallable indexTemplate;
-    /**
-     * Extracted as field to prevent lambda creation on every method reference pass.
-     */
-    private final Function<Supplier<LongArrayValues>, LongArrayValuesHolder> arrayValuesSupplierCall = this::newLogArrayValuesHolder;
-
     LongValue writePosition;
-    Sequence sequence;
+    RollCycleEncodeSequence sequence;
     // visible for testing
     int linearScanCount;
     int linearScanByPositionCount;
-    Collection<Closeable> closeables = new ArrayList<>();
+    final Collection<Closeable> closeables = ConcurrentHashMap.newKeySet();
     private long lastScannedIndex = -1;
 
     /**
@@ -121,8 +113,11 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         this.index2Index = index2Index;
         this.nextEntryToBeIndexed = nextEntryToBeIndexed;
         this.longArraySupplier = longArraySupplier;
-        this.index2indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
-        this.indexArray = CleaningThreadLocal.withCleanup(wr -> Closeable.closeQuietly(wr.get()));
+        // A collected holder must not leave its reserved view behind and create another on lookup.
+        // Capture the view collection, not this indexing owner, in thread cleanup callbacks.
+        Collection<Closeable> ownedViews = closeables;
+        this.index2indexArray = CleaningThreadLocal.withCleanup(h -> releaseHolder(ownedViews, h));
+        this.indexArray = CleaningThreadLocal.withCleanup(h -> releaseHolder(ownedViews, h));
         this.index2IndexTemplate = w -> w.writeEventName("index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName("index").int64array(indexCount);
         singleThreadedCheckDisabled(true);
@@ -139,13 +134,13 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     // Fetches the index-to-index array from thread-local storage.
     @NotNull
     private LongArrayValuesHolder getIndex2IndexArray() {
-        return ThreadLocalHelper.getTL(index2indexArray, longArraySupplier, arrayValuesSupplierCall);
+        return getOrCreate(index2indexArray);
     }
 
     // Fetches the index array from thread-local storage.
     @NotNull
     private LongArrayValuesHolder getIndexArray() {
-        return ThreadLocalHelper.getTL(indexArray, longArraySupplier, arrayValuesSupplierCall);
+        return getOrCreate(indexArray);
     }
 
     public long toAddress0(long index) {
@@ -172,21 +167,27 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         closeQuietly(index2Index, nextEntryToBeIndexed);
         closeQuietly(closeables);
         closeables.clear();
-        // Eagerly clean up the contents of thread locals but only for this thread.
-        // The contents of the thread local for other threads will be cleaned up in
-        // MappedFile.performRelease
-        closeTL(indexArray);
-        closeTL(index2indexArray);
+        // Other threads may retain a closed holder until their normal thread-local cleanup.
+        // Its mapped view has already been released above.
+        indexArray.remove();
+        index2indexArray.remove();
     }
 
-    // Helper method to close a thread-local LongArrayValuesHolder.
-    private void closeTL(ThreadLocal<WeakReference<LongArrayValuesHolder>> tl) {
-        WeakReference<LongArrayValuesHolder> weakReference = tl.get();
-        if (weakReference == null)
-            return;
-        LongArrayValuesHolder holder = weakReference.get();
-        if (holder != null)
+    private static void releaseHolder(Collection<Closeable> ownedViews, LongArrayValuesHolder holder) {
+        if (holder != null) {
             closeQuietly(holder.values());
+            ownedViews.remove(holder.values());
+        }
+    }
+
+    private LongArrayValuesHolder getOrCreate(ThreadLocal<LongArrayValuesHolder> tl) {
+        LongArrayValuesHolder holder = tl.get();
+        if (holder == null) {
+            throwExceptionIfClosed();
+            holder = newLogArrayValuesHolder(longArraySupplier);
+            tl.set(holder);
+        }
+        return holder;
     }
 
     /**
@@ -498,7 +499,7 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
 
         // optimized if the `toIndex` is the last sequence
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
+        long lastIndex = this.sequence.getSequenceAt(lastAddress);
         if (toIndex == lastIndex) {
             assert (lastAddress >= knownAddress && lastIndex >= fromKnownIndex);
             knownAddress = lastAddress;
@@ -565,8 +566,18 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                               final long indexOfNext,
                               final long startAddress,
                               boolean inclusive) throws EOFException {
+        return linearScanByPosition(wire, toPosition, indexOfNext, startAddress, inclusive, true);
+    }
+
+    private long linearScanByPosition(@NotNull final Wire wire,
+                                      final long toPosition,
+                                      final long indexOfNext,
+                                      final long startAddress,
+                                      boolean inclusive,
+                                      boolean useLastSequenceShortcut) throws EOFException {
         long start = REPORT_LINEAR_SCAN ? System.nanoTime() : 0;
-        long index = linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive);
+        long index = linearScanByPosition0(
+                wire, toPosition, indexOfNext, startAddress, inclusive, useLastSequenceShortcut);
         if (REPORT_LINEAR_SCAN) {
             printLinearScanTime(index, startAddress, start, "linearScan by position");
         }
@@ -591,16 +602,28 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
                                long indexOfNext,
                                long startAddress,
                                boolean inclusive) throws EOFException {
+        return linearScanByPosition0(wire, toPosition, indexOfNext, startAddress, inclusive, true);
+    }
+
+    private long linearScanByPosition0(@NotNull final Wire wire,
+                                       final long toPosition,
+                                       long indexOfNext,
+                                       long startAddress,
+                                       boolean inclusive,
+                                       boolean useLastSequenceShortcut) throws EOFException {
         linearScanByPositionCount++;
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
-        long i;
-
-        // Optimized path if the `toPosition` is the last written position.
         long lastAddress = writePosition.getVolatileValue();
-        long lastIndex = this.sequence.getSequence(lastAddress);
-
-        i = calculateInitialValue(toPosition, indexOfNext, startAddress, bytes, lastAddress, lastIndex);
+        if (useLastSequenceShortcut && lastAddress > startAddress && (toPosition == lastAddress || toPosition == Long.MAX_VALUE)) {
+            long lastIndex = sequence.getSequenceAt(lastAddress, startAddress, indexOfNext);
+            if (lastIndex >= 0) {
+                startAddress = lastAddress;
+                indexOfNext = lastIndex;
+            }
+        }
+        bytes.readPositionUnlimited(startAddress);
+        long i = indexOfNext - 1;
 
         // Scan through the entries until the target position is found or exceeded.
         while (bytes.readPosition() <= toPosition) {
@@ -652,29 +675,6 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     }
 
     /**
-     * Calculates the initial index value to start scanning from, based on whether
-     * the target position is the last written position or a known earlier position.
-     *
-     * @param toPosition   The target position in the wire.
-     * @param indexOfNext  The index of the next known entry.
-     * @param startAddress The starting address for the scan.
-     * @param bytes        The bytes object associated with the wire.
-     * @param lastAddress  The address of the last written entry.
-     * @param lastIndex    The index of the last written entry.
-     * @return The starting index for the scan.
-     */
-    private long calculateInitialValue(long toPosition, long indexOfNext, long startAddress, Bytes<?> bytes, long lastAddress, long lastIndex) {
-        if (lastAddress > 0 && toPosition == lastAddress
-                && lastIndex != Sequence.NOT_FOUND && lastIndex != Sequence.NOT_FOUND_RETRY) {
-            bytes.readPositionUnlimited(toPosition);
-            return lastIndex - 1;
-        } else {
-            bytes.readPositionUnlimited(startAddress);
-            return indexOfNext - 1;
-        }
-    }
-
-    /**
      * Throws an exception if an index is requested for an entry that hasn't been written yet.
      *
      * @param toPosition   The target position in the wire.
@@ -723,9 +723,27 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
     long sequenceForPosition(@NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive) throws StreamCorruptedException {
+        //! Sequence lookup is Queue-internal and must remain available while public mutable-Wire
+        //! access is rejected; ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
+        //! exercises this indexing work during listener-backed publication.
+        return sequenceForPosition(wireForIndex(ec), position, inclusive, true);
+    }
+
+    long sequenceForPositionWithoutSequenceShortcut(@NotNull Wire wire,
+                                                     final long position,
+                                                     boolean inclusive) throws StreamCorruptedException {
+        //! StoreAppenderTest#exactPreflightRejectsStaleAliasingEncodedSequence requires exact preflight to use the
+        //! sparse index but not the usual last-position shortcut. That shortcut trusts the lossy paired sequence, so
+        //! a crash can make an older aliased pair validate a newer full write position and misclassify exact-next.
+        return sequenceForPosition(wire, position, inclusive, false);
+    }
+
+    private long sequenceForPosition(@NotNull Wire wire,
+                                     final long position,
+                                     boolean inclusive,
+                                     boolean useLastSequenceShortcut) throws StreamCorruptedException {
         long indexOfNext = 0;
         long lastKnownAddress = 0;
-        @NotNull Wire wire = ec.wireForIndex();
         try {
             final LongArrayValues index2indexArr = getIndex2index(wire);
             int used2 = getUsedAsInt(index2indexArr);
@@ -773,7 +791,8 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
         try {
             // Perform a linear scan if no exact match is found.
-            return linearScanByPosition(wire, position, indexOfNext, lastKnownAddress, inclusive);
+            return linearScanByPosition(
+                    wire, position, indexOfNext, lastKnownAddress, inclusive, useLastSequenceShortcut);
         } catch (EOFException e) {
             throw new UncheckedIOException(e);
         }
@@ -877,7 +896,10 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             return;
         }
 
-        Wire wire = ec.wireForIndex();
+        //! Index publication must use the private appender view so the callback guard protects only
+        //! callers, not Queue internals; ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter
+        //! fails if publication re-enters StoreAppender#wireForIndex().
+        Wire wire = wireForIndex(ec);
         Bytes<?> bytes = wire.bytes();
         if (position > bytes.capacity())
             throw new IllegalArgumentException("pos: " + position);
@@ -962,20 +984,28 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
             throws StreamCorruptedException {
         throwExceptionIfClosed();
 
-        Sequence sequence1 = this.sequence;
+        RollCycleEncodeSequence sequence1 = this.sequence;
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
                 long address = writePosition.getVolatileValue(0);
+                //! eosOnlyRestartPreservesReadySequenceZeroBeforeOrdinaryAppend reproduces the address-zero crash
+                //! where ready data reaches storage before writePosition. Returning empty here loses that record;
+                //! the existing physical scan can classify it without attempting general index repair.
+                //! restartScansCommittedRecordAfterSparseIndexPublicationWasLost is integration evidence for the
+                //! pre-existing non-zero-address scan and deliberately does not claim this changed branch.
                 if (address == 0)
-                    return -1;
-                long sequence = sequence1.getSequence(address);
+                    break;
+                long sequence = sequence1.getSequenceAt(address);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
                 if (sequence == Sequence.NOT_FOUND)
                     break;
                 try {
-                    Wire wireForIndex = ec.wireForIndex();
+                    //! ContextListenerCoreTest#notifiesEachAppenderWithItsOwnContextOncePerRoll and
+                    //! #sequentialResetsPreserveAutomaticClosesForAppenderListener fail if this fallback re-enters
+                    //! the guarded public accessor while another listener record uses the held Queue write lock.
+                    Wire wireForIndex = wireForIndex(ec);
                     return wireForIndex == null ? sequence : linearScanByPosition(wireForIndex, Long.MAX_VALUE, sequence, address, true);
                 } catch (EOFException e) {
                     throw new UncheckedIOException(e);
@@ -984,6 +1014,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         }
 
         return sequenceForPosition(ec, Long.MAX_VALUE, false);
+    }
+
+    private static Wire wireForIndex(@NotNull ExcerptContext context) {
+        //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter mutation-fails
+        //! if Queue's internal index publication re-enters the guarded public appender wire accessor.
+        return context instanceof StoreAppender
+                ? ((StoreAppender) context).wireForIndexInternal()
+                : context.wireForIndex();
     }
 
     /**
@@ -1015,14 +1053,14 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
      * @return The last sequence number, or {@code -1} if it cannot be determined.
      */
     public long moveToEnd(final Wire wire) {
-        Sequence sequence1 = this.sequence;
+        RollCycleEncodeSequence sequence1 = this.sequence;
         if (sequence1 != null) {
             for (int i = 0; i < 128; i++) {
 
                 long endAddress = writePosition.getVolatileValue(0);
                 if (endAddress == 0)
                     return -1;
-                long sequence = sequence1.getSequence(endAddress);
+                long sequence = sequence1.getSequenceAt(endAddress);
                 if (sequence == Sequence.NOT_FOUND_RETRY)
                     continue;
                 if (sequence == Sequence.NOT_FOUND)

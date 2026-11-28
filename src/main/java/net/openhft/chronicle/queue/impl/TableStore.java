@@ -52,6 +52,21 @@ public interface TableStore<T extends Metadata> extends CommonStore, ManagedClos
     LongValue acquireValueFor(CharSequence key, long defaultValue);
 
     /**
+     * Looks up an existing key without creating metadata. The caller owns the returned binding.
+     * Use the structural file lock when another writer may register keys concurrently.
+     * Existing table-store key matching remains case-insensitive.
+     *
+     * @param key key to look up
+     * @return a closeable mapped value, or null if absent
+     * @throws UnsupportedOperationException when this store does not support passive lookup
+     */
+    default LongValue getValueFor(CharSequence key) {
+        //! A default preserves specialised implementations; maintenance must fail explicitly
+        //! rather than creating a missing key merely to inspect it.
+        throw new UnsupportedOperationException("Passive lookup is not supported");
+    }
+
+    /**
      * Iterates over each key in the table store and applies the given {@link TableStoreIterator} on it.
      *
      * @param <A>          the type of the accumulator

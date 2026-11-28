@@ -62,6 +62,30 @@ public class RollCycleEncodeSequenceTest extends QueueTestCommon {
     }
 
     @Test
+    public void writerAdvancingByFourGiBInvalidatesTheCapturedPosition() {
+        long captured = 128;
+        longValue.setOrderedValue(captured);
+        rollCycleEncodeSequence.setSequence(1, captured);
+        assertEquals(1, rollCycleEncodeSequence.getSequenceAt(captured));
+
+        long advanced = captured + (1L << 32);
+        longValue.setOrderedValue(advanced);
+        rollCycleEncodeSequence.setSequence(2, advanced);
+        assertEquals(2, rollCycleEncodeSequence.getSequence(captured));
+        assertEquals(Sequence.NOT_FOUND_RETRY, rollCycleEncodeSequence.getSequenceAt(captured));
+    }
+
+    @Test
+    public void trackerBeforeTheIndexedRecordCannotIdentifyTheTail() {
+        long stale = 128;
+        long tail = stale + (1L << 32);
+        longValue.setOrderedValue(tail);
+        rollCycleEncodeSequence.setSequence(1, stale);
+        assertEquals(1, rollCycleEncodeSequence.getSequence(tail));
+        assertEquals(Sequence.NOT_FOUND, rollCycleEncodeSequence.getSequenceAt(tail, tail - 32, 2));
+    }
+
+    @Test
     public void setGet() {
         int sequenceInitial = 0xb;
         int position = 0x40284;

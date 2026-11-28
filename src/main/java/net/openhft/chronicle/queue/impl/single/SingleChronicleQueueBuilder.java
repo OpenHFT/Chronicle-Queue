@@ -91,6 +91,9 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private BufferMode readBufferMode = BufferMode.None;
     private WireType wireType = WireType.BINARY_LIGHT;
     private Long blockSize;
+    // Wire honours transient independently of java.io.Serializable; do not serialise this local test setting.
+    @SuppressWarnings("java:S2065")
+    private final transient long testBlockSizeCap = TestBlockSizeCap.configured();
     private File path;
     private RollCycle rollCycle;
     private Long epoch; // default is 1970-01-01 00:00:00.000 UTC
@@ -139,6 +142,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
     private Function<SingleChronicleQueue, Condition> createAppenderConditionCreator;
     private long forceDirectoryListingRefreshIntervalMs = 60_000;
     private AppenderListener appenderListener;
+    //! ContextListenerCoreTest#writesContextBeforeDataAndAllowsRetainingWriter and
+    //! #listenerRemainsCallerOwned require builder registration to retain the writer contract and
+    //! caller-owned callback until the Queue creates independent appender lifecycle state.
+    @Nullable
+    private Class<?> contextListenerWriterType;
+    @Nullable
+    private MarshallableOut.ContextListener<?> contextListener;
     private SyncMode syncMode;
 
     protected SingleChronicleQueueBuilder() {
@@ -194,11 +204,14 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 throw new IllegalArgumentException("Invalid file type: " + file.getName());
             }
 
+            File parent = file.getParentFile();
+            // A bare filename has no parent component and refers to the current directory.
+            File directory = parent == null ? new File(".") : parent;
             Jvm.warn().on(SingleChronicleQueueBuilder.class,
                     "Queues should be configured with the queue directory, not a specific filename. Actual file used: "
-                            + file.getParentFile());
+                            + directory);
 
-            result.path(file.getParentFile());
+            result.path(directory);
         } else {
             result.path(file);
         }
@@ -285,8 +298,20 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
                 queue.indexCount(),
                 queue.indexSpacing());
 
-        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
-        return wireStore;
+        //! Until header serialization succeeds, the builder owns the store; any Throwable must release it.
+        //! Otherwise its reservations leak; closing a successful return instead breaks caller ownership.
+        //! StoreAcquisitionFailureTest#headerFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer and
+        //! StoreAcquisitionFailureTest#checkedHeaderFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+        //! assert original failure identity, release before Queue.close and live successful transfer.
+        boolean failed = true;
+        try {
+            wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+            failed = false;
+            return wireStore;
+        } finally {
+            if (failed)
+                Closeable.closeQuietly(wireStore);
+        }
     }
 
     /**
@@ -370,7 +395,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     @NotNull
     public SingleChronicleQueue build() {
+        if (testBlockSizeCap > 0)
+            blockSize(); // Reject invalid test geometry before opening metadata.
         preBuild();
+        //! ContextListenerCoreTest#validatesModesLoadedDuringPreBuildAndClosesMetadata requires the
+        //! compatibility decision after persisted/enterprise configuration has been loaded but
+        //! before a Queue can expose an unsupported listener/output combination.
+        validateContextListenerCompatibility();
 
         SingleChronicleQueue chronicleQueue;
 
@@ -382,8 +413,28 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             chronicleQueue = new SingleChronicleQueue(this);
 
         postBuild(chronicleQueue);
+        if (testBlockSizeCap > 0)
+            Jvm.startup().on(getClass(), "Test block-size cap=" + testBlockSizeCap
+                    + " bytes, effective blockSize=" + chronicleQueue.blockSize()
+                    + " bytes for " + path());
 
         return chronicleQueue;
+    }
+
+    private void validateContextListenerCompatibility() {
+        if (contextListener == null)
+            return;
+        //! validatesModesLoadedDuringPreBuildAndClosesMetadata requires validation after preBuild
+        //! and requires the metadata mapping to close when persisted settings make the mode invalid.
+        try {
+            SingleChronicleQueue.validateContextListenerCompatibility(
+                    key != null || encodingSupplier != null,
+                    writeBufferMode() == BufferMode.Asynchronous,
+                    doubleBuffer());
+        } catch (RuntimeException incompatible) {
+            Closeable.closeQuietly(metaStore);
+            throw incompatible;
+        }
     }
 
     /**
@@ -511,12 +562,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Sets the roll time for the queue using the provided {@link LocalTime}.
+     * Uses UTC when no roll time zone has been configured.
      *
      * @param rollTime the roll time to set
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder rollTime(@NotNull final LocalTime rollTime) {
-        rollTime(rollTime, rollTimeZone);
+        rollTime(rollTime, rollTimeZone == null ? ZoneId.of("UTC") : rollTimeZone);
         return this;
     }
 
@@ -531,12 +583,13 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
     /**
      * Sets the roll time zone for the queue using the provided {@link ZoneId}.
+     * Uses midnight when no roll time has been configured.
      *
      * @param rollTimeZone the time zone to set
      * @return the current builder instance for method chaining
      */
     public SingleChronicleQueueBuilder rollTimeZone(@NotNull final ZoneId rollTimeZone) {
-        rollTime(rollTime, rollTimeZone);
+        rollTime(rollTime == null ? LocalTime.MIDNIGHT : rollTime, rollTimeZone);
         return this;
     }
 
@@ -614,7 +667,8 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
             // the code is slightly brutal and crude but should work for most cases. It will NOT work if files were created with
             // the following cycles: LARGE_HOURLY_SPARSE LARGE_HOURLY_XSPARSE LARGE_DAILY XLARGE_DAILY HUGE_DAILY HUGE_DAILY_XSPARSE
             // for such cases user MUST use correct roll cycle when creating the queue
-            String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX));
+            String[] list = path.list((d, name) -> name.endsWith(SingleChronicleQueue.SUFFIX)
+                    && new File(d, name).isFile());
             if (list != null && list.length > 0) {
                 // Try to match the roll cycle by parsing the filename against known roll cycles
                 String filename = list[0];
@@ -919,7 +973,7 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
 
         // can add an index2index & an index in one go.
         long minSize = Math.max(SMALL_BLOCK_SIZE, 32L * indexCount());
-        return Math.max(minSize, bs);
+        return TestBlockSizeCap.apply(bs, minSize, testBlockSizeCap);
     }
 
     /**
@@ -1617,6 +1671,26 @@ public class SingleChronicleQueueBuilder extends SelfDescribingMarshallable impl
      */
     public AppenderListener appenderListener() {
         return appenderListener;
+    }
+
+    /**
+     * Sets the default context listener for appenders created by this queue.
+     * The caller retains ownership of the listener.
+     *
+     * @see ExcerptAppender#contextListener(Class, MarshallableOut.ContextListener)
+     */
+    public <T> SingleChronicleQueueBuilder contextListener(@NotNull Class<T> writerType,
+                                                            @NotNull MarshallableOut.ContextListener<? super T> listener) {
+        //! ContextListenerCoreTest#listenerRemainsCallerOwned requires configuration to retain but
+        //! never close the caller-owned listener.
+        contextListenerWriterType = requireNonNull(writerType, "writerType");
+        contextListener = requireNonNull(listener, "listener");
+        return this;
+    }
+
+    @NotNull
+    ContextListenerState contextListenerState() {
+        return new ContextListenerState(contextListenerWriterType, contextListener);
     }
 
     /**

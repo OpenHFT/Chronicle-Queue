@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.internal.main;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.core.util.Time;
@@ -63,41 +64,23 @@ public final class InternalPingPongMain {
         Histogram readDelay = new Histogram();
         Histogram readDelay2 = new Histogram();
         try (ChronicleQueue queue = createQueue(path)) {
+            runPingPong(queue, size, readDelay, readDelay2);
+        }
+        System.out.println("read delay: " + readDelay.toMicrosFormat());
+        System.out.println("read delay2: " + readDelay2.toMicrosFormat());
+        // Closing Queue can defer unmapping; Windows cannot delete mapped roll files.
+        BackgroundResourceReleaser.releasePendingResources();
+        IOTools.deleteDirWithFiles(path, 2);
+    }
 
-            Thread reader = new Thread(() -> {
-                ExcerptTailer tailer = queue.createTailer();
-                while (running.get()) {
-                    //noinspection StatementWithEmptyBody
-                    while (readCount.get() == writeCount.get()) ;
-
-                    long wakeTime = System.nanoTime();
-                    while (running.get()) {
-                        try (DocumentContext dc = tailer.readingDocument(true)) {
-                            if (!dc.isPresent())
-                                continue;
-                        }
-                        break;
-                    }
-                    final long delay = wakeTime - writeTime.get();
-                    final long time = System.nanoTime() - wakeTime;
-                    readDelay2.sample(time);
-                    readDelay.sample(delay);
-                    if (time + delay > 20_000)
-                        System.out.println("td " + delay + " + " + time);
-                    if (readCount.get() == 100000) {
-                        System.out.println("reset");
-                        readDelay.reset();
-                        readDelay2.reset();
-                    }
-                    readCount.incrementAndGet();
-                }
-            });
-            reader.setDaemon(true);
-            reader.start();
+    private static void runPingPong(ChronicleQueue queue, int size, Histogram readDelay, Histogram readDelay2) {
+        Thread reader = new Thread(() -> readPingPong(queue, readDelay, readDelay2));
+        reader.setDaemon(true);
+        reader.start();
+        try (ExcerptAppender appender = queue.createAppender()) {
             Jvm.pause(100);
 
             final long finish = System.currentTimeMillis() + runtime * 1000L;
-            final ExcerptAppender appender = queue.createAppender(); // NOSONAR
             while (System.currentTimeMillis() < finish) {
                 if (readCount.get() < writeCount.get()) {
                     Thread.yield();
@@ -109,11 +92,60 @@ public final class InternalPingPongMain {
                 writeCount.incrementAndGet();
                 writeTime.set(System.nanoTime());
             }
-            running.set(false);
+        } finally {
+            stopReader(reader);
         }
-        System.out.println("read delay: " + readDelay.toMicrosFormat());
-        System.out.println("read delay2: " + readDelay2.toMicrosFormat());
-        IOTools.deleteDirWithFiles(path, 2);
+    }
+
+    private static void readPingPong(ChronicleQueue queue, Histogram readDelay, Histogram readDelay2) {
+        try (ExcerptTailer tailer = queue.createTailer()) {
+            while (running.get()) {
+                //noinspection StatementWithEmptyBody
+                while (running.get() && readCount.get() == writeCount.get()) ;
+
+                long wakeTime = System.nanoTime();
+                if (!readNextDocument(tailer))
+                    return;
+                final long delay = wakeTime - writeTime.get();
+                final long time = System.nanoTime() - wakeTime;
+                readDelay2.sample(time);
+                readDelay.sample(delay);
+                if (time + delay > 20_000)
+                    System.out.println("td " + delay + " + " + time);
+                if (readCount.get() == 100000) {
+                    System.out.println("reset");
+                    readDelay.reset();
+                    readDelay2.reset();
+                }
+                readCount.incrementAndGet();
+            }
+        }
+    }
+
+    private static boolean readNextDocument(ExcerptTailer tailer) {
+        while (running.get()) {
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                if (dc.isPresent())
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    // Restore the interrupt after joining so that a retry can wait for the reader.
+    @SuppressWarnings("java:S2142")
+    static void stopReader(Thread reader) {
+        running.set(false);
+        boolean interrupted = false;
+        while (reader.isAlive()) {
+            try {
+                reader.join();
+            } catch (InterruptedException e) {
+                interrupted = true;
+            }
+        }
+        if (interrupted)
+            Thread.currentThread().interrupt();
     }
 
     /**

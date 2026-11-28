@@ -71,6 +71,21 @@ public class SingleChronicleQueueBuilderTest extends QueueTestCommon {
     }
 
     @Test
+    public void shouldDetermineQueueDirectoryFromBareQueueFilename() throws IOException {
+        expectException("Queues should be configured with the queue directory, not a specific filename");
+        Path created = Files.createTempFile(Paths.get("."), "queue-parent-", SingleChronicleQueue.SUFFIX);
+        try {
+            File queueFile = created.getFileName().toFile();
+            assertNull(queueFile.getParentFile());
+            SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.binary(queueFile);
+            assertNotNull("A bare queue filename must resolve to the current directory", builder.path());
+            assertEquals(new File(".").getCanonicalFile(), builder.path().getCanonicalFile());
+        } finally {
+            Files.delete(created);
+        }
+    }
+
+    @Test
     public void shouldThrowExceptionIfQueuePathIsFileWithIncorrectExtension() throws IOException {
         final File tempFile = File.createTempFile(SingleChronicleQueueBuilderTest.class.getSimpleName(), ".txt");
         tempFile.deleteOnExit();

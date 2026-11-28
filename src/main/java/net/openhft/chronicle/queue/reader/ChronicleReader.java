@@ -654,6 +654,15 @@ public class ChronicleReader implements Reader {
         tailer.direction(originalDirection);
     }
 
+    private int comparePreservingKey(Wire entry, Wire key) {
+        long position = key.bytes().readPosition();
+        try {
+            return binarySearch.compare(entry, key);
+        } finally {
+            key.bytes().readPosition(position);
+        }
+    }
+
     /**
      * In the event the matched value is repeated, move to the first instance of it, taking into account traversal
      * direction
@@ -671,7 +680,7 @@ public class ChronicleReader implements Reader {
                 if (!dc.isPresent())
                     break;
                 try {
-                    if (binarySearch.compare(dc.wire(), key) == 0)
+                    if (comparePreservingKey(dc.wire(), key) == 0)
                         indexToMoveTo = dc.index();
                     else
                         break;
@@ -700,8 +709,8 @@ public class ChronicleReader implements Reader {
                 if (!dc.isPresent())
                     break;
                 try {
-                    if ((tailer.direction() == TailerDirection.FORWARD && binarySearch.compare(dc.wire(), key) >= 0)
-                            || (tailer.direction() == BACKWARD && binarySearch.compare(dc.wire(), key) <= 0)) {
+                    if ((tailer.direction() == TailerDirection.FORWARD && comparePreservingKey(dc.wire(), key) >= 0)
+                            || (tailer.direction() == BACKWARD && comparePreservingKey(dc.wire(), key) <= 0)) {
                         indexToMoveTo = dc.index();
                         break;
                     }

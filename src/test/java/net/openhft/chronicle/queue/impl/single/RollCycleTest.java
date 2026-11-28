@@ -21,12 +21,14 @@ import org.junit.Test;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.queue.rollcycles.TestRollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class RollCycleTest extends QueueTestCommon {
 
@@ -42,43 +44,33 @@ public class RollCycleTest extends QueueTestCommon {
         SetTimeProvider timeProvider = new SetTimeProvider();
         ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder
+        try (ChronicleQueue observedQueue = observer.queue;
+             ChronicleQueue queue = SingleChronicleQueueBuilder
                 .binary(path)
                 .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .timeProvider(timeProvider)
                 .build();
              ExcerptAppender appender = queue.createAppender()) {
-
+            assertFalse(observedQueue.isClosed());
             Thread thread = new Thread(observer);
             thread.start();
+            try {
+                observer.await();
 
-            observer.await();
-
-            // two days pass
-            timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
-
-            appender.writeText("0");
-
-            // allow parallel tailer to finish iteration
-            for (int i = 0; i < 5_000 && observer.documentsRead != 1; i++) {
-                timeProvider.advanceMicros(100);
-                Thread.sleep(1);
+                // two days pass
+                timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
+                appender.writeText("0");
+                observer.awaitDocuments(1);
+            } finally {
+                observer.stopAndJoin(thread);
             }
-
-            thread.interrupt();
-            // the tailer of the observer must stop before the queue close unmaps the store files
-            thread.join(5_000);
             assertFalse("observer did not stop", thread.isAlive());
         }
-
-        assertEquals(1, observer.documentsRead);
-        observer.queue.close();
     }
 
     @Test
     public void newRollCycleIgnored2() throws InterruptedException {
-        finishedNormally = false;
         File path = getTmpDir();
         Assume.assumeFalse("Ignored on hugetlbfs as byte offsets will be different due to page size", PageUtil.isHugePage(path.getAbsolutePath()));
 
@@ -105,6 +97,10 @@ public class RollCycleTest extends QueueTestCommon {
                     timeProvider.advanceMillis(TimeUnit.DAYS.toMillis(2));
                     appender.writeText(Integer.toString(i));
                 }
+                // Let the observer advance before inspecting the settled file lengths.
+                observer.awaitDocuments(1 + cyclesToWrite);
+                assertEquals(1 + cyclesToWrite, observer.documentsRead);
+                awaitBackgroundRelease();
                 assertEquals("" +
                                 "--- !!meta-data #binary\n" +
                                 "header: !STStore {\n" +
@@ -279,21 +275,13 @@ public class RollCycleTest extends QueueTestCommon {
                                 "...\n" +
                                 "# 130660 bytes remaining\n",
                         queue.dump().replaceAll("listing.modCount: \\d+", "listing.modCount: 9"));
-
-                // allow parallel tailer to finish iteration
-                for (int i = 0; i < 5_000 && observer.documentsRead != 1 + cyclesToWrite; i++) {
-                    Thread.sleep(1);
-                }
             } finally {
-                thread.interrupt();
-                // the tailer of the observer must stop before the queue close unmaps the store files
-                thread.join(5_000);
+                observer.stopAndJoin(thread);
             }
 
             assertFalse("observer did not stop", thread.isAlive());
             assertEquals(1 + cyclesToWrite, observer.documentsRead);
         }
-        finishedNormally = true;
     }
 
     @After
@@ -304,7 +292,10 @@ public class RollCycleTest extends QueueTestCommon {
     static class ParallelQueueObserver implements Runnable, StoreFileListener {
         ChronicleQueue queue;
         CountDownLatch progressLatch;
+        final Semaphore completedDocuments = new Semaphore(0);
         volatile int documentsRead;
+        private volatile boolean running = true;
+        private volatile Throwable failure;
 
         ParallelQueueObserver(TimeProvider timeProvider, @NotNull Path path) {
             queue = SingleChronicleQueueBuilder.binary(path.toFile())
@@ -320,27 +311,47 @@ public class RollCycleTest extends QueueTestCommon {
 
         @Override
         public void run() {
-
-            ExcerptTailer tailer = queue.createTailer();
-
-            progressLatch.countDown();
-
-            int lastDocId = -1;
-            while (!Thread.currentThread().isInterrupted()) {
-
-                String readText = tailer.readText();
-                if (readText != null) {
-                    // System.out.println("Read a document " + readText);
-                    documentsRead++;
-                    int docId = Integer.parseInt(readText);
-                    assertEquals(docId, lastDocId + 1);
-                    lastDocId = docId;
+            try (ExcerptTailer tailer = queue.createTailer()) {
+                progressLatch.countDown();
+                int lastDocId = -1;
+                while (running) {
+                    String readText = tailer.readText();
+                    if (readText != null) {
+                        documentsRead++;
+                        int docId = Integer.parseInt(readText);
+                        assertEquals(docId, lastDocId + 1);
+                        lastDocId = docId;
+                        completedDocuments.release();
+                    }
                 }
+            } catch (Throwable observerFailure) {
+                failure = observerFailure;
+            } finally {
+                progressLatch.countDown();
             }
         }
 
         void await() throws InterruptedException {
-            progressLatch.await();
+            assertTrue("observer did not start", progressLatch.await(5, TimeUnit.SECONDS));
+            checkFailure();
+        }
+
+        void stopAndJoin(Thread thread) throws InterruptedException {
+            // Interrupt alone does not establish that a reader has stopped dereferencing its native mapping.
+            // Join before the observer Queue closes, including assertion/failure exits from the test body.
+            running = false;
+            thread.join(10_000);
+            assertFalse("observer must stop before its Queue is closed", thread.isAlive());
+            checkFailure();
+        }
+
+        private void checkFailure() {
+            if (failure != null)
+                throw new AssertionError("Queue observer failed", failure);
+        }
+
+        void awaitDocuments(int count) throws InterruptedException {
+            assertTrue("observer did not read " + count + " documents", completedDocuments.tryAcquire(count, 5, TimeUnit.SECONDS));
         }
 
         public int documentsRead() {
@@ -349,12 +360,10 @@ public class RollCycleTest extends QueueTestCommon {
 
         @Override
         public void onAcquired(int cycle, File file) {
-            // System.out.println("Acquiring " + file);
         }
 
         @Override
         public void onReleased(int cycle, File file) {
-            // System.out.println("Releasing " + file);
         }
     }
 }

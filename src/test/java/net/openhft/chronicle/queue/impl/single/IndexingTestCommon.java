@@ -38,6 +38,11 @@ public class IndexingTestCommon extends QueueTestCommon {
         queuePath = getTmpDir();
         IOTools.deleteDirWithFiles(queuePath);
         queue = createQueueInstance();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                Math.max(SingleChronicleQueueBuilder.SMALL_BLOCK_SIZE, 32L * queue.indexCount()),
+                queue.blockSize(), "fixture mapping budget");
+        org.junit.jupiter.api.Assertions.assertEquals(rollCycle().defaultIndexCount(), queue.indexCount());
+        org.junit.jupiter.api.Assertions.assertEquals(rollCycle().defaultIndexSpacing(), queue.indexSpacing());
         appender = (StoreAppender) queue.createAppender();
         tailer = queue.createTailer();
     }
@@ -51,10 +56,7 @@ public class IndexingTestCommon extends QueueTestCommon {
 
     private SingleChronicleQueue createQueueInstance() {
         return SingleChronicleQueueBuilder.builder()
-                //! These fixtures test indexing across the existing cycles and messages,
-                //! not a 64 MiB initial mapping. Request small chunks to avoid eagerly
-                //! allocating default-sized roll files on Windows. The builder retains
-                //! the index-geometry minimum and grows as larger indexing cases need it.
+                // Start with a small mapping and let it grow as the indexing workload requires.
                 .testBlockSize()
                 .path(queuePath)
                 .timeProvider(timeProvider)

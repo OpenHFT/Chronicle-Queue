@@ -7,6 +7,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.AbstractCloseable;
 import net.openhft.chronicle.core.io.AbstractReferenceCounted;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.onoes.LogLevel;
@@ -23,6 +24,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -36,6 +41,7 @@ import java.util.stream.Stream;
 import static net.openhft.chronicle.core.onoes.LogLevel.DEBUG;
 import static net.openhft.chronicle.core.onoes.LogLevel.PERF;
 
+@ExtendWith(QueueTestCommon.JupiterLifecycle.class)
 public class QueueTestCommon {
     private static final Set<LogLevel> IGNORED_LOG_LEVELS = EnumSet.of(DEBUG, PERF);
     private static final boolean TRACE_TEST_EXECUTION = Jvm.getBoolean("queue.traceTestExecution");
@@ -44,10 +50,14 @@ public class QueueTestCommon {
     private final List<File> tmpDirs = new ArrayList<>();
 
     private ThreadDump threadDump;
+    /** @deprecated Binary compatibility only; verification uses the JUnit outcome. */
+    @Deprecated
     protected boolean finishedNormally;
     protected ExceptionTracker<ExceptionKey> exceptionTracker;
     private Map<ExceptionKey, Integer> recordedExceptions;
     private String diagnosticTestName = getClass().getName();
+    private String currentMethodName;
+    private boolean referenceTracingEnabled;
 
     static {
         System.setProperty("queue.check.index", "true");
@@ -64,6 +74,56 @@ public class QueueTestCommon {
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
 
+    @Rule(order = Integer.MIN_VALUE)
+    public final TestRule resourceLifecycle() {
+        return RuleChain.outerRule(new TestWatcher() {
+            @Override protected void finished(Description description) {
+                resetTestState();
+            }
+        }).around(new Verifier() {
+            @Override protected void verify() {
+                verifySuccessfulTest();
+            }
+        });
+    }
+
+    public static final class JupiterLifecycle implements BeforeEachCallback, AfterEachCallback {
+        @Override
+        public void beforeEach(ExtensionContext context) {
+            QueueTestCommon fixture = fixture(context);
+            fixture.currentMethodName = context.getRequiredTestMethod().getName();
+            fixture.diagnosticTestName = context.getRequiredTestClass().getName() + "." + fixture.currentMethodName;
+            fixture.recordTargetDirContents();
+            fixture.recordDiskSpace();
+            fixture.clearMessageHistory();
+            fixture.enableReferenceTracing();
+            fixture.recordExceptions();
+        }
+
+        @Override
+        public void afterEach(ExtensionContext context) {
+            QueueTestCommon fixture = fixture(context);
+            Throwable failure = attempt(null, fixture::afterChecks);
+            failure = attempt(failure, fixture::checkSpaceUsed);
+            failure = attempt(failure, fixture::deleteTargetDirTestArtifacts);
+            Throwable primary = context.getExecutionException().orElse(null);
+            if (primary == null && failure == null)
+                failure = attempt(null, fixture::verifySuccessfulTest);
+            failure = attempt(failure, fixture::resetTestState);
+            if (failure != null) {
+                if (primary != null && !(primary instanceof org.opentest4j.TestAbortedException))
+                    primary.addSuppressed(failure);
+                else
+                    throw Jvm.rethrow(failure);
+            }
+        }
+
+        private static QueueTestCommon fixture(ExtensionContext context) {
+            return context.getRequiredTestInstances().findInstance(QueueTestCommon.class)
+                    .orElseThrow(() -> new IllegalStateException("Missing Queue test fixture"));
+        }
+    }
+
     @NotNull
     @Rule
     public TestRule watcher = new TestWatcher() {
@@ -76,9 +136,42 @@ public class QueueTestCommon {
                         + description.getClassName() + "."
                         + description.getMethodName()
                 );
+                traceResourceBoundary("start");
             }
         }
+
+        @Override
+        protected void finished(@NotNull Description description) {
+            if (TRACE_TEST_EXECUTION)
+                traceResourceBoundary("finish");
+        }
     };
+
+    /** Fail if Core's bounded drain timed out while a release was still executing. */
+    protected static void awaitBackgroundRelease() {
+        BackgroundResourceReleaser.releasePendingResources();
+        try {
+            AtomicLong pending = (AtomicLong) Jvm.getField(BackgroundResourceReleaser.class, "COUNTER").get(null);
+            org.junit.Assert.assertEquals("Background cleanup did not finish", 0L, pending.get());
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    //! Opt-in boundaries correlate per-process native/mapped samples with the active test.
+    //! Used/committed heap are observations, not per-test ownership or a resource limit.
+    //! Write directly so exception recording does not hide this diagnostic or turn it into a failure.
+    //! Regression: QueueTestCommonResourceTest#boundariesAreOptInAndPreserveFailures
+    //! runs with tracing off and on; it observes output, unchanged primary failures, and recorded warnings.
+    private void traceResourceBoundary(String phase) {
+        Runtime runtime = Runtime.getRuntime();
+        System.out.println("QueueTestExecution phase=" + phase + " timeMs=" + System.currentTimeMillis()
+                + " pid=" + OS.getProcessId() + " test=" + diagnosticTestName
+                + " heapUsed=" + (runtime.totalMemory() - runtime.freeMemory())
+                + " heapCommitted=" + runtime.totalMemory() + " heapMax=" + runtime.maxMemory()
+                + " target=" + OS.getTarget());
+
+    }
 
     private static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
@@ -86,7 +179,7 @@ public class QueueTestCommon {
 
     @NotNull
     protected File getTmpDir() {
-        final String methodName = testName.getMethodName();
+        final String methodName = testName.getMethodName() == null ? currentMethodName : testName.getMethodName();
         String name = methodName == null ? "unknown" : methodName;
         final File tmpDir = DirectoryUtils.tempDir(name + "-" + counter.incrementAndGet());
         tmpDirs.add(tmpDir);
@@ -118,12 +211,7 @@ public class QueueTestCommon {
     public void checkSpaceUsed() {
         long spaceLeft = diskFreeSpace();
         if (freeSpace - spaceLeft > 2L << 30) {
-            //! Free space belongs to the filesystem shared by all test forks and other
-            //! processes. A decrease during this test cannot identify which owner wrote
-            //! the data, so keep the 2 GiB observation as context rather than a failure.
-            //! Agent/build capacity checks must enforce headroom; fixture limits require
-            //! explicitly owned paths. Use stdout because an error/warning handler can
-            //! turn this diagnostic back into a test failure through ExceptionTracker.
+            // Free space is shared across test forks. Write the change to stdout so it cannot fail the warning check.
             System.out.println("Shared filesystem free space decreased by "
                     + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB during "
                     + getClass().getName() + "." + testName.getMethodName()
@@ -135,9 +223,10 @@ public class QueueTestCommon {
         return new File(OS.getTarget()).getFreeSpace();
     }
 
-    @Before
+    /** @deprecated Compatibility bridge; JUnit determines whether verification runs. */
+    @Deprecated
     public void assumeFinishedNormally() {
-        finishedNormally = true;
+        // Existing callers may still invoke this hook. The JUnit lifecycle now determines the outcome.
     }
 
     @Before
@@ -148,6 +237,7 @@ public class QueueTestCommon {
     @Before
     public void enableReferenceTracing() {
         AbstractReferenceCounted.enableReferenceTracing();
+        referenceTracingEnabled = true;
     }
 
     public void assertReferencesReleased() {
@@ -224,7 +314,7 @@ public class QueueTestCommon {
      */
     @After
     public void deleteTargetDirTestArtifacts() {
-        if (HugetlbfsTestUtil.isHugetlbfsAvailable()) {
+        if (targetAllowList != null && HugetlbfsTestUtil.isHugetlbfsAvailable()) {
             String target = OS.getTarget();
             File[] files = new File(target).listFiles();
             if (files == null) {
@@ -250,20 +340,58 @@ public class QueueTestCommon {
     public void afterChecks() {
         // Report before cleanup can fail or exception checking can consume an expected warning.
         reportMethodWriterFallback();
-        preAfter();
+        Throwable failure = attempt(null, this::preAfter);
+        failure = attempt(failure, () -> SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE);
+        failure = attempt(failure, () -> CleaningThread.performCleanup(Thread.currentThread()));
+        // A closed queue may still own mapped files until its queued release runs.
+        failure = attempt(failure, BackgroundResourceReleaser::releasePendingResources);
+        failure = attempt(failure, this::tearDown);
+        if (failure != null)
+            throw Jvm.rethrow(failure);
+    }
+
+    private void verifySuccessfulTest() {
+        Throwable resourceFailure = attempt(null, () -> AbstractCloseable.waitForCloseablesToClose(100));
+        if (referenceTracingEnabled)
+            resourceFailure = attempt(resourceFailure, this::assertReferencesReleased);
+        resourceFailure = attempt(resourceFailure, this::checkThreadDump);
+        // Resource verification can itself emit an expected warning. Collect it before
+        // checking the log, while retaining a logged failure as the primary diagnostic.
+        Throwable failure = exceptionTracker == null ? null : attempt(null, this::checkExceptions);
+        if (failure == null)
+            failure = resourceFailure;
+        else if (resourceFailure != null && resourceFailure != failure)
+            failure.addSuppressed(resourceFailure);
+        if (failure != null)
+            throw Jvm.rethrow(failure);
+    }
+
+    private void resetTestState() {
+        Throwable failure = attempt(null, Jvm::resetExceptionHandlers);
+        if (referenceTracingEnabled)
+            failure = attempt(failure, AbstractReferenceCounted::disableReferenceTracing);
+        referenceTracingEnabled = false;
+        threadDump = null;
+        exceptionTracker = null;
+        recordedExceptions = null;
+        targetAllowList = null;
+        currentMethodName = null;
+        tmpDirs.clear();
         SystemTimeProvider.CLOCK = SystemTimeProvider.INSTANCE;
-        CleaningThread.performCleanup(Thread.currentThread());
+        if (failure != null)
+            throw Jvm.rethrow(failure);
+    }
 
-        // find any discarded resources.
-        AbstractCloseable.waitForCloseablesToClose(100);
-
-        if (finishedNormally) {
-            assertReferencesReleased();
-            checkThreadDump();
-            checkExceptions();
+    private static Throwable attempt(Throwable failure, Runnable action) {
+        try {
+            action.run();
+        } catch (Throwable next) {
+            if (failure == null)
+                return next;
+            if (failure != next)
+                failure.addSuppressed(next);
         }
-
-        tearDown();
+        return failure;
     }
 
     private void reportMethodWriterFallback() {
@@ -309,11 +437,23 @@ public class QueueTestCommon {
     }
 
     protected void tearDown() {
-        // should be able to remove tmp dirs
+        // File deletion follows deferred unmapping. Report every remaining owned path
+        // as a failure: exception tracking has already finished by this point.
+        net.openhft.chronicle.core.io.BackgroundResourceReleaser.releasePendingResources();
+        List<File> remaining = new ArrayList<>();
+        List<AssertionError> failures = new ArrayList<>();
         tmpDirs.forEach(file -> {
-            if (file.exists() && !IOTools.deleteDirWithFiles(file)) {
-                Jvm.error().on(getClass(), "Could not delete tmp dir " + file);
+            try {
+                TestDirectoryCleanup.delete(file.toPath());
+            } catch (AssertionError failure) {
+                remaining.add(file);
+                failures.add(failure);
             }
         });
+        if (!remaining.isEmpty()) {
+            AssertionError failure = new AssertionError("Could not delete owned test directories: " + remaining);
+            failures.forEach(failure::addSuppressed);
+            throw failure;
+        }
     }
 }

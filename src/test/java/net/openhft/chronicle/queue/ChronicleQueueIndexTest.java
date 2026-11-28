@@ -80,8 +80,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
-//            assertFalse(hasEOFAtEndOfFile(file1));
-
             writer2.accept(appender);
 
             // Simulate the end of the day i.e the queue closes the day rolls
@@ -96,7 +94,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
         try (ChronicleQueue queue123 = SingleChronicleQueueBuilder.builder()
                 .path(file).build()) {
             String dump = queue123.dump();
-            // System.out.println(dump);
             return dump.contains(" EOF") && dump.contains("--- !!not-ready-meta-data");
         }
     }
@@ -106,31 +103,36 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
 
         File file1 = getTmpDir();
         file1.deleteOnExit();
+        final SetTimeProvider time = new SetTimeProvider(1_000_000_000L);
+        final int firstCycle = RollCycles.DEFAULT.current(time, 0);
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DEFAULT)
+                .timeProvider(time)
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             Bytes<byte[]> hello_world = Bytes.from("Hello World 1");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 0L), hello_world);
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(firstCycle, 0L), hello_world);
             hello_world.releaseLast();
             hello_world = Bytes.from("Hello World 2");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18264, 1L), hello_world);
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(firstCycle, 1L), hello_world);
             hello_world.releaseLast();
 
             // Simulate the end of the day i.e the queue closes the day rolls
             // (note the change of index from 18264 to 18265)
         }
+        time.advanceMillis(RollCycles.DEFAULT.lengthInMillis());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.builder()
                 .path(file1)
                 .rollCycle(RollCycles.DEFAULT)
+                .timeProvider(time)
                 .build();
              InternalAppender appender = (InternalAppender) queue.createAppender()) {
 
             // add a message for the new day
             Bytes<byte[]> hello_world = Bytes.from("Hello World 3");
-            appender.writeBytes(RollCycles.DEFAULT.toIndex(18265, 0L), hello_world);
+            appender.writeBytes(RollCycles.DEFAULT.toIndex(firstCycle + 1, 0L), hello_world);
             hello_world.releaseLast();
 
             final ExcerptTailer tailer = queue.createTailer();
@@ -171,7 +173,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             for (int j = 0; j < 8; j++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("hello").text(msg + (i++));
-                    // long indexWritten = dc.index();
                 }
                 stp.advanceMillis(1500);
             }
@@ -205,7 +206,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
                 String s5 = dc.wire().read("hello").text();
-                // System.out.println(s5);
                 assertEquals(msg + 4, s5);
             }
         }
@@ -251,8 +251,6 @@ public class ChronicleQueueIndexTest extends QueueTestCommon {
                 }
                 stp.advanceMillis(millis);
             }
-//            System.out.println(queue.dump());
-
             // read all (meta + data)
             List<String> allReads = readKeyed(queue, true);
             assertEquals(Arrays.asList(strings), allReads);
