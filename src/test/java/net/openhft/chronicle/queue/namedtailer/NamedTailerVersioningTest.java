@@ -30,7 +30,6 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
     @Test
     public void nonReplicatedNamedTailerShouldNotCreateVersionInMetdata() {
-        finishedNormally = false;
         File queuePath = getTmpDir();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(queuePath).build();
              ExcerptAppender appender = queue.createAppender();
@@ -46,8 +45,6 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
             LongValue longValue = queue.metaStore().acquireValueFor(String.format(SingleChronicleQueue.INDEX_VERSION_FORMAT, "named_1"));
             assertEquals(Long.MIN_VALUE, longValue.getValue());
             longValue.close();
-
-            finishedNormally = true;
         } finally {
             IOTools.deleteDirWithFiles(queuePath);
         }
@@ -59,7 +56,7 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
 
         // Copy the data from src/test/resources
         Path templatePath = Paths.get(this.getClass().getResource("/named-tailer/5.25ea1-backwards-compat").toURI());
-        Path targetPath = Paths.get(OS.getTarget()).resolve(templatePath.getFileName());
+        Path targetPath = getTmpDir().toPath();
         copyFolder(templatePath, targetPath);
 
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.builder().path(targetPath).build();
@@ -82,6 +79,12 @@ public class NamedTailerVersioningTest extends QueueTestCommon {
         } finally {
             IOTools.deleteDirWithFiles(targetPath.toString());
         }
+    }
+
+    @Test
+    public void backwardsCompatibilityFixtureCanBeCopiedTwice() throws IOException, URISyntaxException {
+        verifyBackwardsCompatibility_tailerPositionsAreRetained();
+        verifyBackwardsCompatibility_tailerPositionsAreRetained();
     }
 
     @Test

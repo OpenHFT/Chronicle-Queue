@@ -47,7 +47,6 @@ public class QueueLockTest extends QueueTestCommon {
     }
 
     private void check(boolean shouldThrowException) throws InterruptedException {
-        finishedNormally = false;
         ignoreException("Couldn't acquire write lock");
         if (!shouldThrowException)
             expectException("Forced unlock for the lock");
@@ -57,6 +56,15 @@ public class QueueLockTest extends QueueTestCommon {
 
             final long timeoutMs = 2_000;
             final File queueDir = DirectoryUtils.tempDir("check");
+            if (!shouldThrowException) {
+                // Require the original writer's expected unlock warning for this queue only.
+                String expectedWarning = "Write lock was already unlocked. For the lock file:"
+                        + new File(queueDir, "metadata.cq4t");
+                expectException(key -> key.clazz() == TableStoreWriteLock.class
+                        && key.level() == net.openhft.chronicle.core.onoes.LogLevel.WARN
+                        && expectedWarning.equals(key.message())
+                        && key.throwable() == null, "Original writer releases the forcibly recovered lock");
+            }
             try (final RollingChronicleQueue queue = ChronicleQueue.singleBuilder(queueDir).
                     timeoutMS(timeoutMs).
                     build();
@@ -104,7 +112,6 @@ public class QueueLockTest extends QueueTestCommon {
                     assertTrue("timeout, time: " + time, time >= timeoutMs);
                 }
             }
-            finishedNormally = true;
         } finally {
             System.clearProperty("queue.force.unlock.mode");
         }
