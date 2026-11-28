@@ -6,6 +6,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.StackTrace;
@@ -23,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.io.UncheckedIOException;
 import java.lang.ref.WeakReference;
@@ -888,6 +890,29 @@ class SCQIndexing extends AbstractCloseable implements Indexing, Demarshallable,
         try (DocumentContext ignored = wire.readingDocument(indexToIndex)) {
             return array(wire, values, true);
         }
+    }
+
+    //! When the next recovered record needs a new sparse index, build it behind EOF and seal it before linking it.
+    //! RecentRollBackfillTest crosses the first secondary-page boundary and seeks directly after reopening the queue.
+    long prepareSealedIndex(Wire wire, long sequence, long seal) throws IOException {
+        if (!indexable(sequence))
+            return seal;
+        long page = sequence >>> (indexCountBits + indexSpacingBits);
+        if (page >= indexCount)
+            throw new IllegalStateException("Recovery sequence exceeds the index capacity: " + sequence);
+        LongArrayValues root = getIndex2index(wire);
+        if (root.getVolatileValueAt(page) != 0)
+            return seal;
+        Bytes<?> bytes = wire.bytes();
+        bytes.writePosition(seal + Wires.SPB_HEADER_SIZE);
+        indexTemplate.writeMarshallable(wire);
+        long nextSeal = RecentRollBackfill.advanceSeal((MappedBytes) bytes, seal, bytes.writePosition(), true);
+        if (!root.compareAndSet(page, NOT_INITIALIZED, seal))
+            throw new IllegalStateException("Secondary index changed under the queue write lock");
+        root.setMaxUsed(page + 1);
+        // A subsequent data record can use this page as soon as its own header becomes visible.
+        RecentRollBackfill.force((MappedBytes) bytes, 0, nextSeal + Wires.SPB_HEADER_SIZE);
+        return nextSeal;
     }
 
     // May throw UnrecoverableTimeoutException
