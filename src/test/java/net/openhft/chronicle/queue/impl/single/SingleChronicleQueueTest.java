@@ -5,6 +5,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.testframework.process.JavaProcessBuilder;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.AbstractCloseable;
@@ -12,8 +13,10 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.table.AbstractTSQueueLock;
 import net.openhft.chronicle.testframework.GcControls;
 import net.openhft.chronicle.testframework.mappedfiles.MappedFileUtil;
 import net.openhft.chronicle.threads.NamedThreadFactory;
@@ -25,6 +28,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -411,6 +416,61 @@ public class SingleChronicleQueueTest extends QueueTestCommon {
         try (final ChronicleQueue queue = builder(tmpDir, wireType).rollCycle(new RollCycleDefaultingTest.MyRollcycle()).build();
              final ExcerptAppender excerptAppender = queue.createAppender()) {
             excerptAppender.writeText("hello");
+        }
+    }
+
+    // Exercise recovery from a real exited process, including subclasses that buffer writes asynchronously.
+    @Test(timeout = 30_000)
+    public void deadAppendLockOwnerDoesNotStrandWriters() throws InterruptedException, IOException {
+        Process owner = JavaProcessBuilder.create(ExitedAppendLockOwner.class).start();
+        final long deadPid;
+        try {
+            assertTrue("lock owner exits", owner.waitFor(10, TimeUnit.SECONDS));
+            assertEquals(JavaProcessBuilder.getProcessStdErr(owner), 0, owner.exitValue());
+            try (BufferedReader output = new BufferedReader(new InputStreamReader(owner.getInputStream(), ISO_8859_1))) {
+                deadPid = Long.parseLong(output.readLine());
+            }
+        } finally {
+            if (owner.isAlive()) {
+                owner.destroyForcibly();
+                assertTrue("lock owner is reaped", owner.waitFor(5, TimeUnit.SECONDS));
+            }
+        }
+        try (SingleChronicleQueue queue = builder(getTmpDir(), wireType).build();
+             LongValue appendLockValue = queue.metaStore().acquireValueFor(TableStoreWriteLock.APPEND_LOCK_KEY);
+             ExcerptAppender appender = queue.createAppender();
+             ExcerptTailer tailer = queue.createTailer()) {
+            appendLockValue.setValue(deadPid);
+            long appendDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            for (;;) {
+                try {
+                    appender.writeText("recovered");
+                    break;
+                } catch (IllegalStateException failure) {
+                    // A timed-out Windows process query is deliberately conservative. Retry only rejection
+                    // by this unchanged lock; absent recovery still fails at the bounded deadline.
+                    if (appendLockValue.getVolatileValue() != deadPid
+                            || !String.valueOf(failure.getMessage()).startsWith("locked: unable to append")
+                            || System.nanoTime() >= appendDeadline)
+                        throw failure;
+                    Jvm.pause(1);
+                }
+            }
+            String actual;
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while ((actual = tailer.readText()) == null && System.nanoTime() < deadline)
+                Jvm.pause(1);
+            assertEquals("recovered", actual);
+            // A buffered reader can see the message before the drainer reaches the persistent append lock.
+            while (appendLockValue.getVolatileValue() == deadPid && System.nanoTime() < deadline)
+                Jvm.pause(1);
+            assertNotEquals("the exited owner must be replaced", deadPid, appendLockValue.getVolatileValue());
+        }
+    }
+
+    public static final class ExitedAppendLockOwner {
+        public static void main(String[] args) {
+            System.out.println(Jvm.getProcessId());
         }
     }
 

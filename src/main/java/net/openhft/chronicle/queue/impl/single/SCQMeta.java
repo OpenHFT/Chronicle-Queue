@@ -9,7 +9,6 @@ import net.openhft.chronicle.queue.impl.table.Metadata;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
-
 import java.util.Objects;
 
 /**
