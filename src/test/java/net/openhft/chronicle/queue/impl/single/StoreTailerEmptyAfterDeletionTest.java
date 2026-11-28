@@ -4,6 +4,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.BackgroundResourceReleaser;
+import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -18,8 +20,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -33,22 +33,22 @@ public class StoreTailerEmptyAfterDeletionTest extends QueueTestCommon {
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
-    public void toStartResetsWhenAlreadyAtDeletedSoleStart() throws IOException {
+    public void toStartFromStartAfterOfflineQueueDeletion() throws IOException {
         verifyBothQueueModes(Position.START, Position.START);
     }
 
     @Test
-    public void toStartResetsWhenElsewhereAfterDeletingSoleRoll() throws IOException {
+    public void toStartFromEndAfterOfflineQueueDeletion() throws IOException {
         verifyBothQueueModes(Position.END, Position.START);
     }
 
     @Test
-    public void toEndResetsWhenAlreadyAtDeletedSoleEnd() throws IOException {
+    public void toEndFromEndAfterOfflineQueueDeletion() throws IOException {
         verifyBothQueueModes(Position.END, Position.END);
     }
 
     @Test
-    public void toEndResetsWhenElsewhereAfterDeletingSoleRoll() throws IOException {
+    public void toEndFromStartAfterOfflineQueueDeletion() throws IOException {
         verifyBothQueueModes(Position.START, Position.END);
     }
 
@@ -63,28 +63,35 @@ public class StoreTailerEmptyAfterDeletionTest extends QueueTestCommon {
         final SetTimeProvider time = new SetTimeProvider(System.currentTimeMillis());
         final File directory = temporaryFolder.newFolder(readOnly ? "read-only" : "writable");
         try (SingleChronicleQueue writerQueue = newQueue(directory, false, time);
-             ExcerptAppender appender = writerQueue.createAppender()) {
+             ExcerptAppender appender = writerQueue.createAppender();
+             ExcerptTailer tailer = writerQueue.createTailer()) {
             appender.writeText("only-entry");
+            initialPosition.move(tailer);
+            assertEquals(initialPosition == Position.START ? appender.lastIndexAppended() : appender.lastIndexAppended() + 1,
+                    tailer.index());
         }
 
-        final Path rollFile;
-        try (Stream<Path> files = Files.list(directory.toPath())) {
-            rollFile = files.filter(path -> path.toString().endsWith(SingleChronicleQueue.SUFFIX))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError("queue roll file not found"));
+        //! Integration control for QUEUE-146: deleting the current roll while its published metadata survives is not an empty queue.
+        //! Close all handles and delete the complete queue before testing empty positioning and subsequent appends in either mode.
+        //! Historical deletion with a live tailer is covered separately by ReadOnlyToStartAfterDeletionTest and TestDeleteQueueFile.
+        BackgroundResourceReleaser.releasePendingResources();
+        assertTrue("offline deletion includes the published metadata", IOTools.deleteDirWithFiles(directory));
+        Files.createDirectory(directory.toPath());
+        try (SingleChronicleQueue emptyQueue = newQueue(directory, false, time)) {
+            assertEquals("initialise empty metadata before opening a read-only queue", 0, emptyQueue.entryCount());
         }
+        BackgroundResourceReleaser.releasePendingResources();
 
         try (SingleChronicleQueue queue = newQueue(directory, readOnly, time);
              ExcerptTailer tailer = queue.createTailer()) {
             initialPosition.move(tailer);
-            Files.delete(rollFile);
 
             for (int attempt = 0; attempt < 3; attempt++) {
                 operation.move(tailer);
                 assertEquals("public empty-queue index", 0, tailer.index());
                 assertEquals("cycle", Integer.MIN_VALUE, tailer.cycle());
                 assertEquals("state", TailerState.UNINITIALISED, tailer.state());
-                assertNull("deleted store must be released", tailer.currentFile());
+                assertNull("the reopened empty queue must not retain a store", tailer.currentFile());
                 try (DocumentContext document = tailer.readingDocument()) {
                     assertFalse("empty tailer must not expose a document", document.isPresent());
                 }

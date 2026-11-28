@@ -60,18 +60,31 @@ public class ReadOnlyToStartAfterDeletionTest extends QueueTestCommon {
     public void disappearingSnapshotBoundaryDoesNotRetryWithinTheSameCall() throws Exception {
         assumeFalse(OS.isWindows());
         Fixture f = fixture();
-        try (SingleChronicleQueue queue = builder(f, true).build(); ExcerptTailer tailer = queue.createTailer()) {
+        SingleChronicleQueueBuilder builder = builder(f, true);
+        builder.preBuild();
+        try (SingleChronicleQueue queue = new SingleChronicleQueue(builder) {
+            private boolean boundaryDeleted;
+
+            @Override
+            int firstCycleInDirectory() {
+                int firstCycle = super.firstCycleInDirectory();
+                if (!boundaryDeleted) {
+                    //! Inject the race after the snapshot has selected and validated its boundary, just before the tailer opens it.
+                    //! Deleting during File.list() is too early: the regular-file filter may legitimately skip that entry in one scan.
+                    assertEquals(f.indexes[1], rollCycle().toIndex(firstCycle, 0));
+                    try {
+                        Files.delete(f.rolls.get(1));
+                    } catch (Exception e) {
+                        throw new AssertionError(e);
+                    }
+                    boundaryDeleted = true;
+                }
+                return firstCycle;
+            }
+        }; ExcerptTailer tailer = queue.createTailer()) {
             assertEquals(f.indexes[0], tailer.toStart().index());
             Files.delete(f.rolls.get(0));
             f.directory.listCalls = 0;
-            f.directory.afterNextList = () -> {
-                try {
-                    // A second actor removes the next historical roll after the snapshot was taken.
-                    Files.delete(f.rolls.get(1));
-                } catch (Exception e) {
-                    throw new AssertionError(e);
-                }
-            };
             try {
                 tailer.toStart();
                 fail("a disappeared snapshot boundary must end this bounded attempt");
@@ -169,7 +182,6 @@ public class ReadOnlyToStartAfterDeletionTest extends QueueTestCommon {
     private static final class CountingDirectory extends File {
         private static final long serialVersionUID = 1L;
         int listCalls;
-        transient Runnable afterNextList;
 
         CountingDirectory(File directory) {
             super(directory.getPath());
@@ -178,13 +190,7 @@ public class ReadOnlyToStartAfterDeletionTest extends QueueTestCommon {
         @Override
         public String[] list() {
             listCalls++;
-            String[] snapshot = super.list();
-            if (afterNextList != null) {
-                Runnable action = afterNextList;
-                afterNextList = null;
-                action.run();
-            }
-            return snapshot;
+            return super.list();
         }
     }
 }
