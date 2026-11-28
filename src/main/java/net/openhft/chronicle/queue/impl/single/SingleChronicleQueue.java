@@ -1418,6 +1418,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
          * @throws IOException      in case of IO errors
          * @throws TimeoutException if acquiring the store times out
          */
+        // Failed native acquisition must release ownership even when it throws an Error.
+        @SuppressWarnings("java:S1181")
         @Override
         public SingleChronicleQueueStore acquire(int cycle, CreateStrategy createStrategy) {
             throwExceptionIfClosed();
@@ -1426,6 +1428,8 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             @NotNull final RollingResourcesCache.Resource dateValue = that
                     .dateCache.resourceFor(cycle);
             MappedBytes mappedBytes = null;
+            SingleChronicleQueueStore wireStore = null;
+            boolean initialisingStore = false;
             try {
                 File path = dateValue.path;
 
@@ -1462,10 +1466,10 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                 wire.pauser(pauserSupplier.get());
                 wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
-                SingleChronicleQueueStore wireStore;
                 try {
                     if (!readOnly && createStrategy == CreateStrategy.CREATE && wire.writeFirstHeader()) {
                         // implicitly reserves the wireStore for this StoreSupplier
+                        initialisingStore = true;
                         wireStore = storeFactory.apply(that, wire);
 
                         createIndexThenUpdateHeader(wire, cycle, wireStore);
@@ -1502,14 +1506,7 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
                         }
                     }
                 } catch (InternalError e) {
-                    long pos = Objects.requireNonNull(((Bytes<?>) mappedBytes).bytesStore()).addressForRead(0);
-                    String s = Long.toHexString(pos);
-                    System.err.println("pos=" + s);
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
-                        for (String line; (line = br.readLine()) != null; )
-                            if (line.contains(".cq4"))
-                                System.err.println(line);
-                    }
+                    printMappingDiagnostics(mappedBytes, e);
                     throw e;
                 }
                 return wireStore;
@@ -1517,6 +1514,39 @@ public class SingleChronicleQueue extends AbstractCloseable implements RollingCh
             } catch (@NotNull TimeoutException | IOException e) {
                 Closeable.closeQuietly(mappedBytes);
                 throw Jvm.rethrow(e);
+            } catch (RuntimeException | Error e) {
+                if (initialisingStore) {
+                    //! A returned store owns reservations that survive closing its provisional bytes alone.
+                    //! StoreAcquisitionFailureTest#indexFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+                    //! fails "Failed store closes before Queue.close" before fixture cleanup if this close is omitted.
+                    if (wireStore != null)
+                        Closeable.closeQuietly(wireStore);
+                    else
+                        //! A factory failure transfers no store, so the supplier must release its provisional bytes.
+                        //! StoreAcquisitionFailureTest#factoryFailuresReleaseBeforeQueueCloseAndAllowSuccessfulTransfer
+                        //! fails the zero-bytes-reservation assertion before fixture cleanup if this close is omitted.
+                        Closeable.closeQuietly(mappedBytes);
+                }
+                throw e;
+            }
+        }
+
+        private void printMappingDiagnostics(MappedBytes mappedBytes, InternalError failure) {
+            try {
+                if (mappedBytes.refCount() > 0 && ((Bytes<?>) mappedBytes).bytesStore() != null) {
+                    long pos = ((Bytes<?>) mappedBytes).bytesStore().addressForRead(0);
+                    Jvm.warn().on(SingleChronicleQueue.class, "Mapping diagnostic: pos=" + Long.toHexString(pos));
+                }
+                if (!OS.isLinux())
+                    return;
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")))) {
+                    for (String line; (line = br.readLine()) != null; )
+                        if (line.contains(".cq4"))
+                            Jvm.warn().on(SingleChronicleQueue.class, "Mapping diagnostic: " + line);
+                }
+            } catch (IOException | RuntimeException | InternalError diagnosticFailure) {
+                // Diagnostics must not hide the native failure or bypass acquisition cleanup.
+                failure.addSuppressed(diagnosticFailure);
             }
         }
 
