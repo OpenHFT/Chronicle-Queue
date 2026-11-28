@@ -1,0 +1,100 @@
+/*
+ * Copyright 2013-2025 chronicle.software; SPDX-License-Identifier: Apache-2.0
+ */
+package net.openhft.chronicle.queue;
+
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.onoes.ExceptionKey;
+import org.junit.Test;
+import org.junit.runner.Description;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Result;
+import org.junit.runners.model.Statement;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.Map;
+import static org.junit.Assert.*;
+
+public class QueueTestCommonResourceTest {
+    private static final String UNRELATED_WARNING = "unrelated resource contract warning";
+
+    @Test
+    public void boundariesAreOptInAndPreserveFailures() throws Throwable {
+        QueueTestCommon fixture = new QueueTestCommon();
+        Description description = Description.createTestDescription(getClass(), "boundaryProbe");
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        PrintStream original = System.out;
+        AssertionError primary = new AssertionError("primary test assertion");
+        Map<ExceptionKey, Integer> recorded = Jvm.recordExceptions(false);
+        try (PrintStream outputStream = new PrintStream(captured)) {
+            System.setOut(outputStream);
+            fixture.watcher.apply(new Statement() {
+                @Override public void evaluate() {
+                    // A successful body exercises the normal finish boundary.
+                }
+            }, description).evaluate();
+            Statement failingBody = fixture.watcher.apply(new Statement() {
+                @Override public void evaluate() { throw primary; }
+            }, description);
+            AssertionError caught = assertThrows(AssertionError.class, failingBody::evaluate);
+            assertSame(primary, caught);
+            String output = captured.toString("UTF-8");
+            if (Boolean.getBoolean("queue.traceTestExecution")) {
+                assertEquals("two start boundaries", 2, occurrences(output, "QueueTestExecution phase=start"));
+                assertEquals("two finish boundaries", 2, occurrences(output, "QueueTestExecution phase=finish"));
+                for (String field : new String[]{" timeMs=", " pid=", " test=" + getClass().getName()
+                        + ".boundaryProbe", " heapUsed=", " heapCommitted=", " heapMax=", " target="})
+                    assertTrue("missing context " + field, output.contains(field));
+            } else {
+                assertEquals("diagnostics are opt in", "", output);
+            }
+            assertTrue("boundaries must not become recorded warnings/errors", recorded.isEmpty());
+        } finally {
+            System.setOut(original);
+            Jvm.resetExceptionHandlers();
+        }
+    }
+
+    @Test
+    public void sharedDiskDropIsDiagnosticContext() throws Exception {
+        QueueTestCommon fixture = new QueueTestCommon() {
+            int reads;
+            @Override long diskFreeSpace() { return (++reads == 1 ? 10L : 7L) << 30; }
+        };
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        PrintStream original = System.out;
+        fixture.recordExceptions();
+        try (PrintStream outputStream = new PrintStream(captured)) {
+            System.setOut(outputStream);
+            fixture.recordDiskSpace();
+            fixture.checkSpaceUsed();
+            String output = captured.toString("UTF-8");
+            assertTrue("shared drop is visible", output.contains("Shared filesystem free space decreased by 3.0 GiB"));
+            assertTrue("does not attribute usage", output.contains("this is not per-test disk usage"));
+            fixture.exceptionTracker.checkExceptions();
+        } finally {
+            System.setOut(original);
+            Jvm.resetExceptionHandlers();
+        }
+    }
+
+    @Test
+    public void unrelatedWarningsStillFailThroughJUnitLifecycle() {
+        Result result = JUnitCore.runClasses(WarningFixture.class);
+        assertEquals("one fixture executes", 1, result.getRunCount());
+        assertEquals("unrelated warning still fails", 1, result.getFailureCount());
+        assertEquals("1 exceptions were detected: " + UNRELATED_WARNING, result.getFailures().get(0).getMessage());
+    }
+
+    public static class WarningFixture extends QueueTestCommon {
+        @Test
+        public void recordsWarning() {
+            Jvm.warn().on(getClass(), UNRELATED_WARNING);
+            assertTrue("The fixture must record the warning before teardown", exceptionTracker.hasException(UNRELATED_WARNING));
+        }
+    }
+
+    private static int occurrences(String text, String word) {
+        return (text.length() - text.replace(word, "").length()) / word.length();
+    }
+}

@@ -76,9 +76,26 @@ public class QueueTestCommon {
                         + description.getClassName() + "."
                         + description.getMethodName()
                 );
+                traceResourceBoundary("start");
             }
         }
+
+        @Override
+        protected void finished(@NotNull Description description) {
+            if (TRACE_TEST_EXECUTION)
+                traceResourceBoundary("finish");
+        }
     };
+
+    // Print heap samples with the active test name so they can be correlated with process-level measurements.
+    private void traceResourceBoundary(String phase) {
+        Runtime runtime = Runtime.getRuntime();
+        System.out.println("QueueTestExecution phase=" + phase + " timeMs=" + System.currentTimeMillis()
+                + " pid=" + OS.getProcessId() + " test=" + diagnosticTestName
+                + " heapUsed=" + (runtime.totalMemory() - runtime.freeMemory())
+                + " heapCommitted=" + runtime.totalMemory() + " heapMax=" + runtime.maxMemory()
+                + " target=" + OS.getTarget());
+    }
 
     private static AtomicLong counter = new AtomicLong();
     private Set<String> targetAllowList;
@@ -118,12 +135,7 @@ public class QueueTestCommon {
     public void checkSpaceUsed() {
         long spaceLeft = diskFreeSpace();
         if (freeSpace - spaceLeft > 2L << 30) {
-            //! Free space belongs to the filesystem shared by all test forks and other
-            //! processes. A decrease during this test cannot identify which owner wrote
-            //! the data, so keep the 2 GiB observation as context rather than a failure.
-            //! Agent/build capacity checks must enforce headroom; fixture limits require
-            //! explicitly owned paths. Use stdout because an error/warning handler can
-            //! turn this diagnostic back into a test failure through ExceptionTracker.
+            // Free space is shared across test forks. Write the change to stdout so it cannot fail the warning check.
             System.out.println("Shared filesystem free space decreased by "
                     + ((freeSpace - spaceLeft) >> 20) / 1024.0 + " GiB during "
                     + getClass().getName() + "." + testName.getMethodName()
